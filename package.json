@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seed:matches": "ts-node --project tsconfig.json scripts/seed-matches.ts"
   },
   "dependencies": {
     "@fontsource/bebas-neue": "^5.2.7",
@@ -71,8 +72,11 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "tw-animate-css": "1.3.3",
     "typescript": "5.7.3"
   }

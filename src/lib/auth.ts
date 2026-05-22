@@ -1,27 +1,33 @@
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
-function getAuthCallbackUrl(): string {
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}/auth/callback`
+export async function signUpWithPassword(
+  email: string,
+  password: string
+): Promise<{ error: Error | null; needsEmailConfirmation?: boolean }> {
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+  })
+
+  if (error) {
+    return { error: new Error(error.message) }
   }
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  if (!siteUrl) {
-    throw new Error(
-      'NEXT_PUBLIC_SITE_URL must be set for server-side auth redirects'
-    )
+
+  if (!data.session) {
+    return { error: null, needsEmailConfirmation: true }
   }
-  return `${siteUrl.replace(/\/$/, '')}/auth/callback`
+
+  return { error: null }
 }
 
-export async function sendMagicLink(
-  email: string
+export async function signInWithPassword(
+  email: string,
+  password: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
-    options: {
-      emailRedirectTo: getAuthCallbackUrl(),
-    },
+    password,
   })
 
   return { error: error ? new Error(error.message) : null }
