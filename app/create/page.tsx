@@ -56,6 +56,33 @@ export default function CreatePoolPage() {
       return
     }
 
+    setLoadingMessage('Adding you to the pool…')
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    let displayName = profile?.display_name?.trim()
+    if (!displayName) {
+      const emailUsername = user.email?.split('@')[0]?.trim()
+      displayName = emailUsername || 'Pool creator'
+    }
+
+    const { error: memberError } = await supabase.from('pool_members').insert({
+      pool_id: pool.id,
+      user_id: user.id,
+      display_name: displayName,
+    })
+
+    if (memberError) {
+      setSubmitting(false)
+      setLoadingMessage(null)
+      setError(memberError.message)
+      return
+    }
+
     setLoadingMessage('Redirecting to checkout…')
 
     try {
