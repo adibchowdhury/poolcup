@@ -1,41 +1,82 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 
 const inputClassName =
   'w-full rounded-lg bg-[#080b0f] border border-[#1e2d3d] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]'
 
+const RECOVERY_TIMEOUT_MS = 5000
+
+function isRecoveryHash(): boolean {
+  if (typeof window === 'undefined') return false
+  const hash = window.location.hash
+  return (
+    hash.includes('type=recovery') ||
+    hash.includes('type=password_recovery')
+  )
+}
+
+type PageState = 'loading' | 'ready' | 'expired'
+
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const [ready, setReady] = useState(false)
-  const [password, setPassword] = useState('')
+  const [pageState, setPageState] = useState<PageState>('loading')
+  const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
+    let recoveryConfirmed = false
+
+    const confirmRecovery = () => {
+      if (!mounted || recoveryConfirmed) return
+      recoveryConfirmed = true
+      setPageState('ready')
+    }
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (!mounted) return
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        setReady(true)
+        confirmRecovery()
+        return
+      }
+
+      if (
+        session &&
+        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
+        isRecoveryHash()
+      ) {
+        confirmRecovery()
       }
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted && session) {
-        setReady(true)
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!mounted || recoveryConfirmed) return
+
+      if (session && isRecoveryHash()) {
+        confirmRecovery()
       }
-    })
+    }
+
+    checkSession()
+
+    const timeout = setTimeout(() => {
+      if (!mounted || recoveryConfirmed) return
+      setPageState('expired')
+    }, RECOVERY_TIMEOUT_MS)
 
     return () => {
       mounted = false
       subscription.unsubscribe()
+      clearTimeout(timeout)
     }
   }, [])
 
@@ -43,12 +84,12 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError(null)
 
-    if (password !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       setError('Passwords do not match')
       return
     }
 
-    if (password.length < 6) {
+    if (newPassword.length < 6) {
       setError('Password must be at least 6 characters')
       return
     }
@@ -56,7 +97,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     const { error: updateError } = await supabase.auth.updateUser({
-      password,
+      password: newPassword,
     })
 
     setLoading(false)
@@ -66,7 +107,7 @@ export default function ResetPasswordPage() {
       return
     }
 
-    router.push('/dashboard?passwordReset=success')
+    router.push('/dashboard')
   }
 
   return (
@@ -76,14 +117,32 @@ export default function ResetPasswordPage() {
           Reset password
         </h1>
         <p className="mt-2 text-sm text-[#5a7080]">
-          Choose a new password for your account.
+          {pageState === 'ready'
+            ? 'Choose a new password for your account.'
+            : pageState === 'loading'
+              ? 'Verifying your reset link…'
+              : 'Unable to verify this reset link.'}
         </p>
 
-        {!ready ? (
-          <p className="mt-8 text-sm text-[#5a7080]">
-            Verifying reset link…
-          </p>
-        ) : (
+        {pageState === 'loading' && (
+          <p className="mt-8 text-sm text-[#5a7080]">Please wait…</p>
+        )}
+
+        {pageState === 'expired' && (
+          <div className="mt-8 space-y-4">
+            <p className="text-sm text-red-400" role="alert">
+              This reset link is invalid or has expired
+            </p>
+            <Link
+              href="/login"
+              className="inline-block text-sm font-medium text-[#00e676] hover:underline"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        )}
+
+        {pageState === 'ready' && (
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
               <label
@@ -97,8 +156,8 @@ export default function ResetPasswordPage() {
                 type="password"
                 required
                 autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
                 className={inputClassName}
@@ -141,11 +200,16 @@ export default function ResetPasswordPage() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-sm text-[#5a7080]">
-          <a href="/login" className="text-[#00e676] hover:underline font-medium">
-            Back to sign in
-          </a>
-        </p>
+        {pageState !== 'expired' && (
+          <p className="mt-6 text-center text-sm text-[#5a7080]">
+            <Link
+              href="/login"
+              className="text-[#00e676] hover:underline font-medium"
+            >
+              Back to sign in
+            </Link>
+          </p>
+        )}
       </div>
     </main>
   )
