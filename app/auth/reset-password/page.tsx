@@ -8,14 +8,15 @@ import { supabase } from '@/src/lib/supabase'
 const inputClassName =
   'w-full rounded-lg bg-[#080b0f] border border-[#1e2d3d] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]'
 
-const RECOVERY_TIMEOUT_MS = 5000
+const RECOVERY_TIMEOUT_MS = 15000
 
-function isRecoveryHash(): boolean {
+function hashHasRecoveryToken(): boolean {
   if (typeof window === 'undefined') return false
   const hash = window.location.hash
   return (
     hash.includes('type=recovery') ||
-    hash.includes('type=password_recovery')
+    hash.includes('type=password_recovery') ||
+    hash.includes('access_token')
   )
 }
 
@@ -41,35 +42,32 @@ export default function ResetPasswordPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        confirmRecovery()
-        return
-      }
-
-      if (
-        session &&
-        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
-        isRecoveryHash()
-      ) {
         confirmRecovery()
       }
     })
 
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession()
-
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted || recoveryConfirmed) return
-
-      if (session && isRecoveryHash()) {
+      if (session?.user) {
         confirmRecovery()
       }
-    }
+    })
 
-    checkSession()
-
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
       if (!mounted || recoveryConfirmed) return
+
+      if (hashHasRecoveryToken()) {
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        confirmRecovery()
+        return
+      }
+
       setPageState('expired')
     }, RECOVERY_TIMEOUT_MS)
 
