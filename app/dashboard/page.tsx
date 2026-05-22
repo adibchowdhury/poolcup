@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 type Pool = {
@@ -49,12 +50,15 @@ export default async function DashboardPage({
           <h1 className="font-display text-5xl tracking-wide text-[#f0f4f8]">
             My Pools
           </h1>
-          <Link
-            href="/create"
-            className="inline-flex items-center justify-center rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 transition-colors"
-          >
-            Create a Pool
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <DashboardSignOut email={user.email ?? ''} />
+            <Link
+              href="/create"
+              className="inline-flex items-center justify-center rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 transition-colors"
+            >
+              Create a Pool
+            </Link>
+          </div>
         </header>
 
         {passwordReset === 'success' && (
