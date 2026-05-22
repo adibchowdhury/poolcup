@@ -69,9 +69,20 @@ export default function LandingPage() {
             <a href="#pricing" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Pricing</a>
             <a href="#features" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Features</a>
           </div>
-          <Link href="/login" className="bg-[#00e676] text-[#080b0f] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#00e676]/90 transition-colors">
-            Create Pool
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/create-account"
+              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+            >
+              Create account
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90"
+            >
+              Sign in
+            </Link>
+          </div>
         </nav>
 
         {/* Hero Content */}
