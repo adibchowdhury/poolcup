@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 
 const scoringStyles = [
@@ -68,9 +69,9 @@ export default function LandingPage() {
             <a href="#pricing" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Pricing</a>
             <a href="#features" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Features</a>
           </div>
-          <a href="#cta" className="bg-[#00e676] text-[#080b0f] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#00e676]/90 transition-colors">
+          <Link href="/login" className="bg-[#00e676] text-[#080b0f] px-4 py-2 rounded-lg font-semibold text-sm hover:bg-[#00e676]/90 transition-colors">
             Create Pool
-          </a>
+          </Link>
         </nav>
 
         {/* Hero Content */}
@@ -87,12 +88,12 @@ export default function LandingPage() {
             </p>
 
             <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="#cta" className="w-full sm:w-auto bg-[#00e676] text-[#080b0f] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+              <Link href="/login" className="w-full sm:w-auto bg-[#00e676] text-[#080b0f] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
                 Create a Pool
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </a>
+              </Link>
               <a href="#how-it-works" className="w-full sm:w-auto border border-[rgba(255,255,255,0.2)] text-[#f0f4f8] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[rgba(255,255,255,0.05)] transition-all">
                 See how it works
               </a>
@@ -221,12 +222,12 @@ export default function LandingPage() {
                 </div>
 
                 {/* CTA Button */}
-                <button className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-base hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
+                <Link href="/login" className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-base hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
                   Pay $15 & Create Pool
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -705,12 +706,12 @@ export default function LandingPage() {
                 </li>
               </ul>
               
-              <button className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
+              <Link href="/login" className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
                 Create a Pool
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </button>
+              </Link>
             </div>
             
             <p className="text-[#5a7080] text-sm text-center mt-6">
@@ -734,12 +735,12 @@ export default function LandingPage() {
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#f0f4f8] mb-4">THE TOURNAMENT STARTS JUNE 11.</h2>
           <p className="text-[#5a7080] text-xl mb-10">Your pool won&apos;t create itself.</p>
           
-          <button className="bg-[#00e676] text-[#080b0f] px-10 py-5 rounded-xl font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] inline-flex items-center gap-2">
+          <Link href="/login" className="bg-[#00e676] text-[#080b0f] px-10 py-5 rounded-xl font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] inline-flex items-center gap-2">
             Create a Pool
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
-          </button>
+          </Link>
           
           <p className="mt-6 text-[#5a7080] text-sm">Takes 60 seconds · $15 one-time · No subscription</p>
         </div>
