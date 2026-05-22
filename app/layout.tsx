@@ -7,6 +7,7 @@ import '@fontsource/dm-sans/700.css'
 import '@fontsource/space-mono/400.css'
 import '@fontsource/space-mono/700.css'
 import './globals.css'
+import { AuthProvider } from '@/src/lib/auth-context'
 
 export const metadata: Metadata = {
   title: 'PoolCup - World Cup 2026 Prediction Pool',
@@ -28,7 +29,7 @@ export default function RootLayout({
         className="font-sans antialiased bg-[#080b0f] text-[#f0f4f8]"
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   )

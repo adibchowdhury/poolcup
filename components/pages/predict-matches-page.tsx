@@ -2,7 +2,19 @@
 
 import { useState } from "react"
 
-const matchesData = {
+type MatchCard = {
+  id: number
+  team1: string
+  flag1: string
+  team2: string
+  flag2: string
+  score1: string
+  score2: string
+  completed: boolean
+  locked?: boolean
+}
+
+const matchesData: Record<string, MatchCard[]> = {
   "Thursday Jun 12": [
     { id: 1, team1: "Mexico", flag1: "🇲🇽", team2: "S.Africa", flag2: "🇿🇦", score1: "2", score2: "1", completed: true },
     { id: 2, team1: "Korea", flag1: "🇰🇷", team2: "Czech Rep", flag2: "🇨🇿", score1: "1", score2: "1", completed: true },
@@ -10,7 +22,7 @@ const matchesData = {
   "Friday Jun 13": [
     { id: 3, team1: "Brazil", flag1: "🇧🇷", team2: "Argentina", flag2: "🇦🇷", score1: "", score2: "", completed: false },
     { id: 4, team1: "England", flag1: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", team2: "France", flag2: "🇫🇷", score1: "", score2: "", completed: false },
-    { id: 5, team1: "Germany", flag1: "🇩🇪", team2: "Japan", flag2: "🇯🇵", locked: true },
+    { id: 5, team1: "Germany", flag1: "🇩🇪", team2: "Japan", flag2: "🇯🇵", score1: "", score2: "", completed: false, locked: true },
   ],
 }
 
