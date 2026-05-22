@@ -20,6 +20,16 @@ type PoolMember = {
   display_name: string
 }
 
+function splitDisplayName(displayName: string): {
+  firstName: string
+  lastName: string
+} {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: '', lastName: '' }
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') }
+}
+
 export default function JoinPoolPage() {
   const params = useParams()
   const router = useRouter()
@@ -30,7 +40,8 @@ export default function JoinPoolPage() {
   const [members, setMembers] = useState<PoolMember[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
-  const [displayName, setDisplayName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,6 +92,50 @@ export default function JoinPoolPage() {
     loadPoolData()
   }, [authLoading, user, inviteCode, router, loadPoolData])
 
+  useEffect(() => {
+    if (!user) return
+
+    const userId = user.id
+    const metadata = user.user_metadata as {
+      first_name?: string
+      last_name?: string
+      display_name?: string
+    }
+
+    async function prefillName() {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('display_name')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (profile?.display_name) {
+        const { firstName: first, lastName: last } = splitDisplayName(
+          profile.display_name,
+        )
+        setFirstName(first)
+        setLastName(last)
+        return
+      }
+
+      if (metadata.first_name || metadata.last_name) {
+        setFirstName(metadata.first_name ?? '')
+        setLastName(metadata.last_name ?? '')
+        return
+      }
+
+      if (metadata.display_name) {
+        const { firstName: first, lastName: last } = splitDisplayName(
+          metadata.display_name,
+        )
+        setFirstName(first)
+        setLastName(last)
+      }
+    }
+
+    prefillName()
+  }, [user])
+
   async function handleJoin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!user || !pool) return
@@ -94,10 +149,18 @@ export default function JoinPoolPage() {
       return
     }
 
+    const displayName = `${firstName.trim()} ${lastName.trim()}`.trim()
+
+    if (!displayName) {
+      setError('First name and last name are required')
+      setJoining(false)
+      return
+    }
+
     const { error: joinError } = await supabase.from('pool_members').insert({
       pool_id: pool.id,
       user_id: user.id,
-      display_name: displayName.trim(),
+      display_name: displayName,
     })
 
     setJoining(false)
@@ -177,19 +240,49 @@ export default function JoinPoolPage() {
           </div>
 
           <div className="p-6">
-            <form onSubmit={handleJoin} className="flex gap-3">
-              <input
-                type="text"
-                required
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your display name"
-                className="flex-1 rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus:ring-1 focus:ring-[#00e676]"
-              />
+            <form onSubmit={handleJoin} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="join-first-name"
+                    className="mb-1.5 block text-xs font-medium text-[#5a7080]"
+                  >
+                    First name
+                  </label>
+                  <input
+                    id="join-first-name"
+                    type="text"
+                    required
+                    autoComplete="given-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Alex"
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus:ring-1 focus:ring-[#00e676]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="join-last-name"
+                    className="mb-1.5 block text-xs font-medium text-[#5a7080]"
+                  >
+                    Last name
+                  </label>
+                  <input
+                    id="join-last-name"
+                    type="text"
+                    required
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Jordan"
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus:ring-1 focus:ring-[#00e676]"
+                  />
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={joining}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {joining ? 'Joining…' : 'Join →'}
               </button>

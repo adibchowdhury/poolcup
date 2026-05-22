@@ -1,17 +1,51 @@
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
+export type SignUpProfile = {
+  firstName: string
+  lastName: string
+}
+
+function buildDisplayName(firstName: string, lastName: string) {
+  return `${firstName.trim()} ${lastName.trim()}`.trim()
+}
+
 export async function signUpWithPassword(
   email: string,
-  password: string
+  password: string,
+  profile: SignUpProfile
 ): Promise<{ error: Error | null; needsEmailConfirmation?: boolean }> {
+  const firstName = profile.firstName.trim()
+  const lastName = profile.lastName.trim()
+  const displayName = buildDisplayName(firstName, lastName)
+
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        display_name: displayName,
+      },
+    },
   })
 
   if (error) {
     return { error: new Error(error.message) }
+  }
+
+  const userId = data.user?.id
+
+  if (userId && data.session) {
+    const { error: profileError } = await supabase
+      .from('users')
+      .update({ display_name: displayName })
+      .eq('id', userId)
+
+    if (profileError) {
+      return { error: new Error(profileError.message) }
+    }
   }
 
   if (!data.session) {

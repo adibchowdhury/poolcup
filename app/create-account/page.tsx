@@ -10,6 +10,8 @@ const inputClassName =
 
 export default function CreateAccountPage() {
   const router = useRouter()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -21,6 +23,11 @@ export default function CreateAccountPage() {
     e.preventDefault()
     setError(null)
     setInfo(null)
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('First name and last name are required')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -34,8 +41,11 @@ export default function CreateAccountPage() {
 
     setLoading(true)
 
-    const { error: authError, needsEmailConfirmation } =
-      await signUpWithPassword(email, password)
+    const { error: authError, needsEmailConfirmation } = await signUpWithPassword(
+      email,
+      password,
+      { firstName, lastName },
+    )
 
     setLoading(false)
 
@@ -61,6 +71,45 @@ export default function CreateAccountPage() {
         <p className="mt-2 text-sm text-[#5a7080]">Create your account</p>
 
         <form onSubmit={handleSignUp} className="mt-8 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="first-name"
+                className="mb-2 block text-sm font-medium text-[#5a7080]"
+              >
+                First name
+              </label>
+              <input
+                id="first-name"
+                type="text"
+                required
+                autoComplete="given-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Alex"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="last-name"
+                className="mb-2 block text-sm font-medium text-[#5a7080]"
+              >
+                Last name
+              </label>
+              <input
+                id="last-name"
+                type="text"
+                required
+                autoComplete="family-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Jordan"
+                className={inputClassName}
+              />
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="email"
