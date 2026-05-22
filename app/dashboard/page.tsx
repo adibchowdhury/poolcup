@@ -15,7 +15,12 @@ function formatPaymentStatus(status: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ passwordReset?: string }>
+}) {
+  const { passwordReset } = await searchParams
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -51,6 +56,12 @@ export default async function DashboardPage() {
             Create a Pool
           </Link>
         </header>
+
+        {passwordReset === 'success' && (
+          <div className="mt-6 rounded-lg border border-[#00e676]/30 bg-[#00e676]/10 px-4 py-3 text-sm text-[#00e676]">
+            Your password has been updated successfully.
+          </div>
+        )}
 
         <section className="mt-10">
           {userPools.length === 0 ? (

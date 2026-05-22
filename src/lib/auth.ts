@@ -33,6 +33,23 @@ export async function signInWithPassword(
   return { error: error ? new Error(error.message) : null }
 }
 
+function getPasswordResetRedirectUrl(): string {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (typeof window !== 'undefined' ? window.location.origin : '')
+  return `${siteUrl.replace(/\/$/, '')}/auth/reset-password`
+}
+
+export async function sendPasswordResetEmail(
+  email: string
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: getPasswordResetRedirectUrl(),
+  })
+
+  return { error: error ? new Error(error.message) : null }
+}
+
 export async function signOut(): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.signOut()
   return { error: error ? new Error(error.message) : null }
