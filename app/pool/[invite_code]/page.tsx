@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
+import {
+  PoolHomeView,
+  type PoolHomeMeta,
+} from '@/components/pool/pool-home-view'
+import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 
 type Pool = {
   id: string
@@ -22,27 +27,53 @@ type PoolMember = {
 type LeaderboardEntry = {
   rank: number
   prev_rank: number | null
+  member_id: string
   user_id: string
   display_name: string
   points: number
   correct_predictions: number
 }
 
-function getRankMovement(rank: number, prevRank: number | null): {
-  label: string
-  className: string
-} {
-  if (prevRank == null || prevRank <= 0) {
-    return { label: '—', className: 'text-[#5a7080]' }
+const ROUND_STAGE_LABELS: Record<string, string> = {
+  group: 'Group Stage',
+  r32: 'Round of 32',
+  r16: 'Round of 16',
+  qf: 'Quarter Finals',
+  sf: 'Semi Finals',
+  final: 'Final',
+}
+
+function formatTimeUntil(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return 'Soon'
+  const totalMinutes = Math.ceil(ms / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
   }
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
+function getMovement(
+  rank: number,
+  prevRank: number | null,
+): 'up' | 'down' | 'none' {
+  if (prevRank == null || prevRank <= 0) return 'none'
   const delta = prevRank - rank
-  if (delta > 0) {
-    return { label: `↑${delta}`, className: 'text-[#00e676]' }
-  }
-  if (delta < 0) {
-    return { label: `↓${Math.abs(delta)}`, className: 'text-[#ff4444]' }
-  }
-  return { label: '—', className: 'text-[#5a7080]' }
+  if (delta > 0) return 'up'
+  if (delta < 0) return 'down'
+  return 'none'
+}
+
+function deriveStageLabel(roundCounts: Record<string, number>): string {
+  const entries = Object.entries(roundCounts).filter(([, n]) => n > 0)
+  if (entries.length === 0) return 'Group Stage'
+  const sorted = entries.sort((a, b) => b[1] - a[1])
+  const topRound = sorted[0][0]
+  return ROUND_STAGE_LABELS[topRound] ?? 'Group Stage'
 }
 
 export default function PoolPage() {
@@ -51,14 +82,14 @@ export default function PoolPage() {
   const inviteCode = params.invite_code as string
   const { user, loading: authLoading } = useAuth()
 
-  const [pool, setPool] = useState<Pool | null>(null)
-  const [memberCount, setMemberCount] = useState(0)
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
+  const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   const loadPoolData = useCallback(async () => {
+    if (!user) return
+
     setPageLoading(true)
     setNotFound(false)
 
@@ -69,30 +100,54 @@ export default function PoolPage() {
       .maybeSingle()
 
     if (poolError || !poolData) {
-      setPool(null)
-      setLeaderboard([])
+      setPoolMeta(null)
+      setMembers([])
       setNotFound(true)
       setPageLoading(false)
       return
     }
 
+    const pool = poolData as Pool
+
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
       .select('id, user_id, display_name, joined_at')
-      .eq('pool_id', poolData.id)
+      .eq('pool_id', pool.id)
       .order('joined_at', { ascending: true })
 
     if (membersError) {
       console.error('Failed to load members:', membersError.message)
     }
 
-    const members = (membersData ?? []) as PoolMember[]
-    const memberById = new Map(members.map((member) => [member.id, member]))
+    const poolMembers = (membersData ?? []) as PoolMember[]
+    const memberById = new Map(poolMembers.map((m) => [m.id, m]))
+    const memberIds = poolMembers.map((m) => m.id)
+
+    const predictionsByMember = new Map<string, number>()
+    if (memberIds.length > 0) {
+      const { data: predictions } = await supabase
+        .from('predictions')
+        .select('member_id, match_id')
+        .eq('pool_id', pool.id)
+        .in('member_id', memberIds)
+
+      const distinct = new Map<string, Set<string>>()
+      for (const row of predictions ?? []) {
+        if (!distinct.has(row.member_id)) {
+          distinct.set(row.member_id, new Set())
+        }
+        distinct.get(row.member_id)!.add(row.match_id)
+      }
+      for (const [memberId, matchIds] of distinct) {
+        predictionsByMember.set(memberId, matchIds.size)
+      }
+    }
 
     const buildFallbackEntries = (): LeaderboardEntry[] =>
-      members.map((member, index) => ({
+      poolMembers.map((member, index) => ({
         rank: index + 1,
         prev_rank: null,
+        member_id: member.id,
         user_id: member.user_id,
         display_name: member.display_name,
         points: 0,
@@ -102,7 +157,7 @@ export default function PoolPage() {
     const { data: cacheData, error: cacheError } = await supabase
       .from('leaderboard_cache')
       .select('rank, prev_rank, member_id, total_points, correct_winners')
-      .eq('pool_id', poolData.id)
+      .eq('pool_id', pool.id)
       .order('rank', { ascending: true })
 
     let entries: LeaderboardEntry[] = buildFallbackEntries()
@@ -115,6 +170,7 @@ export default function PoolPage() {
         return {
           rank: row.rank,
           prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
+          member_id: row.member_id,
           user_id: member?.user_id ?? '',
           display_name: member?.display_name ?? 'Unknown',
           points: row.total_points ?? 0,
@@ -123,11 +179,60 @@ export default function PoolPage() {
       })
     }
 
-    setPool(poolData as Pool)
-    setMemberCount(members.length)
-    setLeaderboard(entries)
+    const { count: totalMatches } = await supabase
+      .from('matches')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: matchesPlayed } = await supabase
+      .from('matches')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_final', true)
+
+    const { data: roundRows } = await supabase.from('matches').select('round')
+
+    const roundCounts: Record<string, number> = {}
+    for (const row of roundRows ?? []) {
+      const round = row.round as string
+      roundCounts[round] = (roundCounts[round] ?? 0) + 1
+    }
+
+    let nextMatchIn: string | null = null
+    const { data: nextMatch } = await supabase
+      .from('matches')
+      .select('kickoff_at')
+      .gt('kickoff_at', new Date().toISOString())
+      .order('kickoff_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (nextMatch?.kickoff_at) {
+      nextMatchIn = formatTimeUntil(nextMatch.kickoff_at)
+    }
+
+    const leaderboardMembers: LeaderboardMember[] = entries.map((entry) => ({
+      id: entry.member_id,
+      name: entry.display_name,
+      isYou: user.id === entry.user_id,
+      avatar: entry.display_name.charAt(0).toUpperCase(),
+      points: entry.points,
+      correctPredictions: entry.correct_predictions,
+      totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
+      movement: getMovement(entry.rank, entry.prev_rank),
+      streak: 0,
+    }))
+
+    setPoolMeta({
+      inviteCode: pool.invite_code,
+      name: pool.name,
+      stage: deriveStageLabel(roundCounts),
+      memberCount: poolMembers.length,
+      matchesPlayed: matchesPlayed ?? 0,
+      totalMatches: totalMatches ?? 0,
+      nextMatchIn,
+    })
+    setMembers(leaderboardMembers)
     setPageLoading(false)
-  }, [inviteCode])
+  }, [inviteCode, user])
 
   useEffect(() => {
     if (authLoading) return
@@ -140,172 +245,46 @@ export default function PoolPage() {
     loadPoolData()
   }, [authLoading, user, router, loadPoolData])
 
-  async function handleSharePool() {
-    const joinUrl = `${window.location.origin}/join/${inviteCode}`
-    try {
-      await navigator.clipboard.writeText(joinUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setCopied(false)
-    }
-  }
-
   if (authLoading || (!user && !notFound)) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
-        <p className="text-[#5a7080]">Loading…</p>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading…</p>
+      </div>
     )
   }
 
   if (pageLoading) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
-        <p className="text-[#5a7080]">Loading pool…</p>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading pool…</p>
+      </div>
     )
   }
 
-  if (notFound || !pool) {
+  if (notFound || !poolMeta) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 text-center">
-          <p className="text-lg font-semibold text-[#f0f4f8]">Pool not found</p>
-          <p className="mt-2 text-sm text-[#5a7080]">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+          <p className="text-lg font-semibold text-foreground">Pool not found</p>
+          <p className="mt-2 text-sm text-muted-foreground">
             This invite link may be invalid.
           </p>
           <Link
             href="/dashboard"
-            className="mt-6 inline-block text-sm text-[#00e676] hover:underline"
+            className="mt-6 inline-block text-sm text-primary hover:underline"
           >
             Back to dashboard
           </Link>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#080b0f] pb-10 pt-8">
-      <div className="mx-auto w-full max-w-lg px-4">
-        <header className="mb-6">
-          <h1 className="font-display text-4xl tracking-wide text-[#f0f4f8]">
-            {pool.name}
-          </h1>
-          <p className="mt-1 font-mono text-xs text-[#5a7080]">
-            Invite: {pool.invite_code}
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[#1e2d3d] bg-[#111a27] px-3 py-1.5 text-xs text-[#5a7080]">
-              {memberCount} {memberCount === 1 ? 'Member' : 'Members'}
-            </span>
-            <span className="rounded-full border border-[#1e2d3d] bg-[#111a27] px-3 py-1.5 text-xs text-[#5a7080]">
-              0 Matches played
-            </span>
-            <span className="rounded-full border border-[#1e2d3d] bg-[#111a27] px-3 py-1.5 text-xs text-[#5a7080]">
-              Group Stage
-            </span>
-          </div>
-        </header>
-
-        <section className="mb-6 overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27]">
-          <div className="border-b border-[#1e2d3d] px-4 py-3">
-            <h2 className="font-display text-xl tracking-wide text-[#f0f4f8]">
-              Leaderboard
-            </h2>
-          </div>
-
-          {leaderboard.length === 0 ? (
-            <p className="p-6 text-center text-sm text-[#5a7080]">
-              No members in this pool yet.
-            </p>
-          ) : (
-            <ul>
-              {leaderboard.map((entry) => {
-                const isYou = user?.id === entry.user_id
-                const movement = getRankMovement(entry.rank, entry.prev_rank)
-
-                return (
-                  <li
-                    key={`${entry.user_id}-${entry.rank}`}
-                    className={`flex items-center justify-between border-b border-[#1e2d3d] p-4 last:border-b-0 ${
-                      isYou
-                        ? 'border-l-2 border-l-[#00e676] bg-[#00e676]/5'
-                        : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 font-mono text-sm text-[#5a7080]">
-                        {entry.rank}
-                      </span>
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
-                          isYou
-                            ? 'bg-[#00e676]/20 text-[#00e676]'
-                            : 'bg-[#1a2535] text-[#f0f4f8]'
-                        }`}
-                      >
-                        {entry.display_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-medium ${
-                              isYou ? 'text-[#00e676]' : 'text-[#f0f4f8]'
-                            }`}
-                          >
-                            {entry.display_name}
-                          </span>
-                          {isYou && (
-                            <span className="text-xs text-[#00e676]">
-                              (you)
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-[#5a7080]">
-                          {entry.correct_predictions} correct
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`font-mono text-xs ${movement.className}`}
-                      >
-                        {movement.label}
-                      </span>
-                      <div className="font-display text-xl text-[#f0f4f8]">
-                        {entry.points}
-                        <span className="ml-0.5 font-sans text-xs text-[#5a7080]">
-                          pts
-                        </span>
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href={`/pool/${inviteCode}/predict`}
-            className="flex-1 rounded-lg bg-[#00e676] px-4 py-3 text-center text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 transition-colors"
-          >
-            Make Predictions
-          </Link>
-          <button
-            type="button"
-            onClick={handleSharePool}
-            className="flex-1 rounded-lg border border-[#1e2d3d] bg-[#111a27] px-4 py-3 text-sm font-semibold text-[#f0f4f8] hover:border-[#00e676]/50 transition-colors"
-          >
-            {copied ? 'Link copied!' : 'Share Pool'}
-          </button>
-        </div>
-      </div>
-    </main>
+    <PoolHomeView
+      pool={poolMeta}
+      members={members}
+      predictHref={`/pool/${inviteCode}/predict`}
+    />
   )
 }
