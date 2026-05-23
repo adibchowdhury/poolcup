@@ -1,27 +1,50 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { DashboardSignOut } from '@/components/dashboard-sign-out'
+import { DashboardView } from '@/components/dashboard/dashboard-view'
+import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
-type Pool = {
+type MembershipRow = {
   id: string
-  name: string
-  invite_code: string
-  payment_status: string
+  pool_id: string
+  pools: {
+    id: string
+    name: string
+    invite_code: string
+    payment_status: string
+  } | null
 }
 
-function formatPaymentStatus(status: string): string {
-  return status
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+function formatTimeUntil(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return 'Soon'
+  const totalMinutes = Math.ceil(ms / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
+  }
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
+function stripeErrorMessage(code: string | undefined): string | null {
+  if (!code) return null
+  if (code === 'payment_failed') {
+    return 'Payment could not be completed. Please try creating your pool again.'
+  }
+  if (code === 'missing_params') {
+    return 'Payment session was invalid. Please try again.'
+  }
+  return 'Something went wrong. Please try again.'
 }
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ passwordReset?: string }>
+  searchParams: Promise<{ passwordReset?: string; error?: string }>
 }) {
-  const { passwordReset } = await searchParams
+  const { passwordReset, error: errorCode } = await searchParams
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -32,92 +55,141 @@ export default async function DashboardPage({
     redirect('/login')
   }
 
-  const { data: pools, error } = await supabase
-    .from('pools')
-    .select('id, name, invite_code, payment_status')
-    .eq('creator_id', user.id)
+  const { data: memberships, error: memberError } = await supabase
+    .from('pool_members')
+    .select(
+      `
+      id,
+      pool_id,
+      pools (
+        id,
+        name,
+        invite_code,
+        payment_status
+      )
+    `,
+    )
+    .eq('user_id', user.id)
 
-  if (error) {
-    console.error('Failed to fetch pools:', error.message)
+  if (memberError) {
+    console.error('Failed to fetch pool memberships:', memberError.message)
   }
 
-  const userPools = (pools ?? []) as Pool[]
+  const memberRows = (memberships ?? []) as MembershipRow[]
+  const validMemberships = memberRows.filter((row) => row.pools != null)
+  const memberIds = validMemberships.map((row) => row.id)
+  const poolIds = validMemberships.map((row) => row.pool_id)
+
+  const { count: totalMatchCount } = await supabase
+    .from('matches')
+    .select('*', { count: 'exact', head: true })
+
+  const totalPredictions = totalMatchCount ?? 0
+
+  let nextMatchLabel: string | null = null
+  const { data: nextMatch } = await supabase
+    .from('matches')
+    .select('kickoff_at')
+    .gt('kickoff_at', new Date().toISOString())
+    .order('kickoff_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (nextMatch?.kickoff_at) {
+    nextMatchLabel = formatTimeUntil(nextMatch.kickoff_at)
+  }
+
+  const memberCountByPool = new Map<string, number>()
+  if (poolIds.length > 0) {
+    const { data: memberRowsAll } = await supabase
+      .from('pool_members')
+      .select('pool_id')
+      .in('pool_id', poolIds)
+
+    for (const row of memberRowsAll ?? []) {
+      memberCountByPool.set(
+        row.pool_id,
+        (memberCountByPool.get(row.pool_id) ?? 0) + 1,
+      )
+    }
+  }
+
+  const predictionsByMember = new Map<string, number>()
+  if (memberIds.length > 0) {
+    const { data: predictions } = await supabase
+      .from('predictions')
+      .select('member_id, match_id')
+      .in('member_id', memberIds)
+
+    const distinctByMember = new Map<string, Set<string>>()
+    for (const row of predictions ?? []) {
+      if (!distinctByMember.has(row.member_id)) {
+        distinctByMember.set(row.member_id, new Set())
+      }
+      distinctByMember.get(row.member_id)!.add(row.match_id)
+    }
+    for (const [memberId, matchIds] of distinctByMember) {
+      predictionsByMember.set(memberId, matchIds.size)
+    }
+  }
+
+  const rankByMember = new Map<string, number>()
+  const pointsByMember = new Map<string, number>()
+  const correctByMember = new Map<string, number>()
+  if (memberIds.length > 0) {
+    const { data: cacheRows } = await supabase
+      .from('leaderboard_cache')
+      .select('member_id, rank, total_points, correct_winners')
+      .in('member_id', memberIds)
+
+    for (const row of cacheRows ?? []) {
+      rankByMember.set(row.member_id, row.rank)
+      pointsByMember.set(row.member_id, row.total_points ?? 0)
+      correctByMember.set(row.member_id, row.correct_winners ?? 0)
+    }
+  }
+
+  const pools: DashboardPoolCardData[] = validMemberships.map((row) => {
+    const pool = row.pools!
+    const yourPredictions = predictionsByMember.get(row.id) ?? 0
+    return {
+      id: pool.id,
+      name: pool.name,
+      inviteCode: pool.invite_code,
+      status: pool.payment_status,
+      members: memberCountByPool.get(pool.id) ?? 1,
+      yourRank: rankByMember.get(row.id) ?? null,
+      totalPredictions,
+      yourPredictions,
+      nextMatch: nextMatchLabel,
+    }
+  })
+
+  let totalPoints = 0
+  let predictionsMade = 0
+  let totalCorrect = 0
+  for (const row of validMemberships) {
+    totalPoints += pointsByMember.get(row.id) ?? 0
+    predictionsMade += predictionsByMember.get(row.id) ?? 0
+    totalCorrect += correctByMember.get(row.id) ?? 0
+  }
+
+  const winRate =
+    predictionsMade > 0
+      ? Math.round((totalCorrect / predictionsMade) * 100)
+      : null
 
   return (
-    <main className="min-h-screen bg-[#080b0f] px-4 py-10">
-      <div className="mx-auto w-full max-w-2xl">
-        <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-display text-5xl tracking-wide text-[#f0f4f8]">
-            My Pools
-          </h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <DashboardSignOut email={user.email ?? ''} />
-            <Link
-              href="/create"
-              className="inline-flex items-center justify-center rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 transition-colors"
-            >
-              Create a Pool
-            </Link>
-          </div>
-        </header>
-
-        {passwordReset === 'success' && (
-          <div className="mt-6 rounded-lg border border-[#00e676]/30 bg-[#00e676]/10 px-4 py-3 text-sm text-[#00e676]">
-            Your password has been updated successfully.
-          </div>
-        )}
-
-        <section className="mt-10">
-          {userPools.length === 0 ? (
-            <div className="rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-10 text-center">
-              <p className="text-[#5a7080]">
-                No pools yet — create your first one
-              </p>
-              <Link
-                href="/create"
-                className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 transition-colors"
-              >
-                Create a Pool
-              </Link>
-            </div>
-          ) : (
-            <ul className="space-y-4">
-              {userPools.map((pool) => (
-                <li key={pool.id}>
-                  <Link
-                    href={`/pool/${pool.invite_code}`}
-                    className="block rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-6 transition-colors hover:border-[#00e676]/40"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <h2 className="text-lg font-semibold text-[#f0f4f8]">
-                          {pool.name}
-                        </h2>
-                        <p className="mt-1 text-sm text-[#5a7080]">
-                          Invite code:{' '}
-                          <span className="font-mono text-[#f0f4f8]">
-                            {pool.invite_code}
-                          </span>
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex w-fit shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-                          pool.payment_status === 'active' ||
-                            pool.payment_status === 'paid'
-                            ? 'bg-[#00e676]/15 text-[#00e676]'
-                            : 'bg-[#1a2535] text-[#5a7080]'
-                        }`}
-                      >
-                        {formatPaymentStatus(pool.payment_status)}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-    </main>
+    <DashboardView
+      email={user.email ?? ''}
+      pools={pools}
+      quickStats={{
+        totalPoints,
+        predictionsMade,
+        winRate,
+      }}
+      passwordResetSuccess={passwordReset === 'success'}
+      errorMessage={stripeErrorMessage(errorCode)}
+    />
   )
 }
