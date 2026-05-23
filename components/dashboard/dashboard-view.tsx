@@ -108,15 +108,10 @@ export function DashboardView({
           )}
 
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {quickStatItems.map((stat, i) => (
+            {quickStatItems.map((stat) => (
               <div
                 key={stat.label}
-                className={cn(
-                  'flex cursor-default items-center gap-4 rounded-2xl border border-border bg-card p-4 hover-lift',
-                  i === 0 && 'animate-float',
-                  i === 1 && 'animate-float-delayed',
-                  i === 2 && 'animate-float-delayed-2',
-                )}
+                className="flex cursor-default items-center gap-4 rounded-2xl border border-border bg-card p-4 hover-lift"
               >
                 <div className={cn('rounded-xl bg-muted p-3', stat.color)}>
                   <stat.icon className="h-6 w-6" />
@@ -140,8 +135,8 @@ export function DashboardView({
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {pools.map((pool, index) => (
-              <PoolCard key={pool.id} pool={pool} index={index} />
+            {pools.map((pool) => (
+              <PoolCard key={pool.id} pool={pool} />
             ))}
 
             <Link

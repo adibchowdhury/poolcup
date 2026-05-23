@@ -25,7 +25,6 @@ export type DashboardPoolCardData = {
 
 interface PoolCardProps {
   pool: DashboardPoolCardData
-  index: number
 }
 
 function isActiveStatus(status: string): boolean {
@@ -33,7 +32,7 @@ function isActiveStatus(status: string): boolean {
   return s === 'active' || s === 'paid'
 }
 
-export function PoolCard({ pool, index }: PoolCardProps) {
+export function PoolCard({ pool }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const progressPercent =
     pool.totalPredictions > 0
@@ -51,12 +50,7 @@ export function PoolCard({ pool, index }: PoolCardProps) {
   return (
     <Link href={`/pool/${pool.inviteCode}`}>
       <div
-        className={cn(
-          'group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card hover-lift',
-          index === 0 && 'animate-float',
-          index === 1 && 'animate-float-delayed',
-          index === 2 && 'animate-float-delayed-2',
-        )}
+        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card hover-lift"
       >
         <div className="absolute inset-0 animate-shine opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
