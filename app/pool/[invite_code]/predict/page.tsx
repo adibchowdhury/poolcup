@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
+import { CompactMatchRow } from '@/components/predict/compact-match-row'
+import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
+import { StageTabs, type StageTab } from '@/components/predict/stage-tabs'
+import { ProgressHeader } from '@/components/predict/progress-header'
+import { SaveBar } from '@/components/predict/save-bar'
 
 type Pool = {
   id: string
@@ -20,6 +26,8 @@ type Match = {
   team2_name: string
   team1_flag: string
   team2_flag: string
+  group_name: string | null
+  round: string
 }
 
 type PredictionRow = {
@@ -33,13 +41,38 @@ type ScoreInput = {
   score2: string
 }
 
-function formatMatchDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  })
+type MatchGroup = {
+  id: string
+  title: string
+  subtitle?: string
+  matches: Match[]
 }
+
+const STAGE_TABS: StageTab[] = [
+  { id: 'group', label: 'Group Stage' },
+  { id: 'knockout', label: 'Round of 16' },
+  { id: 'qf', label: 'Quarter Finals' },
+  { id: 'sf', label: 'Semi Finals' },
+  { id: 'final', label: 'Final' },
+]
+
+const STAGE_ROUNDS: Record<string, string[]> = {
+  group: ['group'],
+  knockout: ['r32', 'r16'],
+  qf: ['qf'],
+  sf: ['sf'],
+  final: ['final'],
+}
+
+const KNOCKOUT_SECTION_LABELS: Record<string, string> = {
+  r32: 'Round of 32',
+  r16: 'Round of 16',
+  qf: 'Quarter Finals',
+  sf: 'Semi Finals',
+  final: 'Final',
+}
+
+const KNOCKOUT_SECTION_ORDER = ['r32', 'r16', 'qf', 'sf', 'final'] as const
 
 function isMatchLocked(lockedAt: string | null): boolean {
   if (!lockedAt) return false
@@ -53,6 +86,117 @@ function clampScoreValue(value: string): string {
   return String(Math.min(20, Math.max(0, num)))
 }
 
+function isPredicted(match: Match, scores: Record<string, ScoreInput>): boolean {
+  const entry = scores[match.id]
+  return entry?.score1 !== '' && entry?.score2 !== ''
+}
+
+function matchInStage(match: Match, stageId: string): boolean {
+  return STAGE_ROUNDS[stageId]?.includes(match.round) ?? false
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function buildMatchdayGroups(matches: Match[]): MatchGroup[] {
+  const sorted = [...matches].sort(
+    (a, b) => new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+  )
+  const dayKeys: string[] = []
+  for (const m of sorted) {
+    const day = m.kickoff_at.slice(0, 10)
+    if (!dayKeys.includes(day)) dayKeys.push(day)
+  }
+
+  return dayKeys.map((day, index) => {
+    const dayMatches = sorted.filter((m) => m.kickoff_at.startsWith(day))
+    return {
+      id: `matchday-${day}`,
+      title: `MATCHDAY ${index + 1}`,
+      subtitle: formatShortDate(day),
+      matches: dayMatches,
+    }
+  })
+}
+
+function buildKnockoutGroups(matches: Match[], stageId: string): MatchGroup[] {
+  const rounds = STAGE_ROUNDS[stageId] ?? []
+  return KNOCKOUT_SECTION_ORDER.filter((r) => rounds.includes(r))
+    .map((round) => {
+      const roundMatches = matches
+        .filter((m) => m.round === round)
+        .sort(
+          (a, b) =>
+            new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+        )
+      if (roundMatches.length === 0) return null
+      return {
+        id: round,
+        title: KNOCKOUT_SECTION_LABELS[round].toUpperCase(),
+        subtitle: formatShortDate(roundMatches[0].kickoff_at),
+        matches: roundMatches,
+      }
+    })
+    .filter((g): g is MatchGroup => g !== null)
+}
+
+function buildGroupSections(matches: Match[], stageId: string): MatchGroup[] {
+  if (stageId === 'group') {
+    const byGroup = new Map<string, Match[]>()
+    for (const m of matches) {
+      const key = m.group_name?.toUpperCase() ?? 'OTHER'
+      if (!byGroup.has(key)) byGroup.set(key, [])
+      byGroup.get(key)!.push(m)
+    }
+    if (byGroup.size > 1 && [...byGroup.keys()].some((k) => k !== 'OTHER')) {
+      return [...byGroup.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([group, groupMatches]) => ({
+          id: `group-${group}`,
+          title: `GROUP ${group}`,
+          matches: groupMatches.sort(
+            (a, b) =>
+              new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+          ),
+        }))
+    }
+    return buildMatchdayGroups(matches)
+  }
+  return buildKnockoutGroups(matches, stageId)
+}
+
+function toSectionMatch(
+  match: Match,
+  scores: Record<string, ScoreInput>,
+  savedMatchIds: Set<string>,
+): SectionMatch {
+  const entry = scores[match.id] ?? { score1: '', score2: '' }
+  const both = entry.score1 !== '' && entry.score2 !== ''
+  return {
+    id: match.id,
+    homeTeam: { name: match.team1_name, flag: match.team1_flag },
+    awayTeam: { name: match.team2_name, flag: match.team2_flag },
+    homeScore: entry.score1,
+    awayScore: entry.score2,
+    isLocked: isMatchLocked(match.locked_at),
+    isPredicted: savedMatchIds.has(match.id) && both,
+  }
+}
+
+function sectionNeedsAttention(
+  group: MatchGroup,
+  scores: Record<string, ScoreInput>,
+): boolean {
+  return group.matches.some(
+    (m) => !isMatchLocked(m.locked_at) && !isPredicted(m, scores),
+  )
+}
+
 export default function PredictPage() {
   const params = useParams()
   const router = useRouter()
@@ -63,11 +207,14 @@ export default function PredictPage() {
   const [memberId, setMemberId] = useState<string | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
   const [scores, setScores] = useState<Record<string, ScoreInput>>({})
+  const [baselineScores, setBaselineScores] = useState<Record<string, ScoreInput>>({})
   const [savedMatchIds, setSavedMatchIds] = useState<Set<string>>(new Set())
+  const [activeStage, setActiveStage] = useState('group')
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [notMember, setNotMember] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -108,7 +255,7 @@ export default function PredictPage() {
     const { data: matchesData, error: matchesError } = await supabase
       .from('matches')
       .select(
-        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag'
+        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
       )
       .order('kickoff_at', { ascending: true })
 
@@ -142,44 +289,109 @@ export default function PredictPage() {
       initialSaved.add(prediction.match_id)
     }
 
+    const loaded = (matchesData ?? []) as Match[]
+    const defaultStage =
+      STAGE_TABS.find((tab) =>
+        loaded.some(
+          (m) =>
+            matchInStage(m, tab.id) &&
+            !isMatchLocked(m.locked_at) &&
+            !isPredicted(m, initialScores),
+        ),
+      )?.id ??
+      STAGE_TABS.find((tab) => loaded.some((m) => matchInStage(m, tab.id)))?.id ??
+      'group'
+
     setPool(poolData as Pool)
     setMemberId(memberData.id)
-    setMatches((matchesData ?? []) as Match[])
+    setMatches(loaded)
     setScores(initialScores)
+    setBaselineScores(
+      Object.fromEntries(
+        Object.entries(initialScores).map(([id, s]) => [id, { ...s }]),
+      ),
+    )
     setSavedMatchIds(initialSaved)
+    setActiveStage(defaultStage)
     setPageLoading(false)
   }, [inviteCode, user])
 
   useEffect(() => {
     if (authLoading) return
-
     if (!user) {
       router.replace('/login')
       return
     }
-
     loadData()
   }, [authLoading, user, router, loadData])
 
-  const matchesByDate = useMemo(() => {
-    return matches.reduce<Record<string, Match[]>>((groups, match) => {
-      const dateKey = formatMatchDate(match.kickoff_at)
-      if (!groups[dateKey]) {
-        groups[dateKey] = []
-      }
-      groups[dateKey].push(match)
-      return groups
-    }, {})
-  }, [matches])
+  const stageMatches = useMemo(
+    () => matches.filter((m) => matchInStage(m, activeStage)),
+    [matches, activeStage],
+  )
 
-  function updateScore(
-    matchId: string,
-    field: 'score1' | 'score2',
-    value: string
-  ) {
+  const sections = useMemo(
+    () => buildGroupSections(stageMatches, activeStage),
+    [stageMatches, activeStage],
+  )
+
+  const defaultOpenSectionId = useMemo(() => {
+    const open =
+      sections.find((s) => sectionNeedsAttention(s, scores))?.id ??
+      sections[0]?.id
+    return open ?? ''
+  }, [sections, scores])
+
+  const predictedCount = useMemo(
+    () => matches.filter((m) => isPredicted(m, scores)).length,
+    [matches, scores],
+  )
+
+  const stagePredictedCount = useMemo(
+    () => stageMatches.filter((m) => isPredicted(m, scores)).length,
+    [stageMatches, scores],
+  )
+
+  const totalMatches = matches.length
+
+  const priorityMatches = useMemo(() => {
+    return matches
+      .filter(
+        (m) =>
+          !isMatchLocked(m.locked_at) &&
+          !isPredicted(m, scores) &&
+          new Date(m.kickoff_at).getTime() >= Date.now(),
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+      )
+      .slice(0, 4)
+  }, [matches, scores])
+
+  const unsavedCount = useMemo(() => {
+    return matches.filter((match) => {
+      if (isMatchLocked(match.locked_at)) return false
+      const entry = scores[match.id]
+      const baseline = baselineScores[match.id]
+      if (!entry || entry.score1 === '' || entry.score2 === '') return false
+      return (
+        entry.score1 !== (baseline?.score1 ?? '') ||
+        entry.score2 !== (baseline?.score2 ?? '')
+      )
+    }).length
+  }, [matches, scores, baselineScores])
+
+  const visibleTabs = useMemo(
+    () =>
+      STAGE_TABS.filter((tab) => matches.some((m) => matchInStage(m, tab.id))),
+    [matches],
+  )
+
+  function updateScore(matchId: string, field: 'score1' | 'score2', value: string) {
     const sanitized = value.replace(/\D/g, '')
     const clamped = clampScoreValue(sanitized)
-
+    setSaveSuccess(false)
     setScores((prev) => ({
       ...prev,
       [matchId]: {
@@ -192,11 +404,12 @@ export default function PredictPage() {
   }
 
   async function handleSave() {
-    if (!pool || !memberId) return
+    if (!pool || !memberId || unsavedCount === 0) return
 
     setSaving(true)
     setError(null)
     setSuccessMessage(null)
+    setSaveSuccess(false)
 
     const rows = matches
       .filter((match) => {
@@ -237,213 +450,172 @@ export default function PredictPage() {
       rows.forEach((row) => next.add(row.match_id))
       return next
     })
+    setBaselineScores((prev) => {
+      const next = { ...prev }
+      rows.forEach((row) => {
+        next[row.match_id] = { ...scores[row.match_id]! }
+      })
+      return next
+    })
+    setSaveSuccess(true)
     setSuccessMessage(`Saved ${rows.length} prediction${rows.length === 1 ? '' : 's'}`)
+    window.setTimeout(() => setSaveSuccess(false), 2000)
   }
 
   if (authLoading || (!user && !notFound)) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
-        <p className="text-[#5a7080]">Loading…</p>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading…</p>
+      </div>
     )
   }
 
   if (pageLoading) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
-        <p className="text-[#5a7080]">Loading matches…</p>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading matches…</p>
+      </div>
     )
   }
 
   if (notFound || !pool) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 text-center">
-          <p className="text-lg font-semibold text-[#f0f4f8]">Pool not found</p>
-          <Link
-            href="/dashboard"
-            className="mt-6 inline-block text-sm text-[#00e676] hover:underline"
-          >
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+          <p className="text-lg font-semibold text-foreground">Pool not found</p>
+          <Link href="/dashboard" className="mt-6 inline-block text-sm text-primary hover:underline">
             Back to dashboard
           </Link>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (notMember) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 text-center">
-          <p className="text-lg font-semibold text-[#f0f4f8]">Join this pool first</p>
-          <p className="mt-2 text-sm text-[#5a7080]">
-            You need to be a member before making predictions.
-          </p>
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+          <p className="text-lg font-semibold text-foreground">Join this pool first</p>
           <Link
             href={`/join/${inviteCode}`}
-            className="mt-6 inline-block rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f]"
+            className="mt-6 inline-block rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
           >
             Join pool
           </Link>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#080b0f] pb-28 pt-8">
-      <div className="mx-auto w-full max-w-lg px-4">
-        <Link
-          href={`/pool/${inviteCode}`}
-          className="text-sm text-[#5a7080] hover:text-[#00e676] transition-colors"
-        >
-          ← Back to pool
-        </Link>
+    <div className="min-h-screen bg-background pb-20">
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
+        <div className="mx-auto max-w-5xl space-y-3 px-4 py-3 sm:py-4">
+          <Link
+            href={`/pool/${inviteCode}`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="truncate">{pool.name}</span>
+          </Link>
 
-        <header className="mt-4 mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl tracking-wide text-[#f0f4f8]">
-              Your predictions
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">
+              Predictions
             </h1>
-            <p className="mt-1 text-sm text-[#5a7080]">{pool.name}</p>
+            <p className="font-mono text-xs text-muted-foreground sm:text-sm">
+              {stagePredictedCount}/{stageMatches.length} in this stage
+            </p>
           </div>
-        </header>
 
+          <ProgressHeader current={predictedCount} total={totalMatches || 48} />
+
+          {visibleTabs.length > 0 && (
+            <StageTabs
+              tabs={visibleTabs}
+              activeId={activeStage}
+              onChange={setActiveStage}
+            />
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-4">
         {successMessage && (
-          <div className="mb-4 rounded-lg border border-[#00e676]/30 bg-[#00e676]/10 px-4 py-3 text-sm text-[#00e676]">
+          <div className="animate-in fade-in rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary duration-300">
             {successMessage}
           </div>
         )}
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="space-y-6">
-          {Object.entries(matchesByDate).map(([dateLabel, dayMatches]) => (
-            <section key={dateLabel}>
-              <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-[#5a7080]">
-                {dateLabel}
+        {priorityMatches.length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-secondary" />
+              <h2 className="font-display text-lg tracking-wide text-foreground uppercase">
+                Up Next
               </h2>
-              <div className="space-y-3">
-                {dayMatches.map((match) => {
-                  const locked = isMatchLocked(match.locked_at)
-                  const entry = scores[match.id] ?? { score1: '', score2: '' }
-                  const hasSaved = savedMatchIds.has(match.id)
-                  const bothFilled = entry.score1 !== '' && entry.score2 !== ''
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+              {priorityMatches.map((match) => {
+                const card = toSectionMatch(match, scores, savedMatchIds)
+                return (
+                  <CompactMatchRow
+                    key={`priority-${match.id}`}
+                    homeTeam={card.homeTeam}
+                    awayTeam={card.awayTeam}
+                    homeScore={card.homeScore}
+                    awayScore={card.awayScore}
+                    isLocked={card.isLocked}
+                    isPredicted={card.isPredicted}
+                    onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
+                    onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
+                  />
+                )
+              })}
+            </div>
+          </section>
+        )}
 
-                  return (
-                    <div
-                      key={match.id}
-                      className={`rounded-xl border border-[#1e2d3d] bg-[#111a27] p-4 ${
-                        locked ? 'opacity-60' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                          <span className="text-2xl">{match.team1_flag}</span>
-                          <span className="truncate text-sm font-medium text-[#f0f4f8]">
-                            {match.team1_name}
-                          </span>
-                        </div>
-
-                        {locked ? (
-                          <span className="shrink-0 rounded-lg bg-[#1a2535] px-3 py-2 text-xs font-semibold tracking-wider text-[#5a7080]">
-                            LOCKED
-                          </span>
-                        ) : (
-                          <div className="flex shrink-0 items-center gap-2">
-                            <input
-                              type="number"
-                              min={0}
-                              max={20}
-                              inputMode="numeric"
-                              placeholder="–"
-                              value={entry.score1}
-                              onChange={(e) =>
-                                updateScore(match.id, 'score1', e.target.value)
-                              }
-                              className={`h-11 w-12 rounded-md text-center font-display text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] ${
-                                hasSaved && bothFilled
-                                  ? 'border-2 border-[#00e676] bg-[#00e676]/15 text-[#00e676]'
-                                  : 'border border-[#1e2d3d] bg-[#080b0f] text-[#f0f4f8]'
-                              }`}
-                            />
-                            <span className="text-[#5a7080]">–</span>
-                            <input
-                              type="number"
-                              min={0}
-                              max={20}
-                              inputMode="numeric"
-                              placeholder="–"
-                              value={entry.score2}
-                              onChange={(e) =>
-                                updateScore(match.id, 'score2', e.target.value)
-                              }
-                              className={`h-11 w-12 rounded-md text-center font-display text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] ${
-                                hasSaved && bothFilled
-                                  ? 'border-2 border-[#00e676] bg-[#00e676]/15 text-[#00e676]'
-                                  : 'border border-[#1e2d3d] bg-[#080b0f] text-[#f0f4f8]'
-                              }`}
-                            />
-                            {hasSaved && bothFilled && (
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00e676]">
-                                <svg
-                                  className="h-3.5 w-3.5 text-[#080b0f]"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  aria-hidden
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={3}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                          <span className="truncate text-sm font-medium text-[#f0f4f8]">
-                            {match.team2_name}
-                          </span>
-                          <span className="text-2xl">{match.team2_flag}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-
-          {matches.length === 0 && (
-            <p className="text-center text-sm text-[#5a7080]">
-              No matches available yet.
+        <div key={activeStage} className="space-y-2">
+          {sections.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No matches in this stage.
             </p>
+          ) : (
+            sections.map((group) => (
+              <MatchSection
+                key={group.id}
+                id={group.id}
+                title={group.title}
+                subtitle={group.subtitle}
+                matches={group.matches.map((m) =>
+                  toSectionMatch(m, scores, savedMatchIds),
+                )}
+                predictedInSection={
+                  group.matches.filter((m) => isPredicted(m, scores)).length
+                }
+                defaultOpen={group.id === defaultOpenSectionId}
+                onHomeScoreChange={(id, v) => updateScore(id, 'score1', v)}
+                onAwayScoreChange={(id, v) => updateScore(id, 'score2', v)}
+              />
+            ))
           )}
         </div>
-      </div>
+      </main>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-[#1e2d3d] bg-[#111a27] p-4">
-        <div className="mx-auto w-full max-w-lg">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#00e676] py-4 text-base font-semibold text-[#080b0f] hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save predictions'}
-          </button>
-        </div>
-      </div>
-    </main>
+      <SaveBar
+        unsavedCount={unsavedCount}
+        saving={saving}
+        success={saveSuccess}
+        disabled={unsavedCount === 0}
+        onSave={handleSave}
+      />
+    </div>
   )
 }
