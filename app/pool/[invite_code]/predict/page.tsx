@@ -6,9 +6,13 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
+import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
-import { StageTabs, type StageTab } from '@/components/predict/stage-tabs'
+import {
+  GroupKnockoutTabs,
+  type GroupKnockoutTabId,
+} from '@/components/predict/group-knockout-tabs'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 
@@ -48,21 +52,7 @@ type MatchGroup = {
   matches: Match[]
 }
 
-const STAGE_TABS: StageTab[] = [
-  { id: 'group', label: 'Group Stage' },
-  { id: 'knockout', label: 'Round of 16' },
-  { id: 'qf', label: 'Quarter Finals' },
-  { id: 'sf', label: 'Semi Finals' },
-  { id: 'final', label: 'Final' },
-]
-
-const STAGE_ROUNDS: Record<string, string[]> = {
-  group: ['group'],
-  knockout: ['r32', 'r16'],
-  qf: ['qf'],
-  sf: ['sf'],
-  final: ['final'],
-}
+const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
 
 const KNOCKOUT_SECTION_LABELS: Record<string, string> = {
   r32: 'Round of 32',
@@ -72,7 +62,9 @@ const KNOCKOUT_SECTION_LABELS: Record<string, string> = {
   final: 'Final',
 }
 
-const KNOCKOUT_SECTION_ORDER = ['r32', 'r16', 'qf', 'sf', 'final'] as const
+function isKnockoutRound(round: string): boolean {
+  return (KNOCKOUT_ROUNDS as readonly string[]).includes(round)
+}
 
 function isMatchLocked(lockedAt: string | null): boolean {
   if (!lockedAt) return false
@@ -91,8 +83,9 @@ function isPredicted(match: Match, scores: Record<string, ScoreInput>): boolean 
   return entry?.score1 !== '' && entry?.score2 !== ''
 }
 
-function matchInStage(match: Match, stageId: string): boolean {
-  return STAGE_ROUNDS[stageId]?.includes(match.round) ?? false
+function matchInTab(match: Match, tab: GroupKnockoutTabId): boolean {
+  if (tab === 'group') return match.round === 'group'
+  return isKnockoutRound(match.round)
 }
 
 function formatShortDate(iso: string): string {
@@ -124,50 +117,44 @@ function buildMatchdayGroups(matches: Match[]): MatchGroup[] {
   })
 }
 
-function buildKnockoutGroups(matches: Match[], stageId: string): MatchGroup[] {
-  const rounds = STAGE_ROUNDS[stageId] ?? []
-  return KNOCKOUT_SECTION_ORDER.filter((r) => rounds.includes(r))
-    .map((round) => {
-      const roundMatches = matches
-        .filter((m) => m.round === round)
-        .sort(
+function buildGroupStageSections(matches: Match[]): MatchGroup[] {
+  const byGroup = new Map<string, Match[]>()
+  for (const m of matches) {
+    const key = m.group_name?.toUpperCase() ?? 'OTHER'
+    if (!byGroup.has(key)) byGroup.set(key, [])
+    byGroup.get(key)!.push(m)
+  }
+  if (byGroup.size > 1 && [...byGroup.keys()].some((k) => k !== 'OTHER')) {
+    return [...byGroup.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([group, groupMatches]) => ({
+        id: `group-${group}`,
+        title: `GROUP ${group}`,
+        matches: groupMatches.sort(
           (a, b) =>
             new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
-        )
-      if (roundMatches.length === 0) return null
-      return {
-        id: round,
-        title: KNOCKOUT_SECTION_LABELS[round].toUpperCase(),
-        subtitle: formatShortDate(roundMatches[0].kickoff_at),
-        matches: roundMatches,
-      }
-    })
-    .filter((g): g is MatchGroup => g !== null)
+        ),
+      }))
+  }
+  return buildMatchdayGroups(matches)
 }
 
-function buildGroupSections(matches: Match[], stageId: string): MatchGroup[] {
-  if (stageId === 'group') {
-    const byGroup = new Map<string, Match[]>()
-    for (const m of matches) {
-      const key = m.group_name?.toUpperCase() ?? 'OTHER'
-      if (!byGroup.has(key)) byGroup.set(key, [])
-      byGroup.get(key)!.push(m)
+function buildKnockoutSections(matches: Match[]): MatchGroup[] {
+  return KNOCKOUT_ROUNDS.map((round) => {
+    const roundMatches = matches
+      .filter((m) => m.round === round)
+      .sort(
+        (a, b) =>
+          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+      )
+    if (roundMatches.length === 0) return null
+    return {
+      id: round,
+      title: KNOCKOUT_SECTION_LABELS[round].toUpperCase(),
+      subtitle: formatShortDate(roundMatches[0].kickoff_at),
+      matches: roundMatches,
     }
-    if (byGroup.size > 1 && [...byGroup.keys()].some((k) => k !== 'OTHER')) {
-      return [...byGroup.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([group, groupMatches]) => ({
-          id: `group-${group}`,
-          title: `GROUP ${group}`,
-          matches: groupMatches.sort(
-            (a, b) =>
-              new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
-          ),
-        }))
-    }
-    return buildMatchdayGroups(matches)
-  }
-  return buildKnockoutGroups(matches, stageId)
+  }).filter((g): g is MatchGroup => g !== null)
 }
 
 function toSectionMatch(
@@ -179,8 +166,14 @@ function toSectionMatch(
   const both = entry.score1 !== '' && entry.score2 !== ''
   return {
     id: match.id,
-    homeTeam: { name: match.team1_name, flag: match.team1_flag },
-    awayTeam: { name: match.team2_name, flag: match.team2_flag },
+    homeTeam: {
+      name: match.team1_name,
+      flag: resolveTeamFlag(match.team1_name, match.team1_flag),
+    },
+    awayTeam: {
+      name: match.team2_name,
+      flag: resolveTeamFlag(match.team2_name, match.team2_flag),
+    },
     homeScore: entry.score1,
     awayScore: entry.score2,
     isLocked: isMatchLocked(match.locked_at),
@@ -209,7 +202,7 @@ export default function PredictPage() {
   const [scores, setScores] = useState<Record<string, ScoreInput>>({})
   const [baselineScores, setBaselineScores] = useState<Record<string, ScoreInput>>({})
   const [savedMatchIds, setSavedMatchIds] = useState<Set<string>>(new Set())
-  const [activeStage, setActiveStage] = useState('group')
+  const [activeTab, setActiveTab] = useState<GroupKnockoutTabId>('group')
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [notMember, setNotMember] = useState(false)
@@ -290,17 +283,23 @@ export default function PredictPage() {
     }
 
     const loaded = (matchesData ?? []) as Match[]
-    const defaultStage =
-      STAGE_TABS.find((tab) =>
-        loaded.some(
-          (m) =>
-            matchInStage(m, tab.id) &&
-            !isMatchLocked(m.locked_at) &&
-            !isPredicted(m, initialScores),
-        ),
-      )?.id ??
-      STAGE_TABS.find((tab) => loaded.some((m) => matchInStage(m, tab.id)))?.id ??
-      'group'
+    const defaultTab: GroupKnockoutTabId = loaded.some(
+      (m) =>
+        matchInTab(m, 'group') &&
+        !isMatchLocked(m.locked_at) &&
+        !isPredicted(m, initialScores),
+    )
+      ? 'group'
+      : loaded.some(
+            (m) =>
+              matchInTab(m, 'knockout') &&
+              !isMatchLocked(m.locked_at) &&
+              !isPredicted(m, initialScores),
+          )
+        ? 'knockout'
+        : loaded.some((m) => matchInTab(m, 'group'))
+          ? 'group'
+          : 'knockout'
 
     setPool(poolData as Pool)
     setMemberId(memberData.id)
@@ -312,7 +311,7 @@ export default function PredictPage() {
       ),
     )
     setSavedMatchIds(initialSaved)
-    setActiveStage(defaultStage)
+    setActiveTab(defaultTab)
     setPageLoading(false)
   }, [inviteCode, user])
 
@@ -325,15 +324,15 @@ export default function PredictPage() {
     loadData()
   }, [authLoading, user, router, loadData])
 
-  const stageMatches = useMemo(
-    () => matches.filter((m) => matchInStage(m, activeStage)),
-    [matches, activeStage],
+  const tabMatches = useMemo(
+    () => matches.filter((m) => matchInTab(m, activeTab)),
+    [matches, activeTab],
   )
 
-  const sections = useMemo(
-    () => buildGroupSections(stageMatches, activeStage),
-    [stageMatches, activeStage],
-  )
+  const sections = useMemo(() => {
+    if (activeTab === 'group') return buildGroupStageSections(tabMatches)
+    return buildKnockoutSections(tabMatches)
+  }, [tabMatches, activeTab])
 
   const defaultOpenSectionId = useMemo(() => {
     const open =
@@ -347,9 +346,9 @@ export default function PredictPage() {
     [matches, scores],
   )
 
-  const stagePredictedCount = useMemo(
-    () => stageMatches.filter((m) => isPredicted(m, scores)).length,
-    [stageMatches, scores],
+  const tabPredictedCount = useMemo(
+    () => tabMatches.filter((m) => isPredicted(m, scores)).length,
+    [tabMatches, scores],
   )
 
   const totalMatches = matches.length
@@ -366,7 +365,7 @@ export default function PredictPage() {
         (a, b) =>
           new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
       )
-      .slice(0, 4)
+      .slice(0, 3)
   }, [matches, scores])
 
   const unsavedCount = useMemo(() => {
@@ -381,12 +380,6 @@ export default function PredictPage() {
       )
     }).length
   }, [matches, scores, baselineScores])
-
-  const visibleTabs = useMemo(
-    () =>
-      STAGE_TABS.filter((tab) => matches.some((m) => matchInStage(m, tab.id))),
-    [matches],
-  )
 
   function updateScore(matchId: string, field: 'score1' | 'score2', value: string) {
     const sanitized = value.replace(/\D/g, '')
@@ -510,7 +503,7 @@ export default function PredictPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto max-w-5xl space-y-3 px-4 py-3 sm:py-4">
+        <div className="mx-auto max-w-3xl space-y-3 px-4 py-3 sm:py-4">
           <Link
             href={`/pool/${inviteCode}`}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -519,28 +512,22 @@ export default function PredictPage() {
             <span className="truncate">{pool.name}</span>
           </Link>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">
               Predictions
             </h1>
             <p className="font-mono text-xs text-muted-foreground sm:text-sm">
-              {stagePredictedCount}/{stageMatches.length} in this stage
+              {tabPredictedCount}/{tabMatches.length} in this view
             </p>
           </div>
 
           <ProgressHeader current={predictedCount} total={totalMatches || 48} />
 
-          {visibleTabs.length > 0 && (
-            <StageTabs
-              tabs={visibleTabs}
-              activeId={activeStage}
-              onChange={setActiveStage}
-            />
-          )}
+          <GroupKnockoutTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-4 px-4 py-4">
+      <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
         {successMessage && (
           <div className="animate-in fade-in rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary duration-300">
             {successMessage}
@@ -554,19 +541,20 @@ export default function PredictPage() {
         )}
 
         {priorityMatches.length > 0 && (
-          <section className="space-y-2">
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse-dot rounded-full bg-secondary" />
-              <h2 className="font-display text-lg tracking-wide text-foreground uppercase">
+              <h2 className="font-display text-xl tracking-wide text-foreground uppercase">
                 Up Next
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+            <div className="flex flex-col gap-3">
               {priorityMatches.map((match) => {
                 const card = toSectionMatch(match, scores, savedMatchIds)
                 return (
                   <CompactMatchRow
                     key={`priority-${match.id}`}
+                    variant="prominent"
                     homeTeam={card.homeTeam}
                     awayTeam={card.awayTeam}
                     homeScore={card.homeScore}
@@ -582,7 +570,7 @@ export default function PredictPage() {
           </section>
         )}
 
-        <div key={activeStage} className="space-y-2">
+        <div key={activeTab} className="space-y-2">
           {sections.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No matches in this stage.

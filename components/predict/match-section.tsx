@@ -80,7 +80,7 @@ export function MatchSection({
         )}
       >
         <div className="overflow-hidden">
-          <div className="grid grid-cols-1 gap-1.5 border-t border-border/60 p-2 sm:gap-2 sm:p-3 md:grid-cols-2">
+          <div className="flex flex-col gap-2 border-t border-border/60 p-3 sm:p-4">
             {matches.map((match) => (
               <CompactMatchRow
                 key={match.id}

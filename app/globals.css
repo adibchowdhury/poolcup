@@ -156,3 +156,14 @@
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 }
+
+.predict-score-input::-webkit-outer-spin-button,
+.predict-score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.predict-score-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
