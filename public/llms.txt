@@ -1,0 +1,43 @@
+# PoolCup
+
+> PoolCup is a private World Cup 2026 prediction pool app. Create a pool for your office, group chat, or friends; invite members with a link; everyone predicts match scores before kickoff; the app scores predictions and updates live leaderboards automatically.
+
+## What it does
+
+- Create a paid private pool ($15 one-time per pool creator)
+- Share an invite link so members can join
+- Predict scores for group stage and knockout matches
+- Automatic scoring and leaderboard rankings after results are final
+- Built for the FIFA World Cup 2026 tournament (72 matches)
+
+## Key pages
+
+- Homepage (product overview, how it works, features, pricing): https://poolcup.app/
+- How it works (on homepage): https://poolcup.app/#how-it-works
+- Features (on homepage): https://poolcup.app/#features
+- Pricing (on homepage): https://poolcup.app/#pricing
+- Sign in: https://poolcup.app/login
+- Create account: https://poolcup.app/create-account
+- Contact support: https://poolcup.app/contact
+
+## Legal & trust (linked from footer; pages may be added over time)
+
+- Privacy policy: https://poolcup.app/privacy
+- Terms of service: https://poolcup.app/terms
+- Cookie policy: https://poolcup.app/cookies
+- Security & data protection: https://poolcup.app/security
+
+## Authenticated areas (not for public indexing)
+
+Member-only flows such as `/dashboard`, `/create`, `/pool/{invite_code}`, and `/join/{invite_code}` require an account and/or a pool invite code.
+
+## Contact
+
+- Support email: support@poolcup.app
+- Contact form: https://poolcup.app/contact
+
+## Tech summary
+
+- Web app: Next.js (React), hosted as a modern SPA/SSR site
+- Auth & data: Supabase
+- Payments: Stripe (pool creation)
