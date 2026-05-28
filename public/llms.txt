@@ -12,20 +12,20 @@
 
 ## Key pages
 
-- Homepage (product overview, how it works, features, pricing): https://poolcup.app/
-- How it works (on homepage): https://poolcup.app/#how-it-works
-- Features (on homepage): https://poolcup.app/#features
-- Pricing (on homepage): https://poolcup.app/#pricing
-- Sign in: https://poolcup.app/login
-- Create account: https://poolcup.app/create-account
-- Contact support: https://poolcup.app/contact
+- Homepage (product overview, how it works, features, pricing): https://www.getpoolcup.com/
+- How it works (on homepage): https://www.getpoolcup.com/#how-it-works
+- Features (on homepage): https://www.getpoolcup.com/#features
+- Pricing (on homepage): https://www.getpoolcup.com/#pricing
+- Sign in: https://www.getpoolcup.com/login
+- Create account: https://www.getpoolcup.com/create-account
+- Contact support: https://www.getpoolcup.com/contact
 
 ## Legal & trust (linked from footer; pages may be added over time)
 
-- Privacy policy: https://poolcup.app/privacy
-- Terms of service: https://poolcup.app/terms
-- Cookie policy: https://poolcup.app/cookies
-- Security & data protection: https://poolcup.app/security
+- Privacy policy: https://www.getpoolcup.com/privacy
+- Terms of service: https://www.getpoolcup.com/terms
+- Cookie policy: https://www.getpoolcup.com/cookies
+- Security & data protection: https://www.getpoolcup.com/security
 
 ## Authenticated areas (not for public indexing)
 
@@ -34,7 +34,7 @@ Member-only flows such as `/dashboard`, `/create`, `/pool/{invite_code}`, and `/
 ## Contact
 
 - Support email: support@poolcup.app
-- Contact form: https://poolcup.app/contact
+- Contact form: https://www.getpoolcup.com/contact
 
 ## Tech summary
 
