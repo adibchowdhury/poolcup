@@ -131,7 +131,7 @@ export default function PrivacyPage() {
               <Link href="/cookies" className="text-primary underline-offset-4 hover:underline">
                 Cookie Policy
               </Link>{' '}
-              for more detail when available.
+              for more detail.
             </p>
           </section>
 
