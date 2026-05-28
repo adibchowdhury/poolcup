@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { SiteFooter } from "@/components/site-footer"
 
 const scoringStyles = [
   { id: "classic", label: "Classic" },
@@ -757,13 +758,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-[rgba(255,255,255,0.08)] bg-[#080b0f]">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="font-display text-xl text-[#00e676]">POOLCUP</div>
-          <div className="text-[#5a7080] text-sm">World Cup 2026 Prediction Pools</div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

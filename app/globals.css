@@ -97,6 +97,16 @@
   letter-spacing: 0.02em;
 }
 
+/* Footer column titles (reference SiteFooter — DM Sans caps, not Bebas) */
+.font-footer-heading {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 /* Space Mono for scores and timers */
 .font-mono {
   font-family: 'Space Mono', monospace;
