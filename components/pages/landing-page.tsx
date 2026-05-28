@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { SiteFooter } from "@/components/site-footer"
 
 const scoringStyles = [
@@ -184,7 +185,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== CREATE YOUR POOL ===== */}
-      <section id="features" className="py-24 md:py-32 bg-[#080b0f]">
+      <section className="py-24 md:py-32 bg-[#080b0f]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* UI Preview - Left */}
@@ -281,6 +282,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <FeatureTabsSection />
 
       {/* ===== INVITE YOUR SQUAD ===== */}
       <section className="py-24 md:py-32 bg-[#0d1520]">
