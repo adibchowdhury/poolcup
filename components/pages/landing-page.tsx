@@ -63,14 +63,16 @@ export default function LandingPage() {
         </svg>
         
         {/* Navigation */}
-        <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-          <div className="font-display text-2xl text-[#00e676] tracking-wider">POOLCUP</div>
-          <div className="hidden md:flex items-center gap-8">
+        <nav className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4 max-w-7xl mx-auto">
+          <div className="font-display text-2xl text-[#00e676] tracking-wider justify-self-start">
+            POOLCUP
+          </div>
+          <div className="hidden md:flex items-center justify-center gap-8">
             <a href="#how-it-works" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">How it works</a>
             <a href="#pricing" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Pricing</a>
             <a href="#features" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Features</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3 justify-self-end">
             <Link
               href="/create-account"
               className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)]"
