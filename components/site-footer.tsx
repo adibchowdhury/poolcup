@@ -18,7 +18,7 @@ const siteMap: FooterLink[] = [
   { label: 'How it works', hash: '#how-it-works' },
   { label: 'Features', hash: '#features' },
   { label: 'Pricing', hash: '#pricing' },
-  { label: 'Create account', href: '/create-account' },
+  { label: 'Contact Support', href: '/contact' },
   { label: 'Sign in', href: '/login' },
 ]
 
