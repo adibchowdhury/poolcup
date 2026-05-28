@@ -3,10 +3,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { PasswordInput } from '@/components/auth/password-input'
 import { supabase } from '@/src/lib/supabase'
-
-const inputClassName =
-  'w-full rounded-lg bg-[#080b0f] border border-[#1e2d3d] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]'
 
 const RECOVERY_TIMEOUT_MS = 15000
 
@@ -149,16 +147,14 @@ export default function ResetPasswordPage() {
               >
                 New password
               </label>
-              <input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 required
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
-                className={inputClassName}
               />
             </div>
 
@@ -169,16 +165,14 @@ export default function ResetPasswordPage() {
               >
                 Confirm new password
               </label>
-              <input
+              <PasswordInput
                 id="confirm-new-password"
-                type="password"
                 required
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
-                className={inputClassName}
               />
             </div>
 

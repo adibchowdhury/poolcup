@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { signUpWithPassword } from '@/src/lib/auth'
 
-const inputClassName =
-  'w-full rounded-lg bg-[#080b0f] border border-[#1e2d3d] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]'
+const inputClassName = authInputClassName
 
 export default function CreateAccountPage() {
   const router = useRouter()
@@ -136,16 +136,14 @@ export default function CreateAccountPage() {
             >
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               required
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               minLength={6}
-              className={inputClassName}
             />
           </div>
 
@@ -156,16 +154,14 @@ export default function CreateAccountPage() {
             >
               Confirm password
             </label>
-            <input
+            <PasswordInput
               id="confirm-password"
-              type="password"
               required
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               minLength={6}
-              className={inputClassName}
             />
           </div>
 
