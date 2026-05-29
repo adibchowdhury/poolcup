@@ -91,6 +91,16 @@ export default function LandingPage() {
           className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-20"
         >
           <div className="text-center">
+            <p
+              className={cn(
+                'mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white md:mb-6',
+                heroReveal(isVisible),
+              )}
+              style={{ transitionDelay: '0ms' }}
+            >
+              World Cup 2026 · June 11 — July 19
+            </p>
+
             <h1 className="font-display text-5xl leading-[0.95] tracking-wide md:text-7xl lg:text-8xl">
               <span
                 className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
@@ -123,8 +133,9 @@ export default function LandingPage() {
               )}
               style={{ transitionDelay: "300ms" }}
             >
-              Create a private prediction pool for your office, group chat, or Discord.
-              Everyone predicts, the app keeps score.
+              Create a private World Cup 2026 prediction pool for your friends, family, or
+              coworkers. Everyone predicts the scores — the app keeps score and crowns the
+              winner.
             </p>
 
             <div
