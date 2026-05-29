@@ -9,9 +9,6 @@ export const metadata: Metadata = {
     description:
       'How PoolCup collects, uses, and protects your personal information.',
   },
-  alternates: {
-    canonical: 'https://www.getpoolcup.com/privacy',
-  },
 }
 
 export default function PrivacyLayout({

@@ -8,9 +8,6 @@ export const metadata: Metadata = {
     title: 'Cookie Policy — PoolCup',
     description: 'How PoolCup uses cookies and similar technologies.',
   },
-  alternates: {
-    canonical: 'https://www.getpoolcup.com/cookies',
-  },
 }
 
 export default function CookiesLayout({

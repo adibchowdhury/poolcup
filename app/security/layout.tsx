@@ -9,9 +9,6 @@ export const metadata: Metadata = {
     description:
       'Learn how PoolCup protects your data with modern security practices.',
   },
-  alternates: {
-    canonical: 'https://www.getpoolcup.com/security',
-  },
 }
 
 export default function SecurityLayout({

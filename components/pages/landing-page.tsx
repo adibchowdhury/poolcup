@@ -154,7 +154,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">CREATE YOUR POOL</h3>
-              <p className="text-[#5a7080] leading-relaxed">Pay $15, name your pool, get a shareable invite link in seconds.</p>
+              <p className="text-muted-on-section leading-relaxed">Pay $15, name your pool, get a shareable invite link in seconds.</p>
             </div>
 
             {/* Step 2 */}
@@ -166,7 +166,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">INVITE YOUR SQUAD</h3>
-              <p className="text-[#5a7080] leading-relaxed">Share the link. Friends join free — no account, no app download needed.</p>
+              <p className="text-muted-on-section leading-relaxed">Share the link. Friends join free — no account, no app download needed.</p>
             </div>
 
             {/* Step 3 */}
@@ -178,7 +178,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">PREDICT & COMPETE</h3>
-              <p className="text-[#5a7080] leading-relaxed">Everyone predicts match scores. The app tracks points and updates the leaderboard automatically.</p>
+              <p className="text-muted-on-section leading-relaxed">Everyone predicts match scores. The app tracks points and updates the leaderboard automatically.</p>
             </div>
           </div>
         </div>

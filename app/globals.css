@@ -24,6 +24,8 @@
   /* Muted */
   --muted: #1a2535;
   --muted-foreground: #5a7080;
+  /* WCAG AA on #0d1520 section backgrounds (6.35:1) */
+  --muted-on-section: #7a9db0;
   
   /* Accent */
   --accent: #00e676;
@@ -64,6 +66,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-muted-on-section: var(--muted-on-section);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
