@@ -7,6 +7,7 @@ import '@fontsource/dm-sans/700.css'
 import '@fontsource/space-mono/400.css'
 import '@fontsource/space-mono/700.css'
 import './globals.css'
+import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/src/lib/auth-context'
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
