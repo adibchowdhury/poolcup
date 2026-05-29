@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /security
+Allow: /contact
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /create
+Disallow: /join/
+Disallow: /pool/
+Disallow: /login
+Disallow: /create-account
+Disallow: /auth/
+
+Sitemap: https://www.getpoolcup.com/sitemap.xml
