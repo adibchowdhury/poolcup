@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
+import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 
@@ -79,43 +80,10 @@ export default function LandingPage() {
         {/* Noise texture */}
         <div className="hero-noise" aria-hidden />
 
-        {/* Navigation */}
-        <nav
-          className={cn(
-            "relative z-10 mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4",
-            heroReveal(isVisible),
-          )}
+        <LandingNavbar
+          className={heroReveal(isVisible)}
           style={{ transitionDelay: "0ms" }}
-        >
-          <div className="justify-self-start font-display text-2xl tracking-wider text-[#00e676]">
-            POOLCUP
-          </div>
-          <div className="hidden items-center justify-center gap-8 md:flex">
-            <a href="#how-it-works" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
-              How it works
-            </a>
-            <a href="#pricing" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
-              Pricing
-            </a>
-            <a href="#features" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
-              Features
-            </a>
-          </div>
-          <div className="flex items-center justify-end gap-3 justify-self-end">
-            <Link
-              href="/create-account"
-              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
-            >
-              Create account
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 hover:shadow-[0_0_24px_rgba(0,230,118,0.35)] active:scale-95"
-            >
-              Sign in
-            </Link>
-          </div>
-        </nav>
+        />
 
         {/* Hero Content */}
         <main

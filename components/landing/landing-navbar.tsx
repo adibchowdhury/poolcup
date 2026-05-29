@@ -1,0 +1,183 @@
+'use client'
+
+import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
+
+const navLinks = [
+  { label: 'How it works', href: '/#how-it-works' },
+  { label: 'Pricing', href: '/#pricing' },
+  { label: 'Features', href: '/#features' },
+] as const
+
+type LandingNavbarProps = {
+  className?: string
+  style?: React.CSSProperties
+}
+
+export function LandingNavbar({ className, style }: LandingNavbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu()
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen, closeMenu])
+
+  return (
+    <>
+      <nav
+        className={cn(
+          'relative z-50 mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4',
+          className,
+        )}
+        style={style}
+      >
+        <Link
+          href="/"
+          className="font-display text-2xl tracking-wider text-[#22c55e]"
+          onClick={closeMenu}
+        >
+          POOLCUP
+        </Link>
+
+        {/* Desktop links */}
+        <div className="hidden items-center gap-8 md:flex">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Desktop auth */}
+        <div className="hidden items-center gap-3 md:flex">
+          <Link
+            href="/create-account"
+            className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
+          >
+            Create account
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#22c55e]/90 hover:shadow-[0_0_24px_rgba(34,197,94,0.35)] active:scale-95"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)] md:hidden"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav-menu"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        >
+          <span className="sr-only">{menuOpen ? 'Close menu' : 'Open menu'}</span>
+          <span className="relative block h-4 w-5" aria-hidden>
+            <span
+              className={cn(
+                'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                menuOpen ? 'top-2 rotate-45' : 'top-0',
+              )}
+            />
+            <span
+              className={cn(
+                'absolute left-0 top-2 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                menuOpen ? 'opacity-0' : 'opacity-100',
+              )}
+            />
+            <span
+              className={cn(
+                'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                menuOpen ? 'top-2 -rotate-45' : 'top-4',
+              )}
+            />
+          </span>
+        </button>
+      </nav>
+
+      {/* Mobile menu overlay */}
+      <div
+        className={cn(
+          'fixed inset-0 z-40 md:hidden',
+          menuOpen ? 'pointer-events-auto' : 'pointer-events-none',
+        )}
+        aria-hidden={!menuOpen}
+      >
+        <button
+          type="button"
+          className={cn(
+            'absolute inset-0 bg-[#080b0f]/60 backdrop-blur-sm transition-opacity duration-300',
+            menuOpen ? 'opacity-100' : 'opacity-0',
+          )}
+          onClick={closeMenu}
+          tabIndex={menuOpen ? 0 : -1}
+          aria-label="Close menu"
+        />
+
+        <div
+          id="mobile-nav-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
+          className={cn(
+            'absolute inset-x-0 top-0 flex min-h-full flex-col bg-[#0d1520] px-6 pb-10 pt-20 transition-transform duration-300 ease-out',
+            menuOpen ? 'translate-y-0' : '-translate-y-full',
+          )}
+        >
+          <nav className="flex flex-1 flex-col">
+            <ul className="space-y-1">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    onClick={closeMenu}
+                    className="block rounded-lg px-4 py-4 font-display text-2xl tracking-wide text-[#f0f4f8] transition-colors hover:bg-[rgba(34,197,94,0.08)] hover:text-[#22c55e]"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-auto flex flex-col gap-3 border-t border-[rgba(255,255,255,0.08)] pt-8">
+              <Link
+                href="/create-account"
+                onClick={closeMenu}
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-3.5 text-center text-sm font-semibold text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+              >
+                Create account
+              </Link>
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="w-full rounded-lg bg-[#22c55e] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#22c55e]/90"
+              >
+                Sign in
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </>
+  )
+}
