@@ -1,9 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { SiteFooter } from "@/components/site-footer"
+import { cn } from "@/lib/utils"
+
+function heroReveal(isVisible: boolean) {
+  return cn(
+    "transition-all duration-700 ease-out motion-reduce:transition-none",
+    isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+  )
+}
 
 const scoringStyles = [
   { id: "classic", label: "Classic" },
@@ -32,57 +40,77 @@ const joinMembers = [
 
 export default function LandingPage() {
   const [selectedStyle, setSelectedStyle] = useState("classic")
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    setIsVisible(true)
+  }, [])
 
   return (
     <div className="bg-[#080b0f]">
       {/* ===== SECTION 1: HERO ===== */}
-      <section className="min-h-screen relative overflow-hidden">
-        {/* Background Green Radial Glow from top */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,230,118,0.06) 0%, transparent 60%)"
-          }}
-        />
-        
-        {/* Football Pitch Line Art Pattern */}
-        <svg 
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          viewBox="0 0 1200 800" 
+      <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
+        {/* Layered background */}
+        <div className="hero-glow-layer hero-glow-primary" aria-hidden />
+        <div className="hero-glow-layer hero-glow-secondary" aria-hidden />
+        <div className="hero-glow-layer hero-vignette" aria-hidden />
+
+        {/* Football pitch line art */}
+        <svg
+          className="animate-pulse-subtle pointer-events-none absolute inset-0 h-full w-full"
+          viewBox="0 0 1200 800"
           preserveAspectRatio="xMidYMid slice"
+          aria-hidden
         >
-          <circle cx="600" cy="400" r="120" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <circle cx="600" cy="400" r="4" fill="rgba(0,230,118,0.04)" />
-          <line x1="600" y1="100" x2="600" y2="700" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <rect x="50" y="250" width="180" height="300" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <rect x="50" y="320" width="70" height="160" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <path d="M 230 340 A 60 60 0 0 1 230 460" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <rect x="970" y="250" width="180" height="300" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <rect x="1080" y="320" width="70" height="160" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <path d="M 970 340 A 60 60 0 0 0 970 460" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
-          <rect x="50" y="100" width="1100" height="600" fill="none" stroke="rgba(0,230,118,0.04)" strokeWidth="2" />
+          <g stroke="rgba(0,230,118,0.07)" strokeWidth="2" fill="none">
+            <circle cx="600" cy="400" r="120" />
+            <circle cx="600" cy="400" r="4" fill="rgba(0,230,118,0.07)" />
+            <line x1="600" y1="100" x2="600" y2="700" />
+            <rect x="50" y="250" width="180" height="300" />
+            <rect x="50" y="320" width="70" height="160" />
+            <path d="M 230 340 A 60 60 0 0 1 230 460" />
+            <rect x="970" y="250" width="180" height="300" />
+            <rect x="1080" y="320" width="70" height="160" />
+            <path d="M 970 340 A 60 60 0 0 0 970 460" />
+            <rect x="50" y="100" width="1100" height="600" />
+          </g>
         </svg>
-        
+
+        {/* Noise texture */}
+        <div className="hero-noise" aria-hidden />
+
         {/* Navigation */}
-        <nav className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4 max-w-7xl mx-auto">
-          <div className="font-display text-2xl text-[#00e676] tracking-wider justify-self-start">
+        <nav
+          className={cn(
+            "relative z-10 mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4",
+            heroReveal(isVisible),
+          )}
+          style={{ transitionDelay: "0ms" }}
+        >
+          <div className="justify-self-start font-display text-2xl tracking-wider text-[#00e676]">
             POOLCUP
           </div>
-          <div className="hidden md:flex items-center justify-center gap-8">
-            <a href="#how-it-works" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">How it works</a>
-            <a href="#pricing" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Pricing</a>
-            <a href="#features" className="text-[#5a7080] hover:text-[#f0f4f8] transition-colors text-sm">Features</a>
+          <div className="hidden items-center justify-center gap-8 md:flex">
+            <a href="#how-it-works" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
+              How it works
+            </a>
+            <a href="#pricing" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
+              Pricing
+            </a>
+            <a href="#features" className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]">
+              Features
+            </a>
           </div>
           <div className="flex items-center justify-end gap-3 justify-self-end">
             <Link
               href="/create-account"
-              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
             >
               Create account
             </Link>
             <Link
               href="/login"
-              className="rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90"
+              className="rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 hover:shadow-[0_0_24px_rgba(0,230,118,0.35)] active:scale-95"
             >
               Sign in
             </Link>
@@ -95,51 +123,119 @@ export default function LandingPage() {
           className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-20"
         >
           <div className="text-center">
-            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-wide">
-              <span className="block text-[#f0f4f8]">YOUR SQUAD.</span>
-              <span className="block text-[#f0f4f8]">YOUR POOL.</span>
-              <span className="block text-[#00e676]">YOUR GLORY.</span>
+            <h1 className="font-display text-5xl leading-[0.95] tracking-wide md:text-7xl lg:text-8xl">
+              <span
+                className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
+                style={{ transitionDelay: "0ms" }}
+              >
+                YOUR SQUAD.
+              </span>
+              <span
+                className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
+                style={{ transitionDelay: "100ms" }}
+              >
+                YOUR POOL.
+              </span>
+              <span
+                className={cn(
+                  "block text-[#00e676]",
+                  heroReveal(isVisible),
+                  isVisible && "hero-glory-glow",
+                )}
+                style={{ transitionDelay: "200ms" }}
+              >
+                YOUR GLORY.
+              </span>
             </h1>
 
-            <p className="mt-6 md:mt-8 text-[#5a7080] text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
-              Create a private prediction pool for your office, group chat, or Discord. Everyone predicts, the app keeps score.
+            <p
+              className={cn(
+                "mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#5a7080] md:mt-8 md:text-xl",
+                heroReveal(isVisible),
+              )}
+              style={{ transitionDelay: "300ms" }}
+            >
+              Create a private prediction pool for your office, group chat, or Discord.
+              Everyone predicts, the app keeps score.
             </p>
 
-            <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login" className="w-full sm:w-auto bg-[#00e676] text-[#080b0f] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+            <div
+              className={cn(
+                "mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row md:mt-10",
+                heroReveal(isVisible),
+              )}
+              style={{ transitionDelay: "400ms" }}
+            >
+              <Link
+                href="/login"
+                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-[#00e676] px-8 py-4 text-lg font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95 sm:w-auto"
+              >
                 Create a Pool
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
-              <a href="#how-it-works" className="w-full sm:w-auto border border-[rgba(255,255,255,0.2)] text-[#f0f4f8] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[rgba(255,255,255,0.05)] transition-all">
+              <a
+                href="#how-it-works"
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-8 py-4 text-lg font-semibold text-[#f0f4f8] transition-all hover:scale-[1.03] hover:border-[rgba(0,230,118,0.3)] hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_24px_rgba(255,255,255,0.06)] active:scale-95 sm:w-auto"
+              >
                 See how it works
               </a>
             </div>
           </div>
 
-          {/* Stats Row */}
-          <div className="mt-16 md:mt-24 border-t border-[rgba(255,255,255,0.08)] pt-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-              <div className="text-center">
-                <div className="font-display text-4xl md:text-5xl text-[#f0f4f8]">104</div>
-                <div className="text-[#5a7080] text-sm mt-1">Matches</div>
-              </div>
-              <div className="text-center">
-                <div className="font-display text-4xl md:text-5xl text-[#f0f4f8]">48</div>
-                <div className="text-[#5a7080] text-sm mt-1">Nations</div>
-              </div>
-              <div className="text-center">
-                <div className="font-display text-4xl md:text-5xl text-[#f0f4f8]">39</div>
-                <div className="text-[#5a7080] text-sm mt-1">Days</div>
-              </div>
-              <div className="text-center">
-                <div className="font-display text-4xl md:text-5xl text-[#00e676]">$15</div>
-                <div className="text-[#5a7080] text-sm mt-1">Per Pool</div>
-              </div>
+          {/* Stats row */}
+          <div className="mt-16 border-t border-[rgba(255,255,255,0.08)] pt-8 md:mt-24">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 md:gap-8">
+              {[
+                { value: "104", label: "Matches", accent: false, delay: 500 },
+                { value: "48", label: "Nations", accent: false, delay: 600 },
+                { value: "39", label: "Days", accent: false, delay: 700 },
+                { value: "$15", label: "Per Pool", accent: true, delay: 800 },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={cn("text-center", heroReveal(isVisible))}
+                  style={{ transitionDelay: `${stat.delay}ms` }}
+                >
+                  <div
+                    className={cn(
+                      "font-display text-4xl md:text-5xl",
+                      stat.accent ? "text-[#00e676]" : "text-[#f0f4f8]",
+                    )}
+                  >
+                    {stat.value}
+                  </div>
+                  <div className="mt-1 text-sm text-[#5a7080]">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </main>
+
+        {/* Scroll indicator */}
+        <a
+          href="#how-it-works"
+          className={cn(
+            "absolute bottom-8 left-1/2 z-10 -translate-x-1/2",
+            heroReveal(isVisible),
+          )}
+          style={{ transitionDelay: "900ms" }}
+          aria-label="Scroll to how it works"
+        >
+          <div className="flex flex-col items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3 backdrop-blur-sm">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-[#5a7080]">
+              Scroll
+            </span>
+            <div className="h-2 w-2 rounded-full bg-[#00e676] animate-scroll-bounce" />
+          </div>
+        </a>
       </section>
 
       {/* ===== SECTION 2: HOW IT WORKS (quick 3 steps) ===== */}
