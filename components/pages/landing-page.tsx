@@ -90,7 +90,10 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero Content */}
-        <main className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-20">
+        <main
+          id="main-content"
+          className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-20"
+        >
           <div className="text-center">
             <h1 className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-wide">
               <span className="block text-[#f0f4f8]">YOUR SQUAD.</span>

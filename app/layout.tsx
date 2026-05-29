@@ -41,10 +41,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-[#080b0f]">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body
         className="font-sans antialiased bg-[#080b0f] text-[#f0f4f8]"
         suppressHydrationWarning
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-green-500 focus:text-black focus:rounded"
+        >
+          Skip to content
+        </a>
         <AuthProvider>{children}</AuthProvider>
         <Analytics />
       </body>
