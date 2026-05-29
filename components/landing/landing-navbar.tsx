@@ -40,21 +40,21 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
     <>
       <nav
         className={cn(
-          'relative z-50 mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4',
+          'relative z-50 mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4',
           className,
         )}
         style={style}
       >
         <Link
           href="/"
-          className="font-display text-2xl tracking-wider text-[#22c55e]"
+          className="justify-self-start font-display text-2xl tracking-wider text-[#22c55e]"
           onClick={closeMenu}
         >
           POOLCUP
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden items-center gap-8 md:flex">
+        {/* Desktop links — centered in viewport */}
+        <div className="hidden items-center justify-center gap-8 md:flex">
           {navLinks.map((link) => (
             <a
               key={link.href}
@@ -66,53 +66,54 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           ))}
         </div>
 
-        {/* Desktop auth */}
-        <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/create-account"
-            className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
-          >
-            Create account
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#22c55e]/90 hover:shadow-[0_0_24px_rgba(34,197,94,0.35)] active:scale-95"
-          >
-            Sign in
-          </Link>
-        </div>
+        {/* Desktop auth + mobile hamburger */}
+        <div className="flex items-center justify-end gap-3 justify-self-end">
+          <div className="hidden items-center gap-3 md:flex">
+            <Link
+              href="/create-account"
+              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
+            >
+              Create account
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#22c55e]/90 hover:shadow-[0_0_24px_rgba(34,197,94,0.35)] active:scale-95"
+            >
+              Sign in
+            </Link>
+          </div>
 
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)] md:hidden"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav-menu"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-        >
-          <span className="sr-only">{menuOpen ? 'Close menu' : 'Open menu'}</span>
-          <span className="relative block h-4 w-5" aria-hidden>
-            <span
-              className={cn(
-                'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
-                menuOpen ? 'top-2 rotate-45' : 'top-0',
-              )}
-            />
-            <span
-              className={cn(
-                'absolute left-0 top-2 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
-                menuOpen ? 'opacity-0' : 'opacity-100',
-              )}
-            />
-            <span
-              className={cn(
-                'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
-                menuOpen ? 'top-2 -rotate-45' : 'top-4',
-              )}
-            />
-          </span>
-        </button>
+          <button
+            type="button"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)] md:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <span className="sr-only">{menuOpen ? 'Close menu' : 'Open menu'}</span>
+            <span className="relative block h-4 w-5" aria-hidden>
+              <span
+                className={cn(
+                  'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                  menuOpen ? 'top-2 rotate-45' : 'top-0',
+                )}
+              />
+              <span
+                className={cn(
+                  'absolute left-0 top-2 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                  menuOpen ? 'opacity-0' : 'opacity-100',
+                )}
+              />
+              <span
+                className={cn(
+                  'absolute left-0 block h-0.5 w-5 rounded-full bg-current transition-all duration-300',
+                  menuOpen ? 'top-2 -rotate-45' : 'top-4',
+                )}
+              />
+            </span>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile menu overlay */}
@@ -140,18 +141,18 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           aria-modal="true"
           aria-label="Mobile navigation"
           className={cn(
-            'absolute inset-x-0 top-0 flex min-h-full flex-col bg-[#0d1520] px-6 pb-10 pt-20 transition-transform duration-300 ease-out',
+            'absolute inset-x-0 top-0 flex min-h-full flex-col items-center bg-[#0d1520] px-6 pb-10 pt-24 transition-transform duration-300 ease-out',
             menuOpen ? 'translate-y-0' : '-translate-y-full',
           )}
         >
-          <nav className="flex flex-1 flex-col">
-            <ul className="space-y-1">
+          <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
+            <ul className="w-full space-y-2">
               {navLinks.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
                     onClick={closeMenu}
-                    className="block rounded-lg px-4 py-4 font-display text-2xl tracking-wide text-[#f0f4f8] transition-colors hover:bg-[rgba(34,197,94,0.08)] hover:text-[#22c55e]"
+                    className="block rounded-lg px-4 py-4 text-center font-display text-2xl tracking-wide text-[#f0f4f8] transition-colors hover:bg-[rgba(34,197,94,0.08)] hover:text-[#22c55e]"
                   >
                     {link.label}
                   </a>
@@ -159,7 +160,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
               ))}
             </ul>
 
-            <div className="mt-auto flex flex-col gap-3 border-t border-[rgba(255,255,255,0.08)] pt-8">
+            <div className="mt-12 flex w-full flex-col gap-3 border-t border-[rgba(255,255,255,0.08)] pt-8">
               <Link
                 href="/create-account"
                 onClick={closeMenu}
