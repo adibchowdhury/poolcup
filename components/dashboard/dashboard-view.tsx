@@ -375,44 +375,44 @@ export function DashboardView({
 
             <TabsContent value="profile" className="mt-4">
               <div className="mx-auto flex w-full justify-center">
-                <div className="grid w-full min-h-[min(85vh,800px)] max-w-4xl grid-cols-1 items-center gap-12 sm:max-w-5xl lg:min-h-[72vh] lg:max-w-5xl lg:grid-cols-2 lg:items-stretch lg:gap-x-20 lg:gap-y-0">
-                  <div className="flex min-h-0 flex-1 flex-col items-center gap-2 text-center sm:gap-3">
-                    <div className="relative w-full max-w-[340px] min-h-[min(52vh,460px)] flex-1 sm:max-w-[420px] sm:min-h-[min(56vh,500px)] lg:max-w-[520px] lg:min-h-0">
+                <div className="grid w-full max-w-6xl grid-cols-1 items-stretch gap-12 sm:gap-14 lg:grid-cols-2 lg:gap-x-16 lg:gap-y-0 xl:gap-x-24">
+                  <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:h-full">
+                    <div className="relative min-h-[320px] w-full max-w-[380px] sm:max-w-[480px] lg:min-h-0 lg:max-w-[min(100%,580px)] lg:flex-1">
                       <Image
                         src={getAvatarSrcForLevel(playerLevel.level)}
                         alt={`${playerLevel.title} — Level ${playerLevel.level}`}
                         fill
                         priority
                         className="object-contain object-bottom"
-                        sizes="(max-width: 1024px) 420px, 480px"
+                        sizes="(max-width: 1024px) 420px, 580px"
                       />
                     </div>
 
                     <div className="shrink-0 text-center">
-                      <p className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                      <p className="font-display text-5xl tracking-wide text-foreground sm:text-6xl">
                         {playerLevel.title}
                       </p>
-                      <p className="mt-1 text-base text-muted-foreground sm:text-lg">
+                      <p className="mt-1 text-lg text-muted-foreground sm:text-xl">
                         Level {playerLevel.level}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex w-full flex-col items-start justify-center gap-10 py-4 sm:gap-12 lg:gap-14 lg:py-8 lg:pl-2">
+                  <div className="flex h-full w-full flex-col items-start justify-center gap-12 py-4 sm:gap-14 lg:gap-16 lg:py-0 lg:pl-4">
                     {quickStatItems.map((stat) => (
                       <div
                         key={stat.label}
-                        className="flex items-center gap-5 sm:gap-6"
+                        className="flex items-center gap-6 sm:gap-7"
                       >
                         <stat.icon
-                          className={cn('h-10 w-10 shrink-0 sm:h-12 sm:w-12', stat.color)}
+                          className={cn('h-12 w-12 shrink-0 sm:h-14 sm:w-14', stat.color)}
                           aria-hidden
                         />
                         <div className="text-left">
-                          <div className="font-display text-5xl leading-none text-foreground sm:text-6xl lg:text-7xl">
+                          <div className="font-display text-6xl leading-none text-foreground sm:text-7xl lg:text-8xl">
                             {stat.value}
                           </div>
-                          <div className="mt-2 text-base text-muted-foreground sm:text-lg">
+                          <div className="mt-2 text-lg text-muted-foreground sm:text-xl">
                             {stat.label}
                           </div>
                         </div>
