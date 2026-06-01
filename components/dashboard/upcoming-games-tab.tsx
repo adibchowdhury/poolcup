@@ -30,6 +30,55 @@ const ROUND_LABELS: Record<string, string> = {
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000
 
 let cachedMatches: UpcomingMatch[] | null = null
+let loadPromise: Promise<{
+  matches: UpcomingMatch[] | null
+  error: string | null
+}> | null = null
+
+async function fetchUpcomingMatchesFromDb(): Promise<{
+  matches: UpcomingMatch[] | null
+  error: string | null
+}> {
+  const { data, error: fetchError } = await supabase
+    .from('matches')
+    .select(
+      'id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
+    )
+    .gt('kickoff_at', new Date().toISOString())
+    .eq('is_final', false)
+    .order('kickoff_at', { ascending: true })
+    .limit(15)
+
+  if (fetchError) {
+    return { matches: null, error: fetchError.message }
+  }
+
+  return { matches: (data ?? []) as UpcomingMatch[], error: null }
+}
+
+function loadUpcomingMatches() {
+  if (cachedMatches !== null) {
+    return Promise.resolve({ matches: cachedMatches, error: null })
+  }
+
+  if (!loadPromise) {
+    loadPromise = fetchUpcomingMatchesFromDb().then((result) => {
+      if (!result.error && result.matches) {
+        cachedMatches = result.matches
+      } else {
+        loadPromise = null
+      }
+      return result
+    })
+  }
+
+  return loadPromise
+}
+
+/** Warm cache while the user is on another dashboard tab. */
+export function prefetchUpcomingMatches() {
+  void loadUpcomingMatches()
+}
 
 function formatRoundLabel(round: string, groupName: string | null): string {
   if (round === 'group' && groupName) {
@@ -159,21 +208,12 @@ export function UpcomingGamesTab() {
     if (showLoading) setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await supabase
-      .from('matches')
-      .select(
-        'id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
-      )
-      .gt('kickoff_at', new Date().toISOString())
-      .eq('is_final', false)
-      .order('kickoff_at', { ascending: true })
-      .limit(15)
+    const { matches: rows, error: fetchError } = await loadUpcomingMatches()
 
     if (fetchError) {
-      setError(fetchError.message)
+      setError(fetchError)
       if (cachedMatches === null) setMatches([])
-    } else {
-      const rows = (data ?? []) as UpcomingMatch[]
+    } else if (rows) {
       cachedMatches = rows
       setMatches(rows)
     }

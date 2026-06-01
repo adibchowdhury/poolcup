@@ -16,7 +16,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
-import { UpcomingGamesTab } from '@/components/dashboard/upcoming-games-tab'
+import {
+  prefetchUpcomingMatches,
+  UpcomingGamesTab,
+} from '@/components/dashboard/upcoming-games-tab'
 import { cn } from '@/lib/utils'
 import {
   getAvatarSrcForLevel,
@@ -80,6 +83,10 @@ export function DashboardView({
     setFullName(name)
     setHeaderName(name)
   }, [displayName])
+
+  useEffect(() => {
+    void prefetchUpcomingMatches()
+  }, [])
 
   const canSaveProfile = useMemo(() => {
     return Boolean(fullName.trim()) || Boolean(newEmail.trim())
@@ -475,7 +482,7 @@ export function DashboardView({
               )}
             </TabsContent>
 
-            <TabsContent value="games" className="mt-4" forceMount>
+            <TabsContent value="games" className="mt-4">
               <div className="mx-auto w-full max-w-3xl">
                 <div className="mb-6 flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-primary" />
