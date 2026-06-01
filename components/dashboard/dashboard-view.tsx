@@ -475,7 +475,7 @@ export function DashboardView({
               )}
             </TabsContent>
 
-            <TabsContent value="games" className="mt-4">
+            <TabsContent value="games" className="mt-4" forceMount>
               <div className="mx-auto w-full max-w-3xl">
                 <div className="mb-6 flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-primary" />

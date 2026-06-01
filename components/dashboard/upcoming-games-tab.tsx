@@ -29,6 +29,8 @@ const ROUND_LABELS: Record<string, string> = {
 
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000
 
+let cachedMatches: UpcomingMatch[] | null = null
+
 function formatRoundLabel(round: string, groupName: string | null): string {
   if (round === 'group' && groupName) {
     return `Group ${groupName}`
@@ -80,13 +82,16 @@ function groupMatchesByDay(matches: UpcomingMatch[]): Map<string, UpcomingMatch[
 
 function UpcomingGamesSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-busy="true" aria-label="Loading upcoming matches">
       {[0, 1].map((section) => (
         <div key={section} className="space-y-3">
-          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-7 w-48 bg-muted/50" />
           <div className="space-y-3">
             {[0, 1, 2].map((card) => (
-              <Skeleton key={card} className="h-28 w-full rounded-2xl" />
+              <Skeleton
+                key={card}
+                className="h-28 w-full rounded-2xl bg-muted/40"
+              />
             ))}
           </div>
         </div>
@@ -145,13 +150,13 @@ function MatchCard({ match, nowMs }: { match: UpcomingMatch; nowMs: number }) {
 }
 
 export function UpcomingGamesTab() {
-  const [matches, setMatches] = useState<UpcomingMatch[]>([])
-  const [loading, setLoading] = useState(true)
+  const [matches, setMatches] = useState<UpcomingMatch[]>(cachedMatches ?? [])
+  const [loading, setLoading] = useState(cachedMatches === null)
   const [error, setError] = useState<string | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
 
-  const loadMatches = useCallback(async () => {
-    setLoading(true)
+  const loadMatches = useCallback(async (showLoading: boolean) => {
+    if (showLoading) setLoading(true)
     setError(null)
 
     const { data, error: fetchError } = await supabase
@@ -166,16 +171,18 @@ export function UpcomingGamesTab() {
 
     if (fetchError) {
       setError(fetchError.message)
-      setMatches([])
+      if (cachedMatches === null) setMatches([])
     } else {
-      setMatches((data ?? []) as UpcomingMatch[])
+      const rows = (data ?? []) as UpcomingMatch[]
+      cachedMatches = rows
+      setMatches(rows)
     }
 
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    void loadMatches()
+    void loadMatches(cachedMatches === null)
   }, [loadMatches])
 
   useEffect(() => {
