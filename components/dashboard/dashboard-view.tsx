@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   Calendar,
@@ -16,6 +17,10 @@ import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { cn } from '@/lib/utils'
+import {
+  getAvatarSrcForLevel,
+  getPlayerLevelFromPoints,
+} from '@/src/lib/player-level'
 import { supabase } from '@/src/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -143,6 +148,11 @@ export function DashboardView({
       setPasswordSaving(false)
     }
   }
+
+  const playerLevel = useMemo(
+    () => getPlayerLevelFromPoints(quickStats.totalPoints),
+    [quickStats.totalPoints],
+  )
 
   const quickStatItems = [
     {
@@ -347,8 +357,8 @@ export function DashboardView({
             </div>
           )}
 
-          <Tabs defaultValue="profile" className="gap-6">
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
+          <Tabs defaultValue="profile" className="gap-10">
+            <TabsList className="mx-auto grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
               <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <User className="h-4 w-4 shrink-0" />
                 <span className="truncate">Profile</span>
@@ -363,28 +373,57 @@ export function DashboardView({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="profile" className="mt-0">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {quickStatItems.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="flex cursor-default items-center gap-4 rounded-2xl border border-border bg-card p-4 hover-lift"
-                  >
-                    <div className={cn('rounded-xl bg-muted p-3', stat.color)}>
-                      <stat.icon className="h-6 w-6" />
+            <TabsContent value="profile" className="mt-4">
+              <div className="mx-auto flex w-full justify-center">
+                <div className="grid w-full min-h-[min(85vh,800px)] max-w-4xl grid-cols-1 items-center gap-12 sm:max-w-5xl lg:min-h-[72vh] lg:max-w-5xl lg:grid-cols-2 lg:items-stretch lg:gap-x-20 lg:gap-y-0">
+                  <div className="flex min-h-0 flex-1 flex-col items-center gap-2 text-center sm:gap-3">
+                    <div className="relative w-full max-w-[340px] min-h-[min(52vh,460px)] flex-1 sm:max-w-[420px] sm:min-h-[min(56vh,500px)] lg:max-w-[520px] lg:min-h-0">
+                      <Image
+                        src={getAvatarSrcForLevel(playerLevel.level)}
+                        alt={`${playerLevel.title} — Level ${playerLevel.level}`}
+                        fill
+                        priority
+                        className="object-contain object-bottom"
+                        sizes="(max-width: 1024px) 420px, 480px"
+                      />
                     </div>
-                    <div>
-                      <div className="font-display text-3xl text-foreground">
-                        {stat.value}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{stat.label}</div>
+
+                    <div className="shrink-0 text-center">
+                      <p className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                        {playerLevel.title}
+                      </p>
+                      <p className="mt-1 text-base text-muted-foreground sm:text-lg">
+                        Level {playerLevel.level}
+                      </p>
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex w-full flex-col items-start justify-center gap-10 py-4 sm:gap-12 lg:gap-14 lg:py-8 lg:pl-2">
+                    {quickStatItems.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="flex items-center gap-5 sm:gap-6"
+                      >
+                        <stat.icon
+                          className={cn('h-10 w-10 shrink-0 sm:h-12 sm:w-12', stat.color)}
+                          aria-hidden
+                        />
+                        <div className="text-left">
+                          <div className="font-display text-5xl leading-none text-foreground sm:text-6xl lg:text-7xl">
+                            {stat.value}
+                          </div>
+                          <div className="mt-2 text-base text-muted-foreground sm:text-lg">
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="pools" className="mt-0 space-y-6">
+            <TabsContent value="pools" className="mt-4 space-y-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
@@ -435,7 +474,7 @@ export function DashboardView({
               )}
             </TabsContent>
 
-            <TabsContent value="games" className="mt-0" />
+            <TabsContent value="games" className="mt-4" />
           </Tabs>
         </main>
       </div>
