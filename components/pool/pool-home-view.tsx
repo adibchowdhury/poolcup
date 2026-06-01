@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leaderboard-row'
+import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -33,9 +34,17 @@ interface PoolHomeViewProps {
   pool: PoolHomeMeta
   members: LeaderboardMember[]
   predictHref: string
+  canDelete?: boolean
+  poolId?: string
 }
 
-export function PoolHomeView({ pool, members, predictHref }: PoolHomeViewProps) {
+export function PoolHomeView({
+  pool,
+  members,
+  predictHref,
+  canDelete,
+  poolId,
+}: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
 
@@ -78,6 +87,14 @@ export function PoolHomeView({ pool, members, predictHref }: PoolHomeViewProps) 
                   <code className="font-mono text-primary">{pool.inviteCode}</code>
                 </div>
               </div>
+              {canDelete && poolId && (
+                <DeletePoolDialog
+                  poolId={poolId}
+                  poolName={pool.name}
+                  redirectTo="/dashboard"
+                  triggerVariant="outline"
+                />
+              )}
             </div>
           </div>
         </header>

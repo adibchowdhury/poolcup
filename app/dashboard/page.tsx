@@ -10,6 +10,7 @@ type MembershipRow = {
     id: string
     name: string
     invite_code: string
+    creator_id: string
   } | null
 }
 
@@ -53,6 +54,7 @@ export default async function DashboardPage({
         id,
         name,
         invite_code
+        ,creator_id
       )
     `,
     )
@@ -148,6 +150,7 @@ export default async function DashboardPage({
       totalPredictions,
       yourPredictions,
       nextMatch: nextMatchLabel,
+      canDelete: pool.creator_id === user.id,
     }
   })
 

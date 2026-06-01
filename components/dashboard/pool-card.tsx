@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 
 export type DashboardPoolCardData = {
   id: string
@@ -20,6 +21,7 @@ export type DashboardPoolCardData = {
   totalPredictions: number
   yourPredictions: number
   nextMatch: string | null
+  canDelete?: boolean
 }
 
 interface PoolCardProps {
@@ -72,9 +74,20 @@ export function PoolCard({ pool }: PoolCardProps) {
                 </span>
               </div>
             </div>
-            <span className="shrink-0 rounded-full border border-primary/30 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-              active
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="rounded-full border border-primary/30 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                active
+              </span>
+              {pool.canDelete && (
+                <DeletePoolDialog
+                  poolId={pool.id}
+                  poolName={pool.name}
+                  redirectTo="/dashboard"
+                  triggerVariant="ghost"
+                  triggerClassName="text-destructive hover:bg-destructive/10"
+                />
+              )}
+            </div>
           </div>
 
           <div className="mb-4 grid grid-cols-3 gap-3">

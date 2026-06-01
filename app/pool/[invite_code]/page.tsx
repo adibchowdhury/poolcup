@@ -15,6 +15,7 @@ type Pool = {
   id: string
   name: string
   invite_code: string
+  creator_id: string
 }
 
 type PoolMember = {
@@ -86,6 +87,8 @@ export default function PoolPage() {
   const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [poolId, setPoolId] = useState<string | null>(null)
+  const [canDelete, setCanDelete] = useState(false)
 
   const loadPoolData = useCallback(async () => {
     if (!user) return
@@ -95,7 +98,7 @@ export default function PoolPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code')
+      .select('id, name, invite_code, creator_id')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -108,6 +111,8 @@ export default function PoolPage() {
     }
 
     const pool = poolData as Pool
+    setPoolId(pool.id)
+    setCanDelete(pool.creator_id === user.id)
 
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
@@ -285,6 +290,8 @@ export default function PoolPage() {
       pool={poolMeta}
       members={members}
       predictHref={`/pool/${inviteCode}/predict`}
+      canDelete={canDelete}
+      poolId={poolId ?? undefined}
     />
   )
 }
