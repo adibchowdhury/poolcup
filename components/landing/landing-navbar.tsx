@@ -4,12 +4,6 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
-const navLinks = [
-  { label: 'How it works', href: '/#how-it-works' },
-  { label: 'Pricing', href: '/#pricing' },
-  { label: 'Features', href: '/#features' },
-] as const
-
 type LandingNavbarProps = {
   className?: string
   style?: React.CSSProperties
@@ -40,34 +34,20 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
     <>
       <nav
         className={cn(
-          'relative z-50 mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4',
+          'relative z-50 mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4',
           className,
         )}
         style={style}
       >
         <Link
           href="/"
-          className="justify-self-start font-display text-2xl tracking-wider text-[#22c55e]"
+          className="font-display text-2xl tracking-wider text-[#22c55e]"
           onClick={closeMenu}
         >
           POOLCUP
         </Link>
 
-        {/* Desktop links — centered in viewport */}
-        <div className="hidden items-center justify-center gap-8 md:flex">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm text-[#5a7080] transition-colors hover:text-[#f0f4f8]"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Desktop auth + mobile hamburger */}
-        <div className="flex items-center justify-end gap-3 justify-self-end">
+        <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-3 md:flex">
             <Link
               href="/create-account"
@@ -116,7 +96,6 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         </div>
       </nav>
 
-      {/* Mobile menu overlay */}
       <div
         className={cn(
           'fixed inset-0 z-40 md:hidden',
@@ -146,21 +125,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           )}
         >
           <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
-            <ul className="w-full space-y-2">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    onClick={closeMenu}
-                    className="block rounded-lg px-4 py-4 text-center font-display text-2xl tracking-wide text-[#f0f4f8] transition-colors hover:bg-[rgba(34,197,94,0.08)] hover:text-[#22c55e]"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-12 flex w-full flex-col gap-3 border-t border-[rgba(255,255,255,0.08)] pt-8">
+            <div className="flex w-full flex-col gap-3">
               <Link
                 href="/create-account"
                 onClick={closeMenu}
