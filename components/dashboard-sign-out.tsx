@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation'
 import { signOut } from '@/src/lib/auth'
 import { Button } from '@/components/ui/button'
 
-export function DashboardSignOut({ email }: { email: string }) {
+export function DashboardSignOut({
+  displayName,
+}: {
+  displayName?: string | null
+}) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
@@ -17,9 +21,9 @@ export function DashboardSignOut({ email }: { email: string }) {
 
   return (
     <div className="flex items-center gap-3">
-      {email && (
+      {displayName?.trim() && (
         <span className="hidden max-w-[200px] truncate text-sm text-muted-foreground sm:inline">
-          {email}
+          {displayName.trim()}
         </span>
       )}
       <Button

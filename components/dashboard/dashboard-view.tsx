@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {
   Plus,
+  Settings,
   Sparkles,
   Target,
   TrendingUp,
@@ -13,6 +14,12 @@ import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/src/lib/supabase'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { useEffect, useMemo, useState } from 'react'
 
 export type DashboardQuickStats = {
   totalPoints: number
@@ -21,7 +28,9 @@ export type DashboardQuickStats = {
 }
 
 interface DashboardViewProps {
+  userId: string
   email: string
+  displayName?: string | null
   pools: DashboardPoolCardData[]
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
@@ -29,12 +38,102 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({
+  userId,
   email,
+  displayName,
   pools,
   quickStats,
   passwordResetSuccess,
   errorMessage,
 }: DashboardViewProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [fullName, setFullName] = useState(displayName ?? '')
+  const [headerName, setHeaderName] = useState(displayName ?? '')
+  const [newEmail, setNewEmail] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [nextPassword, setNextPassword] = useState('')
+  const [confirmNextPassword, setConfirmNextPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const name = displayName ?? ''
+    setFullName(name)
+    setHeaderName(name)
+  }, [displayName])
+
+  const canSaveProfile = useMemo(() => {
+    return Boolean(fullName.trim()) || Boolean(newEmail.trim())
+  }, [fullName, newEmail])
+
+  async function handleSaveProfile() {
+    setProfileSaving(true)
+    setProfileMessage(null)
+    try {
+      if (fullName.trim()) {
+        const trimmed = fullName.trim()
+        const { error } = await supabase
+          .from('users')
+          .update({ display_name: trimmed })
+          .eq('id', userId)
+        if (error) throw error
+        setHeaderName(trimmed)
+      }
+
+      if (newEmail.trim()) {
+        const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+        if (error) throw error
+        setNewEmail('')
+      }
+
+      setProfileMessage('Saved. Some email changes may require confirmation.')
+    } catch (e: any) {
+      setProfileMessage(e?.message ?? 'Failed to save profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  async function handleUpdatePassword() {
+    setPasswordSaving(true)
+    setPasswordMessage(null)
+
+    try {
+      if (!currentPassword) {
+        throw new Error('Current password is required')
+      }
+      if (!nextPassword || nextPassword.length < 6) {
+        throw new Error('New password must be at least 6 characters')
+      }
+      if (nextPassword !== confirmNextPassword) {
+        throw new Error('New passwords do not match')
+      }
+
+      // Re-authenticate (confirm current password) before allowing password update.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      })
+      if (reauthError) throw reauthError
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: nextPassword,
+      })
+      if (updateError) throw updateError
+
+      setCurrentPassword('')
+      setNextPassword('')
+      setConfirmNextPassword('')
+      setPasswordMessage('Password updated.')
+    } catch (e: any) {
+      setPasswordMessage(e?.message ?? 'Failed to update password')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
   const quickStatItems = [
     {
       label: 'Total Points',
@@ -82,13 +181,137 @@ export function DashboardView({
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <DashboardSignOut email={email} />
-                <Button asChild className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 group">
-                  <Link href="/create">
-                    <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-                    Create a Pool
-                  </Link>
-                </Button>
+                <DashboardSignOut displayName={headerName} />
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="gap-2">
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Settings</DialogTitle>
+                      <DialogDescription>
+                        Manage your account, security, and preferences. Changes apply to this device where noted.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl tracking-wide">Profile &amp; account</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Your name appears in the app. Email is used to sign in.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="settings-full-name">Full name</Label>
+                          <Input
+                            id="settings-full-name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Account email</Label>
+                          <div className="h-9 w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                            {email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="settings-new-email">New email (optional)</Label>
+                        <Input
+                          id="settings-new-email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          type="email"
+                          autoComplete="email"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This is the address you use to sign in. Your project may send a confirmation link before the update takes effect.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        {profileMessage ? (
+                          <p className="text-sm text-muted-foreground">{profileMessage}</p>
+                        ) : (
+                          <span />
+                        )}
+                        <Button
+                          type="button"
+                          onClick={handleSaveProfile}
+                          disabled={profileSaving || !canSaveProfile}
+                        >
+                          {profileSaving ? 'Saving…' : 'Save profile'}
+                        </Button>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl tracking-wide">Password &amp; security</h3>
+                        <p className="text-sm text-muted-foreground">
+                          For your security, confirm your current password before choosing a new one.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="settings-current-password">Current password</Label>
+                          <Input
+                            id="settings-current-password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            type="password"
+                            autoComplete="current-password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="settings-new-password">New password</Label>
+                          <Input
+                            id="settings-new-password"
+                            value={nextPassword}
+                            onChange={(e) => setNextPassword(e.target.value)}
+                            type="password"
+                            autoComplete="new-password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="settings-confirm-new-password">Confirm new password</Label>
+                          <Input
+                            id="settings-confirm-new-password"
+                            value={confirmNextPassword}
+                            onChange={(e) => setConfirmNextPassword(e.target.value)}
+                            type="password"
+                            autoComplete="new-password"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        {passwordMessage ? (
+                          <p className="text-sm text-muted-foreground">{passwordMessage}</p>
+                        ) : (
+                          <span />
+                        )}
+                        <Button
+                          type="button"
+                          onClick={handleUpdatePassword}
+                          disabled={passwordSaving}
+                        >
+                          {passwordSaving ? 'Updating…' : 'Update password'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
@@ -126,12 +349,23 @@ export function DashboardView({
             ))}
           </div>
 
-          <div className="mb-6 flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-[#ffb300]" />
-            <h2 className="font-display text-2xl tracking-wide text-foreground">
-              Your Active Pools
-            </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
+              <h2 className="font-display text-2xl tracking-wide text-foreground">
+                Your Active Pools
+              </h2>
+              <div className="hidden h-px flex-1 bg-gradient-to-r from-border to-transparent sm:block" />
+            </div>
+            <Button
+              asChild
+              className="shrink-0 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 group"
+            >
+              <Link href="/create">
+                <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+                Create a Pool
+              </Link>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

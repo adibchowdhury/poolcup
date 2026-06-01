@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { DashboardView } from '@/components/dashboard/dashboard-view'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { resolveUserDisplayName } from '@/src/lib/auth'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 type MembershipRow = {
@@ -43,6 +44,12 @@ export default async function DashboardPage({
   if (!user) {
     redirect('/login')
   }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle()
 
   const { data: memberships, error: memberError } = await supabase
     .from('pool_members')
@@ -170,7 +177,12 @@ export default async function DashboardPage({
 
   return (
     <DashboardView
+      userId={user.id}
       email={user.email ?? ''}
+      displayName={resolveUserDisplayName(
+        profile?.display_name,
+        user.user_metadata,
+      )}
       pools={pools}
       quickStats={{
         totalPoints,

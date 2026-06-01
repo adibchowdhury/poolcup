@@ -10,6 +10,29 @@ function buildDisplayName(firstName: string, lastName: string) {
   return `${firstName.trim()} ${lastName.trim()}`.trim()
 }
 
+export function resolveUserDisplayName(
+  profileDisplayName: string | null | undefined,
+  metadata: Record<string, unknown> | undefined,
+): string | null {
+  const fromProfile = profileDisplayName?.trim()
+  if (fromProfile) return fromProfile
+
+  if (!metadata) return null
+
+  const display =
+    typeof metadata.display_name === 'string'
+      ? metadata.display_name.trim()
+      : ''
+  if (display) return display
+
+  const first =
+    typeof metadata.first_name === 'string' ? metadata.first_name.trim() : ''
+  const last =
+    typeof metadata.last_name === 'string' ? metadata.last_name.trim() : ''
+  const combined = `${first} ${last}`.trim()
+  return combined || null
+}
+
 export async function signUpWithPassword(
   email: string,
   password: string,
