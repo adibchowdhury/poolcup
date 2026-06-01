@@ -382,16 +382,17 @@ export function DashboardView({
             </TabsList>
 
             <TabsContent value="profile" className="mt-4">
-              <div className="mx-auto flex w-full justify-center">
-                <div className="grid w-full max-w-6xl grid-cols-1 items-stretch gap-12 sm:gap-14 lg:grid-cols-2 lg:gap-x-16 lg:gap-y-0 xl:gap-x-24">
-                  <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:h-full">
-                    <div className="relative min-h-[320px] w-full max-w-[380px] sm:max-w-[480px] lg:min-h-0 lg:max-w-[min(100%,580px)] lg:flex-1">
+              <div className="flex w-full items-center justify-center">
+                <div className="mx-auto flex flex-col items-center gap-12 lg:flex-row">
+                  <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:grid lg:h-full lg:min-h-0 lg:grid-rows-[1fr_auto] lg:gap-4">
+                    <div className="flex min-h-[320px] w-full max-w-[380px] items-end justify-center sm:max-w-[480px] lg:h-full lg:min-h-0 lg:w-full lg:max-w-[min(100%,580px)]">
                       <Image
                         src={getAvatarSrcForLevel(playerLevel.level)}
                         alt={`${playerLevel.title} — Level ${playerLevel.level}`}
-                        fill
+                        width={580}
+                        height={800}
                         priority
-                        className="object-contain object-bottom"
+                        className="h-[320px] w-auto max-w-full object-contain object-bottom sm:h-[400px] lg:h-full"
                         sizes="(max-width: 1024px) 420px, 580px"
                       />
                     </div>
@@ -406,7 +407,7 @@ export function DashboardView({
                     </div>
                   </div>
 
-                  <div className="flex h-full w-full flex-col items-start justify-center gap-12 py-4 sm:gap-14 lg:gap-16 lg:py-0 lg:pl-4">
+                  <div className="flex h-full min-h-0 flex-col items-start justify-center gap-12 py-4 sm:gap-14 lg:min-h-0 lg:gap-16 lg:py-0 lg:pl-4">
                     {quickStatItems.map((stat) => (
                       <div
                         key={stat.label}
