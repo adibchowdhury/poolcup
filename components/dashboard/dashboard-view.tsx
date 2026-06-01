@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import {
+  Calendar,
   Plus,
   Settings,
   Sparkles,
   Target,
   TrendingUp,
   Trophy,
+  User,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,10 +17,18 @@ import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/src/lib/supabase'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffect, useMemo, useState } from 'react'
 
 export type DashboardQuickStats = {
@@ -112,7 +122,6 @@ export function DashboardView({
         throw new Error('New passwords do not match')
       }
 
-      // Re-authenticate (confirm current password) before allowing password update.
       const { error: reauthError } = await supabase.auth.signInWithPassword({
         email,
         password: currentPassword,
@@ -134,6 +143,7 @@ export function DashboardView({
       setPasswordSaving(false)
     }
   }
+
   const quickStatItems = [
     {
       label: 'Total Points',
@@ -193,13 +203,15 @@ export function DashboardView({
                     <DialogHeader>
                       <DialogTitle>Settings</DialogTitle>
                       <DialogDescription>
-                        Manage your account, security, and preferences. Changes apply to this device where noted.
+                        Manage your account, security, and preferences.
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <h3 className="font-display text-xl tracking-wide">Profile &amp; account</h3>
+                        <h3 className="font-display text-xl tracking-wide">
+                          Profile &amp; account
+                        </h3>
                         <p className="text-sm text-muted-foreground">
                           Your name appears in the app. Email is used to sign in.
                         </p>
@@ -234,7 +246,8 @@ export function DashboardView({
                           autoComplete="email"
                         />
                         <p className="text-xs text-muted-foreground">
-                          This is the address you use to sign in. Your project may send a confirmation link before the update takes effect.
+                          Your project may send a confirmation link before the update
+                          takes effect.
                         </p>
                       </div>
 
@@ -256,9 +269,11 @@ export function DashboardView({
                       <Separator />
 
                       <div className="space-y-2">
-                        <h3 className="font-display text-xl tracking-wide">Password &amp; security</h3>
+                        <h3 className="font-display text-xl tracking-wide">
+                          Password &amp; security
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          For your security, confirm your current password before choosing a new one.
+                          Confirm your current password before choosing a new one.
                         </p>
                       </div>
 
@@ -284,7 +299,9 @@ export function DashboardView({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="settings-confirm-new-password">Confirm new password</Label>
+                          <Label htmlFor="settings-confirm-new-password">
+                            Confirm new password
+                          </Label>
                           <Input
                             id="settings-confirm-new-password"
                             value={confirmNextPassword}
@@ -330,74 +347,96 @@ export function DashboardView({
             </div>
           )}
 
-          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {quickStatItems.map((stat) => (
-              <div
-                key={stat.label}
-                className="flex cursor-default items-center gap-4 rounded-2xl border border-border bg-card p-4 hover-lift"
-              >
-                <div className={cn('rounded-xl bg-muted p-3', stat.color)}>
-                  <stat.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="font-display text-3xl text-foreground">
-                    {stat.value}
+          <Tabs defaultValue="profile" className="gap-6">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
+              <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">Profile</span>
+              </TabsTrigger>
+              <TabsTrigger value="pools" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span className="truncate">Active Pools</span>
+              </TabsTrigger>
+              <TabsTrigger value="games" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
+                <Calendar className="h-4 w-4 shrink-0" />
+                <span className="truncate">Upcoming Games</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="mt-0">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {quickStatItems.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="flex cursor-default items-center gap-4 rounded-2xl border border-border bg-card p-4 hover-lift"
+                  >
+                    <div className={cn('rounded-xl bg-muted p-3', stat.color)}>
+                      <stat.icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="font-display text-3xl text-foreground">
+                        {stat.value}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{stat.label}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </TabsContent>
 
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
-              <h2 className="font-display text-2xl tracking-wide text-foreground">
-                Your Active Pools
-              </h2>
-              <div className="hidden h-px flex-1 bg-gradient-to-r from-border to-transparent sm:block" />
-            </div>
-            <Button
-              asChild
-              className="shrink-0 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 group"
-            >
-              <Link href="/create">
-                <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-                Create a Pool
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {pools.map((pool) => (
-              <PoolCard key={pool.id} pool={pool} />
-            ))}
-
-            <Link
-              href="/create"
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-border transition-colors hover:border-primary/50"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-[#ffb300]/5 opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative flex min-h-[280px] flex-col items-center justify-center p-6 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted transition-transform group-hover:scale-110">
-                  <Plus className="h-8 w-8 text-muted-foreground transition-colors group-hover:text-primary" />
+            <TabsContent value="pools" className="mt-0 space-y-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
+                  <h2 className="font-display text-2xl tracking-wide text-foreground">
+                    Your Active Pools
+                  </h2>
                 </div>
-                <h3 className="mb-2 font-display text-xl text-foreground">
-                  Join or Create a Pool
-                </h3>
-                <p className="max-w-xs text-sm text-muted-foreground">
-                  Start competing with friends or join an existing pool with an
-                  invite code
+                <Button
+                  asChild
+                  className="shrink-0 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 group"
+                >
+                  <Link href="/create">
+                    <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+                    Create a Pool
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {pools.map((pool) => (
+                  <PoolCard key={pool.id} pool={pool} />
+                ))}
+
+                <Link
+                  href="/create"
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-border transition-colors hover:border-primary/50"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-[#ffb300]/5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="relative flex min-h-[280px] flex-col items-center justify-center p-6 text-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted transition-transform group-hover:scale-110">
+                      <Plus className="h-8 w-8 text-muted-foreground transition-colors group-hover:text-primary" />
+                    </div>
+                    <h3 className="mb-2 font-display text-xl text-foreground">
+                      Join or Create a Pool
+                    </h3>
+                    <p className="max-w-xs text-sm text-muted-foreground">
+                      Start competing with friends or join an existing pool with an
+                      invite code
+                    </p>
+                  </div>
+                </Link>
+              </div>
+
+              {pools.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  No pools yet — create one or join with an invite link from a friend.
                 </p>
-              </div>
-            </Link>
-          </div>
+              )}
+            </TabsContent>
 
-          {pools.length === 0 && (
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              No pools yet — create one or join with an invite link from a friend.
-            </p>
-          )}
+            <TabsContent value="games" className="mt-0" />
+          </Tabs>
         </main>
       </div>
     </div>
