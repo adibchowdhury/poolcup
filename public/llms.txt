@@ -4,7 +4,7 @@
 
 ## What it does
 
-- Create a paid private pool ($15 one-time per pool creator)
+- Create a private pool (free to use)
 - Share an invite link so members can join
 - Predict scores for group stage and knockout matches
 - Automatic scoring and leaderboard rankings after results are final
@@ -40,4 +40,3 @@ Member-only flows such as `/dashboard`, `/create`, `/pool/{invite_code}`, and `/
 
 - Web app: Next.js (React), hosted as a modern SPA/SSR site
 - Auth & data: Supabase
-- Payments: Stripe (pool creation)

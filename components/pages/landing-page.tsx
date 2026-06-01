@@ -171,12 +171,11 @@ export default function LandingPage() {
 
           {/* Stats row */}
           <div className="mt-16 border-t border-[rgba(255,255,255,0.08)] pt-8 md:mt-24">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-4 md:gap-8">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 md:gap-8">
               {[
                 { value: "104", label: "Matches", accent: false, delay: 500 },
                 { value: "48", label: "Nations", accent: false, delay: 600 },
                 { value: "39", label: "Days", accent: false, delay: 700 },
-                { value: "$15", label: "Per Pool", accent: true, delay: 800 },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -232,7 +231,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">CREATE YOUR POOL</h3>
-              <p className="text-muted-on-section leading-relaxed">Pay $15, name your pool, get a shareable invite link in seconds.</p>
+              <p className="text-muted-on-section leading-relaxed">Name your pool, pick a scoring style, and get a shareable invite link in seconds.</p>
             </div>
 
             {/* Step 2 */}
@@ -300,23 +299,9 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Paywall Banner */}
-                <div className="bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-xl p-4 flex items-center gap-4 mb-5">
-                  <div className="w-10 h-10 rounded-lg bg-[#ffb300]/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#ffb300]" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[#f0f4f8] font-semibold text-sm">Unlock full pool</div>
-                    <div className="text-[#5a7080] text-xs">Unlimited members · Full tournament</div>
-                  </div>
-                  <div className="font-display text-3xl text-[#00e676]">$15</div>
-                </div>
-
                 {/* CTA Button */}
                 <Link href="/login" className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-base hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
-                  Pay $15 & Create Pool
+                  Create Pool
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -328,14 +313,14 @@ export default function LandingPage() {
             <div>
               <h3 className="font-display text-3xl md:text-4xl text-[#f0f4f8] mb-4">Create your pool in 60 seconds</h3>
               <p className="text-[#5a7080] text-lg leading-relaxed mb-8">
-                Name it, choose a scoring style, pay once. You get a private invite link instantly — no complicated setup, no recurring fees.
+                Name it, choose a scoring style, and get a private invite link instantly — no complicated setup, no recurring fees.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-[#f0f4f8]">
                   <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  One-time $15 payment
+                  Free to create
                 </li>
                 <li className="flex items-center gap-3 text-[#f0f4f8]">
                   <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -757,60 +742,32 @@ export default function LandingPage() {
       {/* ===== PRICING ===== */}
       <section id="pricing" className="py-24 md:py-32 bg-[#0d1520]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="max-w-md mx-auto">
-            {/* Single Pricing Card */}
-            <div className="bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl p-8 md:p-10 text-center">
-              <div className="flex items-baseline justify-center gap-2 mb-2">
-                <span className="font-display text-6xl md:text-7xl text-[#00e676]">$15</span>
-                <span className="text-[#5a7080] text-lg">one-time</span>
-              </div>
-              <p className="text-[#5a7080] text-base mb-8">
-                Everything included. No tiers, no upgrades, no monthly fees.
-              </p>
-              
-              <ul className="space-y-3 mb-8 text-left">
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Unlimited members
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Full tournament — all 104 matches
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Live leaderboard
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Automatic scoring
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Prediction reminders before each match
-                </li>
-              </ul>
-              
-              <Link href="/login" className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="font-display text-4xl md:text-5xl text-[#f0f4f8] mb-4">
+              Free to use
+            </h2>
+            <p className="text-[#5a7080] text-lg leading-relaxed">
+              Create as many pools as you want. Invite unlimited members. No subscriptions, no upgrades, no hidden fees.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/login"
+                className="w-full sm:w-auto bg-[#00e676] text-[#080b0f] px-10 py-4 rounded-lg font-semibold text-lg hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2"
+              >
                 Create a Pool
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
+              <a
+                href="/#features"
+                className="w-full sm:w-auto border border-[rgba(255,255,255,0.2)] text-[#f0f4f8] px-10 py-4 rounded-lg font-semibold text-lg hover:bg-[rgba(255,255,255,0.05)] transition-all"
+              >
+                See features
+              </a>
             </div>
-            
-            <p className="text-[#5a7080] text-sm text-center mt-6">
-              Less than one round of drinks for 39 days of office drama.
+            <p className="mt-6 text-[#5a7080] text-sm">
+              Takes 60 seconds · Unlimited pools · Unlimited members
             </p>
           </div>
         </div>
@@ -837,7 +794,7 @@ export default function LandingPage() {
             </svg>
           </Link>
           
-          <p className="mt-6 text-[#5a7080] text-sm">Takes 60 seconds · $15 one-time · No subscription</p>
+          <p className="mt-6 text-[#5a7080] text-sm">Takes 60 seconds · Free to use · No subscription</p>
         </div>
       </section>
 

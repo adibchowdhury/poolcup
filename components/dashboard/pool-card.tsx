@@ -15,7 +15,6 @@ export type DashboardPoolCardData = {
   id: string
   name: string
   inviteCode: string
-  status: string
   members: number
   yourRank: number | null
   totalPredictions: number
@@ -27,11 +26,6 @@ interface PoolCardProps {
   pool: DashboardPoolCardData
 }
 
-function isActiveStatus(status: string): boolean {
-  const s = status.toLowerCase()
-  return s === 'active' || s === 'paid'
-}
-
 export function PoolCard({ pool }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const progressPercent =
@@ -39,7 +33,6 @@ export function PoolCard({ pool }: PoolCardProps) {
       ? (pool.yourPredictions / pool.totalPredictions) * 100
       : 0
   const isLeader = pool.yourRank === 1
-  const active = isActiveStatus(pool.status)
 
   const copyCode = () => {
     navigator.clipboard.writeText(pool.inviteCode)
@@ -79,15 +72,8 @@ export function PoolCard({ pool }: PoolCardProps) {
                 </span>
               </div>
             </div>
-            <span
-              className={cn(
-                'shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider',
-                active
-                  ? 'border border-primary/30 bg-primary/20 text-primary'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {active ? 'active' : pool.status.replace(/_/g, ' ')}
+            <span className="shrink-0 rounded-full border border-primary/30 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+              active
             </span>
           </div>
 

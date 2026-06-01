@@ -84,15 +84,11 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-display text-2xl tracking-wide">
-              4. Pools, Payments & Refunds
+              4. Pools
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              Creating a pool may require a one-time fee, processed by Stripe. Prices
-              shown at checkout are final unless we state otherwise. Pool creation fees
-              are generally non-refundable once the pool is created, except where required
-              by law or at our sole discretion in cases of billing error or duplicate
-              charge. Joining a pool with an invite link is free for members unless the
-              pool organizer arranges separate arrangements outside the Service.
+              PoolCup is free to use. Creating a pool and joining a pool do not require
+              any fee through the Service.
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               PoolCup does not operate real-money gambling or wagering. Any prizes or

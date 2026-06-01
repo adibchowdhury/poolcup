@@ -54,7 +54,6 @@ export default function JoinPoolPage() {
       .from('pools')
       .select('id, name, invite_code, creator_id, created_at')
       .eq('invite_code', inviteCode)
-      .eq('payment_status', 'active')
       .maybeSingle()
 
     if (poolError || !poolData) {
@@ -197,7 +196,7 @@ export default function JoinPoolPage() {
             This pool is not available
           </p>
           <p className="mt-2 text-sm text-[#5a7080]">
-            The invite link may be invalid or the pool has not been activated yet.
+            The invite link may be invalid.
           </p>
         </div>
       </main>

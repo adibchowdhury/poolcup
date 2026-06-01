@@ -92,8 +92,7 @@ export default function SecurityPage() {
               </li>
               <li>We follow the principle of least privilege for internal access</li>
               <li>
-                Card payments are processed by Stripe; we do not store full payment card
-                numbers on our servers
+                We do not store card numbers on our servers
               </li>
               <li>We do not sell your personal data</li>
             </ul>
@@ -122,7 +121,7 @@ export default function SecurityPage() {
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               We review security as we ship new features, especially around predictions,
-              scoring, and payments.
+              scoring, and account access.
             </p>
           </section>
 
@@ -134,7 +133,6 @@ export default function SecurityPage() {
             <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
               <li>Next.js application hosted on a secure edge platform (e.g. Vercel)</li>
               <li>Database, authentication, and storage managed by Supabase</li>
-              <li>Payments handled by Stripe</li>
             </ul>
           </section>
 

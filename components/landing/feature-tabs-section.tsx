@@ -97,7 +97,7 @@ const FEATURE_TABS: Array<{
     desc: 'Create and manage private World Cup pools without wrestling with spreadsheets or group chats.',
     bullets: [
       'Name your pool and pick scoring in under a minute',
-      'One-time $15 to create — unlimited members',
+      'Free to create — unlimited members',
       'Full tournament coverage in one place',
     ],
   },
@@ -401,7 +401,7 @@ function FeaturePreview({ tab }: { tab: FeatureTabKey }) {
         ))}
       </div>
       <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(255,255,255,0.15)] py-3 text-sm font-medium text-[#5a7080]">
-        + Create another pool ($15)
+        + Create another pool
       </div>
     </div>
   )

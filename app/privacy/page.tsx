@@ -54,10 +54,9 @@ export default function PrivacyPage() {
                 related leaderboard information.
               </li>
               <li>
-                <strong className="text-foreground">Payment-related data</strong> —
-                when you pay to create a pool, payment processing is handled by
-                Stripe. We receive confirmation of payment and limited billing
-                metadata; we do not store full card numbers on our servers.
+                <strong className="text-foreground">Billing-related data</strong> —
+                PoolCup is currently free to use. If billing features are added in the
+                future, we will update this policy before they launch.
               </li>
               <li>
                 <strong className="text-foreground">Communications</strong> — if you
@@ -79,9 +78,9 @@ export default function PrivacyPage() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               We use your information to operate PoolCup: authenticate you, create and
               manage prediction pools, record and score predictions, display
-              leaderboards, process pool-creation payments, and send service-related
-              messages (for example, account or security notices). We do not sell your
-              personal information to third parties.
+              leaderboards, and send service-related messages (for example, account or
+              security notices). We do not sell your personal information to third
+              parties.
             </p>
           </section>
 
@@ -97,10 +96,6 @@ export default function PrivacyPage() {
               <li>
                 <strong className="text-foreground">Supabase</strong> — authentication,
                 database, and application hosting.
-              </li>
-              <li>
-                <strong className="text-foreground">Stripe</strong> — payment
-                processing when you purchase pool creation.
               </li>
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">

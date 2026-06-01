@@ -88,11 +88,6 @@ export default function CookiesPage() {
                 <strong className="text-foreground">Supabase</strong> — session and
                 authentication tokens so you can sign in and stay signed in securely.
               </li>
-              <li>
-                <strong className="text-foreground">Stripe</strong> — when you pay to create
-                a pool, Stripe may set cookies during checkout to prevent fraud and complete
-                payment.
-              </li>
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Those providers handle data under their own policies. We do not use third-party
@@ -118,7 +113,7 @@ export default function CookiesPage() {
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Most browsers let you block or delete cookies in settings. Blocking strictly
-              necessary cookies may prevent sign-in, pool access, or checkout. You can also
+              necessary cookies may prevent sign-in or pool access. You can also
               sign out of PoolCup to clear active session state on your device.
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">

@@ -44,9 +44,8 @@ export default function CreatePoolPage() {
         name: poolName.trim(),
         scoring_style: scoringStyle,
         creator_id: user.id,
-        payment_status: 'pending',
       })
-      .select('id')
+      .select('id, invite_code')
       .single()
 
     if (insertError || !pool) {
@@ -83,30 +82,9 @@ export default function CreatePoolPage() {
       return
     }
 
-    setLoadingMessage('Redirecting to checkout…')
-
-    try {
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ poolId: pool.id, userId: user.id }),
-      })
-
-      const data = (await res.json()) as { url?: string; error?: string }
-
-      if (!res.ok || !data.url) {
-        setSubmitting(false)
-        setLoadingMessage(null)
-        setError(data.error ?? 'Failed to create checkout session')
-        return
-      }
-
-      window.location.href = data.url
-    } catch {
-      setSubmitting(false)
-      setLoadingMessage(null)
-      setError('Failed to create checkout session')
-    }
+    setSubmitting(false)
+    setLoadingMessage(null)
+    router.push(`/pool/${pool.invite_code}`)
   }
 
   if (authLoading || !user) {
@@ -132,7 +110,7 @@ export default function CreatePoolPage() {
             Create a Pool
           </h1>
           <p className="mt-2 text-sm text-[#5a7080]">
-            Set up your pool, then complete a one-time $15 payment.
+            Set up your pool and start inviting your squad.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">

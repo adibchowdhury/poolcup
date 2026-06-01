@@ -10,7 +10,6 @@ type MembershipRow = {
     id: string
     name: string
     invite_code: string
-    payment_status: string
   } | null
 }
 
@@ -28,23 +27,12 @@ function formatTimeUntil(iso: string): string {
   return `${minutes}m`
 }
 
-function stripeErrorMessage(code: string | undefined): string | null {
-  if (!code) return null
-  if (code === 'payment_failed') {
-    return 'Payment could not be completed. Please try creating your pool again.'
-  }
-  if (code === 'missing_params') {
-    return 'Payment session was invalid. Please try again.'
-  }
-  return 'Something went wrong. Please try again.'
-}
-
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ passwordReset?: string; error?: string }>
+  searchParams: Promise<{ passwordReset?: string }>
 }) {
-  const { passwordReset, error: errorCode } = await searchParams
+  const { passwordReset } = await searchParams
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -64,8 +52,7 @@ export default async function DashboardPage({
       pools (
         id,
         name,
-        invite_code,
-        payment_status
+        invite_code
       )
     `,
     )
@@ -156,7 +143,6 @@ export default async function DashboardPage({
       id: pool.id,
       name: pool.name,
       inviteCode: pool.invite_code,
-      status: pool.payment_status,
       members: memberCountByPool.get(pool.id) ?? 1,
       yourRank: rankByMember.get(row.id) ?? null,
       totalPredictions,
@@ -189,7 +175,7 @@ export default async function DashboardPage({
         winRate,
       }}
       passwordResetSuccess={passwordReset === 'success'}
-      errorMessage={stripeErrorMessage(errorCode)}
+      errorMessage={null}
     />
   )
 }
