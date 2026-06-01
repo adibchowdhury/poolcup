@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { UpcomingGamesTab } from '@/components/dashboard/upcoming-games-tab'
 import { cn } from '@/lib/utils'
 import {
   getAvatarSrcForLevel,
@@ -474,7 +475,22 @@ export function DashboardView({
               )}
             </TabsContent>
 
-            <TabsContent value="games" className="mt-4" />
+            <TabsContent value="games" className="mt-4">
+              <div className="mx-auto w-full max-w-3xl">
+                <div className="mb-6 flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <div>
+                    <h2 className="font-display text-2xl tracking-wide text-foreground">
+                      Upcoming Games
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Next fixtures you can predict before kickoff
+                    </p>
+                  </div>
+                </div>
+                <UpcomingGamesTab />
+              </div>
+            </TabsContent>
           </Tabs>
         </main>
       </div>
