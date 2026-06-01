@@ -196,24 +196,6 @@ export default function LandingPage() {
             </div>
           </div>
         </main>
-
-        {/* Scroll indicator */}
-        <a
-          href="#how-it-works"
-          className={cn(
-            "absolute bottom-8 left-1/2 z-10 -translate-x-1/2",
-            heroReveal(isVisible),
-          )}
-          style={{ transitionDelay: "900ms" }}
-          aria-label="Scroll to how it works"
-        >
-          <div className="flex flex-col items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3 backdrop-blur-sm">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-[#5a7080]">
-              Scroll
-            </span>
-            <div className="h-2 w-2 rounded-full bg-[#00e676] animate-scroll-bounce" />
-          </div>
-        </a>
       </section>
 
       {/* ===== SECTION 2: HOW IT WORKS (quick 3 steps) ===== */}
