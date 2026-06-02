@@ -217,7 +217,7 @@ export function PoolCard({ pool }: PoolCardProps) {
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card hover-lift">
-        <div className="absolute inset-0 animate-shine opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+        <div className="absolute inset-0 animate-shine opacity-0 transition-opacity duration-700 group-hover:opacity-30" />
 
         {isLeader && (
           <div className="absolute -right-1 -top-1 z-10">

@@ -219,22 +219,22 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
-  animation: shine 3s ease-in-out infinite;
+  animation: shine 6s ease-in-out infinite;
 }
 
 .hover-lift {
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px rgba(0, 230, 118, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px -14px rgba(0, 230, 118, 0.18);
 }
 
 ::-webkit-scrollbar {
