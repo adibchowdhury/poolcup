@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AuthFormDivider } from '@/components/auth/auth-form-divider'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { signUpWithPassword } from '@/src/lib/auth'
 
@@ -70,7 +72,12 @@ export default function CreateAccountPage() {
         </h1>
         <p className="mt-2 text-sm text-[#5a7080]">Create your account</p>
 
-        <form onSubmit={handleSignUp} className="mt-8 space-y-4">
+        <div className="mt-8">
+          <GoogleSignInButton />
+        </div>
+        <AuthFormDivider />
+
+        <form onSubmit={handleSignUp} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label

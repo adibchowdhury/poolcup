@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { FormEvent, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { AuthFormDivider } from '@/components/auth/auth-form-divider'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { sendPasswordResetEmail, signInWithPassword } from '@/src/lib/auth'
 
@@ -12,6 +14,7 @@ type AuthMode = 'signin' | 'forgot'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,6 +22,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [forgotSent, setForgotSent] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'auth_callback') {
+      setError('Sign-in could not be completed. Please try again.')
+      setMode('signin')
+    }
+  }, [searchParams])
 
   function switchMode(next: AuthMode) {
     setMode(next)
@@ -76,7 +86,12 @@ export default function LoginPage() {
         </p>
 
         {mode === 'signin' && (
-          <form onSubmit={handleSignIn} className="mt-8 space-y-4">
+          <>
+            <div className="mt-8">
+              <GoogleSignInButton />
+            </div>
+            <AuthFormDivider />
+          <form onSubmit={handleSignIn} className="space-y-4">
             <div>
               <label
                 htmlFor="email"
@@ -152,6 +167,7 @@ export default function LoginPage() {
               </Link>
             </p>
           </form>
+          </>
         )}
 
         {mode === 'forgot' && (
