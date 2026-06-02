@@ -22,6 +22,8 @@ type DeletePoolDialogProps = {
   onDeleted?: () => void
   triggerClassName?: string
   triggerVariant?: 'ghost' | 'outline' | 'danger'
+  /** Icon-only trigger (no "Delete pool" label). */
+  iconOnly?: boolean
   /**
    * If the trigger is placed inside a clickable card/Link, enable this to prevent
    * navigation while still allowing the dialog to open.
@@ -36,6 +38,7 @@ export function DeletePoolDialog({
   onDeleted,
   triggerClassName,
   triggerVariant = 'outline',
+  iconOnly = false,
   stopPropagation = true,
 }: DeletePoolDialogProps) {
   const router = useRouter()
@@ -77,8 +80,9 @@ export function DeletePoolDialog({
     }
   }
 
-  const triggerBase =
-    triggerVariant === 'ghost'
+  const triggerBase = iconOnly
+    ? 'inline-flex items-center justify-center rounded-md p-2 text-destructive hover:bg-destructive/10'
+    : triggerVariant === 'ghost'
       ? 'inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm text-destructive hover:bg-destructive/10'
       : triggerVariant === 'danger'
         ? 'inline-flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90'
@@ -89,6 +93,7 @@ export function DeletePoolDialog({
       <button
         type="button"
         className={cn(triggerBase, triggerClassName)}
+        aria-label="Delete pool"
         onClick={(e) => {
           if (stopPropagation) {
             // Triggers often sit inside clickable cards/Links.
@@ -99,7 +104,7 @@ export function DeletePoolDialog({
         }}
       >
         <Trash2 className="h-4 w-4" />
-        Delete pool
+        {!iconOnly && 'Delete pool'}
       </button>
 
       <AlertDialog

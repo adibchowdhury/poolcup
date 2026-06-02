@@ -133,8 +133,7 @@ export function PoolCard({ pool }: PoolCardProps) {
                   poolId={pool.id}
                   poolName={pool.name}
                   redirectTo="/dashboard"
-                  triggerVariant="ghost"
-                  triggerClassName="text-destructive hover:bg-destructive/10"
+                  iconOnly
                 />
               )}
             </div>
