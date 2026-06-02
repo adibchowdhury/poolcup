@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthFormDivider } from '@/components/auth/auth-form-divider'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
@@ -12,7 +12,7 @@ const inputClassName = authInputClassName
 
 type AuthMode = 'signin' | 'forgot'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<AuthMode>('signin')
@@ -91,82 +91,82 @@ export default function LoginPage() {
               <GoogleSignInButton />
             </div>
             <AuthFormDivider />
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-[#5a7080]"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className={inputClassName}
-              />
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
                 <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-[#5a7080]"
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-medium text-[#5a7080]"
                 >
-                  Password
+                  Email
                 </label>
-                <button
-                  type="button"
-                  onClick={() => switchMode('forgot')}
-                  className="text-sm text-[#00e676] hover:underline"
-                >
-                  Forgot password?
-                </button>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className={inputClassName}
+                />
               </div>
-              <PasswordInput
-                id="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
 
-            {error && (
-              <p className="text-sm text-red-400" role="alert">
-                {error}
-              </p>
-            )}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-[#5a7080]"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-sm text-[#00e676] hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <PasswordInput
+                  id="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
 
-            {info && (
-              <p className="text-sm text-[#00e676]" role="status">
-                {info}
-              </p>
-            )}
+              {error && (
+                <p className="text-sm text-red-400" role="alert">
+                  {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
+              {info && (
+                <p className="text-sm text-[#00e676]" role="status">
+                  {info}
+                </p>
+              )}
 
-            <p className="text-center text-sm text-[#5a7080]">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/create-account"
-                className="font-medium text-[#00e676] hover:underline"
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Create account
-              </Link>
-            </p>
-          </form>
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
+
+              <p className="text-center text-sm text-[#5a7080]">
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/create-account"
+                  className="font-medium text-[#00e676] hover:underline"
+                >
+                  Create account
+                </Link>
+              </p>
+            </form>
           </>
         )}
 
@@ -228,5 +228,13 @@ export default function LoginPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   )
 }
