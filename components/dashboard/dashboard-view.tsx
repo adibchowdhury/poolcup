@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import {
   prefetchUpcomingMatches,
@@ -458,24 +459,7 @@ export function DashboardView({
                   <PoolCard key={pool.id} pool={pool} />
                 ))}
 
-                <Link
-                  href="/create"
-                  className="group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-border transition-colors hover:border-primary/50"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-[#ffb300]/5 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="relative flex min-h-[280px] flex-col items-center justify-center p-6 text-center">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted transition-transform group-hover:scale-110">
-                      <Plus className="h-8 w-8 text-muted-foreground transition-colors group-hover:text-primary" />
-                    </div>
-                    <h3 className="mb-2 font-display text-xl text-foreground">
-                      Join or Create a Pool
-                    </h3>
-                    <p className="max-w-xs text-sm text-muted-foreground">
-                      Start competing with friends or join an existing pool with an
-                      invite code
-                    </p>
-                  </div>
-                </Link>
+                <JoinOrCreatePoolCard />
               </div>
 
               {pools.length === 0 && (
