@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Check,
@@ -20,8 +20,58 @@ export type DashboardPoolCardData = {
   yourRank: number | null
   totalPredictions: number
   yourPredictions: number
-  nextMatch: string | null
+  nextMatchKickoffAt: string | null
   canDelete?: boolean
+}
+
+function formatCountdown(ms: number): { label: string; isLive: boolean } {
+  if (ms <= 0) {
+    return { label: 'LIVE NOW', isLive: true }
+  }
+
+  const totalSeconds = Math.floor(ms / 1000)
+  const days = Math.floor(totalSeconds / 86_400)
+  const hours = Math.floor((totalSeconds % 86_400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  return {
+    label: `${days}d ${hours}h ${minutes}m ${seconds}s`,
+    isLive: false,
+  }
+}
+
+function NextMatchCountdown({ kickoffAt }: { kickoffAt: string | null }) {
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (!kickoffAt) return
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [kickoffAt])
+
+  if (!kickoffAt) {
+    return <div className="font-mono text-lg text-[#ffb300]">—</div>
+  }
+
+  const { label, isLive } = formatCountdown(
+    new Date(kickoffAt).getTime() - nowMs,
+  )
+
+  return (
+    <div
+      className={cn(
+        'font-mono text-sm leading-tight sm:text-lg',
+        isLive ? 'animate-pulse font-semibold text-primary' : 'text-[#ffb300]',
+      )}
+    >
+      {label}
+    </div>
+  )
 }
 
 interface PoolCardProps {
@@ -90,24 +140,20 @@ export function PoolCard({ pool }: PoolCardProps) {
             </div>
           </div>
 
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-muted/80 p-3 text-center">
-              <div className="font-display text-2xl text-foreground">
-                {pool.yourRank != null ? `#${pool.yourRank}` : '—'}
-              </div>
-              <div className="text-xs text-muted-foreground">Your Rank</div>
-            </div>
-            <div className="rounded-xl bg-muted/80 p-3 text-center">
-              <div className="font-display text-2xl text-primary">
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-muted/80 p-4 text-center">
+              <div className="font-display text-2xl text-primary sm:text-3xl">
                 {pool.yourPredictions}
               </div>
-              <div className="text-xs text-muted-foreground">Predictions</div>
-            </div>
-            <div className="rounded-xl bg-muted/80 p-3 text-center">
-              <div className="font-mono text-lg text-[#ffb300]">
-                {pool.nextMatch ?? '—'}
+              <div className="text-xs text-muted-foreground sm:text-sm">
+                Predictions
               </div>
-              <div className="text-xs text-muted-foreground">Next Match</div>
+            </div>
+            <div className="rounded-xl bg-muted/80 p-4 text-center">
+              <NextMatchCountdown kickoffAt={pool.nextMatchKickoffAt} />
+              <div className="text-xs text-muted-foreground sm:text-sm">
+                Next Match
+              </div>
             </div>
           </div>
 

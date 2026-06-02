@@ -15,20 +15,6 @@ type MembershipRow = {
   } | null
 }
 
-function formatTimeUntil(iso: string): string {
-  const ms = new Date(iso).getTime() - Date.now()
-  if (ms <= 0) return 'Soon'
-  const totalMinutes = Math.ceil(ms / 60_000)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24)
-    return `${days}d ${hours % 24}h`
-  }
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
-}
-
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -82,7 +68,6 @@ export default async function DashboardPage({
 
   const totalPredictions = totalMatchCount ?? 0
 
-  let nextMatchLabel: string | null = null
   const { data: nextMatch } = await supabase
     .from('matches')
     .select('kickoff_at')
@@ -91,9 +76,7 @@ export default async function DashboardPage({
     .limit(1)
     .maybeSingle()
 
-  if (nextMatch?.kickoff_at) {
-    nextMatchLabel = formatTimeUntil(nextMatch.kickoff_at)
-  }
+  const nextMatchKickoffAt = nextMatch?.kickoff_at ?? null
 
   const memberCountByPool = new Map<string, number>()
   if (poolIds.length > 0) {
@@ -156,7 +139,7 @@ export default async function DashboardPage({
       yourRank: rankByMember.get(row.id) ?? null,
       totalPredictions,
       yourPredictions,
-      nextMatch: nextMatchLabel,
+      nextMatchKickoffAt,
       canDelete: pool.creator_id === user.id,
     }
   })
