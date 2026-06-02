@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import {
   prefetchUpcomingMatches,
   UpcomingGamesTab,
@@ -433,6 +434,7 @@ export function DashboardView({
             </TabsContent>
 
             <TabsContent value="pools" className="mt-4 space-y-6">
+              <WorldCupUrgencyBanner />
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
