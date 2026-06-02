@@ -8,8 +8,10 @@ import {
   Copy,
   Crown,
   Users,
+  Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 
 export type DashboardPoolCardData = {
@@ -21,6 +23,7 @@ export type DashboardPoolCardData = {
   totalPredictions: number
   yourPredictions: number
   nextMatchKickoffAt: string | null
+  predictionsLocked: boolean
   canDelete?: boolean
 }
 
@@ -80,11 +83,32 @@ interface PoolCardProps {
 
 export function PoolCard({ pool }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const progressPercent =
     pool.totalPredictions > 0
       ? (pool.yourPredictions / pool.totalPredictions) * 100
       : 0
   const isLeader = pool.yourRank === 1
+  const predictionsComplete =
+    pool.totalPredictions > 0 &&
+    pool.yourPredictions >= pool.totalPredictions
+  const nextKickoffMs = pool.nextMatchKickoffAt
+    ? new Date(pool.nextMatchKickoffAt).getTime()
+    : null
+  const showPredictButton =
+    !pool.predictionsLocked &&
+    nextKickoffMs != null &&
+    nextKickoffMs > nowMs
+
+  useEffect(() => {
+    if (!pool.nextMatchKickoffAt || pool.predictionsLocked) return
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [pool.nextMatchKickoffAt, pool.predictionsLocked])
 
   const copyCode = () => {
     navigator.clipboard.writeText(pool.inviteCode)
@@ -93,10 +117,7 @@ export function PoolCard({ pool }: PoolCardProps) {
   }
 
   return (
-    <Link href={`/pool/${pool.inviteCode}`}>
-      <div
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card hover-lift"
-      >
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card hover-lift">
         <div className="absolute inset-0 animate-shine opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
         {isLeader && (
@@ -114,9 +135,11 @@ export function PoolCard({ pool }: PoolCardProps) {
         <div className="relative p-6">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="font-display text-2xl tracking-wide text-foreground transition-colors group-hover:text-primary">
-                {pool.name}
-              </h3>
+              <Link href={`/pool/${pool.inviteCode}`}>
+                <h3 className="font-display text-2xl tracking-wide text-foreground transition-colors group-hover:text-primary">
+                  {pool.name}
+                </h3>
+              </Link>
               <div className="mt-1 flex items-center gap-2">
                 <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
@@ -195,15 +218,33 @@ export function PoolCard({ pool }: PoolCardProps) {
                 )}
               </button>
             </div>
-            <div className="flex items-center gap-1 text-primary transition-transform group-hover:translate-x-1">
-              <span className="text-sm font-medium">View Pool</span>
-              <ChevronRight className="h-4 w-4" />
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+              {showPredictButton && (
+                <Button
+                  asChild
+                  size="sm"
+                  className="gap-1.5 bg-primary px-4 font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90"
+                >
+                  <Link href={`/pool/${pool.inviteCode}/predict`}>
+                    <Zap className="h-4 w-4 fill-current" aria-hidden />
+                    {predictionsComplete
+                      ? 'Update Predictions'
+                      : 'Predict Now'}
+                  </Link>
+                </Button>
+              )}
+              <Link
+                href={`/pool/${pool.inviteCode}`}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                View Pool
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary opacity-0 transition-opacity group-hover:opacity-100" />
-      </div>
-    </Link>
+    </div>
   )
 }

@@ -68,15 +68,24 @@ export default async function DashboardPage({
 
   const totalPredictions = totalMatchCount ?? 0
 
+  const nowIso = new Date().toISOString()
+
   const { data: nextMatch } = await supabase
     .from('matches')
     .select('kickoff_at')
-    .gt('kickoff_at', new Date().toISOString())
+    .gt('kickoff_at', nowIso)
     .order('kickoff_at', { ascending: true })
     .limit(1)
     .maybeSingle()
 
   const nextMatchKickoffAt = nextMatch?.kickoff_at ?? null
+
+  const { count: upcomingMatchCount } = await supabase
+    .from('matches')
+    .select('*', { count: 'exact', head: true })
+    .gt('kickoff_at', nowIso)
+
+  const predictionsLocked = (upcomingMatchCount ?? 0) === 0
 
   const memberCountByPool = new Map<string, number>()
   if (poolIds.length > 0) {
@@ -140,6 +149,7 @@ export default async function DashboardPage({
       totalPredictions,
       yourPredictions,
       nextMatchKickoffAt,
+      predictionsLocked,
       canDelete: pool.creator_id === user.id,
     }
   })
