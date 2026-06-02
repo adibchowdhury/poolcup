@@ -27,6 +27,9 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: pathname,
     },
+    verification: {
+      google: 'wUcYdWnVflR1_Y88THjoEWcCYgtCrRWr-BwkzGmoBzs',
+    },
   }
 }
 
