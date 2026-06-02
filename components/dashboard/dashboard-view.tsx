@@ -365,7 +365,7 @@ export function DashboardView({
             </div>
           )}
 
-          <Tabs defaultValue="profile" className="gap-10">
+          <Tabs defaultValue="pools" className="gap-10">
             <TabsList className="mx-auto grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
               <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <User className="h-4 w-4 shrink-0" />
