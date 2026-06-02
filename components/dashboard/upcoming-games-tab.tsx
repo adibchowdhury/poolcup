@@ -2,6 +2,7 @@
 
 import { Calendar, Clock } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useClientNow } from '@/hooks/use-client-now'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
@@ -87,8 +88,10 @@ function formatRoundLabel(round: string, groupName: string | null): string {
   return ROUND_LABELS[round] ?? round
 }
 
+const DATE_LOCALE = 'en-US'
+
 function formatDateHeader(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(DATE_LOCALE, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -96,7 +99,7 @@ function formatDateHeader(iso: string): string {
 }
 
 function formatKickoffLocal(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return new Date(iso).toLocaleString(DATE_LOCALE, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -149,8 +152,16 @@ function UpcomingGamesSkeleton() {
   )
 }
 
-function MatchCard({ match, nowMs }: { match: UpcomingMatch; nowMs: number }) {
-  const countdown = getCountdownLabel(match.kickoff_at, nowMs)
+function MatchCard({
+  match,
+  mounted,
+  nowMs,
+}: {
+  match: UpcomingMatch
+  mounted: boolean
+  nowMs: number
+}) {
+  const countdown = mounted ? getCountdownLabel(match.kickoff_at, nowMs) : null
   const roundLabel = formatRoundLabel(match.round, match.group_name)
 
   return (
@@ -202,7 +213,7 @@ export function UpcomingGamesTab() {
   const [matches, setMatches] = useState<UpcomingMatch[]>(cachedMatches ?? [])
   const [loading, setLoading] = useState(cachedMatches === null)
   const [error, setError] = useState<string | null>(null)
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const { mounted, nowMs } = useClientNow(60_000)
 
   const loadMatches = useCallback(async (showLoading: boolean) => {
     if (showLoading) setLoading(true)
@@ -224,11 +235,6 @@ export function UpcomingGamesTab() {
   useEffect(() => {
     void loadMatches(cachedMatches === null)
   }, [loadMatches])
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNowMs(Date.now()), 60_000)
-    return () => window.clearInterval(interval)
-  }, [])
 
   const matchesByDay = useMemo(() => groupMatchesByDay(matches), [matches])
 
@@ -270,7 +276,7 @@ export function UpcomingGamesTab() {
           <ul className={cn('space-y-3')}>
             {dayMatches.map((match) => (
               <li key={match.id}>
-                <MatchCard match={match} nowMs={nowMs} />
+                <MatchCard match={match} mounted={mounted} nowMs={nowMs} />
               </li>
             ))}
           </ul>

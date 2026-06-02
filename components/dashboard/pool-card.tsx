@@ -1,24 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useClientNow } from '@/hooks/use-client-now'
 import {
+  AlertCircle,
   Check,
   ChevronRight,
   Copy,
   Crown,
-  Users,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 
+export type PoolMemberAvatar = {
+  displayName: string
+  initials: string
+}
+
 export type DashboardPoolCardData = {
   id: string
   name: string
   inviteCode: string
   members: number
+  memberAvatars: PoolMemberAvatar[]
   yourRank: number | null
   totalPredictions: number
   yourPredictions: number
@@ -44,21 +51,120 @@ function formatCountdown(ms: number): { label: string; isLive: boolean } {
   }
 }
 
-function NextMatchCountdown({ kickoffAt }: { kickoffAt: string | null }) {
-  const [nowMs, setNowMs] = useState(() => Date.now())
+const PROGRESS_GREEN = '#22c55e'
+const PROGRESS_YELLOW = '#f59e0b'
+const PROGRESS_RED = '#ef4444'
 
-  useEffect(() => {
-    if (!kickoffAt) return
+function getProgressBarColor(predictions: number, total: number): string {
+  if (total <= 0) return PROGRESS_RED
+  const greenMin = Math.floor(total * 0.67)
+  const yellowMin = Math.ceil(total * 0.34)
+  if (predictions >= greenMin) return PROGRESS_GREEN
+  if (predictions >= yellowMin) return PROGRESS_YELLOW
+  return PROGRESS_RED
+}
 
-    const interval = window.setInterval(() => {
-      setNowMs(Date.now())
-    }, 1000)
+const MAX_VISIBLE_MEMBER_AVATARS = 4
 
-    return () => window.clearInterval(interval)
-  }, [kickoffAt])
+function PoolMemberAvatars({
+  members,
+  memberAvatars,
+}: {
+  members: number
+  memberAvatars: PoolMemberAvatar[]
+}) {
+  const visible = memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
+  const overflow = Math.max(0, members - MAX_VISIBLE_MEMBER_AVATARS)
 
+  if (members === 1 && visible[0]) {
+    return (
+      <div className="mt-2 flex items-center gap-2.5">
+        <MemberAvatarCircle
+          initials={visible[0].initials}
+          displayName={visible[0].displayName}
+          accent
+        />
+        <span className="text-sm text-muted-foreground">Invite friends</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2.5">
+      <div className="flex items-center">
+        {visible.map((member, index) => (
+          <MemberAvatarCircle
+            key={`${member.displayName}-${index}`}
+            initials={member.initials}
+            displayName={member.displayName}
+            className={index > 0 ? '-ml-2' : undefined}
+            accent={index === 0}
+          />
+        ))}
+        {overflow > 0 && (
+          <div
+            className="-ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-card bg-[#1a2535] text-xs font-semibold text-primary ring-2 ring-card"
+            aria-label={`${overflow} more members`}
+          >
+            +{overflow}
+          </div>
+        )}
+      </div>
+      <span className="text-sm text-muted-foreground">
+        {members} {members === 1 ? 'member' : 'members'}
+      </span>
+    </div>
+  )
+}
+
+function MemberAvatarCircle({
+  initials,
+  displayName,
+  className,
+  accent = false,
+}: {
+  initials: string
+  displayName: string
+  className?: string
+  accent?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-card bg-[#1a2535] text-xs font-semibold ring-2 ring-card',
+        accent ? 'text-primary' : 'text-white',
+        className,
+      )}
+      title={displayName}
+      aria-label={displayName}
+    >
+      {initials}
+    </div>
+  )
+}
+
+function NextMatchCountdown({
+  kickoffAt,
+  mounted,
+  nowMs,
+}: {
+  kickoffAt: string | null
+  mounted: boolean
+  nowMs: number
+}) {
   if (!kickoffAt) {
     return <div className="font-mono text-lg text-[#ffb300]">—</div>
+  }
+
+  if (!mounted) {
+    return (
+      <div
+        className="font-mono text-sm leading-tight text-[#ffb300] tabular-nums sm:text-lg"
+        aria-hidden
+      >
+        —
+      </div>
+    )
   }
 
   const { label, isLive } = formatCountdown(
@@ -71,6 +177,7 @@ function NextMatchCountdown({ kickoffAt }: { kickoffAt: string | null }) {
         'font-mono text-sm leading-tight sm:text-lg',
         isLive ? 'animate-pulse font-semibold text-primary' : 'text-[#ffb300]',
       )}
+      suppressHydrationWarning
     >
       {label}
     </div>
@@ -83,32 +190,24 @@ interface PoolCardProps {
 
 export function PoolCard({ pool }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const { mounted, nowMs } = useClientNow(1000)
+  const totalMatches = pool.totalPredictions > 0 ? pool.totalPredictions : 72
   const progressPercent =
-    pool.totalPredictions > 0
-      ? (pool.yourPredictions / pool.totalPredictions) * 100
-      : 0
+    totalMatches > 0 ? (pool.yourPredictions / totalMatches) * 100 : 0
+  const progressBarColor = getProgressBarColor(pool.yourPredictions, totalMatches)
+  const showKickoffWarning = progressPercent < 50
+  const isZeroProgress = pool.yourPredictions === 0
   const isLeader = pool.yourRank === 1
   const predictionsComplete =
-    pool.totalPredictions > 0 &&
-    pool.yourPredictions >= pool.totalPredictions
+    totalMatches > 0 && pool.yourPredictions >= totalMatches
   const nextKickoffMs = pool.nextMatchKickoffAt
     ? new Date(pool.nextMatchKickoffAt).getTime()
     : null
   const showPredictButton =
+    mounted &&
     !pool.predictionsLocked &&
     nextKickoffMs != null &&
     nextKickoffMs > nowMs
-
-  useEffect(() => {
-    if (!pool.nextMatchKickoffAt || pool.predictionsLocked) return
-
-    const interval = window.setInterval(() => {
-      setNowMs(Date.now())
-    }, 1000)
-
-    return () => window.clearInterval(interval)
-  }, [pool.nextMatchKickoffAt, pool.predictionsLocked])
 
   const copyCode = () => {
     navigator.clipboard.writeText(pool.inviteCode)
@@ -140,12 +239,10 @@ export function PoolCard({ pool }: PoolCardProps) {
                   {pool.name}
                 </h3>
               </Link>
-              <div className="mt-1 flex items-center gap-2">
-                <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {pool.members} {pool.members === 1 ? 'member' : 'members'}
-                </span>
-              </div>
+              <PoolMemberAvatars
+                members={pool.members}
+                memberAvatars={pool.memberAvatars}
+              />
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="rounded-full border border-primary/30 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
@@ -172,7 +269,11 @@ export function PoolCard({ pool }: PoolCardProps) {
               </div>
             </div>
             <div className="rounded-xl bg-muted/80 p-4 text-center">
-              <NextMatchCountdown kickoffAt={pool.nextMatchKickoffAt} />
+              <NextMatchCountdown
+                kickoffAt={pool.nextMatchKickoffAt}
+                mounted={mounted}
+                nowMs={nowMs}
+              />
               <div className="text-xs text-muted-foreground sm:text-sm">
                 Next Match
               </div>
@@ -183,15 +284,35 @@ export function PoolCard({ pool }: PoolCardProps) {
             <div className="mb-1 flex justify-between text-xs">
               <span className="text-muted-foreground">Prediction Progress</span>
               <span className="font-mono text-primary">
-                {pool.yourPredictions}/{pool.totalPredictions}
+                {pool.yourPredictions}/{totalMatches}
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-[#ffb300] transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(progressPercent, 100)}%`,
+                  backgroundColor: progressBarColor,
+                }}
               />
             </div>
+            {predictionsComplete && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[#22c55e]">
+                <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                All predictions submitted!
+              </p>
+            )}
+            {!predictionsComplete && showKickoffWarning && isZeroProgress && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[#ef4444]">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Predictions lock at kickoff — don&apos;t get caught out!
+              </p>
+            )}
+            {!predictionsComplete && showKickoffWarning && !isZeroProgress && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Predictions lock at kickoff — don&apos;t get caught out!
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">

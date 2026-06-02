@@ -15,6 +15,14 @@ type MembershipRow = {
   } | null
 }
 
+function memberInitials(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase()
+  }
+  return (parts[0] ?? '?').slice(0, 2).toUpperCase()
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -88,17 +96,31 @@ export default async function DashboardPage({
   const predictionsLocked = (upcomingMatchCount ?? 0) === 0
 
   const memberCountByPool = new Map<string, number>()
+  const memberAvatarsByPool = new Map<
+    string,
+    { displayName: string; initials: string }[]
+  >()
+
   if (poolIds.length > 0) {
     const { data: memberRowsAll } = await supabase
       .from('pool_members')
-      .select('pool_id')
+      .select('pool_id, display_name')
       .in('pool_id', poolIds)
+      .order('joined_at', { ascending: true })
 
     for (const row of memberRowsAll ?? []) {
       memberCountByPool.set(
         row.pool_id,
         (memberCountByPool.get(row.pool_id) ?? 0) + 1,
       )
+
+      const displayName = row.display_name?.trim() || 'Member'
+      const avatars = memberAvatarsByPool.get(row.pool_id) ?? []
+      avatars.push({
+        displayName,
+        initials: memberInitials(displayName),
+      })
+      memberAvatarsByPool.set(row.pool_id, avatars)
     }
   }
 
@@ -145,6 +167,7 @@ export default async function DashboardPage({
       name: pool.name,
       inviteCode: pool.invite_code,
       members: memberCountByPool.get(pool.id) ?? 1,
+      memberAvatars: memberAvatarsByPool.get(pool.id) ?? [],
       yourRank: rankByMember.get(row.id) ?? null,
       totalPredictions,
       yourPredictions,
