@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Zap } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
 
@@ -61,54 +62,14 @@ type CreatedPool = {
   inviteCode: string
 }
 
-declare global {
-  interface Window {
-    confetti?: (options?: Record<string, unknown>) => void
-  }
-}
-
-const CONFETTI_SCRIPT_ID = 'canvas-confetti-cdn'
-const CONFETTI_SCRIPT_SRC =
-  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js'
-
-function loadConfettiScript(): Promise<void> {
-  if (typeof window.confetti === 'function') {
-    return Promise.resolve()
-  }
-
-  const existing = document.getElementById(CONFETTI_SCRIPT_ID)
-  if (existing) {
-    return new Promise((resolve, reject) => {
-      if (typeof window.confetti === 'function') {
-        resolve()
-        return
-      }
-      existing.addEventListener('load', () => resolve(), { once: true })
-      existing.addEventListener('error', () => reject(), { once: true })
-    })
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.id = CONFETTI_SCRIPT_ID
-    script.src = CONFETTI_SCRIPT_SRC
-    script.async = true
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load confetti'))
-    document.head.appendChild(script)
-  })
-}
-
 function fireConfettiBursts() {
-  if (typeof window.confetti !== 'function') return
-
-  window.confetti({
+  confetti({
     particleCount: 120,
     spread: 72,
     origin: { y: 0.55 },
   })
   window.setTimeout(() => {
-    window.confetti?.({
+    confetti({
       particleCount: 60,
       spread: 100,
       origin: { y: 0.35 },
@@ -159,25 +120,13 @@ export default function CreatePoolPage() {
 
     let cancelled = false
 
-    async function runConfetti() {
-      try {
-        await loadConfettiScript()
-        if (cancelled) return
-
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-        if (cancelled) return
-
-        fireConfettiBursts()
-      } catch {
-        /* confetti is decorative */
-      }
-    }
-
-    void runConfetti()
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) {
+          fireConfettiBursts()
+        }
+      })
+    })
 
     return () => {
       cancelled = true
