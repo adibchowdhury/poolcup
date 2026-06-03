@@ -62,19 +62,17 @@ type CreatedPool = {
   inviteCode: string
 }
 
-const fireConfetti = confetti.create(undefined, { useWorker: false })
-
 function fireConfettiBursts() {
-  fireConfetti({
+  confetti({
     particleCount: 120,
     spread: 72,
-    origin: { y: 0.55 },
+    origin: { x: 0.5, y: 0 },
   })
   window.setTimeout(() => {
-    fireConfetti({
+    confetti({
       particleCount: 60,
       spread: 100,
-      origin: { y: 0.35 },
+      origin: { x: 0.5, y: 0 },
     })
   }, 250)
 }
