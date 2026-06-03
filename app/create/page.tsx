@@ -1,15 +1,10 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  Circle,
-  CircleDot,
-  Disc,
-  Egg,
-  Snowflake,
-} from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
 
@@ -28,14 +23,29 @@ type SportId = 'soccer' | 'basketball' | 'baseball' | 'football' | 'hockey'
 const SPORTS: {
   id: SportId
   label: string
-  icon: typeof CircleDot
+  imageSrc: string
   available: boolean
 }[] = [
-  { id: 'soccer', label: 'Soccer', icon: CircleDot, available: true },
-  { id: 'basketball', label: 'Basketball', icon: Circle, available: false },
-  { id: 'baseball', label: 'Baseball', icon: Disc, available: false },
-  { id: 'football', label: 'Football', icon: Egg, available: false },
-  { id: 'hockey', label: 'Hockey', icon: Snowflake, available: false },
+  { id: 'soccer', label: 'Soccer', imageSrc: '/sports/soccer.png', available: true },
+  {
+    id: 'basketball',
+    label: 'Basketball',
+    imageSrc: '/sports/basketball.png',
+    available: false,
+  },
+  {
+    id: 'baseball',
+    label: 'Baseball',
+    imageSrc: '/sports/baseball.png',
+    available: false,
+  },
+  {
+    id: 'football',
+    label: 'Football',
+    imageSrc: '/sports/football.png',
+    available: false,
+  },
+  { id: 'hockey', label: 'Hockey', imageSrc: '/sports/hockey.png', available: false },
 ]
 
 const SOCCER_EVENTS = [
@@ -57,62 +67,57 @@ declare global {
   }
 }
 
-function useConfetti(active: boolean) {
-  useEffect(() => {
-    if (!active) return
+const CONFETTI_SCRIPT_ID = 'canvas-confetti-cdn'
+const CONFETTI_SCRIPT_SRC =
+  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js'
 
-    let cancelled = false
-    const scriptId = 'canvas-confetti-cdn'
+function loadConfettiScript(): Promise<void> {
+  if (typeof window.confetti === 'function') {
+    return Promise.resolve()
+  }
 
-    async function fire() {
-      if (!window.confetti) {
-        const existing = document.getElementById(scriptId)
-        if (!existing) {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement('script')
-            script.id = scriptId
-            script.src =
-              'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js'
-            script.async = true
-            script.onload = () => resolve()
-            script.onerror = () => reject(new Error('Failed to load confetti'))
-            document.head.appendChild(script)
-          })
-        } else {
-          await new Promise<void>((resolve) => {
-            if (window.confetti) resolve()
-            else existing.addEventListener('load', () => resolve(), { once: true })
-          })
-        }
+  const existing = document.getElementById(CONFETTI_SCRIPT_ID)
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      if (typeof window.confetti === 'function') {
+        resolve()
+        return
       }
-
-      if (cancelled || !window.confetti) return
-
-      window.confetti({
-        particleCount: 120,
-        spread: 72,
-        origin: { y: 0.55 },
-      })
-      window.setTimeout(() => {
-        if (!cancelled && window.confetti) {
-          window.confetti({
-            particleCount: 60,
-            spread: 100,
-            origin: { y: 0.35 },
-          })
-        }
-      }, 250)
-    }
-
-    void fire().catch(() => {
-      /* confetti is decorative */
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(), { once: true })
     })
+  }
 
-    return () => {
-      cancelled = true
-    }
-  }, [active])
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.id = CONFETTI_SCRIPT_ID
+    script.src = CONFETTI_SCRIPT_SRC
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load confetti'))
+    document.head.appendChild(script)
+  })
 }
+
+function fireConfettiBursts() {
+  if (typeof window.confetti !== 'function') return
+
+  window.confetti({
+    particleCount: 120,
+    spread: 72,
+    origin: { y: 0.55 },
+  })
+  window.setTimeout(() => {
+    window.confetti?.({
+      particleCount: 60,
+      spread: 100,
+      origin: { y: 0.35 },
+    })
+  }, 250)
+}
+
+const SHARE_BUTTON_CLASS =
+  'w-full rounded-lg border border-[#1e2d3d] px-2 py-2 text-xs font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676] sm:text-sm sm:px-3'
 
 function StepIndicator({ step }: { step: number }) {
   return (
@@ -149,7 +154,35 @@ export default function CreatePoolPage() {
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  useConfetti(step === 4 && createdPool != null)
+  useEffect(() => {
+    if (step !== 4 || !createdPool) return
+
+    let cancelled = false
+
+    async function runConfetti() {
+      try {
+        await loadConfettiScript()
+        if (cancelled) return
+
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+        if (cancelled) return
+
+        fireConfettiBursts()
+      } catch {
+        /* confetti is decorative */
+      }
+    }
+
+    void runConfetti()
+
+    return () => {
+      cancelled = true
+    }
+  }, [step, createdPool])
 
   const inviteLink = useMemo(() => {
     if (!createdPool || typeof window === 'undefined') return ''
@@ -289,7 +322,7 @@ export default function CreatePoolPage() {
     <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10">
       <div className={`w-full ${containerWidth}`}>
         <div className="rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl">
-          {step < 4 ? (
+          {step === 1 ? (
             <Link
               href="/dashboard"
               className="text-sm text-[#5a7080] hover:text-[#00e676] transition-colors"
@@ -298,7 +331,7 @@ export default function CreatePoolPage() {
             </Link>
           ) : null}
 
-          <div className={step < 4 ? 'mt-4' : ''}>
+          <div className={step === 1 ? 'mt-4' : ''}>
             <StepIndicator step={step} />
           </div>
 
@@ -312,9 +345,7 @@ export default function CreatePoolPage() {
               </p>
 
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {SPORTS.map((sport) => {
-                  const Icon = sport.icon
-                  return (
+                {SPORTS.map((sport) => (
                     <button
                       key={sport.id}
                       type="button"
@@ -331,14 +362,16 @@ export default function CreatePoolPage() {
                           Coming soon
                         </span>
                       )}
-                      <Icon
-                        className={`h-10 w-10 ${sport.available ? 'text-[#00e676]' : 'text-[#5a7080]'}`}
-                        aria-hidden
+                      <Image
+                        src={sport.imageSrc}
+                        alt={sport.label}
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 object-contain"
                       />
                       <span className="text-sm font-medium">{sport.label}</span>
                     </button>
-                  )
-                })}
+                  ))}
               </div>
             </>
           )}
@@ -458,7 +491,11 @@ export default function CreatePoolPage() {
               <h1 className="mt-4 font-display text-3xl tracking-wide text-[#f0f4f8]">
                 Pool created!
               </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">{createdPool.name}</p>
+
+              <div className="mt-6 flex items-center justify-center gap-2 text-[#00e676]">
+                <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="text-sm font-semibold">+50 points earned!</span>
+              </div>
 
               <div className="mt-8">
                 <label
@@ -477,39 +514,39 @@ export default function CreatePoolPage() {
                 />
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5">
                 <button
                   type="button"
                   onClick={copyInviteLink}
-                  className="rounded-lg border border-[#1e2d3d] px-3 py-2 text-sm font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676]"
+                  className={SHARE_BUTTON_CLASS}
                 >
                   {linkCopied ? 'Copied!' : 'Copy link'}
                 </button>
                 <button
                   type="button"
                   onClick={shareWhatsApp}
-                  className="rounded-lg border border-[#1e2d3d] px-3 py-2 text-sm font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676]"
+                  className={SHARE_BUTTON_CLASS}
                 >
                   WhatsApp
                 </button>
                 <button
                   type="button"
                   onClick={shareSms}
-                  className="rounded-lg border border-[#1e2d3d] px-3 py-2 text-sm font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676]"
+                  className={SHARE_BUTTON_CLASS}
                 >
                   iMessage
                 </button>
                 <button
                   type="button"
                   onClick={shareEmail}
-                  className="rounded-lg border border-[#1e2d3d] px-3 py-2 text-sm font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676]"
+                  className={SHARE_BUTTON_CLASS}
                 >
                   Email
                 </button>
                 <button
                   type="button"
                   onClick={shareTwitter}
-                  className="rounded-lg border border-[#1e2d3d] px-3 py-2 text-sm font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676]"
+                  className={SHARE_BUTTON_CLASS}
                 >
                   X
                 </button>
