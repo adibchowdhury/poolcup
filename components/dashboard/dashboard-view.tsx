@@ -40,6 +40,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAnimatedNumber } from '@/hooks/use-animated-number'
 import { useEffect, useMemo, useState } from 'react'
 
 export type DashboardQuickStats = {
@@ -56,6 +57,11 @@ interface DashboardViewProps {
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
   errorMessage?: string | null
+}
+
+function AnimatedTotalPointsDisplay({ target }: { target: number }) {
+  const displayed = useAnimatedNumber(target)
+  return <>{displayed.toLocaleString()}</>
 }
 
 export function DashboardView({
@@ -80,6 +86,15 @@ export function DashboardView({
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
+  const [activeTab, setActiveTab] = useState('pools')
+  const [pointsAnimKey, setPointsAnimKey] = useState(0)
+
+  function handleTabChange(value: string) {
+    setActiveTab(value)
+    if (value === 'profile') {
+      setPointsAnimKey((k) => k + 1)
+    }
+  }
 
   useEffect(() => {
     const name = displayName ?? ''
@@ -197,7 +212,6 @@ export function DashboardView({
   const quickStatItems = [
     {
       label: 'Total Points',
-      value: liveTotalPoints.toLocaleString(),
       icon: Zap,
       color: 'text-primary',
     },
@@ -397,7 +411,11 @@ export function DashboardView({
             </div>
           )}
 
-          <Tabs defaultValue="pools" className="gap-10">
+          <Tabs
+            value={activeTab}
+            onValueChange={handleTabChange}
+            className="gap-10"
+          >
             <TabsList className="mx-auto grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
               <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <User className="h-4 w-4 shrink-0" />
@@ -451,7 +469,14 @@ export function DashboardView({
                         />
                         <div className="text-left">
                           <div className="font-display text-6xl leading-none text-foreground sm:text-7xl lg:text-8xl">
-                            {stat.value}
+                            {stat.label === 'Total Points' ? (
+                              <AnimatedTotalPointsDisplay
+                                key={pointsAnimKey}
+                                target={liveTotalPoints}
+                              />
+                            ) : (
+                              stat.value
+                            )}
                           </div>
                           <div className="mt-2 text-lg text-muted-foreground sm:text-xl">
                             {stat.label}
