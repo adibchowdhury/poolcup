@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnimatedNumber } from '@/hooks/use-animated-number'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type DashboardQuickStats = {
   totalPoints: number
@@ -89,10 +89,28 @@ export function DashboardView({
   const [activeTab, setActiveTab] = useState('pools')
   const [pointsAnimKey, setPointsAnimKey] = useState(0)
 
+  const refreshUserPoints = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('points')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Failed to refresh user points:', error.message)
+      return
+    }
+
+    if (typeof data?.points === 'number') {
+      setLiveTotalPoints(data.points)
+    }
+  }, [userId])
+
   function handleTabChange(value: string) {
     setActiveTab(value)
     if (value === 'profile') {
       setPointsAnimKey((k) => k + 1)
+      void refreshUserPoints()
     }
   }
 
@@ -105,6 +123,10 @@ export function DashboardView({
   useEffect(() => {
     setLiveTotalPoints(quickStats.totalPoints)
   }, [quickStats.totalPoints])
+
+  useEffect(() => {
+    void refreshUserPoints()
+  }, [refreshUserPoints])
 
   useEffect(() => {
     const channel = supabase
@@ -124,12 +146,32 @@ export function DashboardView({
           }
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          void refreshUserPoints()
+        }
+      })
 
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, refreshUserPoints])
+
+  useEffect(() => {
+    function refreshIfProfileVisible() {
+      if (document.visibilityState === 'visible' && activeTab === 'profile') {
+        void refreshUserPoints()
+      }
+    }
+
+    window.addEventListener('focus', refreshIfProfileVisible)
+    document.addEventListener('visibilitychange', refreshIfProfileVisible)
+
+    return () => {
+      window.removeEventListener('focus', refreshIfProfileVisible)
+      document.removeEventListener('visibilitychange', refreshIfProfileVisible)
+    }
+  }, [activeTab, refreshUserPoints])
 
   useEffect(() => {
     void prefetchUpcomingMatches()

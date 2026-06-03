@@ -4,6 +4,8 @@ import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { resolveUserDisplayName } from '@/src/lib/auth'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 type MembershipRow = {
   id: string
   pool_id: string
