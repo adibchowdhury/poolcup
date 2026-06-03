@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useClientNow } from '@/hooks/use-client-now'
 import {
   ArrowLeft,
   Calendar,
@@ -9,7 +11,6 @@ import {
   ChevronRight,
   Copy,
   Share2,
-  Sparkles,
   Flame,
   Target,
   Trophy,
@@ -28,25 +29,58 @@ export type PoolHomeMeta = {
   matchesPlayed: number
   totalMatches: number
   nextMatchIn: string | null
+  nextMatchKickoffAt: string | null
 }
 
 interface PoolHomeViewProps {
   pool: PoolHomeMeta
   members: LeaderboardMember[]
   predictHref: string
+  yourPredictions: number
   canDelete?: boolean
   poolId?: string
+}
+
+function formatNextMatchCountdown(ms: number): string {
+  if (ms <= 0) return 'Soon'
+  const totalMinutes = Math.ceil(ms / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
+  }
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
+function PoolNextMatchCountdown({ kickoffAt }: { kickoffAt: string }) {
+  const { mounted, nowMs } = useClientNow(60_000)
+
+  const label = mounted
+    ? formatNextMatchCountdown(new Date(kickoffAt).getTime() - nowMs)
+    : '—'
+
+  return (
+    <span className="text-sm font-medium" suppressHydrationWarning>
+      Next match in {label}
+    </span>
+  )
 }
 
 export function PoolHomeView({
   pool,
   members,
   predictHref,
+  yourPredictions,
   canDelete,
   poolId,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState(
+    pool.matchesPlayed === 0 ? 'predictions' : 'leaderboard',
+  )
 
   const copyInviteLink = () => {
     const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
@@ -57,8 +91,8 @@ export function PoolHomeView({
 
   const yourRank = members.findIndex((m) => m.isYou) + 1
   const yourData = members.find((m) => m.isYou)
-  const isWaitingForAction =
-    members.length === 1 && members[0].points === 0
+  const showLeaderboardEmpty = pool.matchesPlayed === 0
+  const showRankChange = pool.matchesPlayed > 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,15 +143,34 @@ export function PoolHomeView({
             </div>
             <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
               <Calendar className="h-4 w-4 text-[#ffb300]" />
-              <span className="text-sm font-medium">
-                {pool.matchesPlayed} Matches played
-              </span>
+              {pool.matchesPlayed === 0 && pool.nextMatchKickoffAt ? (
+                <PoolNextMatchCountdown kickoffAt={pool.nextMatchKickoffAt} />
+              ) : (
+                <span className="text-sm font-medium">
+                  {pool.matchesPlayed} Matches played
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
               <Target className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">{pool.stage}</span>
             </div>
           </div>
+
+          {yourPredictions === 0 && (
+            <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-foreground">
+                You haven&apos;t made your predictions yet
+              </p>
+              <Button
+                asChild
+                size="sm"
+                className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Link href={predictHref}>Predict Now</Link>
+              </Button>
+            </div>
+          )}
 
           {yourData && yourData.points > 0 && (
             <div className="mb-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6">
@@ -152,137 +205,150 @@ export function PoolHomeView({
             </div>
           )}
 
-          <div className="mb-8">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
-                <Trophy className="relative h-6 w-6 text-primary" />
-              </div>
-              <h2 className="font-display text-2xl tracking-wide text-foreground">
-                LEADERBOARD
-              </h2>
-              <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
-            </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="mb-8 gap-6"
+          >
+            <TabsList className="grid h-auto w-full max-w-md grid-cols-2 p-1">
+              <TabsTrigger value="predictions" className="py-2">
+                Predictions
+              </TabsTrigger>
+              <TabsTrigger value="leaderboard" className="py-2">
+                Leaderboard
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="overflow-hidden rounded-2xl border border-border bg-card">
-              <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
+            <TabsContent value="predictions" className="mt-0 space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Button
+                  asChild
+                  size="lg"
+                  className="group h-16 w-full gap-3 bg-primary font-display text-xl tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift"
+                >
+                  <Link href={predictHref}>
+                    <Zap className="h-6 w-6" />
+                    Make Predictions
+                    <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
 
-              <div className="p-2">
-                {members.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">No members yet</p>
-                    <p className="text-sm text-muted-foreground/60">
-                      Share the invite code to get started!
-                    </p>
-                  </div>
-                ) : isWaitingForAction ? (
-                  <div className="space-y-2">
-                    <LeaderboardRow
-                      member={members[0]}
-                      rank={1}
-                      isTop3={false}
-                    />
-                    <div className="mt-4 border-t border-border py-8 text-center">
-                      <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ffb300]/20 bg-[#ffb300]/10 px-4 py-2">
-                        <Sparkles className="h-4 w-4 text-[#ffb300]" />
-                        <span className="text-sm text-[#ffb300]">
-                          Waiting for the action to begin
-                        </span>
-                      </div>
-                      <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                        Invite your friends and make your predictions before matches
-                        start. Points will appear here once games are played!
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {members.map((member, index) => (
-                      <LeaderboardRow
-                        key={member.id}
-                        member={member}
-                        rank={index + 1}
-                        isTop3={members.length > 2}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Button
-              asChild
-              size="lg"
-              className="group h-16 w-full gap-3 bg-primary font-display text-xl tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift"
-            >
-              <Link href={predictHref}>
-                <Zap className="h-6 w-6" />
-                Make Predictions
-                <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              onClick={() => setShareOpen((o) => !o)}
-              className="group h-16 w-full gap-3 border-2 border-border font-display text-xl tracking-wide hover:border-primary/50 hover-lift"
-            >
-              <Share2 className="h-6 w-6 transition-transform group-hover:scale-110" />
-              Share Pool
-            </Button>
-          </div>
-
-          {shareOpen && (
-            <div className="mt-4 rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted px-4 py-3">
-                  <span className="text-sm text-muted-foreground">/join/</span>
-                  <span className="font-mono font-medium text-primary">
-                    {pool.inviteCode}
-                  </span>
-                </div>
                 <Button
                   type="button"
-                  onClick={copyInviteLink}
-                  variant={copied ? 'default' : 'outline'}
-                  className="gap-2"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setShareOpen((o) => !o)}
+                  className="group h-16 w-full gap-3 border-2 border-border font-display text-xl tracking-wide hover:border-primary/50 hover-lift"
                 >
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </>
-                  )}
+                  <Share2 className="h-6 w-6 transition-transform group-hover:scale-110" />
+                  Share Pool
                 </Button>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">
-                Share this link with friends so they can join your prediction pool
-              </p>
-            </div>
-          )}
 
-          {pool.nextMatchIn && (
-            <div className="mt-8 text-center">
-              <div className="inline-flex items-center gap-3 rounded-full border border-border bg-card px-6 py-3">
-                <span className="h-2 w-2 animate-pulse-dot rounded-full bg-primary" />
-                <span className="text-sm text-muted-foreground">Next match in</span>
-                <span className="font-mono text-lg font-bold text-primary">
-                  {pool.nextMatchIn}
-                </span>
+              {shareOpen && (
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted px-4 py-3">
+                      <span className="text-sm text-muted-foreground">/join/</span>
+                      <span className="font-mono font-medium text-primary">
+                        {pool.inviteCode}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={copyInviteLink}
+                      variant={copied ? 'default' : 'outline'}
+                      className="gap-2"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Share this link with friends so they can join your prediction pool
+                  </p>
+                </div>
+              )}
+
+              {pool.nextMatchIn && (
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-3 rounded-full border border-border bg-card px-6 py-3">
+                    <span className="h-2 w-2 animate-pulse-dot rounded-full bg-primary" />
+                    <span className="text-sm text-muted-foreground">Next match in</span>
+                    <span className="font-mono text-lg font-bold text-primary">
+                      {pool.nextMatchIn}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="leaderboard" className="mt-0">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
+                  <Trophy className="relative h-6 w-6 text-primary" />
+                </div>
+                <h2 className="font-display text-2xl tracking-wide text-foreground">
+                  LEADERBOARD
+                </h2>
+                <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
               </div>
-            </div>
-          )}
+
+              <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
+
+                <div className="p-2">
+                  {members.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">No members yet</p>
+                      <p className="text-sm text-muted-foreground/60">
+                        Share the invite code to get started!
+                      </p>
+                    </div>
+                  ) : showLeaderboardEmpty ? (
+                    <div className="py-12 text-center">
+                      <Trophy className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
+                      <p className="mx-auto max-w-md text-muted-foreground">
+                        The leaderboard will come alive once matches start. Make your
+                        predictions to get on the board.
+                      </p>
+                      <Button
+                        type="button"
+                        className="mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() => setActiveTab('predictions')}
+                      >
+                        Make Predictions
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {members.map((member, index) => (
+                        <LeaderboardRow
+                          key={member.id}
+                          member={member}
+                          rank={index + 1}
+                          isTop3={members.length > 2}
+                          showRankChange={showRankChange}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
     </div>

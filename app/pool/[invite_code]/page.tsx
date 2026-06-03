@@ -202,6 +202,7 @@ export default function PoolPage() {
     }
 
     let nextMatchIn: string | null = null
+    let nextMatchKickoffAt: string | null = null
     const { data: nextMatch } = await supabase
       .from('matches')
       .select('kickoff_at')
@@ -211,6 +212,7 @@ export default function PoolPage() {
       .maybeSingle()
 
     if (nextMatch?.kickoff_at) {
+      nextMatchKickoffAt = nextMatch.kickoff_at
       nextMatchIn = formatTimeUntil(nextMatch.kickoff_at)
     }
 
@@ -234,6 +236,7 @@ export default function PoolPage() {
       matchesPlayed: matchesPlayed ?? 0,
       totalMatches: totalMatches ?? 0,
       nextMatchIn,
+      nextMatchKickoffAt,
     })
     setMembers(leaderboardMembers)
     setPageLoading(false)
@@ -285,11 +288,15 @@ export default function PoolPage() {
     )
   }
 
+  const yourPredictions =
+    members.find((m) => m.isYou)?.totalPredictions ?? 0
+
   return (
     <PoolHomeView
       pool={poolMeta}
       members={members}
       predictHref={`/pool/${inviteCode}/predict`}
+      yourPredictions={yourPredictions}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
     />

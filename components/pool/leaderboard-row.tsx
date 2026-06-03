@@ -26,9 +26,15 @@ interface LeaderboardRowProps {
   member: LeaderboardMember
   rank: number
   isTop3: boolean
+  showRankChange?: boolean
 }
 
-export function LeaderboardRow({ member, rank, isTop3 }: LeaderboardRowProps) {
+export function LeaderboardRow({
+  member,
+  rank,
+  isTop3,
+  showRankChange = false,
+}: LeaderboardRowProps) {
   const MovementIcon =
     member.movement === 'up'
       ? TrendingUp
@@ -108,9 +114,11 @@ export function LeaderboardRow({ member, rank, isTop3 }: LeaderboardRowProps) {
         </div>
       </div>
 
-      <div className={cn('flex items-center gap-1', movementColor)}>
-        <MovementIcon className="h-4 w-4" />
-      </div>
+      {showRankChange && (
+        <div className={cn('flex items-center gap-1', movementColor)}>
+          <MovementIcon className="h-4 w-4" />
+        </div>
+      )}
 
       <div className="text-right">
         <div className="font-display text-2xl text-foreground">{member.points}</div>
