@@ -4,7 +4,7 @@ export type PlayerLevelTier = {
   title: string
 }
 
-/** PoolCup ranks by lifetime total points (across all pools). */
+/** PoolCup ranks by global user points (public.users.points). */
 export const PLAYER_LEVEL_TIERS: readonly PlayerLevelTier[] = [
   { level: 1, minPoints: 0, title: 'Benchwarmer' },
   { level: 2, minPoints: 15, title: 'Substitute' },

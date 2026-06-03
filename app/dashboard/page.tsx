@@ -41,7 +41,7 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name')
+    .select('display_name, points')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -177,11 +177,9 @@ export default async function DashboardPage({
     }
   })
 
-  let totalPoints = 0
   let predictionsMade = 0
   let totalCorrect = 0
   for (const row of validMemberships) {
-    totalPoints += pointsByMember.get(row.id) ?? 0
     predictionsMade += predictionsByMember.get(row.id) ?? 0
     totalCorrect += correctByMember.get(row.id) ?? 0
   }
@@ -201,7 +199,7 @@ export default async function DashboardPage({
       )}
       pools={pools}
       quickStats={{
-        totalPoints,
+        totalPoints: profile?.points ?? 0,
         predictionsMade,
         winRate,
       }}

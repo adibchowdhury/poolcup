@@ -169,6 +169,14 @@ export default function JoinPoolPage() {
       return
     }
 
+    const { error: referralError } = await supabase.rpc('award_referral_points', {
+      p_pool_id: pool.id,
+    })
+
+    if (referralError) {
+      console.error('Referral points award failed:', referralError.message)
+    }
+
     router.push(`/pool/${inviteCode}`)
   }
 

@@ -79,12 +79,42 @@ export function DashboardView({
   const [confirmNextPassword, setConfirmNextPassword] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
+  const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
 
   useEffect(() => {
     const name = displayName ?? ''
     setFullName(name)
     setHeaderName(name)
   }, [displayName])
+
+  useEffect(() => {
+    setLiveTotalPoints(quickStats.totalPoints)
+  }, [quickStats.totalPoints])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`user-points-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as { points?: number }
+          if (typeof row.points === 'number') {
+            setLiveTotalPoints(row.points)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [userId])
 
   useEffect(() => {
     void prefetchUpcomingMatches()
@@ -160,14 +190,14 @@ export function DashboardView({
   }
 
   const playerLevel = useMemo(
-    () => getPlayerLevelFromPoints(quickStats.totalPoints),
-    [quickStats.totalPoints],
+    () => getPlayerLevelFromPoints(liveTotalPoints),
+    [liveTotalPoints],
   )
 
   const quickStatItems = [
     {
       label: 'Total Points',
-      value: quickStats.totalPoints.toLocaleString(),
+      value: liveTotalPoints.toLocaleString(),
       icon: Zap,
       color: 'text-primary',
     },
