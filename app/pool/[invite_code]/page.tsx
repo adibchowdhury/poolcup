@@ -10,6 +10,7 @@ import {
   type PoolHomeMeta,
 } from '@/components/pool/pool-home-view'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
+import type { UserPoolPrediction } from '@/components/pool/pool-predictions-tab'
 
 type Pool = {
   id: string
@@ -33,6 +34,27 @@ type LeaderboardEntry = {
   display_name: string
   points: number
   correct_predictions: number
+}
+
+type MatchForPrediction = {
+  id: string
+  kickoff_at: string
+  round: string
+  group_name: string | null
+  team1_name: string
+  team2_name: string
+  team1_flag: string | null
+  team2_flag: string | null
+  result_team1: number | null
+  result_team2: number | null
+  is_final: boolean
+}
+
+type PredictionWithMatch = {
+  match_id: string
+  pred_team1: number
+  pred_team2: number
+  matches: MatchForPrediction | MatchForPrediction[] | null
 }
 
 const ROUND_STAGE_LABELS: Record<string, string> = {
@@ -69,6 +91,21 @@ function getMovement(
   return 'none'
 }
 
+function sortPoolMembersForPreMatch(
+  members: PoolMember[],
+  creatorUserId: string,
+): PoolMember[] {
+  const creator = members.find((m) => m.user_id === creatorUserId)
+  const rest = members
+    .filter((m) => m.user_id !== creatorUserId)
+    .sort(
+      (a, b) =>
+        new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime(),
+    )
+
+  return creator ? [creator, ...rest] : rest
+}
+
 function deriveStageLabel(roundCounts: Record<string, number>): string {
   const entries = Object.entries(roundCounts).filter(([, n]) => n > 0)
   if (entries.length === 0) return 'Group Stage'
@@ -85,6 +122,7 @@ export default function PoolPage() {
 
   const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
   const [members, setMembers] = useState<LeaderboardMember[]>([])
+  const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [poolId, setPoolId] = useState<string | null>(null)
@@ -159,31 +197,6 @@ export default function PoolPage() {
         correct_predictions: 0,
       }))
 
-    const { data: cacheData, error: cacheError } = await supabase
-      .from('leaderboard_cache')
-      .select('rank, prev_rank, member_id, total_points, correct_winners')
-      .eq('pool_id', pool.id)
-      .order('rank', { ascending: true })
-
-    let entries: LeaderboardEntry[] = buildFallbackEntries()
-
-    if (cacheError) {
-      console.error('Failed to load leaderboard:', cacheError.message)
-    } else if (cacheData && cacheData.length > 0) {
-      entries = cacheData.map((row) => {
-        const member = memberById.get(row.member_id)
-        return {
-          rank: row.rank,
-          prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
-          member_id: row.member_id,
-          user_id: member?.user_id ?? '',
-          display_name: member?.display_name ?? 'Unknown',
-          points: row.total_points ?? 0,
-          correct_predictions: row.correct_winners ?? 0,
-        }
-      })
-    }
-
     const { count: totalMatches } = await supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
@@ -192,6 +205,51 @@ export default function PoolPage() {
       .from('matches')
       .select('*', { count: 'exact', head: true })
       .eq('is_final', true)
+
+    const matchesPlayedCount = matchesPlayed ?? 0
+
+    const { data: cacheData, error: cacheError } = await supabase
+      .from('leaderboard_cache')
+      .select('rank, prev_rank, member_id, total_points, correct_winners')
+      .eq('pool_id', pool.id)
+      .order('rank', { ascending: true })
+
+    let entries: LeaderboardEntry[]
+
+    if (matchesPlayedCount === 0) {
+      const orderedMembers = sortPoolMembersForPreMatch(
+        poolMembers,
+        pool.creator_id,
+      )
+      entries = orderedMembers.map((member, index) => ({
+        rank: index + 1,
+        prev_rank: null,
+        member_id: member.id,
+        user_id: member.user_id,
+        display_name: member.display_name,
+        points: 0,
+        correct_predictions: 0,
+      }))
+    } else {
+      entries = buildFallbackEntries()
+
+      if (cacheError) {
+        console.error('Failed to load leaderboard:', cacheError.message)
+      } else if (cacheData && cacheData.length > 0) {
+        entries = cacheData.map((row) => {
+          const member = memberById.get(row.member_id)
+          return {
+            rank: row.rank,
+            prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
+            member_id: row.member_id,
+            user_id: member?.user_id ?? '',
+            display_name: member?.display_name ?? 'Unknown',
+            points: row.total_points ?? 0,
+            correct_predictions: row.correct_winners ?? 0,
+          }
+        })
+      }
+    }
 
     const { data: roundRows } = await supabase.from('matches').select('round')
 
@@ -216,6 +274,62 @@ export default function PoolPage() {
       nextMatchIn = formatTimeUntil(nextMatch.kickoff_at)
     }
 
+    const currentMember = poolMembers.find((m) => m.user_id === user.id)
+    const loadedUserPredictions: UserPoolPrediction[] = []
+
+    if (currentMember) {
+      const { data: userPredRows, error: userPredError } = await supabase
+        .from('predictions')
+        .select(
+          `
+          match_id,
+          pred_team1,
+          pred_team2,
+          matches (
+            id,
+            kickoff_at,
+            round,
+            group_name,
+            team1_name,
+            team2_name,
+            team1_flag,
+            team2_flag,
+            result_team1,
+            result_team2,
+            is_final
+          )
+        `,
+        )
+        .eq('pool_id', pool.id)
+        .eq('member_id', currentMember.id)
+
+      if (userPredError) {
+        console.error('Failed to load user predictions:', userPredError.message)
+      } else {
+        for (const row of (userPredRows ?? []) as PredictionWithMatch[]) {
+          const matchRaw = row.matches
+          const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
+          if (!match) continue
+
+          loadedUserPredictions.push({
+            matchId: match.id,
+            kickoffAt: match.kickoff_at,
+            round: match.round,
+            groupName: match.group_name,
+            team1Name: match.team1_name,
+            team2Name: match.team2_name,
+            team1Flag: match.team1_flag,
+            team2Flag: match.team2_flag,
+            predTeam1: row.pred_team1,
+            predTeam2: row.pred_team2,
+            resultTeam1: match.result_team1,
+            resultTeam2: match.result_team2,
+            isFinal: match.is_final,
+          })
+        }
+      }
+    }
+
     const leaderboardMembers: LeaderboardMember[] = entries.map((entry) => ({
       id: entry.member_id,
       name: entry.display_name,
@@ -233,12 +347,13 @@ export default function PoolPage() {
       name: pool.name,
       stage: deriveStageLabel(roundCounts),
       memberCount: poolMembers.length,
-      matchesPlayed: matchesPlayed ?? 0,
+      matchesPlayed: matchesPlayedCount,
       totalMatches: totalMatches ?? 0,
       nextMatchIn,
       nextMatchKickoffAt,
     })
     setMembers(leaderboardMembers)
+    setUserPredictions(loadedUserPredictions)
     setPageLoading(false)
   }, [inviteCode, user])
 
@@ -288,13 +403,13 @@ export default function PoolPage() {
     )
   }
 
-  const yourPredictions =
-    members.find((m) => m.isYou)?.totalPredictions ?? 0
+  const yourPredictions = userPredictions.length
 
   return (
     <PoolHomeView
       pool={poolMeta}
       members={members}
+      userPredictions={userPredictions}
       predictHref={`/pool/${inviteCode}/predict`}
       yourPredictions={yourPredictions}
       canDelete={canDelete}
