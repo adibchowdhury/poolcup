@@ -213,6 +213,14 @@ export default function CreatePoolPage() {
       return
     }
 
+    const { error: pointsError } = await supabase.rpc('award_pool_created_points', {
+      p_pool_id: pool.id,
+    })
+
+    if (pointsError) {
+      console.error('Pool creation points award failed:', pointsError.message)
+    }
+
     setSubmitting(false)
     setLoadingMessage(null)
     setCreatedPool({
@@ -443,7 +451,7 @@ export default function CreatePoolPage() {
 
               <div className="mt-6 flex items-center justify-center gap-2 text-[#00e676]">
                 <Zap className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="text-sm font-semibold">+50 points earned!</span>
+                <span className="text-sm font-semibold">+5 points earned!</span>
               </div>
 
               <div className="mt-8">
