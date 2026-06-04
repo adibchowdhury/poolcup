@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
+import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import {
   prefetchUpcomingMatches,
@@ -475,7 +476,13 @@ export function DashboardView({
 
             <TabsContent value="profile" className="mt-4">
               <div className="flex w-full items-center justify-center">
-                <div className="mx-auto flex flex-col items-center gap-12 lg:flex-row">
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-stretch gap-12 lg:flex-row lg:items-center">
+                  <PointsHistoryFeed
+                    userId={userId}
+                    animKey={pointsAnimKey}
+                    active={activeTab === 'profile'}
+                  />
+                  <div className="mx-auto flex flex-col items-center gap-12 lg:flex-row">
                   <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:grid lg:h-full lg:min-h-0 lg:grid-rows-[1fr_auto] lg:gap-4">
                     <div className="flex min-h-[320px] w-full max-w-[380px] items-end justify-center sm:max-w-[480px] lg:h-full lg:min-h-0 lg:w-full lg:max-w-[min(100%,580px)]">
                       <Image
@@ -526,6 +533,7 @@ export function DashboardView({
                         </div>
                       </div>
                     ))}
+                  </div>
                   </div>
                 </div>
               </div>
