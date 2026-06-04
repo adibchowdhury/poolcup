@@ -159,8 +159,13 @@ function TeamFlagImage({
   countryName: string
   dbFlag: string | null
 }) {
+  const flagSrc = countryNameToFlagSrc(countryName)
   const [imageFailed, setImageFailed] = useState(false)
   const fallbackLabel = resolveTeamFlagDisplay(countryName, dbFlag)
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [flagSrc])
 
   if (imageFailed) {
     return (
@@ -172,7 +177,8 @@ function TeamFlagImage({
 
   return (
     <img
-      src={countryNameToFlagSrc(countryName)}
+      key={flagSrc}
+      src={flagSrc}
       alt={countryName}
       className="h-6 w-auto shrink-0"
       onError={() => setImageFailed(true)}
