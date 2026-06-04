@@ -5,7 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { countryNameToFlagSrc, resolveTeamFlagDisplay } from '@/src/lib/team-flags'
+import {
+  countryNameToFlagSrc,
+  hasFlagImage,
+  resolveTeamFlagDisplay,
+} from '@/src/lib/team-flags'
 import { supabase } from '@/src/lib/supabase'
 
 type UpcomingMatch = {
@@ -162,12 +166,13 @@ function TeamFlagImage({
   const flagSrc = countryNameToFlagSrc(countryName)
   const [imageFailed, setImageFailed] = useState(false)
   const fallbackLabel = resolveTeamFlagDisplay(countryName, dbFlag)
+  const showFlagImage = hasFlagImage(countryName)
 
   useEffect(() => {
     setImageFailed(false)
-  }, [flagSrc])
+  }, [flagSrc, showFlagImage])
 
-  if (imageFailed) {
+  if (!showFlagImage || imageFailed) {
     return (
       <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
         {fallbackLabel}

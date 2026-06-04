@@ -96,6 +96,7 @@ export const FLAG_IMAGE_SLUGS = new Set([
   'curacao',
   'czech_republic',
   'ecuador',
+  'egypt',
   'germany',
   'haiti',
   'ivory_coast',
@@ -110,40 +111,58 @@ export const FLAG_IMAGE_SLUGS = new Set([
   'south_korea',
   'spain',
   'sweden',
+  'switzerland',
   'tunisia',
   'turkiye',
   'uruguay',
   'usa',
 ])
 
-/** Team names that do not match filename slugs after normalization. */
+/** Intentionally no PNG yet — use emoji/initials fallback. */
+const TEAM_NAMES_WITHOUT_FLAG_IMAGE = new Set(['saudi arabia'])
+
+/** API / display names that do not match filename slugs after normalization. */
 const TEAM_FLAG_IMAGE_ALIASES: Record<string, string> = {
-  turkey: 'turkiye',
-  turkiye: 'turkiye',
   usa: 'usa',
   us: 'usa',
   'u.s.': 'usa',
   'u.s.a.': 'usa',
   'united states': 'usa',
   'united states of america': 'usa',
+  turkey: 'turkiye',
+  turkiye: 'turkiye',
   bosnia: 'bosnia',
   'bosnia and herzegovina': 'bosnia',
+  'bosnia & herzegovina': 'bosnia',
   'bosnia-herzegovina': 'bosnia',
   curacao: 'curacao',
   curaçao: 'curacao',
+  'south korea': 'south_korea',
   'korea republic': 'south_korea',
   'republic of korea': 'south_korea',
   korea: 'south_korea',
+  'czech republic': 'czech_republic',
   czechia: 'czech_republic',
   'czech rep': 'czech_republic',
+  'south africa': 'south_africa',
+  's.africa': 'south_africa',
+  'ivory coast': 'ivory_coast',
+  "cote d'ivoire": 'ivory_coast',
   'cote d ivoire': 'ivory_coast',
   'cote divoire': 'ivory_coast',
+  'cape verde': 'cape_verde',
+  'cape verde islands': 'cape_verde',
+  'cabo verde': 'cape_verde',
+  cabo_verde: 'cape_verde',
 }
 
 function normalizeTeamNameKey(name: string): string {
   return name
     .trim()
     .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[''’`]/g, ' ')
+    .replace(/\s+/g, ' ')
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
 }
@@ -152,8 +171,10 @@ function nameToFlagSlug(name: string): string {
   return normalizeTeamNameKey(name).replace(/\s+/g, '_')
 }
 
-export function countryNameToFlagFilename(countryName: string): string {
-  const key = normalizeTeamNameKey(countryName)
+function resolveFlagSlugFromKey(key: string): string | null {
+  if (TEAM_NAMES_WITHOUT_FLAG_IMAGE.has(key)) {
+    return null
+  }
 
   if (TEAM_FLAG_IMAGE_ALIASES[key]) {
     return TEAM_FLAG_IMAGE_ALIASES[key]!
@@ -167,12 +188,34 @@ export function countryNameToFlagFilename(countryName: string): string {
     }
   }
 
-  const slug = nameToFlagSlug(countryName)
-  return slug
+  const slug = nameToFlagSlug(key)
+  if (FLAG_IMAGE_SLUGS.has(slug)) {
+    return slug
+  }
+
+  if (key.endsWith(' islands')) {
+    const base = key.replace(/ islands$/, '').trim()
+    if (TEAM_FLAG_IMAGE_ALIASES[base]) {
+      return TEAM_FLAG_IMAGE_ALIASES[base]!
+    }
+    const baseSlug = nameToFlagSlug(base)
+    if (FLAG_IMAGE_SLUGS.has(baseSlug)) {
+      return baseSlug
+    }
+  }
+
+  return null
+}
+
+export function countryNameToFlagFilename(countryName: string): string {
+  const key = normalizeTeamNameKey(countryName)
+  return resolveFlagSlugFromKey(key) ?? nameToFlagSlug(countryName)
 }
 
 export function hasFlagImage(countryName: string): boolean {
-  return FLAG_IMAGE_SLUGS.has(countryNameToFlagFilename(countryName))
+  const key = normalizeTeamNameKey(countryName)
+  const slug = resolveFlagSlugFromKey(key)
+  return slug !== null && FLAG_IMAGE_SLUGS.has(slug)
 }
 
 export function countryNameToFlagSrc(countryName: string): string {
