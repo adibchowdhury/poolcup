@@ -7,15 +7,15 @@ export type PlayerLevelTier = {
 /** PoolCup ranks by global user points (public.users.points). */
 export const PLAYER_LEVEL_TIERS: readonly PlayerLevelTier[] = [
   { level: 1, minPoints: 0, title: 'Benchwarmer' },
-  { level: 2, minPoints: 15, title: 'Substitute' },
-  { level: 3, minPoints: 40, title: 'Squad Player' },
-  { level: 4, minPoints: 80, title: 'Starter' },
-  { level: 5, minPoints: 130, title: 'Playmaker' },
-  { level: 6, minPoints: 200, title: 'Captain' },
-  { level: 7, minPoints: 290, title: 'Star' },
-  { level: 8, minPoints: 400, title: 'World Class' },
-  { level: 9, minPoints: 530, title: 'Legend' },
-  { level: 10, minPoints: 700, title: 'Pool Cup Champion' },
+  { level: 2, minPoints: 200, title: 'Substitute' },
+  { level: 3, minPoints: 450, title: 'Squad Player' },
+  { level: 4, minPoints: 800, title: 'Starter' },
+  { level: 5, minPoints: 1200, title: 'Key Player' },
+  { level: 6, minPoints: 1800, title: 'Fan Favorite' },
+  { level: 7, minPoints: 2500, title: 'Club Legend' },
+  { level: 8, minPoints: 3300, title: 'International' },
+  { level: 9, minPoints: 4200, title: 'World Class' },
+  { level: 10, minPoints: 5000, title: 'GOAT' },
 ] as const
 
 export const MAX_PLAYER_LEVEL = PLAYER_LEVEL_TIERS.length
