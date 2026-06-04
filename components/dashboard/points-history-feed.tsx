@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import {
   formatPointsDelta,
   formatRelativeTimestamp,
-  getPointsTransactionDisplay,
+  getPointsTransactionDescription,
   POINTS_FEED_ANIMATION_MS,
   POINTS_FEED_STAGGER_MS,
   type PointsTransactionRow,
@@ -66,9 +66,7 @@ export function PointsHistoryFeed({
         ) : (
           <ul className="divide-y divide-border/50">
             {transactions.map((tx, index) => {
-              const { icon, description } = getPointsTransactionDisplay(
-                tx.reason,
-              )
+              const description = getPointsTransactionDescription(tx.reason)
               return (
                 <li
                   key={`${tx.id}-${animKey}`}
@@ -80,12 +78,6 @@ export function PointsHistoryFeed({
                     animationDelay: `${index * POINTS_FEED_STAGGER_MS}ms`,
                   }}
                 >
-                  <span
-                    className="mt-0.5 shrink-0 text-xl leading-none"
-                    aria-hidden
-                  >
-                    {icon}
-                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-foreground">{description}</p>
                     <p className="mt-1 text-xs text-muted-foreground">

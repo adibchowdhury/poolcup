@@ -12,24 +12,18 @@ export type PointsTransactionRow = {
   created_at: string
 }
 
-const REASON_META: Record<
-  PointsTransactionReason,
-  { icon: string; description: string }
-> = {
-  signup: { icon: '⚡', description: 'Joined PoolCup' },
-  referral: { icon: '👥', description: 'Friend joined your pool' },
-  correct_winner: { icon: '🎯', description: 'Correct winner prediction' },
-  exact_score: { icon: '🏆', description: 'Exact score prediction' },
-  pool_created: { icon: '🏊', description: 'Created a pool' },
+const REASON_DESCRIPTIONS: Record<PointsTransactionReason, string> = {
+  signup: 'Joined PoolCup',
+  referral: 'Friend joined your pool',
+  correct_winner: 'Correct winner prediction',
+  exact_score: 'Exact score prediction',
+  pool_created: 'Created a pool',
 }
 
-export function getPointsTransactionDisplay(reason: string): {
-  icon: string
-  description: string
-} {
-  const meta = REASON_META[reason as PointsTransactionReason]
-  if (meta) return meta
-  return { icon: '✨', description: reason.replace(/_/g, ' ') }
+export function getPointsTransactionDescription(reason: string): string {
+  const description = REASON_DESCRIPTIONS[reason as PointsTransactionReason]
+  if (description) return description
+  return reason.replace(/_/g, ' ')
 }
 
 export function formatPointsDelta(points: number): string {
