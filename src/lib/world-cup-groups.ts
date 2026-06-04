@@ -1,0 +1,203 @@
+export const WORLD_CUP_GROUP_LETTERS = [
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+  'H',
+  'I',
+  'J',
+  'K',
+  'L',
+] as const
+
+export type WorldCupGroupLetter = (typeof WORLD_CUP_GROUP_LETTERS)[number]
+
+export type GroupRankings = Record<string, string[]>
+
+export type WorldCupGroup = {
+  letter: WorldCupGroupLetter
+  teams: string[]
+}
+
+export type GroupStageMatch = {
+  round: string
+  group_name: string | null
+  team1_name: string
+  team2_name: string
+}
+
+/** Parse group letter from DB value (e.g. "A") or label (e.g. "Group A"). Rejects bad values like "S" from "Group Stage". */
+export function parseGroupLetter(
+  groupName: string | null | undefined,
+): WorldCupGroupLetter | null {
+  if (!groupName) return null
+
+  const trimmed = groupName.trim().toUpperCase()
+  if (/^[A-L]$/.test(trimmed)) {
+    return trimmed as WorldCupGroupLetter
+  }
+
+  const fromLabel = trimmed.match(/GROUP\s+([A-L])\b/)
+  if (fromLabel) {
+    return fromLabel[1] as WorldCupGroupLetter
+  }
+
+  return null
+}
+
+export function isGroupStageRound(round: string): boolean {
+  return round.trim().toLowerCase() === 'group'
+}
+
+/** Map API-Football league.round to our matches.round + group_name (shared with seed script). */
+export function mapLeagueRoundToGroup(leagueRound: string): {
+  round: string
+  group_name: string | null
+} {
+  const label = leagueRound.trim()
+
+  const groupLetterMatch = label.match(/Group\s+([A-L])\b/i)
+  if (groupLetterMatch) {
+    return { round: 'group', group_name: groupLetterMatch[1].toUpperCase() }
+  }
+
+  const ROUND_LABEL_MAP: Record<string, string> = {
+    'Group Stage': 'group',
+    'Round of 32': 'r32',
+    'Round of 16': 'r16',
+    'Quarter-finals': 'qf',
+    'Semi-finals': 'sf',
+    Final: 'final',
+  }
+
+  for (const [apiLabel, round] of Object.entries(ROUND_LABEL_MAP)) {
+    if (label.includes(apiLabel)) {
+      return { round, group_name: null }
+    }
+  }
+
+  return { round: 'group', group_name: null }
+}
+
+export function resolveMatchGroupLetter(
+  match: GroupStageMatch,
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): WorldCupGroupLetter | null {
+  const fromField = parseGroupLetter(match.group_name)
+  if (fromField) return fromField
+
+  if (!teamToGroup) return null
+
+  const homeGroup = teamToGroup.get(match.team1_name)
+  const awayGroup = teamToGroup.get(match.team2_name)
+  if (homeGroup && awayGroup && homeGroup === awayGroup) return homeGroup
+  return homeGroup ?? awayGroup ?? null
+}
+
+export function buildTeamToGroupMap(
+  standingRows: Array<{ team: { name: string }; group: string }>,
+): Map<string, WorldCupGroupLetter> {
+  const map = new Map<string, WorldCupGroupLetter>()
+
+  for (const row of standingRows) {
+    const letter = parseGroupLetter(row.group)
+    if (!letter) continue
+    map.set(row.team.name, letter)
+  }
+
+  return map
+}
+
+export function buildWorldCupGroups(
+  matches: GroupStageMatch[],
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): WorldCupGroup[] {
+  const teamSets = new Map<string, Set<string>>()
+
+  for (const match of matches) {
+    if (!isGroupStageRound(match.round)) continue
+
+    const letter = resolveMatchGroupLetter(match, teamToGroup)
+    if (!letter) continue
+
+    if (!teamSets.has(letter)) teamSets.set(letter, new Set())
+    teamSets.get(letter)!.add(match.team1_name)
+    teamSets.get(letter)!.add(match.team2_name)
+  }
+
+  return WORLD_CUP_GROUP_LETTERS.map((letter) => ({
+    letter,
+    teams: [...(teamSets.get(letter) ?? [])].sort((a, b) =>
+      a.localeCompare(b),
+    ),
+  }))
+}
+
+export function emptyGroupRankings(): GroupRankings {
+  return Object.fromEntries(
+    WORLD_CUP_GROUP_LETTERS.map((letter) => [letter, [] as string[]]),
+  )
+}
+
+export function parseStandingsJson(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
+export function isGroupRankingComplete(standings: string[], teamCount = 4): boolean {
+  return standings.length === teamCount
+}
+
+export function countCompleteGroups(
+  rankings: GroupRankings,
+  groups: WorldCupGroup[],
+): number {
+  return groups.filter((group) =>
+    isGroupRankingComplete(rankings[group.letter] ?? [], group.teams.length),
+  ).length
+}
+
+export function getTeamRank(
+  standings: string[],
+  teamName: string,
+): number | null {
+  const index = standings.indexOf(teamName)
+  return index >= 0 ? index + 1 : null
+}
+
+export function tapTeamInGroup(
+  standings: string[],
+  teamName: string,
+  teamsInGroup: string[],
+): string[] {
+  if (!teamsInGroup.includes(teamName)) return standings
+
+  const existingIndex = standings.indexOf(teamName)
+  if (existingIndex >= 0) {
+    return standings.slice(0, existingIndex)
+  }
+
+  if (standings.length >= teamsInGroup.length) return standings
+  return [...standings, teamName]
+}
+
+export function clearGroupRankings(): string[] {
+  return []
+}
+
+export function rankingsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((team, index) => team === b[index])
+}
+
+export function cloneGroupRankings(rankings: GroupRankings): GroupRankings {
+  return Object.fromEntries(
+    Object.entries(rankings).map(([letter, standings]) => [
+      letter,
+      [...standings],
+    ]),
+  )
+}

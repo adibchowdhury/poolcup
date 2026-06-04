@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CompactMatchRow, type CompactTeam } from './compact-match-row'
+import {
+  WinnerOnlyMatchRow,
+  type WinnerPick,
+} from './winner-only-match-row'
 
 export interface SectionMatch {
   id: string
@@ -11,6 +15,7 @@ export interface SectionMatch {
   awayTeam: CompactTeam
   homeScore: string
   awayScore: string
+  winnerPick?: WinnerPick
   isLocked?: boolean
   isPredicted?: boolean
 }
@@ -22,8 +27,10 @@ interface MatchSectionProps {
   matches: SectionMatch[]
   predictedInSection: number
   defaultOpen?: boolean
+  winnerOnly?: boolean
   onHomeScoreChange: (matchId: string, value: string) => void
   onAwayScoreChange: (matchId: string, value: string) => void
+  onWinnerPickChange?: (matchId: string, pick: WinnerPick) => void
 }
 
 export function MatchSection({
@@ -33,8 +40,10 @@ export function MatchSection({
   matches,
   predictedInSection,
   defaultOpen = false,
+  winnerOnly = false,
   onHomeScoreChange,
   onAwayScoreChange,
+  onWinnerPickChange,
 }: MatchSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
@@ -81,19 +90,31 @@ export function MatchSection({
       >
         <div className="overflow-hidden">
           <div className="flex flex-col gap-2 border-t border-border/60 p-3 sm:p-4">
-            {matches.map((match) => (
-              <CompactMatchRow
-                key={match.id}
-                homeTeam={match.homeTeam}
-                awayTeam={match.awayTeam}
-                homeScore={match.homeScore}
-                awayScore={match.awayScore}
-                isLocked={match.isLocked}
-                isPredicted={match.isPredicted}
-                onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}
-                onAwayScoreChange={(v) => onAwayScoreChange(match.id, v)}
-              />
-            ))}
+            {matches.map((match) =>
+              winnerOnly && onWinnerPickChange ? (
+                <WinnerOnlyMatchRow
+                  key={match.id}
+                  homeTeam={match.homeTeam}
+                  awayTeam={match.awayTeam}
+                  selected={match.winnerPick ?? null}
+                  isLocked={match.isLocked}
+                  isPredicted={match.isPredicted}
+                  onSelect={(pick) => onWinnerPickChange(match.id, pick)}
+                />
+              ) : (
+                <CompactMatchRow
+                  key={match.id}
+                  homeTeam={match.homeTeam}
+                  awayTeam={match.awayTeam}
+                  homeScore={match.homeScore}
+                  awayScore={match.awayScore}
+                  isLocked={match.isLocked}
+                  isPredicted={match.isPredicted}
+                  onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}
+                  onAwayScoreChange={(v) => onAwayScoreChange(match.id, v)}
+                />
+              ),
+            )}
           </div>
         </div>
       </div>

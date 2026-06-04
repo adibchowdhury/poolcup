@@ -12,8 +12,8 @@ import { supabase } from '@/src/lib/supabase'
 const TOTAL_STEPS = 4
 
 const scoringStyles = [
-  { id: 'classic', label: 'Classic' },
   { id: 'winner', label: 'Winner Only' },
+  { id: 'classic', label: 'Classic' },
   { id: 'exact', label: 'Exact Score' },
 ] as const
 
@@ -108,7 +108,7 @@ export default function CreatePoolPage() {
   const [selectedSport, setSelectedSport] = useState<SportId | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [poolName, setPoolName] = useState('')
-  const [scoringStyle, setScoringStyle] = useState<ScoringStyleId>('classic')
+  const [scoringStyle, setScoringStyle] = useState<ScoringStyleId>('winner')
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

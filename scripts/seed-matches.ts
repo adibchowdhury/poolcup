@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv'
 import path from 'path'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { mapLeagueRoundToGroup } from '@/src/lib/world-cup-groups'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
@@ -33,38 +34,9 @@ type MatchInsert = {
   group_name: string | null
 }
 
-const ROUND_LABEL_MAP: Record<string, string> = {
-  'Group Stage': 'group',
-  'Round of 32': 'r32',
-  'Round of 16': 'r16',
-  'Quarter-finals': 'qf',
-  'Semi-finals': 'sf',
-  Final: 'final',
-}
-
-function mapRoundAndGroup(leagueRound: string): {
-  round: string
-  group_name: string | null
-} {
-  const label = leagueRound.trim()
-
-  const groupMatch = label.match(/Group\s+([A-Za-z])/i)
-  if (groupMatch) {
-    return { round: 'group', group_name: groupMatch[1].toUpperCase() }
-  }
-
-  for (const [apiLabel, round] of Object.entries(ROUND_LABEL_MAP)) {
-    if (label.includes(apiLabel)) {
-      return { round, group_name: null }
-    }
-  }
-
-  return { round: 'group', group_name: null }
-}
-
 function mapFixture(fixture: ApiFixture): MatchInsert {
   const kickoffAt = fixture.fixture.date
-  const { round, group_name } = mapRoundAndGroup(fixture.league.round)
+  const { round, group_name } = mapLeagueRoundToGroup(fixture.league.round)
 
   return {
     fixture_id: String(fixture.fixture.id),

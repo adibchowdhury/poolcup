@@ -9,6 +9,7 @@ import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
+import { WinnerOnlyPredictView } from '@/components/predict/winner-only-predict-view'
 import {
   GroupKnockoutTabs,
   type GroupKnockoutTabId,
@@ -16,10 +17,13 @@ import {
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 
+type ScoringStyle = 'classic' | 'winner' | 'exact'
+
 type Pool = {
   id: string
   name: string
   invite_code: string
+  scoring_style: ScoringStyle
 }
 
 type Match = {
@@ -45,16 +49,20 @@ type ScoreInput = {
   score2: string
 }
 
+const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
+
+type KnockoutRoundId = (typeof KNOCKOUT_ROUNDS)[number]
+
+type MatchGroupId = KnockoutRoundId | `group-${string}` | `matchday-${string}`
+
 type MatchGroup = {
-  id: string
+  id: MatchGroupId
   title: string
   subtitle?: string
   matches: Match[]
 }
 
-const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
-
-const KNOCKOUT_SECTION_LABELS: Record<string, string> = {
+const KNOCKOUT_SECTION_LABELS: Record<KnockoutRoundId, string> = {
   r32: 'Round of 32',
   r16: 'Round of 16',
   qf: 'Quarter Finals',
@@ -62,7 +70,7 @@ const KNOCKOUT_SECTION_LABELS: Record<string, string> = {
   final: 'Final',
 }
 
-function isKnockoutRound(round: string): boolean {
+function isKnockoutRound(round: string): round is KnockoutRoundId {
   return (KNOCKOUT_ROUNDS as readonly string[]).includes(round)
 }
 
@@ -78,7 +86,10 @@ function clampScoreValue(value: string): string {
   return String(Math.min(20, Math.max(0, num)))
 }
 
-function isPredicted(match: Match, scores: Record<string, ScoreInput>): boolean {
+function isPredicted(
+  match: Match,
+  scores: Record<string, ScoreInput>,
+): boolean {
   const entry = scores[match.id]
   return entry?.score1 !== '' && entry?.score2 !== ''
 }
@@ -140,21 +151,26 @@ function buildGroupStageSections(matches: Match[]): MatchGroup[] {
 }
 
 function buildKnockoutSections(matches: Match[]): MatchGroup[] {
-  return KNOCKOUT_ROUNDS.map((round) => {
+  const sections: MatchGroup[] = []
+
+  for (const round of KNOCKOUT_ROUNDS) {
     const roundMatches = matches
       .filter((m) => m.round === round)
       .sort(
         (a, b) =>
           new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
       )
-    if (roundMatches.length === 0) return null
-    return {
+    if (roundMatches.length === 0) continue
+
+    sections.push({
       id: round,
       title: KNOCKOUT_SECTION_LABELS[round].toUpperCase(),
       subtitle: formatShortDate(roundMatches[0].kickoff_at),
       matches: roundMatches,
-    }
-  }).filter((g): g is MatchGroup => g !== null)
+    })
+  }
+
+  return sections
 }
 
 function toSectionMatch(
@@ -221,7 +237,7 @@ export default function PredictPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code')
+      .select('id, name, invite_code, scoring_style')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -267,6 +283,7 @@ export default function PredictPage() {
       console.error('Failed to load predictions:', predictionsError.message)
     }
 
+    const isWinnerOnlyPool = (poolData as Pool).scoring_style === 'winner'
     const initialScores: Record<string, ScoreInput> = {}
     const initialSaved = new Set<string>()
 
@@ -274,12 +291,14 @@ export default function PredictPage() {
       initialScores[match.id] = { score1: '', score2: '' }
     }
 
-    for (const prediction of (predictionsData ?? []) as PredictionRow[]) {
-      initialScores[prediction.match_id] = {
-        score1: String(prediction.pred_team1),
-        score2: String(prediction.pred_team2),
+    if (!isWinnerOnlyPool) {
+      for (const prediction of (predictionsData ?? []) as PredictionRow[]) {
+        initialScores[prediction.match_id] = {
+          score1: String(prediction.pred_team1),
+          score2: String(prediction.pred_team2),
+        }
+        initialSaved.add(prediction.match_id)
       }
-      initialSaved.add(prediction.match_id)
     }
 
     const loaded = (matchesData ?? []) as Match[]
@@ -497,6 +516,16 @@ export default function PredictPage() {
           </Link>
         </div>
       </div>
+    )
+  }
+
+  if (pool.scoring_style === 'winner' && memberId) {
+    return (
+      <WinnerOnlyPredictView
+        pool={pool}
+        memberId={memberId}
+        inviteCode={inviteCode}
+      />
     )
   }
 

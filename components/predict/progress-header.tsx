@@ -5,10 +5,16 @@ import { cn } from '@/lib/utils'
 interface ProgressHeaderProps {
   current: number
   total: number
+  label?: string
   className?: string
 }
 
-export function ProgressHeader({ current, total, className }: ProgressHeaderProps) {
+export function ProgressHeader({
+  current,
+  total,
+  label = 'Matches Predicted',
+  className,
+}: ProgressHeaderProps) {
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0
 
   return (
@@ -17,7 +23,7 @@ export function ProgressHeader({ current, total, className }: ProgressHeaderProp
         <span className="font-mono text-primary">{current}</span>
         <span className="text-muted-foreground"> / </span>
         <span className="font-mono text-foreground">{total}</span>
-        <span className="text-muted-foreground"> Matches Predicted</span>
+        <span className="text-muted-foreground"> {label}</span>
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-primary/15">
         <div
