@@ -9,6 +9,7 @@ import '@fontsource/space-mono/400.css'
 import '@fontsource/space-mono/700.css'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
+import { PostHogIdentify, PostHogProvider } from '@/components/posthog-provider'
 import { AuthProvider } from '@/src/lib/auth-context'
 import { siteUrl } from '@/src/lib/site'
 
@@ -58,7 +59,12 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <AuthProvider>{children}</AuthProvider>
+        <PostHogProvider>
+          <AuthProvider>
+            <PostHogIdentify />
+            {children}
+          </AuthProvider>
+        </PostHogProvider>
         <Analytics />
       </body>
     </html>
