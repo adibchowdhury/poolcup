@@ -49,12 +49,12 @@ export function PointsHistoryFeed({
   }, [active, loadTransactions, animKey])
 
   return (
-    <div className="flex w-full min-w-0 flex-col lg:min-h-0 lg:flex-1 lg:max-w-md xl:max-w-lg">
-      <h2 className="shrink-0 font-display text-2xl tracking-wide text-foreground">
+    <div className="w-full min-w-0 lg:flex-1 lg:max-w-md xl:max-w-lg">
+      <h2 className="font-display text-2xl tracking-wide text-foreground">
         POINT HISTORY
       </h2>
 
-      <div className="profile-points-feed-scroll mt-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
+      <div className="mt-6">
         {loading && transactions.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             Loading…
@@ -64,7 +64,8 @@ export function PointsHistoryFeed({
             Your glory story starts here 🏆
           </p>
         ) : (
-          <ul className="divide-y divide-border/50">
+          <div className="profile-points-feed-scroll max-h-[500px] overflow-y-auto">
+            <ul className="divide-y divide-border/50">
             {transactions.map((tx, index) => {
               const description = getPointsTransactionDescription(tx.reason)
               return (
@@ -90,7 +91,8 @@ export function PointsHistoryFeed({
                 </li>
               )
             })}
-          </ul>
+            </ul>
+          </div>
         )}
       </div>
     </div>

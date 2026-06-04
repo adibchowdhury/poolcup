@@ -476,7 +476,7 @@ export function DashboardView({
 
             <TabsContent value="profile" className="mt-4">
               <div className="flex w-full items-center justify-center">
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-stretch gap-12 lg:flex-row lg:items-stretch">
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-stretch gap-12 lg:flex-row lg:items-center">
                   <PointsHistoryFeed
                     userId={userId}
                     animKey={pointsAnimKey}
