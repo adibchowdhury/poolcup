@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
+import { countryNameToFlagSrc, resolveTeamFlagDisplay } from '@/src/lib/team-flags'
 import { supabase } from '@/src/lib/supabase'
 
 type UpcomingMatch = {
@@ -152,6 +152,34 @@ function UpcomingGamesSkeleton() {
   )
 }
 
+function TeamFlagImage({
+  countryName,
+  dbFlag,
+}: {
+  countryName: string
+  dbFlag: string | null
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const fallbackLabel = resolveTeamFlagDisplay(countryName, dbFlag)
+
+  if (imageFailed) {
+    return (
+      <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
+        {fallbackLabel}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={countryNameToFlagSrc(countryName)}
+      alt={countryName}
+      className="h-6 w-auto shrink-0"
+      onError={() => setImageFailed(true)}
+    />
+  )
+}
+
 function MatchCard({
   match,
   mounted,
@@ -180,9 +208,7 @@ function MatchCard({
 
       <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 items-center justify-center gap-3 sm:justify-start">
-          <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
-            {resolveTeamFlagDisplay(match.team1_name, match.team1_flag)}
-          </span>
+          <TeamFlagImage countryName={match.team1_name} dbFlag={match.team1_flag} />
           <span className="truncate text-base font-semibold text-foreground sm:text-lg">
             {match.team1_name}
           </span>
@@ -196,9 +222,7 @@ function MatchCard({
           <span className="truncate text-right text-base font-semibold text-foreground sm:text-lg">
             {match.team2_name}
           </span>
-          <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
-            {resolveTeamFlagDisplay(match.team2_name, match.team2_flag)}
-          </span>
+          <TeamFlagImage countryName={match.team2_name} dbFlag={match.team2_flag} />
         </div>
       </div>
 

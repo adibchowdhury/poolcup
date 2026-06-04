@@ -85,6 +85,52 @@ const NAME_ALIASES: Record<string, string> = {
   's.africa': 'South Africa',
 }
 
+/** Maps API / display team names to PNG filenames in public/flags/. */
+const TEAM_FLAG_IMAGE_ALIASES: Record<string, string> = {
+  australia: 'australia',
+  belgium: 'belgium',
+  bosnia: 'bosnia',
+  'bosnia and herzegovina': 'bosnia',
+  'bosnia-herzegovina': 'bosnia',
+  canada: 'canada',
+  curacao: 'curacao',
+  curaçao: 'curacao',
+  netherlands: 'netherlands',
+  paraguay: 'paraguay',
+  qatar: 'qatar',
+  scotland: 'scotland',
+  sweden: 'sweden',
+  turkiye: 'turkiye',
+  turkey: 'turkiye',
+  türkiye: 'turkiye',
+  usa: 'usa',
+  us: 'usa',
+  'u.s.': 'usa',
+  'u.s.a.': 'usa',
+  'united states': 'usa',
+  'united states of america': 'usa',
+}
+
+function normalizeTeamNameKey(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+}
+
+export function countryNameToFlagFilename(countryName: string): string {
+  const key = normalizeTeamNameKey(countryName)
+  if (TEAM_FLAG_IMAGE_ALIASES[key]) {
+    return TEAM_FLAG_IMAGE_ALIASES[key]!
+  }
+  return key.replace(/\s+/g, '_')
+}
+
+export function countryNameToFlagSrc(countryName: string): string {
+  return `/flags/${countryNameToFlagFilename(countryName)}.png`
+}
+
 function teamInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
   if (words.length === 0) return '??'
