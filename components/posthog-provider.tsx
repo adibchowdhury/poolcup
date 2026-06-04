@@ -59,6 +59,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!POSTHOG_KEY) return
 
+    console.log('PostHog key:', process.env.NEXT_PUBLIC_POSTHOG_KEY)
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       defaults: '2026-01-30',
