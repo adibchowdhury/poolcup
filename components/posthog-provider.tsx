@@ -62,7 +62,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     console.log('PostHog key:', process.env.NEXT_PUBLIC_POSTHOG_KEY)
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
-      defaults: '2026-01-30',
+      capture_pageview: true,
       capture_pageleave: true,
       disable_session_recording: false,
     })
