@@ -49,12 +49,12 @@ export function PointsHistoryFeed({
   }, [active, loadTransactions, animKey])
 
   return (
-    <div className="w-full min-w-0 lg:flex-1 lg:max-w-md xl:max-w-lg">
-      <h2 className="font-display text-2xl tracking-wide text-foreground">
+    <div className="flex w-full min-w-0 flex-col lg:min-h-0 lg:flex-1 lg:max-w-md xl:max-w-lg">
+      <h2 className="shrink-0 font-display text-2xl tracking-wide text-foreground">
         POINT HISTORY
       </h2>
 
-      <div className="mt-6">
+      <div className="profile-points-feed-scroll mt-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
         {loading && transactions.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             Loading…
