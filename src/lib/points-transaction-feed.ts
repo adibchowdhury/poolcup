@@ -3,6 +3,7 @@ export type PointsTransactionReason =
   | 'referral'
   | 'correct_winner'
   | 'exact_score'
+  | 'pool_created'
 
 export type PointsTransactionRow = {
   id: string
@@ -19,6 +20,7 @@ const REASON_META: Record<
   referral: { icon: '👥', description: 'Friend joined your pool' },
   correct_winner: { icon: '🎯', description: 'Correct winner prediction' },
   exact_score: { icon: '🏆', description: 'Exact score prediction' },
+  pool_created: { icon: '🏊', description: 'Created a pool' },
 }
 
 export function getPointsTransactionDisplay(reason: string): {

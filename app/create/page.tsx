@@ -213,12 +213,12 @@ export default function CreatePoolPage() {
       return
     }
 
-    const { error: pointsError } = await supabase.rpc('award_pool_created_points', {
-      p_pool_id: pool.id,
-    })
-
+    const { error: pointsError } = await supabase.rpc(
+      'award_pool_creation_points',
+      { p_pool_id: pool.id },
+    )
     if (pointsError) {
-      console.error('Pool creation points award failed:', pointsError.message)
+      console.error('award_pool_creation_points failed:', pointsError.message)
     }
 
     setSubmitting(false)
