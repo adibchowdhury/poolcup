@@ -69,6 +69,20 @@ export async function signUpWithPassword(
     if (profileError) {
       return { error: new Error(profileError.message) }
     }
+
+    if (data.user?.email) {
+      void fetch('/api/handle-new-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email: data.user.email,
+          firstName,
+        }),
+      }).catch((welcomeError) => {
+        console.error('handle-new-user signup trigger failed:', welcomeError)
+      })
+    }
   }
 
   if (!data.session) {
