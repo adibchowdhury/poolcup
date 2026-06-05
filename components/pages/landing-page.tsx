@@ -52,31 +52,15 @@ export default function LandingPage() {
     <div className="bg-[#080b0f]">
       {/* ===== SECTION 1: HERO ===== */}
       <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
+        <div
+          className="absolute inset-0 bg-[url('/background.png')] bg-cover bg-center bg-no-repeat"
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-[#080b0f]/70" aria-hidden />
         {/* Layered background */}
         <div className="hero-glow-layer hero-glow-primary" aria-hidden />
         <div className="hero-glow-layer hero-glow-secondary" aria-hidden />
         <div className="hero-glow-layer hero-vignette" aria-hidden />
-
-        {/* Football pitch line art */}
-        <svg
-          className="animate-pulse-subtle pointer-events-none absolute inset-0 h-full w-full"
-          viewBox="0 0 1200 800"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden
-        >
-          <g stroke="rgba(0,230,118,0.07)" strokeWidth="2" fill="none">
-            <circle cx="600" cy="400" r="120" />
-            <circle cx="600" cy="400" r="4" fill="rgba(0,230,118,0.07)" />
-            <line x1="600" y1="100" x2="600" y2="700" />
-            <rect x="50" y="250" width="180" height="300" />
-            <rect x="50" y="320" width="70" height="160" />
-            <path d="M 230 340 A 60 60 0 0 1 230 460" />
-            <rect x="970" y="250" width="180" height="300" />
-            <rect x="1080" y="320" width="70" height="160" />
-            <path d="M 970 340 A 60 60 0 0 0 970 460" />
-            <rect x="50" y="100" width="1100" height="600" />
-          </g>
-        </svg>
 
         {/* Noise texture */}
         <div className="hero-noise" aria-hidden />
