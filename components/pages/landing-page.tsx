@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useClientNow } from "@/hooks/use-client-now"
@@ -795,6 +796,15 @@ export default function LandingPage() {
           style={{
             background: "radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0,230,118,0.08) 0%, transparent 60%)"
           }}
+        />
+
+        <Image
+          src="/cheerleader.png"
+          alt=""
+          width={280}
+          height={420}
+          className="pointer-events-none absolute right-0 top-1/2 z-[1] hidden h-[280px] w-auto -translate-y-1/2 lg:block"
+          aria-hidden
         />
         
         <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
