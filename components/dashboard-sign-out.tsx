@@ -16,7 +16,7 @@ export function DashboardSignOut({
   async function handleSignOut() {
     setLoading(true)
     await signOut()
-    router.push('/login')
+    router.push('/')
   }
 
   return (
