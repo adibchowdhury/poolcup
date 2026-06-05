@@ -284,7 +284,7 @@ function EventCard({
   const badge = getEventBadge(event, nowMs, mounted)
 
   return (
-    <article className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111a27] p-5">
+    <article className="h-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111a27] px-4 py-[0.65rem]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-medium text-[#f0f4f8]">{event.name}</h3>
@@ -378,14 +378,15 @@ export function SportsSection() {
           className={cn(
             'mx-auto mt-10 max-w-6xl gap-4',
             filteredEvents.length < 3
-              ? 'flex flex-wrap justify-center'
-              : 'grid sm:grid-cols-2 lg:grid-cols-3',
+              ? 'flex flex-wrap items-stretch justify-center'
+              : 'grid items-stretch sm:grid-cols-2 lg:grid-cols-3',
           )}
         >
           {filteredEvents.map((event) => (
             <div
               key={event.id}
               className={cn(
+                'h-full',
                 filteredEvents.length < 3 &&
                   'w-full max-w-sm sm:max-w-[calc(50%-0.5rem)] lg:w-[20rem]',
               )}
