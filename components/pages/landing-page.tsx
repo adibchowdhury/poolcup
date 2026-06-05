@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { SportsSection } from "@/components/landing/sports-section"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
@@ -13,6 +14,31 @@ function heroReveal(isVisible: boolean) {
     "transition-all duration-700 ease-out motion-reduce:transition-none",
     isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
   )
+}
+
+const WORLD_CUP_KICKOFF_UTC_MS = Date.UTC(2026, 5, 11)
+
+function getHeroDaysStat(mounted: boolean, nowMs: number) {
+  if (!mounted || nowMs <= 0) {
+    return { value: "—", accent: false }
+  }
+
+  const now = new Date(nowMs)
+  const todayStartUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  )
+
+  if (todayStartUtc >= WORLD_CUP_KICKOFF_UTC_MS) {
+    return { value: "LIVE", accent: true }
+  }
+
+  const daysRemaining = Math.ceil(
+    (WORLD_CUP_KICKOFF_UTC_MS - todayStartUtc) / (24 * 60 * 60 * 1000),
+  )
+
+  return { value: String(daysRemaining), accent: false }
 }
 
 const scoringStyles = [
@@ -43,6 +69,12 @@ const joinMembers = [
 export default function LandingPage() {
   const [selectedStyle, setSelectedStyle] = useState("classic")
   const [isVisible, setIsVisible] = useState(false)
+  const { mounted, nowMs } = useClientNow(null)
+
+  const daysStat = useMemo(
+    () => getHeroDaysStat(mounted, nowMs),
+    [mounted, nowMs],
+  )
 
   useEffect(() => {
     setIsVisible(true)
@@ -64,6 +96,11 @@ export default function LandingPage() {
 
         {/* Noise texture */}
         <div className="hero-noise" aria-hidden />
+
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-20 bg-gradient-to-t from-[rgba(0,0,0,0.6)] to-transparent"
+          aria-hidden
+        />
 
         <LandingNavbar
           className={heroReveal(isVisible)}
@@ -113,10 +150,13 @@ export default function LandingPage() {
 
             <p
               className={cn(
-                "mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#5a7080] md:mt-8 md:text-xl",
+                "mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#f0f4f8] md:mt-8 md:text-xl",
                 heroReveal(isVisible),
               )}
-              style={{ transitionDelay: "300ms" }}
+              style={{
+                transitionDelay: "300ms",
+                textShadow: "0 1px 12px rgba(0,0,0,0.9)",
+              }}
             >
               Create a private World Cup 2026 prediction pool for your friends, family, or
               coworkers. Everyone predicts the scores — the app keeps score and crowns the
@@ -147,7 +187,7 @@ export default function LandingPage() {
               </Link>
               <a
                 href="#how-it-works"
-                className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-8 py-4 text-lg font-semibold text-[#f0f4f8] transition-all hover:scale-[1.03] hover:border-[rgba(0,230,118,0.3)] hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_24px_rgba(255,255,255,0.06)] active:scale-95 sm:w-auto"
+                className="w-full rounded-lg border-[1.5px] border-[rgba(255,255,255,0.6)] px-8 py-4 text-lg font-semibold text-white transition-all hover:scale-[1.03] hover:border-[rgba(0,230,118,0.3)] hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_24px_rgba(255,255,255,0.06)] active:scale-95 sm:w-auto"
               >
                 See how it works
               </a>
@@ -160,7 +200,12 @@ export default function LandingPage() {
               {[
                 { value: "104", label: "Matches", accent: false, delay: 500 },
                 { value: "48", label: "Nations", accent: false, delay: 600 },
-                { value: "39", label: "Days", accent: false, delay: 700 },
+                {
+                  value: daysStat.value,
+                  label: "Days",
+                  accent: daysStat.accent,
+                  delay: 700,
+                },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -175,7 +220,7 @@ export default function LandingPage() {
                   >
                     {stat.value}
                   </div>
-                  <div className="mt-1 text-sm text-[#5a7080]">{stat.label}</div>
+                  <div className="mt-1 text-sm text-[#f0f4f8]">{stat.label}</div>
                 </div>
               ))}
             </div>
