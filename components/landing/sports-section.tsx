@@ -321,7 +321,7 @@ export function SportsSection() {
   }, [activeFilter])
 
   return (
-    <section className="bg-[#0d1520] py-24 md:py-32">
+    <section className="bg-[#080b0f] py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#5a7080]">
@@ -374,14 +374,24 @@ export function SportsSection() {
           ))}
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={cn(
+            'mx-auto mt-10 max-w-6xl gap-4',
+            filteredEvents.length < 3
+              ? 'flex flex-wrap justify-center'
+              : 'grid sm:grid-cols-2 lg:grid-cols-3',
+          )}
+        >
           {filteredEvents.map((event) => (
-            <EventCard
+            <div
               key={event.id}
-              event={event}
-              nowMs={nowMs}
-              mounted={mounted}
-            />
+              className={cn(
+                filteredEvents.length < 3 &&
+                  'w-full max-w-sm sm:max-w-[calc(50%-0.5rem)] lg:w-[20rem]',
+              )}
+            >
+              <EventCard event={event} nowMs={nowMs} mounted={mounted} />
+            </div>
           ))}
         </div>
       </div>

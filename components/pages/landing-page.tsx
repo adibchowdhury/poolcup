@@ -244,8 +244,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <SportsSection />
+
       {/* ===== CREATE YOUR POOL ===== */}
-      <section className="py-24 md:py-32 bg-[#080b0f]">
+      <section className="py-24 md:py-32 bg-[#0d1520]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* UI Preview - Left */}
@@ -329,10 +331,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <FeatureTabsSection />
-
       {/* ===== INVITE YOUR SQUAD ===== */}
-      <section className="py-24 md:py-32 bg-[#0d1520]">
+      <section className="py-24 md:py-32 bg-[#080b0f]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Text - Left */}
@@ -416,7 +416,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== PREDICT EVERY MATCH ===== */}
-      <section className="py-24 md:py-32 bg-[#080b0f]">
+      <section className="py-24 md:py-32 bg-[#0d1520]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* UI Preview - Left */}
@@ -520,7 +520,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== LIVE LEADERBOARD ===== */}
-      <section className="py-24 md:py-32 bg-[#0d1520]">
+      <section className="py-24 md:py-32 bg-[#080b0f]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Text - Left */}
@@ -623,6 +623,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <FeatureTabsSection />
+
       {/* ===== MATCH RESULTS ===== */}
       <section className="py-24 md:py-32 bg-[#080b0f]">
         <div className="max-w-7xl mx-auto px-6">
@@ -721,8 +723,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      <SportsSection />
 
       {/* ===== PRICING ===== */}
       <section id="pricing" className="py-24 md:py-32 bg-[#0d1520]">
