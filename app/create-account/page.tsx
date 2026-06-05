@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { FormEvent, Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthFormDivider } from '@/components/auth/auth-form-divider'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
@@ -10,8 +10,18 @@ import { signUpWithPassword } from '@/src/lib/auth'
 
 const inputClassName = authInputClassName
 
-export default function CreateAccountPage() {
+function getSafeNext(searchParams: URLSearchParams): string | null {
+  const next = searchParams.get('next')
+  if (next?.startsWith('/') && !next.startsWith('//')) {
+    return next
+  }
+  return null
+}
+
+function CreateAccountPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = getSafeNext(searchParams)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -61,7 +71,7 @@ export default function CreateAccountPage() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(next ?? '/dashboard')
   }
 
   return (
@@ -73,7 +83,7 @@ export default function CreateAccountPage() {
         <p className="mt-2 text-sm text-[#5a7080]">Create your account</p>
 
         <div className="mt-8">
-          <GoogleSignInButton />
+          <GoogleSignInButton next={next ?? undefined} />
         </div>
         <AuthFormDivider />
 
@@ -184,7 +194,14 @@ export default function CreateAccountPage() {
               {!error && (
                 <>
                   {' '}
-                  <Link href="/login" className="font-medium underline">
+                  <Link
+                    href={
+                      next
+                        ? `/login?next=${encodeURIComponent(next)}`
+                        : '/login'
+                    }
+                    className="font-medium underline"
+                  >
                     Sign in
                   </Link>
                 </>
@@ -202,12 +219,25 @@ export default function CreateAccountPage() {
 
           <p className="text-center text-sm text-[#5a7080]">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-[#00e676] hover:underline">
+            <Link
+              href={
+                next ? `/login?next=${encodeURIComponent(next)}` : '/login'
+              }
+              className="font-medium text-[#00e676] hover:underline"
+            >
               Sign in
             </Link>
           </p>
         </form>
       </div>
     </main>
+  )
+}
+
+export default function CreateAccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateAccountPageContent />
+    </Suspense>
   )
 }

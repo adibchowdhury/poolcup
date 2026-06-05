@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { useAuth } from '@/src/lib/auth-context'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
@@ -84,12 +86,10 @@ export default function JoinPoolPage() {
 
     if (!user) {
       setPendingJoinInvite(inviteCode)
-      router.replace('/login')
-      return
     }
 
     loadPoolData()
-  }, [authLoading, user, inviteCode, router, loadPoolData])
+  }, [authLoading, user, inviteCode, loadPoolData])
 
   useEffect(() => {
     if (!user) return
@@ -180,18 +180,12 @@ export default function JoinPoolPage() {
     router.push(`/pool/${inviteCode}`)
   }
 
-  if (authLoading || (!user && !unavailable)) {
+  const joinNext = `/join/${inviteCode}`
+
+  if (authLoading || pageLoading) {
     return (
       <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
         <p className="text-[#5a7080]">Loading…</p>
-      </main>
-    )
-  }
-
-  if (pageLoading) {
-    return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
-        <p className="text-[#5a7080]">Loading pool…</p>
       </main>
     )
   }
@@ -206,6 +200,78 @@ export default function JoinPoolPage() {
           <p className="mt-2 text-sm text-[#5a7080]">
             The invite link may be invalid.
           </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!user) {
+    const memberLabel =
+      members.length === 1 ? '1 member' : `${members.length} members`
+
+    return (
+      <main className="min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <Link
+              href="/"
+              className="font-display text-3xl tracking-wider text-[#00e676]"
+            >
+              POOLCUP
+            </Link>
+            <p className="mt-1 text-sm text-[#5a7080]">
+              World Cup 2026 Prediction Pools
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] shadow-xl">
+            <div className="bg-gradient-to-br from-[#00e676]/20 to-[#111a27] p-6">
+              <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#080b0f]/50 px-2.5 py-1">
+                <span className="text-sm">⚽</span>
+                <span className="text-xs text-[#5a7080]">World Cup Pool</span>
+              </div>
+              <h1 className="font-display text-3xl tracking-wide text-[#f0f4f8]">
+                {pool.name}
+              </h1>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#00e676]/10 px-3 py-1.5">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-[#00e676]" />
+                <span className="text-sm font-medium text-[#00e676]">
+                  {memberLabel} already in this pool
+                </span>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-center text-sm leading-relaxed text-[#5a7080]">
+                You&apos;ve been invited to join{' '}
+                <span className="font-medium text-[#f0f4f8]">{pool.name}</span>
+                ! Create a free account to make your World Cup predictions.
+              </p>
+
+              <div className="mt-6">
+                <GoogleSignInButton next={joinNext} variant="primary" />
+              </div>
+
+              <p className="mt-4 text-center text-sm text-[#5a7080]">
+                <Link
+                  href={`/create-account?next=${encodeURIComponent(joinNext)}`}
+                  className="font-medium text-[#00e676] hover:underline"
+                >
+                  Sign up with email
+                </Link>
+              </p>
+
+              <p className="mt-6 text-center text-sm text-[#5a7080]">
+                Already have an account?{' '}
+                <Link
+                  href={`/login?next=${encodeURIComponent(joinNext)}`}
+                  className="font-medium text-[#00e676] hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     )

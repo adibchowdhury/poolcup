@@ -12,9 +12,18 @@ const inputClassName = authInputClassName
 
 type AuthMode = 'signin' | 'forgot'
 
+function getSafeNext(searchParams: URLSearchParams): string | null {
+  const next = searchParams.get('next')
+  if (next?.startsWith('/') && !next.startsWith('//')) {
+    return next
+  }
+  return null
+}
+
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const next = getSafeNext(searchParams)
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,7 +62,7 @@ function LoginPageContent() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(next ?? '/dashboard')
   }
 
   async function handleForgotPassword(e: FormEvent<HTMLFormElement>) {
@@ -88,7 +97,7 @@ function LoginPageContent() {
         {mode === 'signin' && (
           <>
             <div className="mt-8">
-              <GoogleSignInButton />
+              <GoogleSignInButton next={next ?? undefined} />
             </div>
             <AuthFormDivider />
             <form onSubmit={handleSignIn} className="space-y-4">
@@ -160,7 +169,11 @@ function LoginPageContent() {
               <p className="text-center text-sm text-[#5a7080]">
                 Don&apos;t have an account?{' '}
                 <Link
-                  href="/create-account"
+                  href={
+                    next
+                      ? `/create-account?next=${encodeURIComponent(next)}`
+                      : '/create-account'
+                  }
                   className="font-medium text-[#00e676] hover:underline"
                 >
                   Create account

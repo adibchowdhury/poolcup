@@ -78,12 +78,17 @@ export async function signUpWithPassword(
   return { error: null }
 }
 
-export async function signInWithGoogle(): Promise<{ error: Error | null }> {
+export async function signInWithGoogle(
+  next?: string,
+): Promise<{ error: Error | null }> {
   if (typeof window === 'undefined') {
     return { error: new Error('Google sign-in is only available in the browser') }
   }
 
-  const redirectTo = `${window.location.origin}/auth/callback`
+  let redirectTo = `${window.location.origin}/auth/callback`
+  if (next?.startsWith('/') && !next.startsWith('//')) {
+    redirectTo += `?next=${encodeURIComponent(next)}`
+  }
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
