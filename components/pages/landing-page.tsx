@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
+import { SportsSection } from "@/components/landing/sports-section"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
@@ -720,6 +721,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <SportsSection />
 
       {/* ===== PRICING ===== */}
       <section id="pricing" className="py-24 md:py-32 bg-[#0d1520]">
