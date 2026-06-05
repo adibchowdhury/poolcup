@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
+import { supabase } from '@/src/lib/supabase'
 
-/** World Cup 2026 opening kickoff (UTC). */
-const WORLD_CUP_KICKOFF_MS = Date.parse('2026-06-11T00:00:00.000Z')
+/** Mexico vs South Africa — opening match (API-Football). */
+const FALLBACK_OPENING_KICKOFF_MS = Date.parse('2026-06-11T19:00:00.000Z')
 
 function formatDaysHoursRemaining(ms: number): string {
   if (ms <= 0) return '0 days 0 hours'
@@ -19,8 +21,41 @@ function formatDaysHoursRemaining(ms: number): string {
 
 export function WorldCupUrgencyBanner() {
   const { mounted, nowMs } = useClientNow(60_000)
-  const hasStarted = mounted && nowMs >= WORLD_CUP_KICKOFF_MS
-  const remainingMs = WORLD_CUP_KICKOFF_MS - nowMs
+  const [openingKickoffMs, setOpeningKickoffMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadOpeningKickoff() {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('kickoff_at')
+        .order('kickoff_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (cancelled) return
+
+      if (!error && data?.kickoff_at) {
+        setOpeningKickoffMs(new Date(data.kickoff_at).getTime())
+      } else {
+        if (error) {
+          console.error('Failed to load opening match kickoff:', error.message)
+        }
+        setOpeningKickoffMs(FALLBACK_OPENING_KICKOFF_MS)
+      }
+    }
+
+    void loadOpeningKickoff()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const kickoffReady = openingKickoffMs != null
+  const hasStarted = mounted && kickoffReady && nowMs >= openingKickoffMs!
+  const remainingMs = kickoffReady ? openingKickoffMs! - nowMs : 0
 
   return (
     <div
@@ -28,7 +63,7 @@ export function WorldCupUrgencyBanner() {
       style={{ backgroundColor: '#0d1f14', borderLeftColor: '#22c55e' }}
       role="status"
     >
-      {!mounted ? (
+      {!mounted || !kickoffReady ? (
         <p className="text-white">
           <span aria-hidden>⚽ </span>
           World Cup kicks off in{' '}
