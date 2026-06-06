@@ -66,7 +66,11 @@ export async function POST(request: Request) {
       await admin.auth.admin.getUserById(userId)
 
     if (authUserError) {
-      return NextResponse.json({ error: authUserError.message }, { status: 500 })
+      console.error('handle-new-user: failed to load auth user', {
+        userId,
+        error: authUserError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const email = authUser.user.email?.trim()
@@ -90,7 +94,7 @@ export async function POST(request: Request) {
 
     if (emailError) {
       console.error('handle-new-user welcome email error:', emailError.message)
-      return NextResponse.json({ error: emailError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const { error: updateError } = await admin.auth.admin.updateUserById(
@@ -114,7 +118,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

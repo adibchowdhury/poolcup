@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (poolError) {
-      return NextResponse.json({ error: poolError.message }, { status: 500 })
+      console.error('delete-pool: failed to load pool', { poolId, error: poolError })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     if (!pool) {
@@ -47,7 +48,11 @@ export async function POST(request: Request) {
       .delete()
       .eq('pool_id', poolId)
     if (predictionsError) {
-      return NextResponse.json({ error: predictionsError.message }, { status: 500 })
+      console.error('delete-pool: failed to delete predictions', {
+        poolId,
+        error: predictionsError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const { error: cacheError } = await admin
@@ -55,7 +60,11 @@ export async function POST(request: Request) {
       .delete()
       .eq('pool_id', poolId)
     if (cacheError) {
-      return NextResponse.json({ error: cacheError.message }, { status: 500 })
+      console.error('delete-pool: failed to delete leaderboard cache', {
+        poolId,
+        error: cacheError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const { error: membersError } = await admin
@@ -63,12 +72,17 @@ export async function POST(request: Request) {
       .delete()
       .eq('pool_id', poolId)
     if (membersError) {
-      return NextResponse.json({ error: membersError.message }, { status: 500 })
+      console.error('delete-pool: failed to delete pool members', {
+        poolId,
+        error: membersError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const { error: deleteError } = await admin.from('pools').delete().eq('id', poolId)
     if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+      console.error('delete-pool: failed to delete pool', { poolId, error: deleteError })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
@@ -78,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

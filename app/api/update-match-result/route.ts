@@ -5,8 +5,9 @@ export async function POST(request: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET
     if (!cronSecret) {
+      console.error('update-match-result: CRON_SECRET is not configured')
       return NextResponse.json(
-        { error: 'CRON_SECRET is not configured' },
+        { error: 'Internal server error' },
         { status: 500 }
       )
     }
@@ -56,8 +57,11 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (findError) {
-      console.error('update-match-result find error:', findError.message)
-      return NextResponse.json({ error: findError.message }, { status: 500 })
+      console.error('update-match-result: failed to find match', {
+        fixtureId,
+        error: findError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     if (!match) {
@@ -74,8 +78,12 @@ export async function POST(request: Request) {
       .eq('id', match.id)
 
     if (updateError) {
-      console.error('update-match-result update error:', updateError.message)
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      console.error('update-match-result: failed to update match', {
+        fixtureId,
+        matchId: match.id,
+        error: updateError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     const { error: rpcError } = await supabase.rpc('calculate_match_points', {
@@ -83,11 +91,12 @@ export async function POST(request: Request) {
     })
 
     if (rpcError) {
-      console.error(
-        'update-match-result calculate_match_points error:',
-        rpcError.message
-      )
-      return NextResponse.json({ error: rpcError.message }, { status: 500 })
+      console.error('update-match-result: calculate_match_points failed', {
+        fixtureId,
+        matchId: match.id,
+        error: rpcError,
+      })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, matchId: match.id })
@@ -99,7 +108,7 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
     return NextResponse.json(
