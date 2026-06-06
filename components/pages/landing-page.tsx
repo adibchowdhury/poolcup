@@ -362,8 +362,22 @@ export default function LandingPage() {
       </section>
 
       {/* ===== INVITE YOUR SQUAD ===== */}
-      <section className="py-24 md:py-32 bg-[#080b0f]">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative py-24 md:py-32 bg-[#080b0f]">
+        <div
+          className="pointer-events-none absolute z-[1] hidden md:block md:top-[48%] md:left-[max(1.5rem,calc((100%-80rem)/2+0.25rem))] lg:top-[11rem] lg:left-[max(1.5rem,calc((100%-80rem)/2+0.25rem))]"
+          aria-hidden
+        >
+          <div className="animate-float">
+            <Image
+              src="/paper_plane.png"
+              alt=""
+              width={120}
+              height={78}
+              className="h-auto w-[120px]"
+            />
+          </div>
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Text - Left */}
             <div className="order-2 lg:order-1">
