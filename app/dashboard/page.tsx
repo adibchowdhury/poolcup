@@ -43,7 +43,7 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, points')
+    .select('display_name, points, avatar')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -199,6 +199,7 @@ export default async function DashboardPage({
         profile?.display_name,
         user.user_metadata,
       )}
+      avatar={profile?.avatar ?? null}
       pools={pools}
       quickStats={{
         totalPoints: profile?.points ?? 0,

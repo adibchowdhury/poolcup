@@ -25,7 +25,10 @@ import {
 } from '@/components/dashboard/upcoming-games-tab'
 import { cn } from '@/lib/utils'
 import {
-  getAvatarSrcForLevel,
+  getAvatarSrc,
+  resolveAvatarFilename,
+} from '@/src/lib/avatars'
+import {
   getPlayerLevelFromPoints,
 } from '@/src/lib/player-level'
 import { supabase } from '@/src/lib/supabase'
@@ -54,6 +57,7 @@ interface DashboardViewProps {
   userId: string
   email: string
   displayName?: string | null
+  avatar?: string | null
   pools: DashboardPoolCardData[]
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
@@ -69,6 +73,7 @@ export function DashboardView({
   userId,
   email,
   displayName,
+  avatar,
   pools,
   quickStats,
   passwordResetSuccess,
@@ -80,6 +85,11 @@ export function DashboardView({
   const [newEmail, setNewEmail] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [selectedAvatar, setSelectedAvatar] = useState(() =>
+    resolveAvatarFilename(avatar),
+  )
+  const [avatarSaving, setAvatarSaving] = useState<string | null>(null)
+  const [availableAvatars, setAvailableAvatars] = useState<string[]>([])
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [nextPassword, setNextPassword] = useState('')
@@ -114,6 +124,27 @@ export function DashboardView({
       void refreshUserPoints()
     }
   }
+
+  useEffect(() => {
+    async function loadAvatars() {
+      try {
+        const response = await fetch('/api/avatars')
+        if (!response.ok) {
+          throw new Error('Failed to load avatars')
+        }
+        const images = (await response.json()) as string[]
+        setAvailableAvatars(images)
+      } catch (error) {
+        console.error('Failed to load avatars:', error)
+      }
+    }
+
+    void loadAvatars()
+  }, [])
+
+  useEffect(() => {
+    setSelectedAvatar(resolveAvatarFilename(avatar))
+  }, [avatar])
 
   useEffect(() => {
     const name = displayName ?? ''
@@ -181,6 +212,25 @@ export function DashboardView({
   const canSaveProfile = useMemo(() => {
     return Boolean(fullName.trim()) || Boolean(newEmail.trim())
   }, [fullName, newEmail])
+
+  async function handleSelectAvatar(filename: string) {
+    if (filename === selectedAvatar || avatarSaving) return
+
+    setAvatarSaving(filename)
+    setSelectedAvatar(filename)
+
+    const { error } = await supabase
+      .from('users')
+      .update({ avatar: filename })
+      .eq('id', userId)
+
+    setAvatarSaving(null)
+
+    if (error) {
+      setSelectedAvatar(resolveAvatarFilename(avatar))
+      console.error('Failed to save avatar:', error.message)
+    }
+  }
 
   async function handleSaveProfile() {
     setProfileSaving(true)
@@ -377,6 +427,53 @@ export function DashboardView({
 
                       <div className="space-y-2">
                         <h3 className="font-display text-xl tracking-wide">
+                          Choose Your Avatar
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Pick a character for your profile. Changes save instantly.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+                        {availableAvatars.map((filename) => {
+                          const isSelected = selectedAvatar === filename
+                          const isSaving = avatarSaving === filename
+                          const avatarLabel = filename.replace(/\.[^.]+$/, '')
+
+                          return (
+                            <button
+                              key={filename}
+                              type="button"
+                              onClick={() => void handleSelectAvatar(filename)}
+                              disabled={Boolean(avatarSaving)}
+                              aria-pressed={isSelected}
+                              aria-label={`Select ${avatarLabel} avatar`}
+                              className={cn(
+                                'rounded-lg border-2 bg-muted/20 p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                isSelected
+                                  ? 'border-primary ring-2 ring-primary/40'
+                                  : 'border-border hover:border-muted-foreground/50',
+                              )}
+                            >
+                              <Image
+                                src={getAvatarSrc(filename)}
+                                alt=""
+                                width={80}
+                                height={80}
+                                className="mx-auto h-20 w-20 object-contain"
+                              />
+                              {isSaving && (
+                                <span className="sr-only">Saving…</span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl tracking-wide">
                           Password &amp; security
                         </h3>
                         <p className="text-sm text-muted-foreground">
@@ -486,7 +583,7 @@ export function DashboardView({
                   <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:grid lg:h-full lg:min-h-0 lg:grid-rows-[1fr_auto] lg:gap-4">
                     <div className="flex min-h-[320px] w-full max-w-[380px] items-end justify-center sm:max-w-[480px] lg:h-full lg:min-h-0 lg:w-full lg:max-w-[min(100%,580px)]">
                       <Image
-                        src={getAvatarSrcForLevel(playerLevel.level)}
+                        src={getAvatarSrc(selectedAvatar)}
                         alt={`${playerLevel.title} — Level ${playerLevel.level}`}
                         width={580}
                         height={800}
