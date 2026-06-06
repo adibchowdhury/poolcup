@@ -11,16 +11,16 @@ export async function POST(request: Request) {
       )
     }
 
+    const authHeader = request.headers.get('authorization')
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
-    const { fixtureId, resultTeam1, resultTeam2, apiSecret } = body as {
+    const { fixtureId, resultTeam1, resultTeam2 } = body as {
       fixtureId?: string
       resultTeam1?: number
       resultTeam2?: number
-      apiSecret?: string
-    }
-
-    if (!apiSecret || apiSecret !== cronSecret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!fixtureId || typeof fixtureId !== 'string') {

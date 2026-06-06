@@ -25,11 +25,9 @@ type MatchRow = {
   is_final: boolean
 }
 
-function isAuthorized(request: Request, bodySecret?: string): boolean {
+function isAuthorized(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return false
-
-  if (bodySecret && bodySecret === cronSecret) return true
 
   const authHeader = request.headers.get('authorization')
   if (authHeader === `Bearer ${cronSecret}`) return true
@@ -185,17 +183,7 @@ async function handleSyncRequest(request: Request) {
     )
   }
 
-  let bodySecret: string | undefined
-  if (request.method === 'POST') {
-    try {
-      const body = (await request.json()) as { apiSecret?: string }
-      bodySecret = body.apiSecret
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-  }
-
-  if (!isAuthorized(request, bodySecret)) {
+  if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
