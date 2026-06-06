@@ -5,30 +5,49 @@ import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 type HandleNewUserBody = {
   userId?: string
-  email?: string
-  firstName?: string
 }
 
 function isInternalRequest(request: Request): boolean {
   const authHeader = request.headers.get('authorization')
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  return Boolean(
-    serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`,
-  )
+  const internalSecret = process.env.INTERNAL_WEBHOOK_SECRET
+  if (!internalSecret) return false
+  return authHeader === `Bearer ${internalSecret}`
+}
+
+function deriveFirstName(
+  metadata: Record<string, unknown> | undefined,
+  email: string | undefined,
+): string {
+  if (metadata) {
+    const firstName =
+      typeof metadata.first_name === 'string' ? metadata.first_name.trim() : ''
+    if (firstName) return firstName
+
+    const fullName =
+      typeof metadata.full_name === 'string' ? metadata.full_name.trim() : ''
+    if (fullName) {
+      const part = fullName.split(/\s+/)[0]
+      if (part) return part
+    }
+
+    const name = typeof metadata.name === 'string' ? metadata.name.trim() : ''
+    if (name) {
+      const part = name.split(/\s+/)[0]
+      if (part) return part
+    }
+  }
+
+  const localPart = email?.split('@')[0]?.trim()
+  return localPart || 'there'
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as HandleNewUserBody
     const userId = body.userId
-    const email = body.email?.trim()
-    const firstName = body.firstName?.trim() || 'there'
 
-    if (!userId || !email) {
-      return NextResponse.json(
-        { error: 'userId and email are required' },
-        { status: 400 },
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
     if (!isInternalRequest(request)) {
@@ -49,6 +68,19 @@ export async function POST(request: Request) {
     if (authUserError) {
       return NextResponse.json({ error: authUserError.message }, { status: 500 })
     }
+
+    const email = authUser.user.email?.trim()
+    if (!email) {
+      return NextResponse.json(
+        { error: 'User has no email address' },
+        { status: 400 },
+      )
+    }
+
+    const firstName = deriveFirstName(
+      authUser.user.user_metadata as Record<string, unknown> | undefined,
+      email,
+    )
 
     if (authUser.user.app_metadata?.welcome_email_sent) {
       return NextResponse.json({ success: true, skipped: true })
