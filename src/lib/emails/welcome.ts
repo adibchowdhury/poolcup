@@ -5,8 +5,17 @@ type SendWelcomeEmailParams = {
   firstName: string
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function buildWelcomeEmailHtml(firstName: string): string {
-  const greetingName = firstName.trim() || 'there'
+  const greetingName = escapeHtml(firstName.trim() || 'there')
 
   return `<!DOCTYPE html>
 <html lang="en">
