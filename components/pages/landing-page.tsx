@@ -817,7 +817,7 @@ export default function LandingPage() {
           alt=""
           width={280}
           height={420}
-          className="pointer-events-none absolute right-0 top-1/2 z-[1] hidden h-[280px] w-auto -translate-y-1/2 lg:block"
+          className="pointer-events-none absolute left-[calc(50%-38.5rem)] top-1/2 z-[1] hidden h-[280px] w-auto -translate-y-1/2 lg:block"
           aria-hidden
         />
         
