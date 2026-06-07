@@ -8,6 +8,7 @@ import {
   todayUtcDateString,
 } from '@/src/lib/api-football'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { secureCompare } from '@/src/lib/secure-compare'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -30,10 +31,13 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret) return false
 
   const authHeader = request.headers.get('authorization')
-  if (authHeader === `Bearer ${cronSecret}`) return true
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : null
+  if (bearerToken && secureCompare(bearerToken, cronSecret)) return true
 
   const cronHeader = request.headers.get('x-cron-secret')
-  if (cronHeader === cronSecret) return true
+  if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
 
   return false
 }
@@ -60,9 +64,6 @@ async function runSync(): Promise<{
   )
 
   if (syncableFixtures.length === 0) {
-    console.log(
-      `sync-scores: date=${date} checked=0 updated=0 (no live/FT fixtures from API)`,
-    )
     return {
       date,
       matchesChecked: 0,
@@ -159,10 +160,6 @@ async function runSync(): Promise<{
   }
 
   const matchesChecked = syncableFixtures.length
-
-  console.log(
-    `sync-scores: date=${date} checked=${matchesChecked} updated=${matchesUpdated} skipped=${matchesSkipped} pointsRecalculated=${pointsRecalculated} errors=${errors.length}`,
-  )
 
   return {
     date,

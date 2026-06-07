@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { sendWelcomeEmail } from '@/src/lib/emails/welcome'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
+import { secureCompare } from '@/src/lib/secure-compare'
 
 type HandleNewUserBody = {
   userId?: string
@@ -11,7 +12,11 @@ function isInternalRequest(request: Request): boolean {
   const authHeader = request.headers.get('authorization')
   const internalSecret = process.env.INTERNAL_WEBHOOK_SECRET
   if (!internalSecret) return false
-  return authHeader === `Bearer ${internalSecret}`
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : null
+  if (!bearerToken) return false
+  return secureCompare(bearerToken, internalSecret)
 }
 
 function deriveFirstName(

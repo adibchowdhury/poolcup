@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { secureCompare } from '@/src/lib/secure-compare'
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,10 @@ export async function POST(request: Request) {
     }
 
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    const bearerToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
+      : null
+    if (!bearerToken || !secureCompare(bearerToken, cronSecret)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -98,28 +98,12 @@ export function WinnerOnlyPredictView({
         teamToGroup?: Record<string, WorldCupGroupLetter>
       }
       teamGroupMap = new Map(Object.entries(body.teamToGroup ?? {}))
-      console.log('[WinnerOnly] Team→group map from standings', {
-        teamCount: teamGroupMap.size,
-        sample: Object.fromEntries([...teamGroupMap.entries()].slice(0, 8)),
-      })
     } else {
       console.warn(
         '[WinnerOnly] Could not load team-group map:',
         teamGroupResult.status,
       )
     }
-
-    console.log('[WinnerOnly] Matches loaded from Supabase', {
-      count: rows.length,
-      sample: rows.slice(0, 5),
-      uniqueGroupNames: [...new Set(rows.map((m) => m.group_name))].sort(),
-      uniqueRounds: [...new Set(rows.map((m) => m.round))],
-      fieldsUsed: {
-        round: 'round',
-        group: 'group_name',
-        teams: ['team1_name', 'team2_name'],
-      },
-    })
 
     setTeamToGroup(teamGroupMap)
     setMatches(rows)
@@ -131,17 +115,10 @@ export function WinnerOnlyPredictView({
   }, [loadMatches])
 
   const groups = useMemo(() => {
-    const built = buildWorldCupGroups(
+    return buildWorldCupGroups(
       matches,
       teamToGroup.size > 0 ? teamToGroup : undefined,
     )
-    console.log('[WinnerOnly] Groups built from matches', {
-      groupsWithTeams: built
-        .filter((g) => g.teams.length > 0)
-        .map((g) => ({ letter: g.letter, teamCount: g.teams.length, teams: g.teams })),
-      emptyGroups: built.filter((g) => g.teams.length === 0).map((g) => g.letter),
-    })
-    return built
   }, [matches, teamToGroup])
 
   const lockedRoundTab = isWinnerOnlyLockedRoundTab(activeTab)

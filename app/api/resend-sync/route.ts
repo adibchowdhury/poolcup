@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { secureCompare } from '@/src/lib/secure-compare'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
   // Confirm the request actually came from Supabase
   const secret = req.headers.get('x-webhook-secret')
-  if (secret !== process.env.SUPABASE_WEBHOOK_SECRET) {
+  const expected = process.env.SUPABASE_WEBHOOK_SECRET
+  if (!expected || !secret || !secureCompare(secret, expected)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
