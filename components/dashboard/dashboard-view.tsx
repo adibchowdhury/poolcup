@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
+import { SupportUsButton } from '@/components/support-us-button'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
@@ -348,6 +349,7 @@ export function DashboardView({
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <SupportUsButton />
                 <DashboardSignOut displayName={headerName} />
                 <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
                   <DialogTrigger asChild>

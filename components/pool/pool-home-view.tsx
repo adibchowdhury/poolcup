@@ -21,6 +21,7 @@ import {
   PoolPredictionsTab,
   type UserPoolPrediction,
 } from '@/components/pool/pool-predictions-tab'
+import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -41,6 +42,7 @@ interface PoolHomeViewProps {
   yourPredictions: number
   canDelete?: boolean
   poolId?: string
+  memberId?: string
 }
 
 function formatNextMatchCountdown(ms: number): string {
@@ -78,6 +80,7 @@ export function PoolHomeView({
   yourPredictions,
   canDelete,
   poolId,
+  memberId,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -213,12 +216,15 @@ export function PoolHomeView({
             onValueChange={setActiveTab}
             className="mb-8 gap-6"
           >
-            <TabsList className="grid h-auto w-full max-w-md grid-cols-2 p-1">
+            <TabsList className="grid h-auto w-full max-w-xl grid-cols-3 p-1">
               <TabsTrigger value="predictions" className="py-2">
                 Predictions
               </TabsTrigger>
               <TabsTrigger value="leaderboard" className="py-2">
                 Leaderboard
+              </TabsTrigger>
+              <TabsTrigger value="bracket" className="py-2">
+                Bracket
               </TabsTrigger>
             </TabsList>
 
@@ -314,6 +320,12 @@ export function PoolHomeView({
                     </>
                   )}
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="bracket" className="mt-0">
+              <div className="w-screen max-w-[100vw] ml-[calc(50%-50vw)]">
+                <PoolBracketTab />
               </div>
             </TabsContent>
           </Tabs>

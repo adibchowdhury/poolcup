@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import { SupportUsButton } from '@/components/support-us-button'
 import { cn } from '@/lib/utils'
 
 type LandingNavbarProps = {
@@ -49,12 +50,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
 
         <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-3 md:flex">
-            <Link
-              href="/create-account"
-              className="rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-all hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] active:scale-95"
-            >
-              Create account
-            </Link>
+            <SupportUsButton />
             <Link
               href="/login"
               className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#22c55e]/90 hover:shadow-[0_0_24px_rgba(34,197,94,0.35)] active:scale-95"
@@ -126,13 +122,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         >
           <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
             <div className="flex w-full flex-col gap-3">
-              <Link
-                href="/create-account"
-                onClick={closeMenu}
-                className="w-full rounded-lg border border-[rgba(255,255,255,0.2)] px-4 py-3.5 text-center text-sm font-semibold text-[#f0f4f8] transition-colors hover:bg-[rgba(255,255,255,0.05)]"
-              >
-                Create account
-              </Link>
+              <SupportUsButton fullWidth />
               <Link
                 href="/login"
                 onClick={closeMenu}

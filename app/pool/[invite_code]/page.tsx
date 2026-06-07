@@ -126,6 +126,7 @@ export default function PoolPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [poolId, setPoolId] = useState<string | null>(null)
+  const [memberId, setMemberId] = useState<string | null>(null)
   const [canDelete, setCanDelete] = useState(false)
 
   const loadPoolData = useCallback(async () => {
@@ -275,6 +276,7 @@ export default function PoolPage() {
     }
 
     const currentMember = poolMembers.find((m) => m.user_id === user.id)
+    setMemberId(currentMember?.id ?? null)
     const loadedUserPredictions: UserPoolPrediction[] = []
 
     if (currentMember) {
@@ -414,6 +416,7 @@ export default function PoolPage() {
       yourPredictions={yourPredictions}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
+      memberId={memberId ?? undefined}
     />
   )
 }

@@ -193,6 +193,51 @@ export function rankingsEqual(a: string[], b: string[]): boolean {
   return a.every((team, index) => team === b[index])
 }
 
+/** World Cup 2026 group stage opens June 11, 2026 (UTC). */
+export const GROUP_STAGE_KICKOFF_LOCK = new Date('2026-06-11T00:00:00Z')
+
+export function isGroupStageLocked(now = Date.now()): boolean {
+  return now >= GROUP_STAGE_KICKOFF_LOCK.getTime()
+}
+
+/** Merge saved standings with default team list for display ordering. */
+export function getGroupDisplayOrder(
+  teams: string[],
+  standings: string[],
+): string[] {
+  if (teams.length === 0) return []
+
+  const validStandings = standings.filter((team) => teams.includes(team))
+  const unranked = teams.filter((team) => !validStandings.includes(team))
+
+  if (validStandings.length === teams.length) {
+    return validStandings
+  }
+
+  return [...validStandings, ...unranked]
+}
+
+export function reorderTeamsInGroup(
+  order: string[],
+  fromIndex: number,
+  toIndex: number,
+): string[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= order.length ||
+    toIndex >= order.length
+  ) {
+    return order
+  }
+
+  const next = [...order]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved!)
+  return next
+}
+
 export function cloneGroupRankings(rankings: GroupRankings): GroupRankings {
   return Object.fromEntries(
     Object.entries(rankings).map(([letter, standings]) => [
