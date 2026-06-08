@@ -97,7 +97,7 @@ function BracketTeamRow({
       </span>
       <span
         className={cn(
-          'whitespace-nowrap text-base font-medium',
+          'min-w-0 flex-1 truncate text-base font-medium',
           rank === 4 ? 'text-[#6b7280]' : 'text-[#e2e8f0]',
         )}
       >
@@ -130,19 +130,19 @@ function BracketGroupCard({
   return (
     <div
       className={cn(
-        'relative z-[1] inline-flex w-fit flex-col',
+        'relative z-[1] flex w-full flex-col',
         align === 'right' && 'items-end',
       )}
     >
       <p
         className={cn(
-          'mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]',
-          align === 'right' && 'text-right',
+          'mb-1 w-full text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]',
+          align === 'right' ? 'text-right' : 'text-left',
         )}
       >
         Group {group.letter}
       </p>
-      <div className="relative z-[1] inline-flex w-fit flex-col overflow-hidden rounded border border-[#1e293b]">
+      <div className="relative z-[1] w-full overflow-hidden rounded border border-[#1e293b]">
         {teams.map((team, index) => {
           const rank = index + 1
           const advanceRank = rank === 1 || rank === 2 ? rank : null
@@ -173,7 +173,7 @@ function R32PlaceholderSlot({
   return (
     <div
       ref={slotRef}
-      className="relative z-[1] flex h-9 w-fit min-w-[120px] items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-3"
+      className="relative z-[1] flex h-9 w-full items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-3"
     >
       <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
       <span className="whitespace-nowrap text-[11px] text-[#4a5568]">TBD</span>
@@ -196,7 +196,7 @@ function R32MatchupBlock({
   const awayTarget: R32SlotRef = { side, matchIndex, slot: 'away' }
 
   return (
-    <div className="inline-flex w-fit flex-col">
+    <div className="flex w-full flex-col">
       <p className="mb-1 text-center font-mono text-[10px] text-[#64748b]">
         {matchup.label}
       </p>
@@ -222,7 +222,7 @@ function R32Column({
 }) {
   return (
     <div
-      className="flex shrink-0 flex-col justify-between self-stretch py-0.5"
+      className="flex w-full shrink-0 flex-col justify-between self-stretch py-0.5"
       style={{ width }}
     >
       {matchups.map((matchup, index) => (
@@ -380,7 +380,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
         <BracketConnectors paths={connectorPaths} />
 
         <div
-          className="flex shrink-0 flex-col items-start gap-2.5"
+          className="flex w-full shrink-0 flex-col items-start gap-2.5"
           style={{ width: BRACKET_LAYOUT.leftGroupColumnWidth }}
         >
           {leftGroups.map((group) => (
@@ -410,7 +410,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
         />
 
         <div
-          className="flex shrink-0 flex-col items-end gap-2.5"
+          className="flex w-full shrink-0 flex-col items-end gap-2.5"
           style={{ width: BRACKET_LAYOUT.rightGroupColumnWidth }}
         >
           {rightGroups.map((group) => (
