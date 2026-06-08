@@ -9,6 +9,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PLAYER_LEVEL_TIERS } from '@/src/lib/player-level'
 import { POOL_SCORING_STYLE_OPTIONS } from '@/src/lib/scoring-style-display'
 
 const SCORING_STYLE_UI = [
@@ -28,19 +29,6 @@ const SCORING_STYLE_UI = [
   },
 ] as const
 
-const XP_LEVELS = [
-  { level: 1, title: 'Benchwarmer', minXp: 0 },
-  { level: 2, title: 'Kickabout', minXp: 100 },
-  { level: 3, title: 'Pitch Rat', minXp: 300 },
-  { level: 4, title: "Scout's Eye", minXp: 600 },
-  { level: 5, title: 'Hat Trick Hero', minXp: 1_000 },
-  { level: 6, title: 'Playmaker', minXp: 1_500 },
-  { level: 7, title: 'Golden Boot', minXp: 2_100 },
-  { level: 8, title: 'Top of the Table', minXp: 3_000 },
-  { level: 9, title: 'Extra Time', minXp: 4_000 },
-  { level: 10, title: 'The GOAT', minXp: 5_000 },
-] as const
-
 const XP_REWARDS = [
   { label: 'Making predictions before kickoff', xp: 5, suffix: 'per match predicted' },
   { label: 'Correct winner prediction', xp: 10 },
@@ -54,11 +42,11 @@ function formatXp(value: number): string {
 
 function getLevelProgress(
   index: number,
-  currentXp: number,
+  currentPoints: number,
 ): { progressPercent: number; isUnlocked: boolean; isCurrent: boolean } {
-  const level = XP_LEVELS[index]!
-  const next = XP_LEVELS[index + 1]
-  const isUnlocked = currentXp >= level.minXp
+  const level = PLAYER_LEVEL_TIERS[index]!
+  const next = PLAYER_LEVEL_TIERS[index + 1]
+  const isUnlocked = currentPoints >= level.minPoints
 
   if (!next) {
     return {
@@ -68,17 +56,19 @@ function getLevelProgress(
     }
   }
 
-  if (currentXp >= next.minXp) {
+  if (currentPoints >= next.minPoints) {
     return { progressPercent: 100, isUnlocked: true, isCurrent: false }
   }
 
-  if (currentXp < level.minXp) {
+  if (currentPoints < level.minPoints) {
     return { progressPercent: 0, isUnlocked: false, isCurrent: false }
   }
 
-  const span = next.minXp - level.minXp
+  const span = next.minPoints - level.minPoints
   const progressPercent =
-    span > 0 ? Math.min(100, ((currentXp - level.minXp) / span) * 100) : 100
+    span > 0
+      ? Math.min(100, ((currentPoints - level.minPoints) / span) * 100)
+      : 100
 
   return { progressPercent, isUnlocked: true, isCurrent: true }
 }
@@ -194,7 +184,7 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
             All 10 levels
           </h3>
           <ul className="space-y-2">
-            {XP_LEVELS.map((level, index) => {
+            {PLAYER_LEVEL_TIERS.map((level, index) => {
               const { progressPercent, isUnlocked, isCurrent } = getLevelProgress(
                 index,
                 xp,
@@ -235,7 +225,7 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
                           {level.title}
                         </p>
                         <p className="shrink-0 font-mono text-xs text-muted-foreground">
-                          {formatXp(level.minXp)} XP
+                          {formatXp(level.minPoints)} XP
                         </p>
                       </div>
 
