@@ -1,0 +1,77 @@
+@keyframes hero-confetti-fall {
+  0% {
+    transform: translateX(-50%) translateY(-8vh);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(108vh);
+    opacity: 0;
+  }
+}
+
+@keyframes hero-confetti-drift {
+  0%,
+  100% {
+    transform: translateX(calc(-1 * var(--drift)));
+  }
+  50% {
+    transform: translateX(var(--drift));
+  }
+}
+
+@keyframes hero-confetti-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hero-confetti {
+  contain: layout style paint;
+}
+
+.hero-confetti-piece {
+  position: absolute;
+  top: 0;
+  animation-name: hero-confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.hero-confetti-drift {
+  display: block;
+  animation-name: hero-confetti-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.hero-confetti-shape {
+  display: block;
+  border-radius: 1px;
+  animation-name: hero-confetti-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-confetti-piece {
+    animation: none;
+    opacity: 0;
+  }
+
+  .hero-confetti-drift,
+  .hero-confetti-shape {
+    animation: none;
+  }
+}

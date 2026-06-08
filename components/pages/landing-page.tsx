@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { SportsSection } from "@/components/landing/sports-section"
+import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
@@ -93,6 +94,8 @@ export default function LandingPage() {
         <div className="hero-glow-layer hero-glow-primary" aria-hidden />
         <div className="hero-glow-layer hero-glow-secondary" aria-hidden />
         <div className="hero-glow-layer hero-vignette" aria-hidden />
+
+        <HeroConfetti />
 
         {/* Noise texture */}
         <div className="hero-noise" aria-hidden />
