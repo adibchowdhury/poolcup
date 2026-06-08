@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { GroupStandingCard } from '@/components/predict/group-standing-card'
+import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import {
@@ -26,6 +27,7 @@ import {
   type GroupStageMatch,
   type WorldCupGroupLetter,
 } from '@/src/lib/world-cup-groups'
+import { cn } from '@/lib/utils'
 
 type Pool = {
   id: string
@@ -276,7 +278,11 @@ export function WinnerOnlyPredictView({
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
+      <main
+        className={cn(
+          activeTab === 'bracket' ? 'py-4' : 'mx-auto max-w-3xl space-y-4 px-4 py-4',
+        )}
+      >
         {successMessage && (
           <div className="animate-in fade-in rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary duration-300">
             {successMessage}
@@ -289,7 +295,9 @@ export function WinnerOnlyPredictView({
           </div>
         )}
 
-        {lockedRoundTab ? (
+        {activeTab === 'bracket' ? (
+          <PoolBracketTab />
+        ) : lockedRoundTab ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             {WINNER_ONLY_LOCKED_ROUND_MESSAGE}
           </p>
@@ -313,13 +321,15 @@ export function WinnerOnlyPredictView({
         )}
       </main>
 
-      <SaveBar
-        unsavedCount={unsavedGroupCount}
-        saving={saving}
-        success={saveSuccess}
-        disabled={unsavedGroupCount === 0}
-        onSave={handleSave}
-      />
+      {activeTab !== 'bracket' && (
+        <SaveBar
+          unsavedCount={unsavedGroupCount}
+          saving={saving}
+          success={saveSuccess}
+          disabled={unsavedGroupCount === 0}
+          onSave={handleSave}
+        />
+      )}
     </div>
   )
 }

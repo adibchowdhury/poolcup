@@ -2,13 +2,19 @@
 
 import { cn } from '@/lib/utils'
 
-export type WinnerOnlyRoundTabId = 'r32' | 'r16' | 'qf' | 'sf' | 'final'
+export type WinnerOnlyRoundTabId =
+  | 'bracket'
+  | 'r32'
+  | 'r16'
+  | 'qf'
+  | 'sf'
+  | 'final'
 
 export const WINNER_ONLY_LOCKED_ROUND_MESSAGE =
   'These matches will be available once the previous round is complete.'
 
 export function isWinnerOnlyLockedRoundTab(tab: WinnerOnlyRoundTabId): boolean {
-  return tab !== 'r32'
+  return tab !== 'r32' && tab !== 'bracket'
 }
 
 interface WinnerOnlyRoundTabsProps {
@@ -21,6 +27,7 @@ export function WinnerOnlyRoundTabs({
   onChange,
 }: WinnerOnlyRoundTabsProps) {
   const tabs: { id: WinnerOnlyRoundTabId; label: string }[] = [
+    { id: 'bracket', label: 'Bracket' },
     { id: 'r32', label: 'Round of 32' },
     { id: 'r16', label: 'Round of 16' },
     { id: 'qf', label: 'Quarterfinals' },

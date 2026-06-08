@@ -31,8 +31,8 @@ const BRACKET_WRAPPER_STYLE: CSSProperties = {
   position: 'relative',
   left: '50%',
   transform: 'translateX(-50%)',
-  paddingLeft: 24,
-  paddingRight: 24,
+  paddingLeft: 48,
+  paddingRight: 48,
   boxSizing: 'border-box',
 }
 
@@ -55,7 +55,7 @@ function RankBadge({ rank }: { rank: number }) {
   return (
     <span
       className={cn(
-        'w-7 shrink-0 text-center font-mono text-[10px] font-semibold',
+        'w-8 shrink-0 text-center font-mono text-xs font-semibold',
         rank <= 2 && 'text-[#22c55e]',
         rank === 3 && 'text-amber-400',
         rank === 4 && 'text-[#4a5568]',
@@ -85,19 +85,19 @@ function BracketTeamRow({
       data-bracket-group={group}
       data-bracket-rank={rank}
       className={cn(
-        'flex h-7 items-center gap-1.5 border-b border-[#1a2332] bg-[#111827] px-1.5 last:border-b-0',
+        'flex h-9 w-full items-center gap-2 border-b border-[#1a2332] bg-[#111827] px-3 last:border-b-0',
         rank <= 2 && 'border-l-2 border-l-[#22c55e]',
         rank === 3 && 'border-l-2 border-l-amber-500',
         rank === 4 && 'border-l-2 border-l-transparent opacity-45',
       )}
     >
       <RankBadge rank={rank} />
-      <span className="shrink-0 text-sm leading-none" aria-hidden>
+      <span className="shrink-0 text-lg leading-none" aria-hidden>
         {flag}
       </span>
       <span
         className={cn(
-          'min-w-0 flex-1 truncate text-xs font-medium',
+          'whitespace-nowrap text-base font-medium',
           rank === 4 ? 'text-[#6b7280]' : 'text-[#e2e8f0]',
         )}
       >
@@ -110,12 +110,14 @@ function BracketTeamRow({
 function BracketGroupCard({
   group,
   registerTeamRef,
+  align,
 }: {
   group: WorldCupGroup
   registerTeamRef: (
     group: WorldCupGroupLetter,
     rank: 1 | 2,
   ) => RefCallback<HTMLElement>
+  align: 'left' | 'right'
 }) {
   const teams =
     group.teams.length >= 4
@@ -126,11 +128,21 @@ function BracketGroupCard({
         ]
 
   return (
-    <div className="relative z-[1] w-full">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]">
+    <div
+      className={cn(
+        'relative z-[1] inline-flex w-fit flex-col',
+        align === 'right' && 'items-end',
+      )}
+    >
+      <p
+        className={cn(
+          'mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]',
+          align === 'right' && 'text-right',
+        )}
+      >
         Group {group.letter}
       </p>
-      <div className="relative z-[1] overflow-hidden rounded border border-[#1e293b]">
+      <div className="relative z-[1] inline-flex w-fit flex-col overflow-hidden rounded border border-[#1e293b]">
         {teams.map((team, index) => {
           const rank = index + 1
           const advanceRank = rank === 1 || rank === 2 ? rank : null
@@ -161,10 +173,10 @@ function R32PlaceholderSlot({
   return (
     <div
       ref={slotRef}
-      className="relative z-[1] flex h-7 w-full items-center gap-1.5 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-2"
+      className="relative z-[1] flex h-9 w-fit min-w-[120px] items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-3"
     >
-      <span className="h-3 w-3 shrink-0 rounded-full border border-dashed border-[#334155]" />
-      <span className="truncate text-[11px] text-[#4a5568]">TBD</span>
+      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
+      <span className="whitespace-nowrap text-[11px] text-[#4a5568]">TBD</span>
     </div>
   )
 }
@@ -184,7 +196,7 @@ function R32MatchupBlock({
   const awayTarget: R32SlotRef = { side, matchIndex, slot: 'away' }
 
   return (
-    <div className="w-full">
+    <div className="inline-flex w-fit flex-col">
       <p className="mb-1 text-center font-mono text-[10px] text-[#64748b]">
         {matchup.label}
       </p>
@@ -368,7 +380,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
         <BracketConnectors paths={connectorPaths} />
 
         <div
-          className="flex shrink-0 flex-col gap-2.5"
+          className="flex shrink-0 flex-col items-start gap-2.5"
           style={{ width: BRACKET_LAYOUT.leftGroupColumnWidth }}
         >
           {leftGroups.map((group) => (
@@ -376,6 +388,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
               key={group.letter}
               group={group}
               registerTeamRef={registerTeamRef}
+              align="left"
             />
           ))}
         </div>
@@ -397,7 +410,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
         />
 
         <div
-          className="flex shrink-0 flex-col gap-2.5"
+          className="flex shrink-0 flex-col items-end gap-2.5"
           style={{ width: BRACKET_LAYOUT.rightGroupColumnWidth }}
         >
           {rightGroups.map((group) => (
@@ -405,6 +418,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
               key={group.letter}
               group={group}
               registerTeamRef={registerTeamRef}
+              align="right"
             />
           ))}
         </div>
