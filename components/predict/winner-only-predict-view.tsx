@@ -20,6 +20,7 @@ import {
   cloneGroupRankings,
   countCompleteGroups,
   emptyGroupRankings,
+  isGroupStageLocked,
   parseStandingsJson,
   rankingsEqual,
   tapTeamInGroup,
@@ -170,6 +171,8 @@ export function WinnerOnlyPredictView({
     }).length
   }, [baselineRankings, groupRankings, groups])
 
+  const groupStageLocked = isGroupStageLocked()
+
   function handleTeamTap(groupLetter: string, teamName: string) {
     const group = groups.find((g) => g.letter === groupLetter)
     if (!group) return
@@ -296,7 +299,18 @@ export function WinnerOnlyPredictView({
         )}
 
         {activeTab === 'bracket' ? (
-          <PoolBracketTab />
+          matchesLoading || !predictionsLoaded ? (
+            <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+              Loading bracket…
+            </p>
+          ) : (
+            <PoolBracketTab
+              groups={groups}
+              groupRankings={groupRankings}
+              readOnly={groupStageLocked}
+              onTeamTap={handleTeamTap}
+            />
+          )
         ) : lockedRoundTab ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             {WINNER_ONLY_LOCKED_ROUND_MESSAGE}
@@ -321,7 +335,7 @@ export function WinnerOnlyPredictView({
         )}
       </main>
 
-      {activeTab !== 'bracket' && (
+      {!lockedRoundTab && (
         <SaveBar
           unsavedCount={unsavedGroupCount}
           saving={saving}

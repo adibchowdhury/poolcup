@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type RefCallback,
-} from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type RefCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
 import {
@@ -24,7 +17,12 @@ import {
   type R32MatchupDef,
   type R32SlotRef,
 } from '@/src/lib/world-cup-2026-bracket'
-import type { WorldCupGroup, WorldCupGroupLetter } from '@/src/lib/world-cup-groups'
+import {
+  getTeamRank,
+  type GroupRankings,
+  type WorldCupGroup,
+  type WorldCupGroupLetter,
+} from '@/src/lib/world-cup-groups'
 
 const BRACKET_WRAPPER_STYLE: CSSProperties = {
   width: '100vw',
@@ -71,27 +69,37 @@ function BracketTeamRow({
   rank,
   group,
   registerRef,
+  readOnly,
+  onTeamTap,
 }: {
   team: string
-  rank: number
+  rank: number | null
   group: WorldCupGroupLetter
   registerRef?: RefCallback<HTMLElement>
+  readOnly: boolean
+  onTeamTap: () => void
 }) {
   const flag = resolveTeamFlagDisplay(team, null)
 
   return (
-    <div
+    <button
       ref={registerRef}
+      type="button"
+      disabled={readOnly}
+      onClick={onTeamTap}
       data-bracket-group={group}
-      data-bracket-rank={rank}
+      data-bracket-rank={rank ?? undefined}
       className={cn(
-        'flex h-9 w-full items-center gap-2 border-b border-[#1a2332] bg-[#111827] px-3 last:border-b-0',
-        rank <= 2 && 'border-l-2 border-l-[#22c55e]',
+        'relative z-[1] flex h-9 w-full items-center gap-2 border-b border-[#1a2332] bg-[#111827] px-3 text-left last:border-b-0',
+        rank === 1 && 'border-l-2 border-l-[#22c55e]',
+        rank === 2 && 'border-l-2 border-l-[#22c55e]',
         rank === 3 && 'border-l-2 border-l-amber-500',
         rank === 4 && 'border-l-2 border-l-transparent opacity-45',
+        rank === null && 'border-l-2 border-l-transparent',
+        !readOnly && 'cursor-pointer transition-colors hover:bg-[#151d2e]',
+        readOnly && 'cursor-default',
       )}
     >
-      <RankBadge rank={rank} />
       <span className="shrink-0 text-lg leading-none" aria-hidden>
         {flag}
       </span>
@@ -103,30 +111,29 @@ function BracketTeamRow({
       >
         {team}
       </span>
-    </div>
+      {rank !== null && <RankBadge rank={rank} />}
+    </button>
   )
 }
 
 function BracketGroupCard({
   group,
+  standings,
   registerTeamRef,
   align,
+  readOnly,
+  onTeamTap,
 }: {
   group: WorldCupGroup
+  standings: string[]
   registerTeamRef: (
     group: WorldCupGroupLetter,
     rank: 1 | 2,
   ) => RefCallback<HTMLElement>
   align: 'left' | 'right'
+  readOnly: boolean
+  onTeamTap: (teamName: string) => void
 }) {
-  const teams =
-    group.teams.length >= 4
-      ? group.teams.slice(0, 4)
-      : [
-          ...group.teams,
-          ...Array.from({ length: Math.max(0, 4 - group.teams.length) }, () => 'TBD'),
-        ]
-
   return (
     <div
       className={cn(
@@ -143,23 +150,28 @@ function BracketGroupCard({
         Group {group.letter}
       </p>
       <div className="relative z-[1] w-full overflow-hidden rounded border border-[#1e293b]">
-        {teams.map((team, index) => {
-          const rank = index + 1
-          const advanceRank = rank === 1 || rank === 2 ? rank : null
-          return (
-            <BracketTeamRow
-              key={`${group.letter}-${index}`}
-              team={team}
-              rank={rank}
-              group={group.letter}
-              registerRef={
-                advanceRank
-                  ? registerTeamRef(group.letter, advanceRank)
-                  : undefined
-              }
-            />
-          )
-        })}
+        {group.teams.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-[#64748b]">No teams loaded yet.</p>
+        ) : (
+          group.teams.map((team) => {
+            const rank = getTeamRank(standings, team)
+            return (
+              <BracketTeamRow
+                key={`${group.letter}-${team}`}
+                team={team}
+                rank={rank}
+                group={group.letter}
+                readOnly={readOnly}
+                onTeamTap={() => onTeamTap(team)}
+                registerRef={
+                  rank === 1 || rank === 2
+                    ? registerTeamRef(group.letter, rank)
+                    : undefined
+                }
+              />
+            )
+          })
+        )}
       </div>
     </div>
   )
@@ -276,9 +288,17 @@ function BracketConnectors({ paths }: { paths: ConnectorPath[] }) {
 
 interface BracketVisualTreeProps {
   groups: WorldCupGroup[]
+  groupRankings: GroupRankings
+  readOnly: boolean
+  onTeamTap: (groupLetter: WorldCupGroupLetter, teamName: string) => void
 }
 
-export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
+export function BracketVisualTree({
+  groups,
+  groupRankings,
+  readOnly,
+  onTeamTap,
+}: BracketVisualTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sourceRefs = useRef(new Map<string, HTMLElement>())
   const targetRefs = useRef(new Map<string, HTMLElement>())
@@ -368,7 +388,23 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
       observer.disconnect()
       window.removeEventListener('resize', updateConnectors)
     }
-  }, [updateConnectors, groups])
+  }, [updateConnectors, groups, groupRankings])
+
+  function renderGroupCard(group: WorldCupGroup, align: 'left' | 'right') {
+    const standings = groupRankings[group.letter] ?? []
+
+    return (
+      <BracketGroupCard
+        key={group.letter}
+        group={group}
+        standings={standings}
+        registerTeamRef={registerTeamRef}
+        align={align}
+        readOnly={readOnly}
+        onTeamTap={(teamName) => onTeamTap(group.letter, teamName)}
+      />
+    )
+  }
 
   return (
     <div style={BRACKET_WRAPPER_STYLE}>
@@ -383,14 +419,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
           className="flex w-full shrink-0 flex-col items-start gap-2.5"
           style={{ width: BRACKET_LAYOUT.leftGroupColumnWidth }}
         >
-          {leftGroups.map((group) => (
-            <BracketGroupCard
-              key={group.letter}
-              group={group}
-              registerTeamRef={registerTeamRef}
-              align="left"
-            />
-          ))}
+          {leftGroups.map((group) => renderGroupCard(group, 'left'))}
         </div>
 
         <R32Column
@@ -413,14 +442,7 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
           className="flex w-full shrink-0 flex-col items-end gap-2.5"
           style={{ width: BRACKET_LAYOUT.rightGroupColumnWidth }}
         >
-          {rightGroups.map((group) => (
-            <BracketGroupCard
-              key={group.letter}
-              group={group}
-              registerTeamRef={registerTeamRef}
-              align="right"
-            />
-          ))}
+          {rightGroups.map((group) => renderGroupCard(group, 'right'))}
         </div>
       </div>
     </div>
