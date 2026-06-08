@@ -27,7 +27,7 @@ export function WinnerOnlyRoundTabs({
   onChange,
 }: WinnerOnlyRoundTabsProps) {
   const tabs: { id: WinnerOnlyRoundTabId; label: string }[] = [
-    { id: 'bracket', label: 'Bracket' },
+    { id: 'bracket', label: 'Group Stage' },
     { id: 'r32', label: 'Round of 32' },
     { id: 'r16', label: 'Round of 16' },
     { id: 'qf', label: 'Quarterfinals' },

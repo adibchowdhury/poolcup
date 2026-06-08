@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { rankOrdinal } from '@/src/lib/world-cup-2026-bracket'
-import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   getTeamRank,
   getThirdPlaceSlots,
@@ -63,8 +63,6 @@ function ThirdPlaceTeamRow({
   readOnly: boolean
   onTeamTap: () => void
 }) {
-  const flag = resolveTeamFlagDisplay(team, null)
-
   return (
     <button
       type="button"
@@ -79,9 +77,11 @@ function ThirdPlaceTeamRow({
         readOnly && 'cursor-default',
       )}
     >
-      <span className="mt-0.5 shrink-0 text-lg leading-none" aria-hidden>
-        {flag}
-      </span>
+      <TeamFlagImage
+        countryName={team}
+        imgClassName="h-5 w-auto"
+        emojiClassName="text-lg leading-none"
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="break-words text-sm font-medium leading-snug text-[#e2e8f0]">
           {team}

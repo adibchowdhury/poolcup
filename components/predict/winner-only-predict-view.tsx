@@ -58,7 +58,7 @@ export function WinnerOnlyPredictView({
   inviteCode,
 }: WinnerOnlyPredictViewProps) {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<WinnerOnlyRoundTabId>('r32')
+  const [activeTab, setActiveTab] = useState<WinnerOnlyRoundTabId>('bracket')
   const [groupRankings, setGroupRankings] = useState<GroupRankings>(
     emptyGroupRankings(),
   )

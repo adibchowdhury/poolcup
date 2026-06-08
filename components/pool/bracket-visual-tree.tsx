@@ -17,7 +17,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover'
-import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   BRACKET_LAYOUT,
   buildR32PopulatedSlots,
@@ -99,8 +99,6 @@ function BracketTeamRow({
   readOnly: boolean
   onTeamTap: () => void
 }) {
-  const flag = resolveTeamFlagDisplay(team, null)
-
   return (
     <button
       ref={registerRef}
@@ -120,9 +118,11 @@ function BracketTeamRow({
         readOnly && 'cursor-default',
       )}
     >
-      <span className="shrink-0 text-lg leading-none" aria-hidden>
-        {flag}
-      </span>
+      <TeamFlagImage
+        countryName={team}
+        imgClassName="h-5 w-auto"
+        emojiClassName="text-lg leading-none"
+      />
       <span
         className={cn(
           'min-w-0 flex-1 truncate text-base font-medium',
@@ -216,16 +216,16 @@ function R32TeamSlot({
     )
   }
 
-  const flag = resolveTeamFlagDisplay(team, null)
-
   return (
     <div
       ref={slotRef}
       className="relative z-[1] flex h-9 w-full items-center gap-2 rounded border border-[#1e293b] bg-[#111827] px-3"
     >
-      <span className="shrink-0 text-lg leading-none" aria-hidden>
-        {flag}
-      </span>
+      <TeamFlagImage
+        countryName={team}
+        imgClassName="h-5 w-auto"
+        emojiClassName="text-lg leading-none"
+      />
       <span className="min-w-0 flex-1 truncate text-base font-medium text-[#e2e8f0]">
         {team}
       </span>
