@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import './hero-confetti.css'
 
@@ -57,7 +57,14 @@ function buildConfettiPieces(): ConfettiPiece[] {
 }
 
 export function HeroConfetti() {
+  const [mounted, setMounted] = useState(false)
   const pieces = useMemo(() => buildConfettiPieces(), [])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
 
   return (
     <div
