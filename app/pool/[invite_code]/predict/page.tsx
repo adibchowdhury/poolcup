@@ -16,6 +16,7 @@ import {
 } from '@/components/predict/group-knockout-tabs'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
+import { SaveSuccessToast } from '@/components/predict/save-success-toast'
 
 type ScoringStyle = 'classic' | 'winner' | 'exact'
 
@@ -400,6 +401,10 @@ export default function PredictPage() {
     }).length
   }, [matches, scores, baselineScores])
 
+  const dismissSuccessToast = useCallback(() => {
+    setSuccessMessage(null)
+  }, [])
+
   function updateScore(matchId: string, field: 'score1' | 'score2', value: string) {
     const sanitized = value.replace(/\D/g, '')
     const clamped = clampScoreValue(sanitized)
@@ -557,12 +562,6 @@ export default function PredictPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
-        {successMessage && (
-          <div className="animate-in fade-in rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary duration-300">
-            {successMessage}
-          </div>
-        )}
-
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
@@ -632,6 +631,11 @@ export default function PredictPage() {
         success={saveSuccess}
         disabled={unsavedCount === 0}
         onSave={handleSave}
+      />
+
+      <SaveSuccessToast
+        message={successMessage}
+        onDismiss={dismissSuccessToast}
       />
     </div>
   )

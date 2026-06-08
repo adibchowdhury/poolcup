@@ -26,6 +26,7 @@ import {
   type R32MatchupDef,
   type R32SlotRef,
 } from '@/src/lib/world-cup-2026-bracket'
+import { ThirdPlaceRankingPanel } from '@/components/pool/third-place-ranking-panel'
 import {
   getTeamRank,
   type GroupRankings,
@@ -41,6 +42,7 @@ const BRACKET_WRAPPER_STYLE: CSSProperties = {
   paddingLeft: 48,
   paddingRight: 48,
   boxSizing: 'border-box',
+  overflowX: 'auto',
 }
 
 type ConnectorPath = {
@@ -329,15 +331,19 @@ function BracketConnectors({ paths }: { paths: ConnectorPath[] }) {
 interface BracketVisualTreeProps {
   groups: WorldCupGroup[]
   groupRankings: GroupRankings
+  thirdPlaceRankings: string[]
   readOnly: boolean
   onTeamTap: (groupLetter: WorldCupGroupLetter, teamName: string) => void
+  onThirdPlaceTeamTap: (teamName: string) => void
 }
 
 export function BracketVisualTree({
   groups,
   groupRankings,
+  thirdPlaceRankings,
   readOnly,
   onTeamTap,
+  onThirdPlaceTeamTap,
 }: BracketVisualTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sourceRefs = useRef(new Map<string, HTMLElement>())
@@ -491,6 +497,13 @@ export function BracketVisualTree({
         >
           {rightGroups.map((group) => renderGroupCard(group, 'right'))}
         </div>
+
+        <ThirdPlaceRankingPanel
+          groupRankings={groupRankings}
+          thirdPlaceRankings={thirdPlaceRankings}
+          readOnly={readOnly}
+          onThirdPlaceTeamTap={onThirdPlaceTeamTap}
+        />
       </div>
     </div>
   )

@@ -80,12 +80,12 @@ export const LEFT_GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'] as const
 export const RIGHT_GROUP_LETTERS = ['G', 'H', 'I', 'J', 'K', 'L'] as const
 
 export const BRACKET_LAYOUT = {
-  leftGroupColumnWidth: '18vw',
+  leftGroupColumnWidth: '15.3vw',
   leftR32ColumnWidth: '14vw',
   centerDividerWidth: '6vw',
   rightR32ColumnWidth: '14vw',
-  rightGroupColumnWidth: '18vw',
-  columnGap: 'calc((30vw - 96px) / 4)',
+  rightGroupColumnWidth: '15.3vw',
+  columnGap: 'calc((22vw - 96px) / 5)',
   r32SlotMinWidth: 120,
   connectorColor: '#2a3545',
 } as const

@@ -246,3 +246,40 @@ export function cloneGroupRankings(rankings: GroupRankings): GroupRankings {
     ]),
   )
 }
+
+export type ThirdPlaceSlot = {
+  group: WorldCupGroupLetter
+  team: string | null
+}
+
+/** Third-place finisher from each group in A–L order. */
+export function getThirdPlaceSlots(
+  groupRankings: GroupRankings,
+): ThirdPlaceSlot[] {
+  return WORLD_CUP_GROUP_LETTERS.map((group) => ({
+    group,
+    team: groupRankings[group]?.[2] ?? null,
+  }))
+}
+
+/** Team names for groups that have a 3rd-place selection (A–L order). */
+export function getAvailableThirdPlaceTeams(
+  groupRankings: GroupRankings,
+): string[] {
+  return getThirdPlaceSlots(groupRankings)
+    .map((slot) => slot.team)
+    .filter((team): team is string => team !== null)
+}
+
+/** Drop rankings for teams no longer 3rd in any group. */
+export function syncThirdPlaceRankings(
+  rankings: string[],
+  groupRankings: GroupRankings,
+): string[] {
+  const available = new Set(getAvailableThirdPlaceTeams(groupRankings))
+  return rankings.filter((team) => available.has(team))
+}
+
+export function parseThirdPlaceRankingsJson(value: unknown): string[] {
+  return parseStandingsJson(value)
+}
