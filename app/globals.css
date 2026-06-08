@@ -228,6 +228,26 @@
   animation-delay: 1s;
 }
 
+@keyframes pool-card-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.pool-card-shimmer {
+  background: linear-gradient(
+    90deg,
+    #1a2535 0%,
+    #243044 50%,
+    #1a2535 100%
+  );
+  background-size: 200% 100%;
+  animation: pool-card-shimmer 1.5s ease-in-out infinite;
+}
+
 @keyframes shine {
   0% {
     background-position: -200% center;

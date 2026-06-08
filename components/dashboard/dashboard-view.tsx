@@ -17,8 +17,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
-import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
-import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
+import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
@@ -61,7 +60,6 @@ interface DashboardViewProps {
   email: string
   displayName?: string | null
   avatar?: string | null
-  pools: DashboardPoolCardData[]
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
   errorMessage?: string | null
@@ -77,7 +75,6 @@ export function DashboardView({
   email,
   displayName,
   avatar,
-  pools,
   quickStats,
   passwordResetSuccess,
   errorMessage,
@@ -654,19 +651,7 @@ export function DashboardView({
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {pools.map((pool) => (
-                  <PoolCard key={pool.id} pool={pool} />
-                ))}
-
-                <JoinOrCreatePoolCard />
-              </div>
-
-              {pools.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground">
-                  No pools yet — create one or join with an invite link from a friend.
-                </p>
-              )}
+              <ActivePoolsTab userId={userId} />
             </TabsContent>
 
             <TabsContent value="games" className="mt-4">
