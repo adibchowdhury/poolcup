@@ -31,6 +31,8 @@ const BRACKET_WRAPPER_STYLE: CSSProperties = {
   position: 'relative',
   left: '50%',
   transform: 'translateX(-50%)',
+  paddingLeft: 24,
+  paddingRight: 24,
   boxSizing: 'border-box',
 }
 
@@ -124,11 +126,11 @@ function BracketGroupCard({
         ]
 
   return (
-    <div className="w-full">
+    <div className="relative z-[1] w-full">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]">
         Group {group.letter}
       </p>
-      <div className="overflow-hidden rounded border border-[#1e293b]">
+      <div className="relative z-[1] overflow-hidden rounded border border-[#1e293b]">
         {teams.map((team, index) => {
           const rank = index + 1
           const advanceRank = rank === 1 || rank === 2 ? rank : null
@@ -159,7 +161,7 @@ function R32PlaceholderSlot({
   return (
     <div
       ref={slotRef}
-      className="flex h-7 w-full items-center gap-1.5 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-2"
+      className="relative z-[1] flex h-7 w-full items-center gap-1.5 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-2"
     >
       <span className="h-3 w-3 shrink-0 rounded-full border border-dashed border-[#334155]" />
       <span className="truncate text-[11px] text-[#4a5568]">TBD</span>
@@ -244,7 +246,7 @@ function BracketConnectors({ paths }: { paths: ConnectorPath[] }) {
 
   return (
     <svg
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full"
       aria-hidden
     >
       {paths.map((path) => (
@@ -360,11 +362,8 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
     <div style={BRACKET_WRAPPER_STYLE}>
       <div
         ref={containerRef}
-        className="relative flex items-stretch py-6"
-        style={{
-          width: '100vw',
-          gap: BRACKET_LAYOUT.columnGap,
-        }}
+        className="relative flex w-full items-stretch py-6"
+        style={{ gap: BRACKET_LAYOUT.columnGap }}
       >
         <BracketConnectors paths={connectorPaths} />
 
