@@ -169,11 +169,17 @@ export default function CreatePoolPage() {
     setSubmitting(true)
     setLoadingMessage('Creating pool…')
 
+    const selectedEvent = SOCCER_EVENTS.find(
+      (event) => event.id === selectedEventId,
+    )
+    const eventName = selectedEvent?.title ?? 'FIFA World Cup 2026'
+
     const { data: pool, error: insertError } = await supabase
       .from('pools')
       .insert({
         name: poolName.trim(),
         scoring_style: scoringStyle,
+        event_name: eventName,
         creator_id: user.id,
       })
       .select('id, invite_code')

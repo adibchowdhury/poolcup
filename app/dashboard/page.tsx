@@ -14,6 +14,8 @@ type MembershipRow = {
     name: string
     invite_code: string
     creator_id: string
+    event_name: string
+    scoring_style: string
   } | null
 }
 
@@ -56,8 +58,10 @@ export default async function DashboardPage({
       pools (
         id,
         name,
-        invite_code
-        ,creator_id
+        invite_code,
+        creator_id,
+        event_name,
+        scoring_style
       )
     `,
     )
@@ -167,6 +171,8 @@ export default async function DashboardPage({
     return {
       id: pool.id,
       name: pool.name,
+      eventName: pool.event_name || 'FIFA World Cup 2026',
+      scoringStyle: pool.scoring_style,
       inviteCode: pool.invite_code,
       members: memberCountByPool.get(pool.id) ?? 1,
       memberAvatars: memberAvatarsByPool.get(pool.id) ?? [],

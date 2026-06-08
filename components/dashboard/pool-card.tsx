@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Copy,
   Crown,
+  Trophy,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,9 +21,13 @@ export type PoolMemberAvatar = {
   initials: string
 }
 
+export type ScoringStyleId = 'winner' | 'classic' | 'exact'
+
 export type DashboardPoolCardData = {
   id: string
   name: string
+  eventName: string
+  scoringStyle: ScoringStyleId | string
   inviteCode: string
   members: number
   memberAvatars: PoolMemberAvatar[]
@@ -54,6 +59,19 @@ function formatCountdown(ms: number): { label: string; isLive: boolean } {
 const PROGRESS_GREEN = '#22c55e'
 const PROGRESS_YELLOW = '#f59e0b'
 const PROGRESS_RED = '#ef4444'
+
+function formatScoringStyleLabel(style: string): string {
+  switch (style) {
+    case 'winner':
+      return 'Winner Only'
+    case 'classic':
+      return 'Classic'
+    case 'exact':
+      return 'Exact Score'
+    default:
+      return style
+  }
+}
 
 function getProgressBarColor(predictions: number, total: number): string {
   if (total <= 0) return PROGRESS_RED
@@ -237,13 +255,23 @@ export function PoolCard({ pool }: PoolCardProps) {
                   {pool.name}
                 </h3>
               </Link>
+              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Trophy
+                  className="h-3 w-3 shrink-0 text-muted-foreground/80"
+                  aria-hidden
+                />
+                <span className="truncate">{pool.eventName}</span>
+              </p>
               <PoolMemberAvatars
                 members={pool.members}
                 memberAvatars={pool.memberAvatars}
               />
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className="rounded-full border border-primary/30 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              <span className="rounded-full border border-border bg-muted/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {formatScoringStyleLabel(pool.scoringStyle)}
+              </span>
+              <span className="rounded-full border border-primary/30 bg-primary/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                 active
               </span>
               {pool.canDelete && (
