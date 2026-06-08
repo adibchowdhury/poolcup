@@ -43,9 +43,8 @@ function getHeroDaysStat(mounted: boolean, nowMs: number) {
 }
 
 const scoringStyles = [
-  { id: "classic", label: "Classic" },
-  { id: "winner", label: "Winner only" },
-  { id: "exact", label: "Exact score" },
+  { id: "winner", label: "Winner Only" },
+  { id: "classic", label: "Score Predictor" },
 ]
 
 const matchesData = [

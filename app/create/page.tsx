@@ -7,17 +7,13 @@ import { useRouter } from 'next/navigation'
 import { Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { useAuth } from '@/src/lib/auth-context'
+import {
+  POOL_SCORING_STYLE_OPTIONS,
+  type PoolScoringStyleId,
+} from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
 
 const TOTAL_STEPS = 4
-
-const scoringStyles = [
-  { id: 'winner', label: 'Winner Only' },
-  { id: 'classic', label: 'Classic' },
-  { id: 'exact', label: 'Exact Score' },
-] as const
-
-type ScoringStyleId = (typeof scoringStyles)[number]['id']
 
 type SportId = 'soccer' | 'basketball' | 'baseball' | 'football' | 'hockey'
 
@@ -108,7 +104,7 @@ export default function CreatePoolPage() {
   const [selectedSport, setSelectedSport] = useState<SportId | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [poolName, setPoolName] = useState('')
-  const [scoringStyle, setScoringStyle] = useState<ScoringStyleId>('winner')
+  const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('winner')
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -413,7 +409,7 @@ export default function CreatePoolPage() {
                     Scoring style
                   </span>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    {scoringStyles.map((style) => (
+                    {POOL_SCORING_STYLE_OPTIONS.map((style) => (
                       <button
                         key={style.id}
                         type="button"
@@ -428,6 +424,24 @@ export default function CreatePoolPage() {
                       </button>
                     ))}
                   </div>
+                  {(() => {
+                    const selected = POOL_SCORING_STYLE_OPTIONS.find(
+                      (s) => s.id === scoringStyle,
+                    )
+                    if (!selected) return null
+                    return (
+                      <div className="mt-3 rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-3">
+                        <ul className="space-y-1.5 text-sm text-[#5a7080]">
+                          {selected.rules.map((rule) => (
+                            <li key={rule}>{rule}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-xs font-medium text-[#00e676]">
+                          {selected.tagline}
+                        </p>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {error && (

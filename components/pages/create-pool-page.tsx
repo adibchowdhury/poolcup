@@ -3,13 +3,12 @@
 import { useState } from "react"
 
 const scoringStyles = [
-  { id: "classic", label: "Classic" },
-  { id: "winner", label: "Winner only" },
-  { id: "exact", label: "Exact score" },
+  { id: "winner", label: "Winner Only" },
+  { id: "classic", label: "Score Predictor" },
 ]
 
 export default function CreatePoolPage() {
-  const [selectedStyle, setSelectedStyle] = useState("classic")
+  const [selectedStyle, setSelectedStyle] = useState("winner")
 
   return (
     <div className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-20">

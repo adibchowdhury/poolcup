@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import {
+  BookOpen,
   Calendar,
   Plus,
   Settings,
@@ -20,6 +21,7 @@ import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/poo
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
+import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
   prefetchUpcomingMatches,
   UpcomingGamesTab,
@@ -548,7 +550,7 @@ export function DashboardView({
             onValueChange={handleTabChange}
             className="gap-10"
           >
-            <TabsList className="mx-auto grid h-auto w-full max-w-2xl grid-cols-3 gap-1 p-1">
+            <TabsList className="mx-auto grid h-auto w-full max-w-3xl grid-cols-2 gap-1 p-1 sm:grid-cols-4">
               <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <User className="h-4 w-4 shrink-0" />
                 <span className="truncate">Profile</span>
@@ -560,6 +562,10 @@ export function DashboardView({
               <TabsTrigger value="games" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span className="truncate">Upcoming Games</span>
+              </TabsTrigger>
+              <TabsTrigger value="how-it-works" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
+                <BookOpen className="h-4 w-4 shrink-0" />
+                <span className="truncate">How It Works</span>
               </TabsTrigger>
             </TabsList>
 
@@ -678,6 +684,10 @@ export function DashboardView({
                 </div>
                 <UpcomingGamesTab />
               </div>
+            </TabsContent>
+
+            <TabsContent value="how-it-works" className="mt-4">
+              <HowItWorksTab currentXp={liveTotalPoints} />
             </TabsContent>
           </Tabs>
         </main>

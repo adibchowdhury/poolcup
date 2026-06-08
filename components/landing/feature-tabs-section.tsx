@@ -61,9 +61,9 @@ const FEATURE_TABS: Array<{
     key: 'scoring',
     title: 'Scoring',
     icon: Trophy,
-    desc: 'Choose how your pool awards points — from simple winner picks to full exact-score classics.',
+    desc: 'Choose how your pool awards points — simple winner picks or full score predictions.',
     bullets: [
-      'Classic, winner-only, or exact-score styles',
+      'Winner Only or Score Predictor styles',
       'Set once when you create the pool',
       'Fair, automatic points — no manual spreadsheets',
     ],
@@ -255,9 +255,8 @@ function FeaturePreview({ tab }: { tab: FeatureTabKey }) {
         </div>
         <div className="mt-5 grid gap-2">
           {[
-            { label: 'Classic', pts: '3 / 1 / 0', on: true },
-            { label: 'Winner only', pts: '1 / 0', on: false },
-            { label: 'Exact score', pts: '5 / 2', on: false },
+            { label: 'Score Predictor', pts: '5 / 2 / 0', on: true },
+            { label: 'Winner Only', pts: '2 / 0', on: false },
           ].map((s) => (
             <div
               key={s.label}

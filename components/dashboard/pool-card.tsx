@@ -15,13 +15,14 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
+import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 
 export type PoolMemberAvatar = {
   displayName: string
   initials: string
 }
 
-export type ScoringStyleId = 'winner' | 'classic' | 'exact'
+export type ScoringStyleId = 'winner' | 'classic' | 'exact' // exact: legacy DB pools only
 
 export type DashboardPoolCardData = {
   id: string
@@ -59,19 +60,6 @@ function formatCountdown(ms: number): { label: string; isLive: boolean } {
 const PROGRESS_GREEN = '#22c55e'
 const PROGRESS_YELLOW = '#f59e0b'
 const PROGRESS_RED = '#ef4444'
-
-function formatScoringStyleLabel(style: string): string {
-  switch (style) {
-    case 'winner':
-      return 'Winner Only'
-    case 'classic':
-      return 'Classic'
-    case 'exact':
-      return 'Exact Score'
-    default:
-      return style
-  }
-}
 
 function getProgressBarColor(predictions: number, total: number): string {
   if (total <= 0) return PROGRESS_RED
