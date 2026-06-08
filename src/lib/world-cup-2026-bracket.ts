@@ -1,4 +1,7 @@
-import type { WorldCupGroupLetter } from '@/src/lib/world-cup-groups'
+import type {
+  GroupRankings,
+  WorldCupGroupLetter,
+} from '@/src/lib/world-cup-groups'
 
 export type BracketSide = 'left' | 'right'
 
@@ -122,4 +125,96 @@ export function r32TargetKey(target: R32SlotRef): string {
 
 export function isLeftGroup(group: WorldCupGroupLetter): boolean {
   return (LEFT_GROUP_LETTERS as readonly string[]).includes(group)
+}
+
+/**
+ * FIFA Annex C combination 1 (E,F,G,H,I,J,K,L third-place teams advance):
+ * which third-place group faces each group winner in Round of 32.
+ */
+export const R32_THIRD_OPPONENT_BY_WINNER: Record<string, WorldCupGroupLetter> =
+  {
+    '1A': 'E',
+    '1B': 'J',
+    '1D': 'F',
+    '1E': 'I',
+    '1G': 'H',
+    '1I': 'G',
+    '1K': 'L',
+    '1L': 'K',
+  }
+
+/** Parse labels like 1A, 2B, 3C into group + finishing position. */
+export function parseGroupPositionLabel(
+  label: string,
+): { group: WorldCupGroupLetter; rank: 1 | 2 | 3 } | null {
+  const match = /^([123])([A-L])$/.exec(label)
+  if (!match) return null
+  const rank = Number(match[1]) as 1 | 2 | 3
+  const group = match[2] as WorldCupGroupLetter
+  return { group, rank }
+}
+
+/** Resolve a fixed group-position label (1A, 2B, 3C) to a team from standings. */
+export function resolveGroupPositionTeam(
+  label: string,
+  groupRankings: GroupRankings,
+): string | null {
+  const parsed = parseGroupPositionLabel(label)
+  if (!parsed) return null
+  const standings = groupRankings[parsed.group] ?? []
+  return standings[parsed.rank - 1] ?? null
+}
+
+/**
+ * Resolve an R32 slot label to a team name.
+ * For "3rd" away slots, pass the matchup home label (e.g. 1E) to apply Annex C mapping.
+ */
+export function resolveR32SlotTeam(
+  slotLabel: string,
+  groupRankings: GroupRankings,
+  homeLabel?: string,
+): string | null {
+  if (slotLabel === '3rd') {
+    if (!homeLabel) return null
+    const thirdGroup = R32_THIRD_OPPONENT_BY_WINNER[homeLabel]
+    if (!thirdGroup) return null
+    const standings = groupRankings[thirdGroup] ?? []
+    return standings[2] ?? null
+  }
+  return resolveGroupPositionTeam(slotLabel, groupRankings)
+}
+
+/** Build a map of R32 slot keys to populated team names from group rankings. */
+export function buildR32PopulatedSlots(
+  groupRankings: GroupRankings,
+): Map<string, string> {
+  const populated = new Map<string, string>()
+
+  const processSide = (matchups: R32MatchupDef[], side: BracketSide) => {
+    matchups.forEach((matchup, matchIndex) => {
+      const homeTeam = resolveR32SlotTeam(matchup.home, groupRankings)
+      if (homeTeam) {
+        populated.set(
+          r32TargetKey({ side, matchIndex, slot: 'home' }),
+          homeTeam,
+        )
+      }
+
+      const awayTeam = resolveR32SlotTeam(
+        matchup.away,
+        groupRankings,
+        matchup.home,
+      )
+      if (awayTeam) {
+        populated.set(
+          r32TargetKey({ side, matchIndex, slot: 'away' }),
+          awayTeam,
+        )
+      }
+    })
+  }
+
+  processSide(R32_LEFT, 'left')
+  processSide(R32_RIGHT, 'right')
+  return populated
 }

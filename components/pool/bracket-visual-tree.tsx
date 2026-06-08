@@ -1,10 +1,19 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type RefCallback } from 'react'
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefCallback,
+} from 'react'
 import { cn } from '@/lib/utils'
 import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
 import {
   BRACKET_LAYOUT,
+  buildR32PopulatedSlots,
   GROUP_ADVANCE_FEEDS,
   LEFT_GROUP_LETTERS,
   R32_LEFT,
@@ -177,18 +186,38 @@ function BracketGroupCard({
   )
 }
 
-function R32PlaceholderSlot({
+function R32TeamSlot({
   slotRef,
+  team,
 }: {
   slotRef: RefCallback<HTMLElement>
+  team: string | null
 }) {
+  if (!team) {
+    return (
+      <div
+        ref={slotRef}
+        className="relative z-[1] flex h-9 w-full items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-3"
+      >
+        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
+        <span className="whitespace-nowrap text-[11px] text-[#4a5568]">TBD</span>
+      </div>
+    )
+  }
+
+  const flag = resolveTeamFlagDisplay(team, null)
+
   return (
     <div
       ref={slotRef}
-      className="relative z-[1] flex h-9 w-full items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-3"
+      className="relative z-[1] flex h-9 w-full items-center gap-2 rounded border border-[#1e293b] bg-[#111827] px-3"
     >
-      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
-      <span className="whitespace-nowrap text-[11px] text-[#4a5568]">TBD</span>
+      <span className="shrink-0 text-lg leading-none" aria-hidden>
+        {flag}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-base font-medium text-[#e2e8f0]">
+        {team}
+      </span>
     </div>
   )
 }
@@ -198,11 +227,13 @@ function R32MatchupBlock({
   side,
   matchIndex,
   registerSlotRef,
+  populatedSlots,
 }: {
   matchup: R32MatchupDef
   side: 'left' | 'right'
   matchIndex: number
   registerSlotRef: (target: R32SlotRef) => RefCallback<HTMLElement>
+  populatedSlots: Map<string, string>
 }) {
   const homeTarget: R32SlotRef = { side, matchIndex, slot: 'home' }
   const awayTarget: R32SlotRef = { side, matchIndex, slot: 'away' }
@@ -212,11 +243,17 @@ function R32MatchupBlock({
       <p className="mb-1 text-center font-mono text-[10px] text-[#64748b]">
         {matchup.label}
       </p>
-      <R32PlaceholderSlot slotRef={registerSlotRef(homeTarget)} />
+      <R32TeamSlot
+        slotRef={registerSlotRef(homeTarget)}
+        team={populatedSlots.get(r32TargetKey(homeTarget)) ?? null}
+      />
       <p className="py-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-[#334155]">
         vs
       </p>
-      <R32PlaceholderSlot slotRef={registerSlotRef(awayTarget)} />
+      <R32TeamSlot
+        slotRef={registerSlotRef(awayTarget)}
+        team={populatedSlots.get(r32TargetKey(awayTarget)) ?? null}
+      />
     </div>
   )
 }
@@ -225,11 +262,13 @@ function R32Column({
   side,
   matchups,
   registerSlotRef,
+  populatedSlots,
   width,
 }: {
   side: 'left' | 'right'
   matchups: R32MatchupDef[]
   registerSlotRef: (target: R32SlotRef) => RefCallback<HTMLElement>
+  populatedSlots: Map<string, string>
   width: string
 }) {
   return (
@@ -244,6 +283,7 @@ function R32Column({
           side={side}
           matchIndex={index}
           registerSlotRef={registerSlotRef}
+          populatedSlots={populatedSlots}
         />
       ))}
     </div>
@@ -313,6 +353,11 @@ export function BracketVisualTree({
   const rightGroups = RIGHT_GROUP_LETTERS.map(
     (letter) =>
       groupByLetter.get(letter) ?? { letter, teams: [] },
+  )
+
+  const populatedR32Slots = useMemo(
+    () => buildR32PopulatedSlots(groupRankings),
+    [groupRankings],
   )
 
   const registerTeamRef = useCallback(
@@ -426,6 +471,7 @@ export function BracketVisualTree({
           side="left"
           matchups={R32_LEFT}
           registerSlotRef={registerSlotRef}
+          populatedSlots={populatedR32Slots}
           width={BRACKET_LAYOUT.leftR32ColumnWidth}
         />
 
@@ -435,6 +481,7 @@ export function BracketVisualTree({
           side="right"
           matchups={R32_RIGHT}
           registerSlotRef={registerSlotRef}
+          populatedSlots={populatedR32Slots}
           width={BRACKET_LAYOUT.rightR32ColumnWidth}
         />
 
