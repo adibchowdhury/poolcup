@@ -40,10 +40,12 @@
 
 .hero-confetti-piece {
   position: absolute;
-  top: 0;
+  top: -20px;
+  opacity: 0;
   animation-name: hero-confetti-fall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  animation-fill-mode: backwards;
   will-change: transform, opacity;
 }
 
