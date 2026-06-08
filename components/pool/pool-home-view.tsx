@@ -324,9 +324,7 @@ export function PoolHomeView({
             </TabsContent>
 
             <TabsContent value="bracket" className="mt-0">
-              <div className="w-screen max-w-[100vw] ml-[calc(50%-50vw)]">
-                <PoolBracketTab />
-              </div>
+              <PoolBracketTab />
             </TabsContent>
           </Tabs>
         </main>

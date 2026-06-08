@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type RefCallback,
 } from 'react'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,14 @@ import {
   type R32SlotRef,
 } from '@/src/lib/world-cup-2026-bracket'
 import type { WorldCupGroup, WorldCupGroupLetter } from '@/src/lib/world-cup-groups'
+
+const BRACKET_WRAPPER_STYLE: CSSProperties = {
+  width: '100vw',
+  position: 'relative',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  boxSizing: 'border-box',
+}
 
 type ConnectorPath = {
   id: string
@@ -99,14 +108,12 @@ function BracketTeamRow({
 function BracketGroupCard({
   group,
   registerTeamRef,
-  cardWidth = BRACKET_LAYOUT.groupCardWidth,
 }: {
   group: WorldCupGroup
   registerTeamRef: (
     group: WorldCupGroupLetter,
     rank: 1 | 2,
   ) => RefCallback<HTMLElement>
-  cardWidth?: number
 }) {
   const teams =
     group.teams.length >= 4
@@ -117,7 +124,7 @@ function BracketGroupCard({
         ]
 
   return (
-    <div style={{ width: cardWidth }}>
+    <div className="w-full">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]">
         Group {group.letter}
       </p>
@@ -152,7 +159,7 @@ function R32PlaceholderSlot({
   return (
     <div
       ref={slotRef}
-      className="flex h-7 items-center gap-1.5 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-2"
+      className="flex h-7 w-full items-center gap-1.5 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/90 px-2"
     >
       <span className="h-3 w-3 shrink-0 rounded-full border border-dashed border-[#334155]" />
       <span className="truncate text-[11px] text-[#4a5568]">TBD</span>
@@ -175,7 +182,7 @@ function R32MatchupBlock({
   const awayTarget: R32SlotRef = { side, matchIndex, slot: 'away' }
 
   return (
-    <div style={{ width: BRACKET_LAYOUT.r32ColumnWidth }}>
+    <div className="w-full">
       <p className="mb-1 text-center font-mono text-[10px] text-[#64748b]">
         {matchup.label}
       </p>
@@ -192,15 +199,17 @@ function R32Column({
   side,
   matchups,
   registerSlotRef,
+  width,
 }: {
   side: 'left' | 'right'
   matchups: R32MatchupDef[]
   registerSlotRef: (target: R32SlotRef) => RefCallback<HTMLElement>
+  width: string
 }) {
   return (
     <div
       className="flex shrink-0 flex-col justify-between self-stretch py-0.5"
-      style={{ minWidth: BRACKET_LAYOUT.r32ColumnMinWidth }}
+      style={{ width }}
     >
       {matchups.map((matchup, index) => (
         <R32MatchupBlock
@@ -215,17 +224,14 @@ function R32Column({
   )
 }
 
-function CenterDivider() {
+function CenterDivider({ width }: { width: string }) {
   return (
     <div
-      className="flex shrink-0 flex-col items-center self-stretch px-2"
-      style={{ minWidth: BRACKET_LAYOUT.centerDividerMinWidth }}
+      className="flex shrink-0 flex-col items-center self-stretch px-1"
+      style={{ width }}
     >
       <div className="w-px flex-1 bg-[#2a3545]" />
-      <p
-        className="my-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#22c55e]"
-        style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-      >
+      <p className="my-4 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
         Round of 32
       </p>
       <div className="w-px flex-1 bg-[#2a3545]" />
@@ -351,55 +357,57 @@ export function BracketVisualTree({ groups }: BracketVisualTreeProps) {
   }, [updateConnectors, groups])
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div style={BRACKET_WRAPPER_STYLE}>
       <div
         ref={containerRef}
-        className="relative px-4 py-6"
-        style={{ minWidth: BRACKET_LAYOUT.minWidth }}
+        className="relative flex items-stretch py-6"
+        style={{
+          width: '100vw',
+          gap: BRACKET_LAYOUT.columnGap,
+        }}
       >
         <BracketConnectors paths={connectorPaths} />
 
-        <div className="flex items-stretch gap-5">
-          <div
-            className="flex shrink-0 flex-col gap-2.5"
-            style={{ minWidth: BRACKET_LAYOUT.groupColumnMinWidth }}
-          >
-            {leftGroups.map((group) => (
-              <BracketGroupCard
-                key={group.letter}
-                group={group}
-                registerTeamRef={registerTeamRef}
-              />
-            ))}
-          </div>
+        <div
+          className="flex shrink-0 flex-col gap-2.5"
+          style={{ width: BRACKET_LAYOUT.leftGroupColumnWidth }}
+        >
+          {leftGroups.map((group) => (
+            <BracketGroupCard
+              key={group.letter}
+              group={group}
+              registerTeamRef={registerTeamRef}
+            />
+          ))}
+        </div>
 
-          <R32Column
-            side="left"
-            matchups={R32_LEFT}
-            registerSlotRef={registerSlotRef}
-          />
+        <R32Column
+          side="left"
+          matchups={R32_LEFT}
+          registerSlotRef={registerSlotRef}
+          width={BRACKET_LAYOUT.leftR32ColumnWidth}
+        />
 
-          <CenterDivider />
+        <CenterDivider width={BRACKET_LAYOUT.centerDividerWidth} />
 
-          <R32Column
-            side="right"
-            matchups={R32_RIGHT}
-            registerSlotRef={registerSlotRef}
-          />
+        <R32Column
+          side="right"
+          matchups={R32_RIGHT}
+          registerSlotRef={registerSlotRef}
+          width={BRACKET_LAYOUT.rightR32ColumnWidth}
+        />
 
-          <div
-            className="flex shrink-0 flex-col gap-2.5"
-            style={{ minWidth: BRACKET_LAYOUT.rightGroupColumnMinWidth }}
-          >
-            {rightGroups.map((group) => (
-              <BracketGroupCard
-                key={group.letter}
-                group={group}
-                registerTeamRef={registerTeamRef}
-                cardWidth={BRACKET_LAYOUT.rightGroupColumnMinWidth}
-              />
-            ))}
-          </div>
+        <div
+          className="flex shrink-0 flex-col gap-2.5"
+          style={{ width: BRACKET_LAYOUT.rightGroupColumnWidth }}
+        >
+          {rightGroups.map((group) => (
+            <BracketGroupCard
+              key={group.letter}
+              group={group}
+              registerTeamRef={registerTeamRef}
+            />
+          ))}
         </div>
       </div>
     </div>

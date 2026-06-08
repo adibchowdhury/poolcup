@@ -77,16 +77,12 @@ export const LEFT_GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'] as const
 export const RIGHT_GROUP_LETTERS = ['G', 'H', 'I', 'J', 'K', 'L'] as const
 
 export const BRACKET_LAYOUT = {
-  minWidth: 1400,
-  groupCardWidth: 180,
-  r32ColumnWidth: 200,
-  groupColumnMinWidth: 220,
-  rightGroupColumnMinWidth: 250,
-  r32ColumnMinWidth: 220,
-  centerDividerMinWidth: 80,
-  teamRowHeight: 28,
-  groupLabelHeight: 18,
-  groupGap: 10,
+  leftGroupColumnWidth: '22vw',
+  leftR32ColumnWidth: '17vw',
+  centerDividerWidth: '6vw',
+  rightR32ColumnWidth: '17vw',
+  rightGroupColumnWidth: '22vw',
+  columnGap: '4vw',
   connectorColor: '#2a3545',
 } as const
 
