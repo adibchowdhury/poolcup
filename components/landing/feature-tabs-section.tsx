@@ -391,10 +391,10 @@ export function FeatureTabsSection() {
           </div>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-5xl items-start gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
+        <div className="mx-auto mt-10 grid max-w-5xl items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
           <div
             key={t.key}
-            className={`transition-opacity duration-300 ${reverse ? 'lg:order-2' : 'lg:order-1'}`}
+            className={`flex flex-col justify-center transition-opacity duration-300 ${reverse ? 'lg:order-2' : 'lg:order-1'}`}
           >
             <h3 className="font-display text-2xl tracking-wide text-[#f0f4f8] sm:text-3xl">
               {t.headline}
