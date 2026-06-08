@@ -154,6 +154,25 @@ export function parseGroupPositionLabel(
   return { group, rank }
 }
 
+/** Human-readable slot code, e.g. 2A → "2nd A", 3rd → "3rd". */
+export function formatR32PositionCode(code: string): string {
+  if (code === '3rd') return '3rd'
+  const parsed = parseGroupPositionLabel(code)
+  if (!parsed) return code
+  return `${rankOrdinal(parsed.rank)} ${parsed.group}`
+}
+
+/** Human-readable matchup label, e.g. "2nd A vs 2nd B". */
+export function formatR32MatchupLabel(matchup: R32MatchupDef): string {
+  return `${formatR32PositionCode(matchup.home)} vs ${formatR32PositionCode(matchup.away)}`
+}
+
+export const R32_NOTATION_LEGEND = [
+  { code: '1A', meaning: '1st place from Group A' },
+  { code: '2B', meaning: '2nd place from Group B' },
+  { code: '3rd', meaning: 'One of the 8 best third-place teams' },
+] as const
+
 /** Resolve a fixed group-position label (1A, 2B, 3C) to a team from standings. */
 export function resolveGroupPositionTeam(
   label: string,

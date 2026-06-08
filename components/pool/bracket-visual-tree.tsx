@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -9,14 +10,22 @@ import {
   type CSSProperties,
   type RefCallback,
 } from 'react'
+import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/components/ui/popover'
 import { resolveTeamFlagDisplay } from '@/src/lib/team-flags'
 import {
   BRACKET_LAYOUT,
   buildR32PopulatedSlots,
   GROUP_ADVANCE_FEEDS,
+  formatR32MatchupLabel,
   LEFT_GROUP_LETTERS,
   R32_LEFT,
+  R32_NOTATION_LEGEND,
   R32_RIGHT,
   RIGHT_GROUP_LETTERS,
   groupSourceKey,
@@ -240,10 +249,16 @@ function R32MatchupBlock({
   const homeTarget: R32SlotRef = { side, matchIndex, slot: 'home' }
   const awayTarget: R32SlotRef = { side, matchIndex, slot: 'away' }
 
+  const readableLabel = formatR32MatchupLabel(matchup)
+
   return (
     <div className="flex w-full flex-col">
-      <p className="mb-1 text-center font-mono text-[10px] text-[#64748b]">
-        {matchup.label}
+      <p
+        className="mb-1 text-center font-mono text-[9px] leading-tight text-[#64748b] min-[1100px]:text-[10px]"
+        title={readableLabel}
+      >
+        <span className="min-[1100px]:hidden">{matchup.label}</span>
+        <span className="hidden min-[1100px]:inline">{readableLabel}</span>
       </p>
       <R32TeamSlot
         slotRef={registerSlotRef(homeTarget)}
@@ -292,16 +307,83 @@ function R32Column({
   )
 }
 
+function R32NotationInfo() {
+  const [open, setOpen] = useState(false)
+  const [isTouch, setIsTouch] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(hover: none), (pointer: coarse)')
+    const update = () => setIsTouch(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          aria-label="Round of 32 label legend"
+          aria-expanded={open}
+          className="rounded-full p-0.5 text-[#64748b] transition-colors hover:bg-[#1e293b] hover:text-[#22c55e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22c55e]/50"
+          onMouseEnter={() => {
+            if (!isTouch) setOpen(true)
+          }}
+          onMouseLeave={() => {
+            if (!isTouch) setOpen(false)
+          }}
+          onClick={() => {
+            if (isTouch) setOpen((prev) => !prev)
+          }}
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </PopoverAnchor>
+      <PopoverContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        className="w-64 border border-[#1e293b] bg-[#111827] p-3 text-[#e2e8f0] shadow-lg"
+        onMouseEnter={() => {
+          if (!isTouch) setOpen(true)
+        }}
+        onMouseLeave={() => {
+          if (!isTouch) setOpen(false)
+        }}
+      >
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#22c55e]">
+          Matchup codes
+        </p>
+        <ul className="space-y-2 text-xs leading-snug text-[#cbd5e1]">
+          {R32_NOTATION_LEGEND.map((item) => (
+            <li key={item.code}>
+              <span className="font-mono font-semibold text-[#e2e8f0]">
+                {item.code}
+              </span>
+              <span className="text-[#64748b]"> = </span>
+              {item.meaning}
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function CenterDivider({ width }: { width: string }) {
   return (
     <div
-      className="flex shrink-0 flex-col items-center self-stretch px-1"
+      className="flex min-w-0 shrink-0 flex-col items-center self-stretch px-1"
       style={{ width }}
     >
       <div className="w-px flex-1 bg-[#2a3545]" />
-      <p className="my-4 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
-        Round of 32
-      </p>
+      <div className="my-4 flex flex-col items-center gap-1">
+        <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
+          Round of 32
+        </p>
+        <R32NotationInfo />
+      </div>
       <div className="w-px flex-1 bg-[#2a3545]" />
     </div>
   )
