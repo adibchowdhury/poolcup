@@ -30,6 +30,11 @@ export async function generateMetadata(): Promise<Metadata> {
     verification: {
       google: 'wUcYdWnVflR1_Y88THjoEWcCYgtCrRWr-BwkzGmoBzs',
     },
+    icons: {
+      icon: '/favicon.png',
+      apple: '/favicon.png',
+    },
+    manifest: '/site.webmanifest',
   }
 }
 
@@ -44,10 +49,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-[#080b0f]">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="32x32" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-      </head>
       <body
         className="font-sans antialiased bg-[#080b0f] text-[#f0f4f8]"
         suppressHydrationWarning

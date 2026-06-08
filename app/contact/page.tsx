@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
-import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react'
+import { ArrowLeft, Mail, MapPin, Phone, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SiteFooter } from '@/components/site-footer'
