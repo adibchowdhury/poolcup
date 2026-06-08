@@ -9,12 +9,12 @@ import {
   Sparkles,
   Target,
   TrendingUp,
-  Trophy,
   User,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
@@ -336,17 +336,7 @@ export function DashboardView({
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary opacity-50 blur-lg" />
-                  <div className="relative rounded-xl bg-primary p-2 text-primary-foreground">
-                    <Trophy className="h-6 w-6" />
-                  </div>
-                </div>
-                <h1 className="font-display text-4xl tracking-wide text-foreground">
-                  MY POOLS
-                </h1>
-              </div>
+              <PoolCupLogo href="/dashboard" />
 
               <div className="flex flex-wrap items-center gap-3">
                 <SupportUsButton />

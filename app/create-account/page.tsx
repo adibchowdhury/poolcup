@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FormEvent, Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthFormDivider } from '@/components/auth/auth-form-divider'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { signUpWithPassword } from '@/src/lib/auth'
@@ -70,9 +71,9 @@ function CreateAccountPageContent() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#080b0f] px-4">
       <div className="w-full max-w-md rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl">
-        <h1 className="text-2xl font-bold tracking-tight text-[#f0f4f8]">
-          PoolCup
-        </h1>
+        <div className="flex justify-center">
+          <PoolCupLogo />
+        </div>
         <p className="mt-2 text-sm text-[#5a7080]">Create your account</p>
 
         <div className="mt-8">

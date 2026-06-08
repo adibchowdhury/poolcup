@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowLeft, Trophy } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SiteFooter } from '@/components/site-footer'
 
 export default function TermsPage() {
@@ -14,13 +15,7 @@ export default function TermsPage() {
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
           </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 font-display text-xl tracking-wider text-primary"
-          >
-            <Trophy className="h-5 w-5" />
-            POOLCUP
-          </Link>
+          <PoolCupLogo />
         </div>
       </header>
 

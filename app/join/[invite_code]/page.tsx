@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { useAuth } from '@/src/lib/auth-context'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
@@ -213,12 +214,9 @@ export default function JoinPoolPage() {
       <main className="min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <Link
-              href="/"
-              className="font-display text-3xl tracking-wider text-[#00e676]"
-            >
-              POOLCUP
-            </Link>
+            <div className="flex justify-center">
+              <PoolCupLogo />
+            </div>
             <p className="mt-1 text-sm text-[#5a7080]">
               World Cup 2026 Prediction Pools
             </p>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
 import { cn } from '@/lib/utils'
 
@@ -40,13 +41,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         )}
         style={style}
       >
-        <Link
-          href="/"
-          className="font-display text-2xl tracking-wider text-[#22c55e]"
-          onClick={closeMenu}
-        >
-          POOLCUP
-        </Link>
+        <PoolCupLogo onClick={closeMenu} />
 
         <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-3 md:flex">
