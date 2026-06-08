@@ -6,21 +6,13 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  Link2,
   Target,
   Trophy,
   Users,
-  Zap,
   type LucideIcon,
 } from 'lucide-react'
 
-type FeatureTabKey =
-  | 'leaderboard'
-  | 'predictions'
-  | 'scoring'
-  | 'invites'
-  | 'live'
-  | 'pools'
+type FeatureTabKey = 'leaderboard' | 'predictions' | 'bragging' | 'winner'
 
 type TabTheme = {
   accent: string
@@ -31,75 +23,42 @@ type TabTheme = {
 const FEATURE_TABS: Array<{
   key: FeatureTabKey
   title: string
+  headline: string
   icon: LucideIcon
   desc: string
   bullets: string[]
 }> = [
   {
     key: 'leaderboard',
-    title: 'Leaderboard',
+    title: 'Live Leaderboard',
+    headline: 'Watch the standings change after every match.',
     icon: BarChart3,
-    desc: 'See who’s on top with live rankings, points, and correct-prediction counts for your whole squad.',
-    bullets: [
-      'Rankings update automatically after final scores',
-      'Points, correct picks, and movement at a glance',
-      'Private to your pool — only members can view',
-    ],
+    desc: 'Every correct prediction earns points and updates the leaderboard automatically. One great day can move you from last place to first.',
+    bullets: [],
   },
   {
     key: 'predictions',
-    title: 'Predictions',
+    title: 'Correct Predictions',
+    headline: 'The closer your prediction, the more points you earn.',
     icon: Target,
-    desc: 'Pick scores before kickoff for every group-stage and knockout match in one clean flow.',
-    bullets: [
-      'Group stage and knockouts in dedicated tabs',
-      'See what’s up next and what you still owe',
-      'Save progress in bulk before deadlines',
-    ],
+    desc: 'Predict winners, nail exact scores, and rack up points throughout the tournament. Every match is another chance to climb the rankings.',
+    bullets: [],
   },
   {
-    key: 'scoring',
-    title: 'Scoring',
-    icon: Trophy,
-    desc: 'Choose how your pool awards points — simple winner picks or full score predictions.',
-    bullets: [
-      'Winner Only or Score Predictor styles',
-      'Set once when you create the pool',
-      'Fair, automatic points — no manual spreadsheets',
-    ],
-  },
-  {
-    key: 'invites',
-    title: 'Invites',
+    key: 'bragging',
+    title: 'Bragging Rights',
+    headline: 'Settle who knows football best.',
     icon: Users,
-    desc: 'Share one link. Coworkers, friends, or your group chat join in seconds.',
-    bullets: [
-      'One private invite link per pool',
-      'Members join free — creator pays once',
-      'Works on any phone or browser',
-    ],
+    desc: 'No spreadsheets. No manual scoring. Just a live competition your whole group can follow from the opening match to the final.',
+    bullets: [],
   },
   {
-    key: 'live',
-    title: 'Live',
-    icon: Zap,
-    desc: 'When matches finish, scores flow in and leaderboards refresh without anyone lifting a finger.',
-    bullets: [
-      'Results synced from official match data',
-      'Points calculated instantly',
-      'No admin work during the tournament',
-    ],
-  },
-  {
-    key: 'pools',
-    title: 'Pools',
-    icon: Link2,
-    desc: 'Create and manage private World Cup pools without wrestling with spreadsheets or group chats.',
-    bullets: [
-      'Name your pool and pick scoring in under a minute',
-      'Free to create — unlimited members',
-      'Full tournament coverage in one place',
-    ],
+    key: 'winner',
+    title: 'Winner Crowned',
+    headline: 'One winner. Thirty-nine days of competition.',
+    icon: Trophy,
+    desc: 'As the tournament unfolds, every point matters. When the final whistle blows, one person finishes on top.',
+    bullets: [],
   },
 ]
 
@@ -114,25 +73,15 @@ const FEATURE_TAB_THEME: Record<FeatureTabKey, TabTheme> = {
     tint: 'rgba(59, 130, 246, 0.12)',
     border: 'rgba(59, 130, 246, 0.28)',
   },
-  scoring: {
-    accent: '#ffb300',
-    tint: 'rgba(255, 179, 0, 0.12)',
-    border: 'rgba(255, 179, 0, 0.28)',
-  },
-  invites: {
+  bragging: {
     accent: '#a78bfa',
     tint: 'rgba(167, 139, 250, 0.12)',
     border: 'rgba(167, 139, 250, 0.28)',
   },
-  live: {
-    accent: '#f472b6',
-    tint: 'rgba(244, 114, 182, 0.12)',
-    border: 'rgba(244, 114, 182, 0.28)',
-  },
-  pools: {
-    accent: '#38bdf8',
-    tint: 'rgba(56, 189, 248, 0.12)',
-    border: 'rgba(56, 189, 248, 0.28)',
+  winner: {
+    accent: '#ffb300',
+    tint: 'rgba(255, 179, 0, 0.12)',
+    border: 'rgba(255, 179, 0, 0.28)',
   },
 }
 
@@ -239,7 +188,7 @@ function FeaturePreview({ tab }: { tab: FeatureTabKey }) {
     )
   }
 
-  if (tab === 'scoring') {
+  if (tab === 'bragging') {
     return (
       <div
         className={previewShell}
@@ -247,47 +196,12 @@ function FeaturePreview({ tab }: { tab: FeatureTabKey }) {
           background: `linear-gradient(135deg, #111a27 0%, #111a27 55%, ${theme.tint} 100%)`,
         }}
       >
-        <div
-          className="text-[11px] font-semibold uppercase tracking-wider"
-          style={{ color: theme.accent }}
-        >
-          Scoring style
-        </div>
-        <div className="mt-5 grid gap-2">
-          {[
-            { label: 'Score Predictor', pts: '5 / 2 / 0', on: true },
-            { label: 'Winner Only', pts: '2 / 0', on: false },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="flex items-center justify-between rounded-2xl border px-4 py-3"
-              style={
-                s.on
-                  ? { borderColor: theme.border, backgroundColor: theme.tint }
-                  : { borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(8, 11, 15, 0.8)' }
-              }
-            >
-              <span className="text-sm font-semibold text-[#f0f4f8]">{s.label}</span>
-              <span className="text-xs font-medium text-[#5a7080]">{s.pts} pts</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/50 p-4 text-sm text-[#5a7080]">
-          Pick your rules once — PoolCup handles the math all tournament long.
-        </div>
-      </div>
-    )
-  }
-
-  if (tab === 'invites') {
-    return (
-      <div className={previewShell}>
         <div className="flex items-center justify-between">
           <div
             className="text-[11px] font-semibold uppercase tracking-wider"
             style={{ color: theme.accent }}
           >
-            Invite link
+            Pool leaderboard
           </div>
           <div
             className="rounded-full px-3 py-1 text-xs font-semibold"
@@ -297,110 +211,118 @@ function FeaturePreview({ tab }: { tab: FeatureTabKey }) {
               border: `1px solid ${theme.border}`,
             }}
           >
-            12 members
+            1st place
           </div>
         </div>
-        <div
-          className="mt-5 rounded-2xl border p-4 font-mono text-xs text-[#f0f4f8] break-all"
-          style={{ borderColor: theme.border, backgroundColor: theme.tint }}
-        >
-          getpoolcup.com/join/marketing-wc-2026
-        </div>
-        <div className="mt-4 flex gap-2">
-          {['Jordan', 'Sarah', 'Mike', '+9'].map((name) => (
+        <div className="mt-5 space-y-2">
+          {[
+            { rank: 1, name: 'Sarah', pts: '167', highlight: true },
+            { rank: 2, name: 'Jordan', pts: '142', highlight: false },
+            { rank: 3, name: 'Alex', pts: '128', highlight: false },
+          ].map((row) => (
             <div
-              key={name}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[#080b0f] text-xs font-semibold text-[#f0f4f8]"
+              key={row.rank}
+              className="flex items-center justify-between rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/80 px-4 py-3"
+              style={
+                row.highlight
+                  ? { borderColor: theme.border, backgroundColor: theme.tint }
+                  : undefined
+              }
             >
-              {name.startsWith('+') ? name : name[0]}
+              <div className="flex items-center gap-3">
+                <span
+                  className="font-display text-lg tabular-nums"
+                  style={{ color: row.highlight ? theme.accent : '#5a7080' }}
+                >
+                  {row.rank}
+                </span>
+                <span className="text-sm font-semibold text-[#f0f4f8]">{row.name}</span>
+              </div>
+              <span
+                className="font-display text-sm font-bold tabular-nums"
+                style={{ color: row.highlight ? theme.accent : '#5a7080' }}
+              >
+                {row.pts} pts
+              </span>
             </div>
           ))}
         </div>
         <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/50 p-4 text-sm text-[#5a7080]">
-          Copy one link to Slack, email, or the group chat — done.
+          Everyone in your group sees the same live standings — no manual updates.
         </div>
       </div>
     )
   }
 
-  if (tab === 'live') {
-    return (
-      <div
-        className={previewShell}
-        style={{
-          background: `linear-gradient(135deg, #111a27 0%, #111a27 55%, ${theme.tint} 100%)`,
-        }}
-      >
-        <div className="flex items-center justify-between">
+  // winner
+  return (
+    <div
+      className={previewShell}
+      style={{
+        background: `linear-gradient(135deg, #111a27 0%, #111a27 55%, ${theme.tint} 100%)`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-4 w-4" style={{ color: theme.accent }} />
           <div
             className="text-[11px] font-semibold uppercase tracking-wider"
             style={{ color: theme.accent }}
           >
-            Just finished
-          </div>
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#00e676]">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[#00e676]" />
-            Live update
+            Final standings
           </div>
         </div>
-        <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/80 p-5">
-          <div className="text-sm font-semibold text-[#f0f4f8]">🇲🇽 Mexico 2 – 1 🇿🇦 South Africa</div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold text-[#5a7080]">Your pick</div>
-              <div className="mt-1 font-mono text-lg font-bold text-[#f0f4f8]">2 – 1</div>
-            </div>
-            <div
-              className="rounded-full px-3 py-1 text-sm font-bold"
-              style={{ backgroundColor: theme.tint, color: theme.accent, border: `1px solid ${theme.border}` }}
-            >
-              +3 pts
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/50 p-4 text-sm text-[#5a7080]">
-          Final whistles trigger scoring — leaderboard updates on its own.
-        </div>
-      </div>
-    )
-  }
-
-  // pools
-  return (
-    <div className={previewShell}>
-      <div className="flex items-center justify-between">
         <div
-          className="text-[11px] font-semibold uppercase tracking-wider"
-          style={{ color: theme.accent }}
+          className="rounded-full px-3 py-1 text-xs font-semibold"
+          style={{
+            backgroundColor: theme.tint,
+            color: theme.accent,
+            border: `1px solid ${theme.border}`,
+          }}
         >
-          Your pools
+          Champion
         </div>
-        <div className="text-xs font-semibold text-[#5a7080]">Dashboard</div>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5">
+        <div
+          className="flex items-center justify-between rounded-2xl border px-4 py-4"
+          style={{ borderColor: theme.border, backgroundColor: theme.tint }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="font-display text-2xl tabular-nums" style={{ color: theme.accent }}>
+              1
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-[#f0f4f8]">Sarah</div>
+              <div className="text-xs text-[#5a7080]">Pool winner</div>
+            </div>
+          </div>
+          <span className="font-display text-xl font-bold tabular-nums" style={{ color: theme.accent }}>
+            312 pts
+          </span>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2">
         {[
-          { n: 'Marketing Team WC 2026', m: '12 members', role: 'Creator' },
-          { n: 'Sunday League Picks', m: '8 members', role: 'Member' },
-        ].map((x) => (
+          { rank: 2, name: 'Jordan', pts: '287' },
+          { rank: 3, name: 'Alex', pts: '264' },
+        ].map((row) => (
           <div
-            key={x.n}
-            className="flex items-center justify-between rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/80 p-4"
+            key={row.rank}
+            className="flex items-center justify-between rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/80 px-4 py-3"
           >
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-[#f0f4f8]">{x.n}</div>
-              <div className="text-xs text-[#5a7080]">{x.m}</div>
+            <div className="flex items-center gap-3">
+              <span className="font-display text-lg tabular-nums text-[#5a7080]">{row.rank}</span>
+              <span className="text-sm font-semibold text-[#f0f4f8]">{row.name}</span>
             </div>
-            <div
-              className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
-              style={{ backgroundColor: theme.tint, color: theme.accent, border: `1px solid ${theme.border}` }}
-            >
-              {x.role}
-            </div>
+            <span className="font-display text-sm font-bold tabular-nums text-[#5a7080]">
+              {row.pts} pts
+            </span>
           </div>
         ))}
       </div>
-      <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(255,255,255,0.15)] py-3 text-sm font-medium text-[#5a7080]">
-        + Create another pool
+      <div className="mt-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#080b0f]/50 p-4 text-sm text-[#5a7080]">
+        Thirty-nine days of picks — one name on top when the final ends.
       </div>
     </div>
   )
@@ -415,7 +337,6 @@ export function FeatureTabsSection() {
     FEATURE_TABS.findIndex((x) => x.key === active),
   )
   const reverse = activeIndex % 2 === 1
-  const Icon = t.icon
 
   return (
     <section
@@ -423,12 +344,12 @@ export function FeatureTabsSection() {
       className="bg-[#0d1520] py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-5 md:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-4xl tracking-wide text-[#f0f4f8] sm:text-5xl">
-            Everything you need
+        <div className="mx-auto max-w-6xl text-center">
+          <h2 className="font-display text-3xl tracking-wide text-[#f0f4f8] whitespace-nowrap sm:text-4xl lg:text-5xl">
+            Turn Every World Cup Match Into a Competition
           </h2>
-          <p className="mt-3 text-[#5a7080]">
-            Explore what makes PoolCup the easiest way to run a private World Cup prediction pool.
+          <p className="mx-auto mt-3 max-w-2xl text-[#5a7080]">
+            Every prediction counts. Follow the standings, chase perfect picks, and see who comes out on top when the tournament ends.
           </p>
         </div>
 
@@ -475,26 +396,21 @@ export function FeatureTabsSection() {
             key={t.key}
             className={`transition-opacity duration-300 ${reverse ? 'lg:order-2' : 'lg:order-1'}`}
           >
-            <div
-              className="inline-flex items-center gap-2 rounded-full border bg-[#111a27] px-3 py-1 text-xs font-semibold"
-              style={{ borderColor: theme.border, color: theme.accent }}
-            >
-              <Icon className="h-4 w-4" style={{ color: theme.accent }} />
-              {t.title}
-            </div>
-            <h3 className="mt-4 font-display text-2xl tracking-wide text-[#f0f4f8] sm:text-3xl">
-              {t.title}
+            <h3 className="font-display text-2xl tracking-wide text-[#f0f4f8] sm:text-3xl">
+              {t.headline}
             </h3>
             <p className="mt-3 text-sm leading-6 text-[#5a7080] sm:text-base">{t.desc}</p>
 
-            <ul className="mt-6 space-y-3">
-              {t.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-3 text-sm text-[#5a7080]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: theme.accent }} />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
+            {t.bullets.length > 0 && (
+              <ul className="mt-6 space-y-3">
+                {t.bullets.map((b) => (
+                  <li key={b} className="flex items-start gap-3 text-sm text-[#5a7080]">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: theme.accent }} />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="mt-7">
               <Link
