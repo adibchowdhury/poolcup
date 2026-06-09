@@ -19,6 +19,7 @@ import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leader
 import { LeaderboardPodium } from '@/components/pool/leaderboard-podium'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
+import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import {
   PoolPredictionsTab,
   type UserPoolPrediction,
@@ -28,6 +29,7 @@ import { trackEvent } from '@/src/lib/track'
 export type PoolHomeMeta = {
   inviteCode: string
   name: string
+  scoringStyle: string
   stage: string
   memberCount: number
   matchesPlayed: number
@@ -128,9 +130,12 @@ export function PoolHomeView({
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </Link>
               <div className="min-w-0 flex-1">
-                <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-                  {pool.name}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                    {pool.name}
+                  </h1>
+                  <ScoringModeBadge scoringStyle={pool.scoringStyle} />
+                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>Invite:</span>
                   <code className="font-mono text-primary">{pool.inviteCode}</code>

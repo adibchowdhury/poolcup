@@ -124,7 +124,7 @@ export function ThirdPlaceRankingPanel({
         3rd Place Teams
       </p>
       <p className="mb-1 text-right font-mono text-[10px] text-[#64748b]">
-        {rankedCount}/12 ranked
+        3rd-place teams ranked: {rankedCount}/12
       </p>
       <div className="relative z-[1] w-full rounded border border-[#1e293b]">
         {slots.map((slot) => {

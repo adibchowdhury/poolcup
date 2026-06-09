@@ -18,6 +18,7 @@ type Pool = {
   name: string
   invite_code: string
   creator_id: string
+  scoring_style: string
 }
 
 type PoolMember = {
@@ -140,7 +141,7 @@ export default function PoolPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code, creator_id')
+      .select('id, name, invite_code, creator_id, scoring_style')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -296,6 +297,7 @@ export default function PoolPage() {
     setPoolMeta({
       inviteCode: pool.invite_code,
       name: pool.name,
+      scoringStyle: pool.scoring_style,
       stage: deriveStageLabel(roundCounts),
       memberCount: poolMembers.length,
       matchesPlayed: matchesPlayedCount,

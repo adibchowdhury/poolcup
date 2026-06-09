@@ -6,6 +6,8 @@ interface ProgressHeaderProps {
   current: number
   total: number
   label?: string
+  /** When true, renders "{label}: X/Y" instead of "X / Y {label}". */
+  labelFirst?: boolean
   className?: string
 }
 
@@ -13,6 +15,7 @@ export function ProgressHeader({
   current,
   total,
   label = 'Matches Predicted',
+  labelFirst = false,
   className,
 }: ProgressHeaderProps) {
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0
@@ -20,10 +23,21 @@ export function ProgressHeader({
   return (
     <div className={cn('space-y-2', className)}>
       <p className="text-sm font-medium text-foreground">
-        <span className="font-mono text-primary">{current}</span>
-        <span className="text-muted-foreground"> / </span>
-        <span className="font-mono text-foreground">{total}</span>
-        <span className="text-muted-foreground"> {label}</span>
+        {labelFirst ? (
+          <>
+            <span className="text-muted-foreground">{label}: </span>
+            <span className="font-mono text-primary">{current}</span>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-mono text-foreground">{total}</span>
+          </>
+        ) : (
+          <>
+            <span className="font-mono text-primary">{current}</span>
+            <span className="text-muted-foreground"> / </span>
+            <span className="font-mono text-foreground">{total}</span>
+            <span className="text-muted-foreground"> {label}</span>
+          </>
+        )}
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-primary/15">
         <div

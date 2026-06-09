@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { GroupStandingCard } from '@/components/predict/group-standing-card'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
+import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
@@ -39,6 +40,7 @@ type Pool = {
   id: string
   name: string
   invite_code: string
+  scoring_style: string
 }
 
 type GroupPredictionRow = {
@@ -373,19 +375,18 @@ export function WinnerOnlyPredictView({
             <span className="truncate">{pool.name}</span>
           </Link>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">
               Predictions
             </h1>
-            <p className="font-mono text-xs text-muted-foreground sm:text-sm">
-              {predictedGroupCount}/12 groups ranked
-            </p>
+            <ScoringModeBadge scoringStyle={pool.scoring_style} />
           </div>
 
           <ProgressHeader
             current={predictedGroupCount}
             total={12}
-            label="Groups Predicted"
+            label="Groups ranked"
+            labelFirst
           />
 
           <WinnerOnlyRoundTabs activeId={activeTab} onChange={setActiveTab} />
@@ -409,14 +410,20 @@ export function WinnerOnlyPredictView({
               Loading bracket…
             </p>
           ) : (
-            <PoolBracketTab
-              groups={groups}
-              groupRankings={groupRankings}
-              thirdPlaceRankings={thirdPlaceRankings}
-              readOnly={groupStageLocked}
-              onTeamTap={handleTeamTap}
-              onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
-            />
+            <div className="space-y-4">
+              <p className="mx-auto max-w-2xl px-4 text-center text-sm text-muted-foreground">
+                Rank each group from 1st to 4th, then rank your best 3rd-place
+                teams. Your knockout bracket fills in automatically as you go.
+              </p>
+              <PoolBracketTab
+                groups={groups}
+                groupRankings={groupRankings}
+                thirdPlaceRankings={thirdPlaceRankings}
+                readOnly={groupStageLocked}
+                onTeamTap={handleTeamTap}
+                onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
+              />
+            </div>
           )
         ) : lockedRoundTab ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
