@@ -34,6 +34,10 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
     void loadPools()
   }, [loadPools])
 
+  function handlePoolDeleted(poolId: string) {
+    setPools((prev) => prev.filter((p) => p.id !== poolId))
+  }
+
   if (loading) {
     return <ActivePoolsSkeleton />
   }
@@ -51,7 +55,11 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
     <>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {pools.map((pool) => (
-          <PoolCard key={pool.id} pool={pool} />
+          <PoolCard
+            key={pool.id}
+            pool={pool}
+            onPoolDeleted={handlePoolDeleted}
+          />
         ))}
 
         <JoinOrCreatePoolCard />

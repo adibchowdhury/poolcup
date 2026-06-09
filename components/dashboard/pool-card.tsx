@@ -193,9 +193,10 @@ function NextMatchCountdown({
 
 interface PoolCardProps {
   pool: DashboardPoolCardData
+  onPoolDeleted?: (poolId: string) => void
 }
 
-export function PoolCard({ pool }: PoolCardProps) {
+export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const { mounted, nowMs } = useClientNow(1000)
   const totalMatches = pool.totalPredictions > 0 ? pool.totalPredictions : 72
@@ -270,6 +271,7 @@ export function PoolCard({ pool }: PoolCardProps) {
                   poolId={pool.id}
                   poolName={pool.name}
                   redirectTo="/dashboard"
+                  onDeleted={() => onPoolDeleted?.(pool.id)}
                   iconOnly
                 />
               )}
