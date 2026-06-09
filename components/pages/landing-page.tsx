@@ -161,9 +161,8 @@ export default function LandingPage() {
                 textShadow: "0 1px 12px rgba(0,0,0,0.9)",
               }}
             >
-              Create a private World Cup 2026 prediction pool for your friends, family, or
-              coworkers. Everyone predicts the scores — the app keeps score and crowns the
-              winner.
+              World Cup 2026 kicks off June 11. Create a private prediction pool and lock
+              your friends, family, or coworkers in before the first whistle.
             </p>
 
             <div
