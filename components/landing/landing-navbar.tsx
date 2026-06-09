@@ -51,7 +51,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
               Login
             </Link>
             <Link
-              href="/login"
+              href="/login?next=/create"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95"
             >
               Create a Pool
@@ -122,7 +122,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
             <div className="flex w-full flex-col gap-3">
               <Link
-                href="/login"
+                href="/login?next=/create"
                 onClick={closeMenu}
                 className="w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
               >

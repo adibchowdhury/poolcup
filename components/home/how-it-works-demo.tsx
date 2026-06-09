@@ -292,7 +292,7 @@ export function HowItWorksDemo() {
             </div>
 
             <Link
-              href="/login"
+              href="/login?next=/create"
               onClick={() => trackEvent('demo_cta_clicked')}
               className={cn(STEP_PRIMARY_ACTION_CLASS, 'inline-block', PRIMARY_BTN_CLASS)}
             >

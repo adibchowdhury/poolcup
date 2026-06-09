@@ -147,7 +147,7 @@ export default function CreatePoolPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login')
+      router.replace('/login?next=/create')
     }
   }, [authLoading, user, router])
 

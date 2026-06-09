@@ -414,7 +414,7 @@ export function FeatureTabsSection() {
 
             <div className="mt-7">
               <Link
-                href="/login"
+                href="/login?next=/create"
                 className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-[#080b0f] shadow-sm transition hover:opacity-90"
                 style={{ backgroundColor: theme.accent }}
               >

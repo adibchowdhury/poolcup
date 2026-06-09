@@ -161,7 +161,7 @@ export default function LandingPage() {
               style={{ transitionDelay: "400ms" }}
             >
               <Link
-                href="/login"
+                href="/login?next=/create"
                 className="group flex w-full items-center justify-center gap-2 rounded-lg bg-[#00e676] px-8 py-4 text-lg font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95 sm:w-auto"
               >
                 Create a Pool
@@ -509,7 +509,7 @@ export default function LandingPage() {
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#f0f4f8] mb-4">THE TOURNAMENT STARTS JUNE 11.</h2>
           <p className="text-[#5a7080] text-xl mb-10">Your pool won&apos;t create itself.</p>
           
-          <Link href="/login" className="bg-[#00e676] text-[#080b0f] px-10 py-5 rounded-xl font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] inline-flex items-center gap-2">
+          <Link href="/login?next=/create" className="bg-[#00e676] text-[#080b0f] px-10 py-5 rounded-xl font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] inline-flex items-center gap-2">
             Create a Pool
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

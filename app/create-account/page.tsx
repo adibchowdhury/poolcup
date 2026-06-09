@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, Suspense, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthFormDivider } from '@/components/auth/auth-form-divider'
 import { PoolCupLogo } from '@/components/poolcup-logo'
@@ -24,6 +24,11 @@ function CreateAccountPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function handleSignUp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -74,7 +79,11 @@ function CreateAccountPageContent() {
         <div className="flex justify-center">
           <PoolCupLogo />
         </div>
-        <p className="mt-2 text-sm text-[#5a7080]">Create your account</p>
+        <p className="mt-2 text-sm text-[#5a7080]">
+          {mounted && next
+            ? 'Create your free account to start your pool.'
+            : 'Create your account'}
+        </p>
 
         <div className="mt-8">
           <GoogleSignInButton next={next ?? undefined} />

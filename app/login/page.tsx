@@ -25,6 +25,11 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [forgotSent, setForgotSent] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (searchParams.get('error') === 'auth_callback') {
@@ -85,7 +90,11 @@ function LoginPageContent() {
           <PoolCupLogo />
         </div>
         <p className="mt-2 text-sm text-[#5a7080]">
-          {mode === 'signin' ? 'Sign in to your account' : 'Reset your password'}
+          {mode === 'signin'
+            ? mounted && next
+              ? 'Sign in to create your pool, or create a free account below.'
+              : 'Sign in to your account'
+            : 'Reset your password'}
         </p>
 
         {mode === 'signin' && (
