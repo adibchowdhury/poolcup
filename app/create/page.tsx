@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Zap } from 'lucide-react'
+import { Download, Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import { useAuth } from '@/src/lib/auth-context'
@@ -570,18 +570,17 @@ export default function CreatePoolPage() {
 
               <div className="mt-8 flex flex-col items-center">
                 <p className="text-xs text-[#5a7080]">Scan to join</p>
-                <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-                  <div className="rounded-xl bg-white p-3">
-                    <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={downloadInviteQr}
-                    className="rounded-lg border border-[#1e2d3d] px-4 py-1.5 text-xs font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:mt-3"
-                  >
-                    Download QR
-                  </button>
+                <div className="mt-2 rounded-xl bg-white p-3">
+                  <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
                 </div>
+                <button
+                  type="button"
+                  onClick={downloadInviteQr}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-[#00e676]/50 hover:bg-[#080b0f] hover:text-[#00e676]"
+                >
+                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Download QR
+                </button>
                 <div className="sr-only" aria-hidden>
                   <QRCodeCanvas
                     ref={inviteQrCanvasRef}
