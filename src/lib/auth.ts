@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import { isStaleAuthSessionError } from './auth-session'
 import { supabase } from './supabase'
 
 export type SignUpProfile = {
@@ -148,6 +149,11 @@ export async function getCurrentUser(): Promise<{
     data: { user },
     error,
   } = await supabase.auth.getUser()
+
+  if (error && isStaleAuthSessionError(error)) {
+    await supabase.auth.signOut({ scope: 'local' })
+    return { user: null, error: null }
+  }
 
   return {
     user: user ?? null,

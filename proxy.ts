@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isStaleAuthSessionError } from '@/src/lib/auth-session'
 import { resolveSafeRedirectPath } from '@/src/lib/safe-redirect'
 
 /** Routes that require a signed-in user (explicit allowlist). */
@@ -53,7 +54,12 @@ export async function proxy(request: NextRequest) {
   // IMPORTANT: Do not run other logic between createServerClient and getUser().
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  if (authError && isStaleAuthSessionError(authError)) {
+    await supabase.auth.signOut({ scope: 'local' })
+  }
 
   if (!user && isProtectedPath(request.nextUrl.pathname)) {
     const loginUrl = request.nextUrl.clone()
