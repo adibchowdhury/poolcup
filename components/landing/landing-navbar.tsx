@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { PoolCupLogo } from '@/components/poolcup-logo'
-import { SupportUsButton } from '@/components/support-us-button'
 import { cn } from '@/lib/utils'
 
 type LandingNavbarProps = {
@@ -44,13 +43,18 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         <PoolCupLogo onClick={closeMenu} />
 
         <div className="flex items-center justify-end gap-3">
-          <div className="hidden items-center gap-3 md:flex">
-            <SupportUsButton />
+          <div className="hidden items-center gap-4 md:flex">
             <Link
               href="/login"
-              className="rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#22c55e]/90 hover:shadow-[0_0_24px_rgba(34,197,94,0.35)] active:scale-95"
+              className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
             >
-              Sign in
+              Login
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95"
+            >
+              Create a Pool
             </Link>
           </div>
 
@@ -117,13 +121,19 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         >
           <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
             <div className="flex w-full flex-col gap-3">
-              <SupportUsButton fullWidth />
               <Link
                 href="/login"
                 onClick={closeMenu}
-                className="w-full rounded-lg bg-[#22c55e] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#22c55e]/90"
+                className="w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
               >
-                Sign in
+                Create a Pool
+              </Link>
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+              >
+                Login
               </Link>
             </div>
           </nav>

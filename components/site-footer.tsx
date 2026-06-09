@@ -29,6 +29,9 @@ const legal: { label: string; href: string }[] = [
   { label: 'How We Protect Your Data', href: '/security' },
 ]
 
+const STRIPE_DONATE_URL =
+  'https://donate.stripe.com/aFa9ASayG42Q9P5g1K4ZG00'
+
 const socialLinks = [
   { label: 'Twitter', href: 'https://twitter.com', icon: Twitter },
   { label: 'LinkedIn', href: 'https://linkedin.com', icon: Linkedin },
@@ -98,7 +101,16 @@ export function SiteFooter() {
               updates the leaderboard automatically.
             </p>
 
-            <div className="mt-6 flex items-center gap-4 font-sans text-[#5a7080]">
+            <a
+              href={STRIPE_DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center justify-center rounded-lg border border-[#4800AE] bg-[#4800AE] px-4 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:border-[#5A10C4] hover:bg-[#5A10C4]"
+            >
+              Support Us
+            </a>
+
+            <div className="mt-4 flex items-center gap-4 font-sans text-[#5a7080]">
               {socialLinks.map(({ label, href, icon: Icon }) => (
                 <a
                   key={label}
