@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { TRANSACTIONAL_EMAIL_FROM } from '@/src/lib/emails/from'
 
 type SendWelcomeEmailParams = {
   email: string
@@ -96,7 +97,7 @@ export async function sendWelcomeEmail({
   const resend = new Resend(apiKey)
 
   const { error } = await resend.emails.send({
-    from: 'hello@getpoolcup.com',
+    from: TRANSACTIONAL_EMAIL_FROM,
     to: email,
     subject: 'Welcome to PoolCup 🏆',
     html: buildWelcomeEmailHtml(firstName),
