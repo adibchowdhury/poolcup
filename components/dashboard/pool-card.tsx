@@ -256,11 +256,8 @@ export function PoolCard({ pool }: PoolCardProps) {
               />
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <span className="rounded-full border border-border bg-muted/80 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <span className="rounded-full border border-primary/30 bg-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
                 {formatScoringStyleLabel(pool.scoringStyle)}
-              </span>
-              <span className="rounded-full border border-primary/30 bg-primary/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                active
               </span>
               {pool.canDelete && (
                 <DeletePoolDialog
