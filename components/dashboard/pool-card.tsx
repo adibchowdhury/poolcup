@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
+import { trackEvent } from '@/src/lib/track'
 
 export type PoolMemberAvatar = {
   displayName: string
@@ -216,7 +217,12 @@ export function PoolCard({ pool }: PoolCardProps) {
     nextKickoffMs > nowMs
 
   const copyCode = () => {
-    navigator.clipboard.writeText(pool.inviteCode)
+    const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
+    navigator.clipboard.writeText(joinUrl)
+    trackEvent('invite_link_copied', {
+      poolId: pool.id,
+      metadata: { source: 'dashboard_card' },
+    })
     setCopied(true)
     window.setTimeout(() => setCopied(false), 2000)
   }

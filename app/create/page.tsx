@@ -12,6 +12,7 @@ import {
   type PoolScoringStyleId,
 } from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
+import { trackEvent } from '@/src/lib/track'
 
 const TOTAL_STEPS = 4
 
@@ -54,6 +55,7 @@ const SOCCER_EVENTS = [
 ] as const
 
 type CreatedPool = {
+  id: string
   name: string
   inviteCode: string
 }
@@ -226,6 +228,7 @@ export default function CreatePoolPage() {
     setSubmitting(false)
     setLoadingMessage(null)
     setCreatedPool({
+      id: pool.id,
       name: poolName.trim(),
       inviteCode: pool.invite_code,
     })
@@ -235,6 +238,11 @@ export default function CreatePoolPage() {
   function copyInviteLink() {
     if (!inviteLink) return
     navigator.clipboard.writeText(inviteLink)
+    trackEvent('invite_link_copied', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { source: 'create_success' },
+    })
     setLinkCopied(true)
     window.setTimeout(() => setLinkCopied(false), 2000)
   }
@@ -244,20 +252,40 @@ export default function CreatePoolPage() {
   }
 
   function shareWhatsApp() {
+    trackEvent('invite_link_shared', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { channel: 'whatsapp' },
+    })
     openShareUrl(
       `https://wa.me/?text=${encodeURIComponent(`${shareMessage} ${inviteLink}`)}`,
     )
   }
 
   function shareSms() {
+    trackEvent('invite_link_shared', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { channel: 'sms' },
+    })
     window.location.href = `sms:?body=${encodeURIComponent(`${shareMessage} ${inviteLink}`)}`
   }
 
   function shareEmail() {
+    trackEvent('invite_link_shared', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { channel: 'email' },
+    })
     window.location.href = `mailto:?subject=${encodeURIComponent(`Join ${createdPool?.name ?? 'my pool'} on PoolCup`)}&body=${encodeURIComponent(`${shareMessage}\n\n${inviteLink}`)}`
   }
 
   function shareTwitter() {
+    trackEvent('invite_link_shared', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { channel: 'x' },
+    })
     openShareUrl(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(inviteLink)}`,
     )

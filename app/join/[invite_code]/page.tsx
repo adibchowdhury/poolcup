@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useCallback, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { useAuth } from '@/src/lib/auth-context'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
+import { trackEvent } from '@/src/lib/track'
 
 type Pool = {
   id: string
@@ -47,6 +48,7 @@ export default function JoinPoolPage() {
   const [lastName, setLastName] = useState('')
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const joinPageViewedRef = useRef(false)
 
   const loadPoolData = useCallback(async () => {
     setPageLoading(true)
@@ -91,6 +93,17 @@ export default function JoinPoolPage() {
 
     loadPoolData()
   }, [authLoading, user, inviteCode, loadPoolData])
+
+  useEffect(() => {
+    if (pageLoading || unavailable || !pool || joinPageViewedRef.current) return
+
+    joinPageViewedRef.current = true
+    trackEvent('join_page_viewed', {
+      poolId: pool.id,
+      userId: user?.id ?? null,
+      metadata: { logged_in: Boolean(user) },
+    })
+  }, [pageLoading, unavailable, pool, user])
 
   useEffect(() => {
     if (!user) return
@@ -140,6 +153,11 @@ export default function JoinPoolPage() {
     e.preventDefault()
     if (!user || !pool) return
 
+    trackEvent('join_started', {
+      poolId: pool.id,
+      userId: user.id,
+    })
+
     setError(null)
     setJoining(true)
 
@@ -169,6 +187,11 @@ export default function JoinPoolPage() {
       setError(joinError.message)
       return
     }
+
+    trackEvent('join_completed', {
+      poolId: pool.id,
+      userId: user.id,
+    })
 
     const { error: referralError } = await supabase.rpc('award_referral_points', {
       p_pool_id: pool.id,

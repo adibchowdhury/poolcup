@@ -23,6 +23,7 @@ import {
   PoolPredictionsTab,
   type UserPoolPrediction,
 } from '@/components/pool/pool-predictions-tab'
+import { trackEvent } from '@/src/lib/track'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -94,6 +95,10 @@ export function PoolHomeView({
   const copyInviteLink = () => {
     const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
     navigator.clipboard.writeText(joinUrl)
+    trackEvent('invite_link_copied', {
+      poolId: poolId ?? null,
+      metadata: { source: 'pool_page' },
+    })
     setCopied(true)
     window.setTimeout(() => setCopied(false), 2000)
   }
