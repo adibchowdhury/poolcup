@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
+import { QRCodeSVG } from 'qrcode.react'
 import { useAuth } from '@/src/lib/auth-context'
 import {
   POOL_SCORING_STYLE_OPTIONS,
@@ -76,7 +77,10 @@ function fireConfettiBursts() {
 }
 
 const SHARE_BUTTON_CLASS =
-  'w-full rounded-lg border border-[#1e2d3d] px-2 py-2 text-xs font-medium text-[#f0f4f8] transition-colors hover:border-[#00e676]/50 hover:text-[#00e676] sm:text-sm sm:px-3'
+  'w-full rounded-lg border border-[#1e2d3d] px-2 py-1.5 text-[10px] font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:text-xs sm:px-2'
+
+const PRIMARY_CTA_CLASS =
+  'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90'
 
 function StepIndicator({ step }: { step: number }) {
   return (
@@ -251,14 +255,25 @@ export default function CreatePoolPage() {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-  function shareWhatsApp() {
+  function shareTelegram() {
     trackEvent('invite_link_shared', {
       poolId: createdPool?.id,
       userId: user?.id,
-      metadata: { channel: 'whatsapp' },
+      metadata: { channel: 'telegram' },
     })
     openShareUrl(
-      `https://wa.me/?text=${encodeURIComponent(`${shareMessage} ${inviteLink}`)}`,
+      `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareMessage)}`,
+    )
+  }
+
+  function shareFacebook() {
+    trackEvent('invite_link_shared', {
+      poolId: createdPool?.id,
+      userId: user?.id,
+      metadata: { channel: 'facebook' },
+    })
+    openShareUrl(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteLink)}`,
     )
   }
 
@@ -268,7 +283,7 @@ export default function CreatePoolPage() {
       userId: user?.id,
       metadata: { channel: 'sms' },
     })
-    window.location.href = `sms:?body=${encodeURIComponent(`${shareMessage} ${inviteLink}`)}`
+    window.location.href = `sms:?&body=${encodeURIComponent(shareMessage)}`
   }
 
   function shareEmail() {
@@ -280,15 +295,35 @@ export default function CreatePoolPage() {
     window.location.href = `mailto:?subject=${encodeURIComponent(`Join ${createdPool?.name ?? 'my pool'} on PoolCup`)}&body=${encodeURIComponent(`${shareMessage}\n\n${inviteLink}`)}`
   }
 
-  function shareTwitter() {
-    trackEvent('invite_link_shared', {
-      poolId: createdPool?.id,
-      userId: user?.id,
-      metadata: { channel: 'x' },
-    })
-    openShareUrl(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(inviteLink)}`,
-    )
+  async function shareInvite() {
+    if (!inviteLink || !createdPool) return
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: createdPool.name,
+          text: shareMessage,
+          url: inviteLink,
+        })
+        trackEvent('invite_link_shared', {
+          poolId: createdPool.id,
+          userId: user?.id,
+          metadata: { channel: 'native' },
+        })
+      } catch (e) {
+        if (
+          typeof e === 'object' &&
+          e !== null &&
+          'name' in e &&
+          (e as { name: string }).name === 'AbortError'
+        ) {
+          return
+        }
+      }
+      return
+    }
+
+    copyInviteLink()
   }
 
   if (authLoading || !user) {
@@ -496,10 +531,27 @@ export default function CreatePoolPage() {
               <h1 className="mt-4 font-display text-3xl tracking-wide text-[#f0f4f8]">
                 Pool created!
               </h1>
+              <p className="mt-2 text-sm text-[#5a7080]">
+                Pools are no fun solo. Invite people to play against you.
+              </p>
 
               <div className="mt-6 flex items-center justify-center gap-2 text-[#00e676]">
                 <Zap className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="text-sm font-semibold">+5 points earned!</span>
+              </div>
+
+              <div className="mt-8 flex flex-col items-center">
+                <p className="text-xs text-[#5a7080]">Scan to join</p>
+                <div className="mt-2 rounded-xl bg-white p-3">
+                  <QRCodeSVG
+                    value={inviteLink}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#080b0f"
+                    level="M"
+                    marginSize={4}
+                  />
+                </div>
               </div>
 
               <div className="mt-8">
@@ -519,27 +571,35 @@ export default function CreatePoolPage() {
                 />
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5">
+              <button
+                type="button"
+                onClick={() => void shareInvite()}
+                className={`mt-6 ${PRIMARY_CTA_CLASS}`}
+              >
+                Share invite
+              </button>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
                 <button
                   type="button"
-                  onClick={copyInviteLink}
+                  onClick={shareTelegram}
                   className={SHARE_BUTTON_CLASS}
                 >
-                  {linkCopied ? 'Copied!' : 'Copy link'}
+                  Telegram
                 </button>
                 <button
                   type="button"
-                  onClick={shareWhatsApp}
+                  onClick={shareFacebook}
                   className={SHARE_BUTTON_CLASS}
                 >
-                  WhatsApp
+                  Facebook
                 </button>
                 <button
                   type="button"
                   onClick={shareSms}
                   className={SHARE_BUTTON_CLASS}
                 >
-                  iMessage
+                  SMS
                 </button>
                 <button
                   type="button"
@@ -550,16 +610,16 @@ export default function CreatePoolPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={shareTwitter}
+                  onClick={copyInviteLink}
                   className={SHARE_BUTTON_CLASS}
                 >
-                  X
+                  {linkCopied ? 'Copied!' : 'Copy link'}
                 </button>
               </div>
 
               <Link
                 href={`/pool/${createdPool.inviteCode}`}
-                className="mt-8 flex w-full items-center justify-center rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90"
+                className="mt-6 block w-full text-center text-sm text-[#5a7080] transition-colors hover:text-[#00e676]"
               >
                 Go to my pool
               </Link>
