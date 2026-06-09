@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
+import { X } from "lucide-react"
 import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
@@ -55,8 +56,13 @@ const leaderboardData = [
   { rank: 6, name: "Priya", points: 91, correct: "15/32", change: 0 },
 ]
 
+const ACCOUNT_DELETED_QUERY_PARAM = 'accountDeleted'
+const ACCOUNT_DELETED_SESSION_KEY = 'poolcup_account_deleted'
+const ACCOUNT_DELETED_BANNER_MS = 5000
+
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false)
+  const [accountDeletedMessage, setAccountDeletedMessage] = useState(false)
   const { mounted, nowMs } = useClientNow(null)
 
   const daysStat = useMemo(
@@ -68,8 +74,47 @@ export default function LandingPage() {
     setIsVisible(true)
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const fromQuery = params.get(ACCOUNT_DELETED_QUERY_PARAM) === '1'
+    const fromStorage =
+      sessionStorage.getItem(ACCOUNT_DELETED_SESSION_KEY) === '1'
+
+    if (!fromQuery && !fromStorage) return
+
+    sessionStorage.removeItem(ACCOUNT_DELETED_SESSION_KEY)
+    if (fromQuery) {
+      window.history.replaceState(null, '', '/')
+    }
+
+    setAccountDeletedMessage(true)
+  }, [])
+
+  useEffect(() => {
+    if (!accountDeletedMessage) return
+
+    const timer = window.setTimeout(() => {
+      setAccountDeletedMessage(false)
+    }, ACCOUNT_DELETED_BANNER_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [accountDeletedMessage])
+
   return (
     <div className="overflow-x-hidden bg-[#080b0f]">
+      {accountDeletedMessage && (
+        <div className="relative border-b border-primary/30 bg-primary/10 px-4 py-3 text-center text-sm text-[#f0f4f8]">
+          Your account has been deleted.
+          <button
+            type="button"
+            onClick={() => setAccountDeletedMessage(false)}
+            className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-[#f0f4f8]/80 transition-colors hover:text-[#f0f4f8]"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      )}
       {/* ===== SECTION 1: HERO ===== */}
       <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
         <div

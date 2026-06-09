@@ -19,6 +19,7 @@ import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
+import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
@@ -411,14 +412,15 @@ function DashboardViewContent({
                       Settings
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
+                  <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl">
+                    <DialogHeader className="shrink-0">
                       <DialogTitle>Settings</DialogTitle>
                       <DialogDescription>
                         Manage your account, security, and preferences.
                       </DialogDescription>
                     </DialogHeader>
 
+                    <div className="min-h-0 flex-1 overflow-y-auto">
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <h3 className="font-display text-xl tracking-wide">
@@ -527,6 +529,11 @@ function DashboardViewContent({
                           {passwordSaving ? 'Updating…' : 'Update password'}
                         </Button>
                       </div>
+
+                      <Separator />
+
+                      <DeleteAccountSection userId={userId} avatar={avatar} />
+                    </div>
                     </div>
                   </DialogContent>
                 </Dialog>
