@@ -1,12 +1,12 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
-import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import { useAuth } from '@/src/lib/auth-context'
 import {
   POOL_SCORING_STYLE_OPTIONS,
@@ -82,6 +82,14 @@ const SHARE_BUTTON_CLASS =
 const PRIMARY_CTA_CLASS =
   'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90'
 
+const INVITE_QR_PROPS = {
+  size: 160,
+  bgColor: '#ffffff',
+  fgColor: '#080b0f',
+  level: 'M' as const,
+  marginSize: 4,
+}
+
 function StepIndicator({ step }: { step: number }) {
   return (
     <p className="text-xs font-medium uppercase tracking-wider text-[#5a7080]">
@@ -103,6 +111,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 }
 
 export default function CreatePoolPage() {
+  const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
@@ -249,6 +258,25 @@ export default function CreatePoolPage() {
     })
     setLinkCopied(true)
     window.setTimeout(() => setLinkCopied(false), 2000)
+  }
+
+  function downloadInviteQr() {
+    if (!inviteLink || !createdPool) return
+
+    const canvas = inviteQrCanvasRef.current
+    if (!canvas) return
+
+    const dataUrl = canvas.toDataURL('image/png')
+    const anchor = document.createElement('a')
+    anchor.href = dataUrl
+    anchor.download = `poolcup-invite-${createdPool.inviteCode}.png`
+    anchor.click()
+
+    trackEvent('invite_link_shared', {
+      poolId: createdPool.id,
+      userId: user?.id,
+      metadata: { channel: 'qr_download' },
+    })
   }
 
   function openShareUrl(url: string) {
@@ -542,14 +570,23 @@ export default function CreatePoolPage() {
 
               <div className="mt-8 flex flex-col items-center">
                 <p className="text-xs text-[#5a7080]">Scan to join</p>
-                <div className="mt-2 rounded-xl bg-white p-3">
-                  <QRCodeSVG
+                <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+                  <div className="rounded-xl bg-white p-3">
+                    <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadInviteQr}
+                    className="rounded-lg border border-[#1e2d3d] px-4 py-1.5 text-xs font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:mt-3"
+                  >
+                    Download QR
+                  </button>
+                </div>
+                <div className="sr-only" aria-hidden>
+                  <QRCodeCanvas
+                    ref={inviteQrCanvasRef}
                     value={inviteLink}
-                    size={160}
-                    bgColor="#ffffff"
-                    fgColor="#080b0f"
-                    level="M"
-                    marginSize={4}
+                    {...INVITE_QR_PROPS}
                   />
                 </div>
               </div>
