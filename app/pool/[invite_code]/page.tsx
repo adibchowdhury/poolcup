@@ -9,6 +9,7 @@ import {
   PoolHomeView,
   type PoolHomeMeta,
 } from '@/components/pool/pool-home-view'
+import { PoolPageSkeleton } from '@/components/pool/pool-page-skeleton'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import type { UserPoolPrediction } from '@/components/pool/pool-predictions-tab'
 
@@ -124,6 +125,7 @@ export default function PoolPage() {
   const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
   const [pageLoading, setPageLoading] = useState(true)
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [poolId, setPoolId] = useState<string | null>(null)
   const [memberId, setMemberId] = useState<string | null>(null)
@@ -133,6 +135,7 @@ export default function PoolPage() {
     if (!user) return
 
     setPageLoading(true)
+    setLeaderboardLoading(true)
     setNotFound(false)
 
     const { data: poolData, error: poolError } = await supabase
@@ -146,6 +149,7 @@ export default function PoolPage() {
       setMembers([])
       setNotFound(true)
       setPageLoading(false)
+      setLeaderboardLoading(false)
       return
     }
 
@@ -208,49 +212,6 @@ export default function PoolPage() {
       .eq('is_final', true)
 
     const matchesPlayedCount = matchesPlayed ?? 0
-
-    const { data: cacheData, error: cacheError } = await supabase
-      .from('leaderboard_cache')
-      .select('rank, prev_rank, member_id, total_points, correct_winners')
-      .eq('pool_id', pool.id)
-      .order('rank', { ascending: true })
-
-    let entries: LeaderboardEntry[]
-
-    if (matchesPlayedCount === 0) {
-      const orderedMembers = sortPoolMembersForPreMatch(
-        poolMembers,
-        pool.creator_id,
-      )
-      entries = orderedMembers.map((member, index) => ({
-        rank: index + 1,
-        prev_rank: null,
-        member_id: member.id,
-        user_id: member.user_id,
-        display_name: member.display_name,
-        points: 0,
-        correct_predictions: 0,
-      }))
-    } else {
-      entries = buildFallbackEntries()
-
-      if (cacheError) {
-        console.error('Failed to load leaderboard:', cacheError.message)
-      } else if (cacheData && cacheData.length > 0) {
-        entries = cacheData.map((row) => {
-          const member = memberById.get(row.member_id)
-          return {
-            rank: row.rank,
-            prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
-            member_id: row.member_id,
-            user_id: member?.user_id ?? '',
-            display_name: member?.display_name ?? 'Unknown',
-            points: row.total_points ?? 0,
-            correct_predictions: row.correct_winners ?? 0,
-          }
-        })
-      }
-    }
 
     const { data: roundRows } = await supabase.from('matches').select('round')
 
@@ -332,6 +293,62 @@ export default function PoolPage() {
       }
     }
 
+    setPoolMeta({
+      inviteCode: pool.invite_code,
+      name: pool.name,
+      stage: deriveStageLabel(roundCounts),
+      memberCount: poolMembers.length,
+      matchesPlayed: matchesPlayedCount,
+      totalMatches: totalMatches ?? 0,
+      nextMatchIn,
+      nextMatchKickoffAt,
+    })
+    setUserPredictions(loadedUserPredictions)
+    setPageLoading(false)
+
+    const { data: cacheData, error: cacheError } = await supabase
+      .from('leaderboard_cache')
+      .select('rank, prev_rank, member_id, total_points, correct_winners')
+      .eq('pool_id', pool.id)
+      .order('rank', { ascending: true })
+
+    let entries: LeaderboardEntry[]
+
+    if (matchesPlayedCount === 0) {
+      const orderedMembers = sortPoolMembersForPreMatch(
+        poolMembers,
+        pool.creator_id,
+      )
+      entries = orderedMembers.map((member, index) => ({
+        rank: index + 1,
+        prev_rank: null,
+        member_id: member.id,
+        user_id: member.user_id,
+        display_name: member.display_name,
+        points: 0,
+        correct_predictions: 0,
+      }))
+    } else {
+      entries = buildFallbackEntries()
+
+      if (cacheError) {
+        console.error('Failed to load leaderboard:', cacheError.message)
+      } else if (cacheData && cacheData.length > 0) {
+        entries = cacheData.map((row) => {
+          const member = memberById.get(row.member_id)
+          return {
+            rank: row.rank,
+            prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
+            member_id: row.member_id,
+            user_id: member?.user_id ?? '',
+            display_name: member?.display_name ?? 'Unknown',
+            points: row.total_points ?? 0,
+            correct_predictions: row.correct_winners ?? 0,
+          }
+        })
+      }
+    }
+
     const leaderboardMembers: LeaderboardMember[] = entries.map((entry) => ({
       id: entry.member_id,
       name: entry.display_name,
@@ -344,19 +361,8 @@ export default function PoolPage() {
       streak: 0,
     }))
 
-    setPoolMeta({
-      inviteCode: pool.invite_code,
-      name: pool.name,
-      stage: deriveStageLabel(roundCounts),
-      memberCount: poolMembers.length,
-      matchesPlayed: matchesPlayedCount,
-      totalMatches: totalMatches ?? 0,
-      nextMatchIn,
-      nextMatchKickoffAt,
-    })
     setMembers(leaderboardMembers)
-    setUserPredictions(loadedUserPredictions)
-    setPageLoading(false)
+    setLeaderboardLoading(false)
   }, [inviteCode, user])
 
   useEffect(() => {
@@ -371,19 +377,11 @@ export default function PoolPage() {
   }, [authLoading, user, router, loadPoolData])
 
   if (authLoading || (!user && !notFound)) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading…</p>
-      </div>
-    )
+    return <PoolPageSkeleton />
   }
 
   if (pageLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading pool…</p>
-      </div>
-    )
+    return <PoolPageSkeleton />
   }
 
   if (notFound || !poolMeta) {
@@ -414,6 +412,7 @@ export default function PoolPage() {
       userPredictions={userPredictions}
       predictHref={`/pool/${inviteCode}/predict`}
       yourPredictions={yourPredictions}
+      leaderboardLoading={leaderboardLoading}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leaderboard-row'
+import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import {
   PoolPredictionsTab,
@@ -39,6 +40,7 @@ interface PoolHomeViewProps {
   userPredictions: UserPoolPrediction[]
   predictHref: string
   yourPredictions: number
+  leaderboardLoading?: boolean
   canDelete?: boolean
   poolId?: string
   memberId?: string
@@ -77,6 +79,7 @@ export function PoolHomeView({
   userPredictions,
   predictHref,
   yourPredictions,
+  leaderboardLoading = false,
   canDelete,
   poolId,
   memberId,
@@ -270,53 +273,59 @@ export function PoolHomeView({
             </TabsContent>
 
             <TabsContent value="leaderboard" className="mt-0">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
-                  <Trophy className="relative h-6 w-6 text-primary" />
-                </div>
-                <h2 className="font-display text-2xl tracking-wide text-foreground">
-                  LEADERBOARD
-                </h2>
-                <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
-
-                <div className="p-2">
-                  {members.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground">No members yet</p>
-                      <p className="text-sm text-muted-foreground/60">
-                        Share the invite code to get started!
-                      </p>
+              {leaderboardLoading ? (
+                <LeaderboardSkeleton />
+              ) : (
+                <>
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
+                      <Trophy className="relative h-6 w-6 text-primary" />
                     </div>
-                  ) : (
-                    <>
-                      <div className="space-y-2">
-                        {members.map((member, index) => (
-                          <LeaderboardRow
-                            key={member.id}
-                            member={member}
-                            rank={index + 1}
-                            isTop3={
-                              pool.matchesPlayed > 0 && members.length > 2
-                            }
-                            showRankChange={showRankChange}
-                          />
-                        ))}
-                      </div>
-                      {showPreMatchLeaderboardNote && (
-                        <p className="mt-4 text-center text-sm text-muted-foreground">
-                          Scores will update automatically after each match.
-                        </p>
+                    <h2 className="font-display text-2xl tracking-wide text-foreground">
+                      LEADERBOARD
+                    </h2>
+                    <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                    <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
+
+                    <div className="p-2">
+                      {members.length === 0 ? (
+                        <div className="py-12 text-center">
+                          <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
+                          <p className="text-muted-foreground">No members yet</p>
+                          <p className="text-sm text-muted-foreground/60">
+                            Share the invite code to get started!
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-2">
+                            {members.map((member, index) => (
+                              <LeaderboardRow
+                                key={member.id}
+                                member={member}
+                                rank={index + 1}
+                                isTop3={
+                                  pool.matchesPlayed > 0 && members.length > 2
+                                }
+                                showRankChange={showRankChange}
+                              />
+                            ))}
+                          </div>
+                          {showPreMatchLeaderboardNote && (
+                            <p className="mt-4 text-center text-sm text-muted-foreground">
+                              Scores will update automatically after each match.
+                            </p>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </TabsContent>
           </Tabs>
         </main>

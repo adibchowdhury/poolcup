@@ -3,7 +3,7 @@
 import { Calendar, Clock } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
-import { Skeleton } from '@/components/ui/skeleton'
+import { UpcomingGamesSkeleton } from '@/components/dashboard/upcoming-games-skeleton'
 import { cn } from '@/lib/utils'
 import {
   countryNameToFlagSrc,
@@ -134,26 +134,6 @@ function groupMatchesByDay(matches: UpcomingMatch[]): Map<string, UpcomingMatch[
     byDay.get(dayKey)!.push(match)
   }
   return byDay
-}
-
-function UpcomingGamesSkeleton() {
-  return (
-    <div className="space-y-8" aria-busy="true" aria-label="Loading upcoming matches">
-      {[0, 1].map((section) => (
-        <div key={section} className="space-y-3">
-          <Skeleton className="h-7 w-48 bg-muted/50" />
-          <div className="space-y-3">
-            {[0, 1, 2].map((card) => (
-              <Skeleton
-                key={card}
-                className="h-28 w-full rounded-2xl bg-muted/40"
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 function TeamFlagImage({
