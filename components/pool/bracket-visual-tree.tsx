@@ -254,11 +254,10 @@ function R32MatchupBlock({
   return (
     <div className="flex w-full flex-col">
       <p
-        className="mb-1 text-center font-mono text-[9px] leading-tight text-[#64748b] min-[1100px]:text-[10px]"
+        className="mb-1 px-0.5 text-center text-[8px] leading-snug text-balance break-words text-[#64748b] sm:text-[9px] min-[1100px]:text-[10px]"
         title={readableLabel}
       >
-        <span className="min-[1100px]:hidden">{matchup.label}</span>
-        <span className="hidden min-[1100px]:inline">{readableLabel}</span>
+        {readableLabel}
       </p>
       <R32TeamSlot
         slotRef={registerSlotRef(homeTarget)}

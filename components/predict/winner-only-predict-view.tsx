@@ -36,6 +36,9 @@ import {
 } from '@/src/lib/world-cup-groups'
 import { cn } from '@/lib/utils'
 
+const TOTAL_GROUPS = 12
+const REQUIRED_THIRD_PLACE_PICKS = 8
+
 type Pool = {
   id: string
   name: string
@@ -197,6 +200,17 @@ export function WinnerOnlyPredictView({
     () => countCompleteGroups(groupRankings, groups),
     [groupRankings, groups],
   )
+
+  const thirdPlacePickedCount = Math.min(
+    thirdPlaceRankings.length,
+    REQUIRED_THIRD_PLACE_PICKS,
+  )
+
+  const groupsRankingComplete = predictedGroupCount >= TOTAL_GROUPS
+  const thirdPlacePickingComplete =
+    thirdPlaceRankings.length >= REQUIRED_THIRD_PLACE_PICKS
+  const predictionsFullyComplete =
+    groupsRankingComplete && thirdPlacePickingComplete
 
   const unsavedGroupCount = useMemo(() => {
     let count = groups.filter((group) => {
@@ -382,12 +396,20 @@ export function WinnerOnlyPredictView({
             <ScoringModeBadge scoringStyle={pool.scoring_style} />
           </div>
 
-          <ProgressHeader
-            current={predictedGroupCount}
-            total={12}
-            label="Groups ranked"
-            labelFirst
-          />
+          <div className="space-y-3">
+            <ProgressHeader
+              current={predictedGroupCount}
+              total={TOTAL_GROUPS}
+              label="Groups ranked"
+              labelFirst
+            />
+            <ProgressHeader
+              current={thirdPlacePickedCount}
+              total={REQUIRED_THIRD_PLACE_PICKS}
+              label="Best 3rd-place teams"
+              labelFirst
+            />
+          </div>
 
           <WinnerOnlyRoundTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
@@ -454,6 +476,7 @@ export function WinnerOnlyPredictView({
           unsavedCount={unsavedGroupCount}
           saving={saving}
           success={saveSuccess}
+          complete={predictionsFullyComplete}
           disabled={unsavedGroupCount === 0}
           onSave={handleSave}
         />

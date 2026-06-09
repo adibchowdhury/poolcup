@@ -116,7 +116,7 @@ export function ThirdPlaceRankingPanel({
   onThirdPlaceTeamTap,
 }: ThirdPlaceRankingPanelProps) {
   const slots = getThirdPlaceSlots(groupRankings)
-  const rankedCount = thirdPlaceRankings.length
+  const pickedCount = Math.min(thirdPlaceRankings.length, 8)
 
   return (
     <div className="relative z-[1] flex min-w-0 flex-1 flex-col self-stretch">
@@ -124,7 +124,7 @@ export function ThirdPlaceRankingPanel({
         3rd Place Teams
       </p>
       <p className="mb-1 text-right font-mono text-[10px] text-[#64748b]">
-        3rd-place teams ranked: {rankedCount}/12
+        {pickedCount}/8 picked
       </p>
       <div className="relative z-[1] w-full rounded border border-[#1e293b]">
         {slots.map((slot) => {

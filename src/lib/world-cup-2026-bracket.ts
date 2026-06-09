@@ -154,15 +154,15 @@ export function parseGroupPositionLabel(
   return { group, rank }
 }
 
-/** Human-readable slot code, e.g. 2A → "2nd A", 3rd → "3rd". */
+/** Human-readable slot code, e.g. 2A → "Group A 2nd Place", 3rd → "Best 3rd Place". */
 export function formatR32PositionCode(code: string): string {
-  if (code === '3rd') return '3rd'
+  if (code === '3rd') return 'Best 3rd Place'
   const parsed = parseGroupPositionLabel(code)
   if (!parsed) return code
-  return `${rankOrdinal(parsed.rank)} ${parsed.group}`
+  return `Group ${parsed.group} ${rankOrdinal(parsed.rank)} Place`
 }
 
-/** Human-readable matchup label, e.g. "2nd A vs 2nd B". */
+/** Human-readable matchup label, e.g. "Group A 2nd Place vs Group B 2nd Place". */
 export function formatR32MatchupLabel(matchup: R32MatchupDef): string {
   return `${formatR32PositionCode(matchup.home)} vs ${formatR32PositionCode(matchup.away)}`
 }
