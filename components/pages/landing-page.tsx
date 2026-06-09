@@ -44,11 +44,6 @@ function getHeroDaysStat(mounted: boolean, nowMs: number) {
   return { value: String(daysRemaining), accent: false }
 }
 
-const scoringStyles = [
-  { id: "winner", label: "Winner Only" },
-  { id: "classic", label: "Score Predictor" },
-]
-
 const matchesData = [
   { id: 1, team1: "Mexico", flag1: "🇲🇽", team2: "S.Africa", flag2: "🇿🇦", score1: "2", score2: "1", completed: true },
   { id: 2, team1: "Brazil", flag1: "🇧🇷", team2: "Argentina", flag2: "🇦🇷", score1: "", score2: "", completed: false },
@@ -61,15 +56,7 @@ const leaderboardData = [
   { rank: 6, name: "Priya", points: 91, correct: "15/32", change: 0 },
 ]
 
-const joinMembers = [
-  { name: "Jordan", role: "Creator", initial: "J" },
-  { name: "Sarah", initial: "S" },
-  { name: "Mike", initial: "M" },
-  { name: "Alex", initial: "A", isNew: true },
-]
-
 export default function LandingPage() {
-  const [selectedStyle, setSelectedStyle] = useState("classic")
   const [isVisible, setIsVisible] = useState(false)
   const { mounted, nowMs } = useClientNow(null)
 
@@ -288,189 +275,6 @@ export default function LandingPage() {
       </section>
 
       <SportsSection />
-
-      {/* ===== CREATE YOUR POOL ===== */}
-      <section className="py-24 md:py-32 bg-[#0d1520]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* UI Preview - Left */}
-            <div className="bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 md:p-8">
-              <div className="max-w-sm mx-auto">
-                {/* Pool Name */}
-                <div className="mb-5">
-                  <label className="block text-[#5a7080] text-xs uppercase tracking-wider mb-2">Pool Name</label>
-                  <input
-                    type="text"
-                    defaultValue="Marketing Team WC 2026"
-                    readOnly
-                    className="w-full bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-lg px-4 py-3 text-[#f0f4f8] focus:outline-none"
-                  />
-                </div>
-
-                {/* Scoring Style */}
-                <div className="mb-5">
-                  <label className="block text-[#5a7080] text-xs uppercase tracking-wider mb-2">Scoring Style</label>
-                  <div className="flex gap-2">
-                    {scoringStyles.map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() => setSelectedStyle(style.id)}
-                        className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                          selectedStyle === style.id
-                            ? "border-2 border-[#00e676] text-[#00e676] bg-[#00e676]/5"
-                            : "border border-[rgba(255,255,255,0.08)] text-[#5a7080] hover:text-[#f0f4f8]"
-                        }`}
-                      >
-                        {style.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* CTA Button */}
-                <Link href="/login" className="w-full bg-[#00e676] text-[#080b0f] py-4 rounded-lg font-semibold text-base hover:bg-[#00e676]/90 transition-all flex items-center justify-center gap-2">
-                  Create Pool
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
-
-            {/* Text - Right */}
-            <div>
-              <h3 className="font-display text-3xl md:text-4xl text-[#f0f4f8] mb-4">Create your pool in 60 seconds</h3>
-              <p className="text-[#5a7080] text-lg leading-relaxed mb-8">
-                Name it, choose a scoring style, and get a private invite link instantly — no complicated setup, no recurring fees.
-              </p>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Free to create
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Instant invite link
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Full 104-match tournament
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Unlimited members
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== INVITE YOUR SQUAD ===== */}
-      <section className="relative py-24 md:py-32 bg-[#080b0f]">
-        <div
-          className="pointer-events-none absolute z-[1] hidden md:block md:top-[48%] md:left-[max(1.5rem,calc((100%-80rem)/2+0.25rem))] lg:top-[11rem] lg:left-[max(1.5rem,calc((100%-80rem)/2+0.25rem))]"
-          aria-hidden
-        >
-          <div className="animate-float">
-            <Image
-              src="/paper_plane.png"
-              alt=""
-              width={120}
-              height={78}
-              className="h-auto w-[120px]"
-            />
-          </div>
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Text - Left */}
-            <div className="order-2 lg:order-1">
-              <h3 className="font-display text-3xl md:text-4xl text-[#f0f4f8] mb-4">Share a link. That&apos;s it.</h3>
-              <p className="text-[#5a7080] text-lg leading-relaxed mb-8">
-                Your friends, coworkers, or Discord server just click the link and enter their name. No account required. No app to download. They&apos;re in within 10 seconds.
-              </p>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  No sign-up for members
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Works on any phone
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Join from anywhere
-                </li>
-              </ul>
-            </div>
-
-            {/* UI Preview - Right */}
-            <div className="order-1 lg:order-2 bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">
-              {/* Pool Banner */}
-              <div className="bg-gradient-to-r from-[#00e676]/20 to-[#00e676]/5 p-6 border-b border-[rgba(255,255,255,0.08)]">
-                <div className="font-display text-2xl text-[#f0f4f8] tracking-wide">MARKETING TEAM WC 2026</div>
-                <div className="text-[#5a7080] text-sm mt-1">4 members · Created by Jordan</div>
-              </div>
-              
-              <div className="p-6">
-                {/* Name Input */}
-                <div className="mb-4">
-                  <label className="block text-[#5a7080] text-xs uppercase tracking-wider mb-2">Your Name</label>
-                  <input
-                    type="text"
-                    defaultValue="Alex"
-                    readOnly
-                    className="w-full bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-lg px-4 py-3 text-[#f0f4f8] focus:outline-none"
-                  />
-                </div>
-                
-                <button className="w-full bg-[#00e676] text-[#080b0f] py-3 rounded-lg font-semibold mb-6">
-                  Join Pool
-                </button>
-                
-                {/* Member List */}
-                <div className="space-y-2">
-                  {joinMembers.map((member, i) => (
-                    <div 
-                      key={i} 
-                      className={`flex items-center gap-3 p-3 rounded-lg ${
-                        member.isNew ? "bg-[#00e676]/10 border border-[#00e676]/30" : "bg-[#1a2535]"
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                        member.isNew ? "bg-[#00e676] text-[#080b0f]" : "bg-[#0d1520] text-[#f0f4f8]"
-                      }`}>
-                        {member.initial}
-                      </div>
-                      <span className={`font-medium ${member.isNew ? "text-[#00e676]" : "text-[#f0f4f8]"}`}>
-                        {member.name}
-                      </span>
-                      {member.role && <span className="text-[#5a7080] text-xs ml-auto">{member.role}</span>}
-                      {member.isNew && <span className="text-[#00e676] text-xs ml-auto">Just joined!</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ===== PREDICT EVERY MATCH ===== */}
       <section className="py-24 md:py-32 bg-[#0d1520]">
