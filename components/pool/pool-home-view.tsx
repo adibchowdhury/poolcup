@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leaderboard-row'
+import { LeaderboardPodium } from '@/components/pool/leaderboard-podium'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import {
@@ -99,8 +100,9 @@ export function PoolHomeView({
 
   const yourRank = members.findIndex((m) => m.isYou) + 1
   const yourData = members.find((m) => m.isYou)
-  const showRankChange = pool.matchesPlayed > 0
-  const showPreMatchLeaderboardNote = pool.matchesPlayed === 0 && members.length > 0
+  const hasResults = pool.matchesPlayed > 0
+  const showPreMatchLeaderboardNote = !hasResults && members.length > 0
+  const leaderboardTableMembers = hasResults ? members.slice(3) : members
 
   return (
     <div className="min-h-screen bg-background">
@@ -302,21 +304,29 @@ export function PoolHomeView({
                         </div>
                       ) : (
                         <>
-                          <div className="space-y-2">
-                            {members.map((member, index) => (
-                              <LeaderboardRow
-                                key={member.id}
-                                member={member}
-                                rank={index + 1}
-                                isTop3={
-                                  pool.matchesPlayed > 0 && members.length > 2
-                                }
-                                showRankChange={showRankChange}
-                              />
-                            ))}
+                          <LeaderboardPodium
+                            members={members}
+                            hasResults={hasResults}
+                          />
+
+                          <div className="mt-2 space-y-2 border-t border-border px-2 pb-2 pt-4">
+                            {leaderboardTableMembers.length > 0 ? (
+                              leaderboardTableMembers.map((member, index) => (
+                                <LeaderboardRow
+                                  key={member.id}
+                                  member={member}
+                                  rank={hasResults ? index + 4 : index + 1}
+                                />
+                              ))
+                            ) : (
+                              <p className="py-6 text-center text-sm text-muted-foreground/50">
+                                No other players yet
+                              </p>
+                            )}
                           </div>
+
                           {showPreMatchLeaderboardNote && (
-                            <p className="mt-4 text-center text-sm text-muted-foreground">
+                            <p className="mt-4 px-2 pb-2 text-center text-sm text-muted-foreground">
                               Scores will update automatically after each match.
                             </p>
                           )}
