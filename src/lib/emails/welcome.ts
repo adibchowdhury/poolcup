@@ -1,6 +1,9 @@
 import { Resend } from 'resend'
 import { TRANSACTIONAL_EMAIL_FROM } from '@/src/lib/emails/from'
 
+const POOLCUP_EMAIL_LOGO_URL = 'https://www.getpoolcup.com/poolcup-logo.png'
+const POOLCUP_EMAIL_LOGO_WIDTH = 160
+
 type SendWelcomeEmailParams = {
   email: string
   firstName: string
@@ -32,7 +35,12 @@ function buildWelcomeEmailHtml(firstName: string): string {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <span style="font-size:28px;font-weight:700;letter-spacing:0.12em;color:#00e676;">POOLCUP</span>
+              <img
+                src="${POOLCUP_EMAIL_LOGO_URL}"
+                alt="PoolCup"
+                width="${POOLCUP_EMAIL_LOGO_WIDTH}"
+                style="display:block;width:${POOLCUP_EMAIL_LOGO_WIDTH}px;max-width:${POOLCUP_EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;"
+              />
             </td>
           </tr>
           <tr>
