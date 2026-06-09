@@ -9,6 +9,12 @@ import {
   Trophy,
   Twitter,
 } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 
 type FooterLink =
   | { label: string; href: string; external?: boolean }
@@ -139,7 +145,48 @@ export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps
             </button>
           </div>
 
-          <div>
+          <div className="md:hidden">
+            <Accordion type="multiple" className="w-full">
+              <AccordionItem
+                value="site-map"
+                className="border-[rgba(255,255,255,0.08)]"
+              >
+                <AccordionTrigger className="font-footer-heading py-3 text-[#f0f4f8] hover:no-underline [&>svg]:text-[#5a7080]">
+                  Site Map
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-3">
+                    {siteMap.map((item) => (
+                      <li key={item.label}>
+                        <FooterLinkItem item={item} />
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem
+                value="legal"
+                className="border-[rgba(255,255,255,0.08)]"
+              >
+                <AccordionTrigger className="font-footer-heading py-3 text-[#f0f4f8] hover:no-underline [&>svg]:text-[#5a7080]">
+                  Legal &amp; Privacy
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-3">
+                    {legal.map((item) => (
+                      <li key={item.label}>
+                        <Link href={item.href} className={linkClassName}>
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+
+          <div className="hidden md:block">
             <h3 className="font-footer-heading text-[#f0f4f8]">Site Map</h3>
             <ul className="mt-5 space-y-3">
               {siteMap.map((item) => (
@@ -150,7 +197,7 @@ export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps
             </ul>
           </div>
 
-          <div>
+          <div className="hidden md:block">
             <h3 className="font-footer-heading text-[#f0f4f8]">
               Legal &amp; Privacy
             </h3>
