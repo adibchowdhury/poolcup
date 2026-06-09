@@ -7,6 +7,7 @@ import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { SportsSection } from "@/components/landing/sports-section"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
+import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
@@ -230,46 +231,57 @@ export default function LandingPage() {
         </main>
       </section>
 
-      {/* ===== SECTION 2: HOW IT WORKS (quick 3 steps) ===== */}
-      <section id="how-it-works" className="py-24 md:py-32 bg-[#0d1520]">
+      {/* ===== SECTION 2: HOW IT WORKS ===== */}
+      <section id="how-it-works" className="py-16 md:py-20 bg-[#0d1520]">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="font-display text-4xl md:text-5xl text-[#f0f4f8] text-center mb-16">HOW IT WORKS</h2>
-          
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-            {/* Step 1 */}
+          <div className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-10 lg:gap-12">
             <div className="text-center md:text-left">
-              <div className="font-display text-6xl md:text-7xl text-[#00e676] mb-4">01</div>
-              <div className="w-14 h-14 rounded-2xl bg-[#00e676]/10 flex items-center justify-center mb-4 mx-auto md:mx-0">
-                <svg className="w-7 h-7 text-[#00e676]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">CREATE YOUR POOL</h3>
-              <p className="text-muted-on-section leading-relaxed">Name your pool, pick a scoring style, and get a shareable invite link in seconds.</p>
+              <h2 className="font-display text-5xl md:text-6xl text-[#f0f4f8]">
+                HOW IT WORKS
+              </h2>
+              <p className="mt-3 text-base text-[#728d9c] leading-relaxed md:text-xl">
+                Spin up a pool in three steps. Try it right here.
+              </p>
+              <ol className="mt-6 space-y-4 text-left">
+                {[
+                  {
+                    title: 'Create your pool',
+                    description:
+                      'Name your pool, pick a scoring style, and get a shareable invite link in seconds.',
+                  },
+                  {
+                    title: 'Invite your squad',
+                    description:
+                      'Share the link. Friends join free — no account, no app download needed.',
+                  },
+                  {
+                    title: 'Predict and compete',
+                    description:
+                      'Everyone predicts match scores. The app tracks points and updates the leaderboard automatically.',
+                  },
+                ].map((item, index) => (
+                  <li key={item.title} className="flex gap-4">
+                    <span
+                      className="font-display shrink-0 text-3xl leading-none tracking-[0.1em] text-[#00e676]"
+                      aria-hidden
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div>
+                      <h3 className="font-display text-2xl tracking-[0.06em] text-[#f0f4f8]">
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-base text-[#728d9c] leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
             </div>
 
-            {/* Step 2 */}
-            <div className="text-center md:text-left">
-              <div className="font-display text-6xl md:text-7xl text-[#00e676] mb-4">02</div>
-              <div className="w-14 h-14 rounded-2xl bg-[#00e676]/10 flex items-center justify-center mb-4 mx-auto md:mx-0">
-                <svg className="w-7 h-7 text-[#00e676]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">INVITE YOUR SQUAD</h3>
-              <p className="text-muted-on-section leading-relaxed">Share the link. Friends join free — no account, no app download needed.</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="text-center md:text-left">
-              <div className="font-display text-6xl md:text-7xl text-[#00e676] mb-4">03</div>
-              <div className="w-14 h-14 rounded-2xl bg-[#00e676]/10 flex items-center justify-center mb-4 mx-auto md:mx-0">
-                <svg className="w-7 h-7 text-[#00e676]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="font-display text-2xl text-[#f0f4f8] mb-2">PREDICT & COMPETE</h3>
-              <p className="text-muted-on-section leading-relaxed">Everyone predicts match scores. The app tracks points and updates the leaderboard automatically.</p>
+            <div className="w-full max-w-lg mx-auto md:mx-0 md:ml-auto">
+              <HowItWorksDemo />
             </div>
           </div>
         </div>
