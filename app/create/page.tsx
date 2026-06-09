@@ -25,7 +25,7 @@ const SPORTS: {
   imageSrc: string
   available: boolean
 }[] = [
-  { id: 'soccer', label: 'Soccer', imageSrc: '/sports/soccer.png', available: true },
+  { id: 'soccer', label: 'Soccer/Fútbol', imageSrc: '/sports/soccer.png', available: true },
   {
     id: 'basketball',
     label: 'Basketball',

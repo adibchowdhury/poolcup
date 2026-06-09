@@ -71,7 +71,11 @@ function FooterLinkItem({ item }: { item: FooterLink }) {
   )
 }
 
-export function SiteFooter() {
+type SiteFooterProps = {
+  backgroundClass?: string
+}
+
+export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps) {
   const year = new Date().getFullYear()
 
   const scrollToTop = () => {
@@ -80,7 +84,7 @@ export function SiteFooter() {
   }
 
   return (
-    <footer className="bg-[#0d1520] font-sans text-[#f0f4f8]">
+    <footer className={`${backgroundClass} font-sans text-[#f0f4f8]`}>
       <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#111a27]">
         <div className="mx-auto grid max-w-6xl gap-12 px-5 py-14 sm:py-16 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>

@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
-import { SportsSection } from "@/components/landing/sports-section"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
@@ -239,7 +238,7 @@ export default function LandingPage() {
                   {
                     title: 'Invite your squad',
                     description:
-                      'Share the link. Friends join free — no account, no app download needed.',
+                      'Share the link. Friends sign up free in seconds, no app to download.',
                   },
                   {
                     title: 'Predict and compete',
@@ -274,10 +273,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <SportsSection />
-
       {/* ===== PREDICT EVERY MATCH ===== */}
-      <section className="py-24 md:py-32 bg-[#0d1520]">
+      <section className="py-24 md:py-32 bg-[#080b0f]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* UI Preview - Left */}
@@ -381,7 +378,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== LIVE LEADERBOARD ===== */}
-      <section className="py-24 md:py-32 bg-[#080b0f]">
+      <section className="py-24 md:py-32 bg-[#0d1520]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Text - Left */}
@@ -487,7 +484,7 @@ export default function LandingPage() {
       <FeatureTabsSection />
 
       {/* ===== FINAL CTA ===== */}
-      <section id="cta" className="relative overflow-hidden bg-[#080b0f] py-24 md:py-32">
+      <section id="cta" className="relative overflow-hidden bg-[#0d1520] py-24 md:py-32">
         {/* Background glow */}
         <div 
           className="absolute inset-0 pointer-events-none"
@@ -520,7 +517,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter backgroundClass="bg-[#080b0f]" />
     </div>
   )
 }

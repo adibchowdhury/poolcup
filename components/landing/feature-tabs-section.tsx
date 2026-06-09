@@ -341,7 +341,7 @@ export function FeatureTabsSection() {
   return (
     <section
       id="features"
-      className="bg-[#0d1520] py-20 sm:py-24"
+      className="bg-[#080b0f] py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-5 md:px-6">
         <div className="mx-auto max-w-6xl text-center">

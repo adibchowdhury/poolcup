@@ -225,7 +225,7 @@ export function HowItWorksDemo() {
             <div className={STEP_CONTENT_CLASS}>
               <h3 className={STEP_TITLE_CLASS}>Create your pool</h3>
               <p className="mt-1.5 text-sm text-[#728d9c]">
-                Review and create — this is a preview, no account needed.
+                Review and create. This is a preview, no account needed.
               </p>
               <dl className="mt-4 space-y-2 rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-2.5 text-sm">
                 <div className="flex justify-between gap-4">
