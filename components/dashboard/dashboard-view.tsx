@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   BookOpen,
   Calendar,
+  Pencil,
   Plus,
   Settings,
   Sparkles,
@@ -102,11 +103,14 @@ function DashboardViewContent({
   errorMessage,
 }: DashboardViewProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [fullName, setFullName] = useState(displayName ?? '')
   const [headerName, setHeaderName] = useState(displayName ?? '')
   const [newEmail, setNewEmail] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
-  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [editProfileMessage, setEditProfileMessage] = useState<string | null>(null)
+  const [accountMessage, setAccountMessage] = useState<string | null>(null)
+  const [accountSaving, setAccountSaving] = useState(false)
   const [selectedAvatar, setSelectedAvatar] = useState(() =>
     resolveAvatarFilename(avatar),
   )
@@ -247,9 +251,13 @@ function DashboardViewContent({
     void prefetchUpcomingMatches()
   }, [])
 
-  const canSaveProfile = useMemo(() => {
-    return Boolean(fullName.trim()) || Boolean(newEmail.trim())
-  }, [fullName, newEmail])
+  const canSaveDisplayName = useMemo(() => {
+    return Boolean(fullName.trim())
+  }, [fullName])
+
+  const canSaveEmail = useMemo(() => {
+    return Boolean(newEmail.trim())
+  }, [newEmail])
 
   async function handleSelectAvatar(filename: string) {
     if (filename === selectedAvatar || avatarSaving) return
@@ -270,9 +278,9 @@ function DashboardViewContent({
     }
   }
 
-  async function handleSaveProfile() {
+  async function handleSaveDisplayName() {
     setProfileSaving(true)
-    setProfileMessage(null)
+    setEditProfileMessage(null)
     try {
       if (fullName.trim()) {
         const trimmed = fullName.trim()
@@ -284,18 +292,36 @@ function DashboardViewContent({
         setHeaderName(trimmed)
       }
 
+      setEditProfileMessage('Saved.')
+    } catch (e: any) {
+      setEditProfileMessage(e?.message ?? 'Failed to save profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  async function handleSaveEmail() {
+    setAccountSaving(true)
+    setAccountMessage(null)
+    try {
       if (newEmail.trim()) {
         const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
         if (error) throw error
         setNewEmail('')
       }
 
-      setProfileMessage('Saved. Some email changes may require confirmation.')
+      setAccountMessage('Saved. Some email changes may require confirmation.')
     } catch (e: any) {
-      setProfileMessage(e?.message ?? 'Failed to save profile')
+      setAccountMessage(e?.message ?? 'Failed to update email')
     } finally {
-      setProfileSaving(false)
+      setAccountSaving(false)
     }
+  }
+
+  function openEditProfile() {
+    setFullName(headerName)
+    setEditProfileMessage(null)
+    setEditProfileOpen(true)
   }
 
   async function handleUpdatePassword() {
@@ -396,28 +422,17 @@ function DashboardViewContent({
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <h3 className="font-display text-xl tracking-wide">
-                          Profile &amp; account
+                          Account email
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          Your name appears in the app. Email is used to sign in.
+                          Your email is used to sign in.
                         </p>
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="settings-full-name">Full name</Label>
-                          <Input
-                            id="settings-full-name"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="John Doe"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Account email</Label>
-                          <div className="h-9 w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                            {email}
-                          </div>
+                      <div className="space-y-2">
+                        <Label>Current email</Label>
+                        <div className="h-9 w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                          {email}
                         </div>
                       </div>
 
@@ -438,65 +453,18 @@ function DashboardViewContent({
                       </div>
 
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        {profileMessage ? (
-                          <p className="text-sm text-muted-foreground">{profileMessage}</p>
+                        {accountMessage ? (
+                          <p className="text-sm text-muted-foreground">{accountMessage}</p>
                         ) : (
                           <span />
                         )}
                         <Button
                           type="button"
-                          onClick={handleSaveProfile}
-                          disabled={profileSaving || !canSaveProfile}
+                          onClick={handleSaveEmail}
+                          disabled={accountSaving || !canSaveEmail}
                         >
-                          {profileSaving ? 'Saving…' : 'Save profile'}
+                          {accountSaving ? 'Saving…' : 'Update email'}
                         </Button>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <h3 className="font-display text-xl tracking-wide">
-                          Choose Your Avatar
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Pick a character for your profile. Changes save instantly.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-                        {availableAvatars.map((filename) => {
-                          const isSelected = selectedAvatar === filename
-                          const isSaving = avatarSaving === filename
-                          const avatarLabel = filename.replace(/\.[^.]+$/, '')
-
-                          return (
-                            <button
-                              key={filename}
-                              type="button"
-                              onClick={() => void handleSelectAvatar(filename)}
-                              disabled={Boolean(avatarSaving)}
-                              aria-pressed={isSelected}
-                              aria-label={`Select ${avatarLabel} avatar`}
-                              className={cn(
-                                'rounded-lg border-2 bg-muted/20 p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                                isSelected
-                                  ? 'border-primary ring-2 ring-primary/40'
-                                  : 'border-border hover:border-muted-foreground/50',
-                              )}
-                            >
-                              <Image
-                                src={getAvatarSrc(filename)}
-                                alt=""
-                                width={80}
-                                height={80}
-                                className="mx-auto h-20 w-20 object-contain"
-                              />
-                              {isSaving && (
-                                <span className="sr-only">Saving…</span>
-                              )}
-                            </button>
-                          )
-                        })}
                       </div>
 
                       <Separator />
@@ -633,8 +601,103 @@ function DashboardViewContent({
                       <p className="mt-1 text-lg text-muted-foreground sm:text-xl">
                         Level {playerLevel.level}
                       </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 gap-2"
+                        onClick={openEditProfile}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit profile
+                      </Button>
                     </div>
                   </div>
+
+                  <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Edit profile</DialogTitle>
+                        <DialogDescription>
+                          Update how you appear in pools and on your profile.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-profile-full-name">Display name</Label>
+                          <Input
+                            id="edit-profile-full-name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="John Doe"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <h3 className="font-display text-xl tracking-wide">
+                            Choose Your Avatar
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Pick a character for your profile. Changes save instantly.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+                          {availableAvatars.map((filename) => {
+                            const isSelected = selectedAvatar === filename
+                            const isSaving = avatarSaving === filename
+                            const avatarLabel = filename.replace(/\.[^.]+$/, '')
+
+                            return (
+                              <button
+                                key={filename}
+                                type="button"
+                                onClick={() => void handleSelectAvatar(filename)}
+                                disabled={Boolean(avatarSaving)}
+                                aria-pressed={isSelected}
+                                aria-label={`Select ${avatarLabel} avatar`}
+                                className={cn(
+                                  'rounded-lg border-2 bg-muted/20 p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                  isSelected
+                                    ? 'border-primary ring-2 ring-primary/40'
+                                    : 'border-border hover:border-muted-foreground/50',
+                                )}
+                              >
+                                <Image
+                                  src={getAvatarSrc(filename)}
+                                  alt=""
+                                  width={80}
+                                  height={80}
+                                  className="mx-auto h-20 w-20 object-contain"
+                                />
+                                {isSaving && (
+                                  <span className="sr-only">Saving…</span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          {editProfileMessage ? (
+                            <p className="text-sm text-muted-foreground">
+                              {editProfileMessage}
+                            </p>
+                          ) : (
+                            <span />
+                          )}
+                          <Button
+                            type="button"
+                            onClick={handleSaveDisplayName}
+                            disabled={profileSaving || !canSaveDisplayName}
+                          >
+                            {profileSaving ? 'Saving…' : 'Save name'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
                   <div className="flex h-full min-h-0 flex-col items-start justify-center gap-12 py-4 sm:gap-14 lg:min-h-0 lg:gap-16 lg:py-0 lg:pl-4">
                     {quickStatItems.map((stat) => (
