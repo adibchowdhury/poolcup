@@ -47,7 +47,8 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnimatedNumber } from '@/hooks/use-animated-number'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 export type DashboardQuickStats = {
   totalPoints: number
@@ -65,12 +66,33 @@ interface DashboardViewProps {
   errorMessage?: string | null
 }
 
+const DEFAULT_DASHBOARD_TAB = 'pools'
+
+const DASHBOARD_TAB_PARAM_TO_VALUE: Record<string, string> = {
+  profile: 'profile',
+  pools: 'pools',
+  upcoming: 'games',
+  'how-it-works': 'how-it-works',
+}
+
+const DASHBOARD_TAB_VALUE_TO_PARAM: Record<string, string> = {
+  profile: 'profile',
+  pools: 'pools',
+  games: 'upcoming',
+  'how-it-works': 'how-it-works',
+}
+
+function dashboardTabFromParam(tabParam: string | null): string {
+  if (!tabParam) return DEFAULT_DASHBOARD_TAB
+  return DASHBOARD_TAB_PARAM_TO_VALUE[tabParam] ?? DEFAULT_DASHBOARD_TAB
+}
+
 function AnimatedTotalPointsDisplay({ target }: { target: number }) {
   const displayed = useAnimatedNumber(target)
   return <>{displayed.toLocaleString()}</>
 }
 
-export function DashboardView({
+function DashboardViewContent({
   userId,
   email,
   displayName,
@@ -97,8 +119,16 @@ export function DashboardView({
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
-  const [activeTab, setActiveTab] = useState('pools')
   const [pointsAnimKey, setPointsAnimKey] = useState(0)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() =>
+    dashboardTabFromParam(searchParams.get('tab')),
+  )
+
+  useEffect(() => {
+    setActiveTab(dashboardTabFromParam(searchParams.get('tab')))
+  }, [searchParams])
 
   const refreshUserPoints = useCallback(async () => {
     const { data, error } = await supabase
@@ -117,13 +147,21 @@ export function DashboardView({
     }
   }, [userId])
 
-  function handleTabChange(value: string) {
-    setActiveTab(value)
-    if (value === 'profile') {
-      setPointsAnimKey((k) => k + 1)
-      void refreshUserPoints()
-    }
-  }
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value)
+
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('tab', DASHBOARD_TAB_VALUE_TO_PARAM[value] ?? DEFAULT_DASHBOARD_TAB)
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false })
+
+      if (value === 'profile') {
+        setPointsAnimKey((k) => k + 1)
+        void refreshUserPoints()
+      }
+    },
+    [router, searchParams, refreshUserPoints],
+  )
 
   useEffect(() => {
     async function loadAvatars() {
@@ -678,5 +716,13 @@ export function DashboardView({
         </main>
       </div>
     </div>
+  )
+}
+
+export function DashboardView(props: DashboardViewProps) {
+  return (
+    <Suspense fallback={null}>
+      <DashboardViewContent {...props} />
+    </Suspense>
   )
 }
