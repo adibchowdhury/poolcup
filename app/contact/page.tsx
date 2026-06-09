@@ -59,8 +59,8 @@ export default function ContactPage() {
               Get in <span className="text-primary">Touch</span>
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Questions about your pool, predictions, or billing? We&apos;re real people
-              and we&apos;d love to hear from you.
+              Questions about your pool or predictions? We&apos;re real people and
+              we&apos;d love to hear from you.
             </p>
           </div>
 

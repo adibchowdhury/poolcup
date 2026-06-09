@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Contact Support — PoolCup',
   description:
-    'Questions about PoolCup prediction pools? Reach out to our team for help with your account, pools, or billing.',
+    'Questions about PoolCup prediction pools? Reach out to our team for help with your account or pools.',
   openGraph: {
     title: 'Contact Support — PoolCup',
     description: 'Questions about PoolCup? We would love to hear from you.',
