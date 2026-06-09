@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { GroupStandingCard } from '@/components/predict/group-standing-card'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { ProgressHeader } from '@/components/predict/progress-header'
@@ -447,27 +446,10 @@ export function WinnerOnlyPredictView({
               />
             </div>
           )
-        ) : lockedRoundTab ? (
+        ) : (
           <p className="py-8 text-center text-sm text-muted-foreground">
             {WINNER_ONLY_LOCKED_ROUND_MESSAGE}
           </p>
-        ) : matchesLoading || !predictionsLoaded ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Loading groups…
-          </p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {groups.map((group) => (
-              <GroupStandingCard
-                key={group.letter}
-                groupLetter={group.letter}
-                teams={group.teams}
-                standings={groupRankings[group.letter] ?? []}
-                onTeamTap={(teamName) => handleTeamTap(group.letter, teamName)}
-                onClear={() => handleClearGroup(group.letter)}
-              />
-            ))}
-          </div>
         )}
       </main>
 
