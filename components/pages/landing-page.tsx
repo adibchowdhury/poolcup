@@ -69,7 +69,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="bg-[#080b0f]">
+    <div className="overflow-x-hidden bg-[#080b0f]">
       {/* ===== SECTION 1: HERO ===== */}
       <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
         <div
@@ -105,7 +105,7 @@ export default function LandingPage() {
           <div className="text-center">
             <p
               className={cn(
-                'mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white md:mb-6',
+                'mb-4 text-balance text-xs font-semibold uppercase tracking-[0.14em] text-white md:mb-6 md:tracking-[0.2em]',
                 heroReveal(isVisible),
               )}
               style={{ transitionDelay: '0ms' }}
@@ -294,13 +294,13 @@ export default function LandingPage() {
                     key={match.id}
                     className="bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-xl p-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-1">
-                        <span className="text-xl">{match.flag1}</span>
-                        <span className="text-[#f0f4f8] font-medium text-sm">{match.team1}</span>
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="shrink-0 text-xl">{match.flag1}</span>
+                        <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team1}</span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-2">
                         <div className={`w-12 h-11 rounded-md flex items-center justify-center font-display text-xl ${
                           match.completed
                             ? "bg-[#00e676]/15 border-2 border-[#00e676] text-[#00e676]"
@@ -325,9 +325,9 @@ export default function LandingPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 flex-1 justify-end">
-                        <span className="text-[#f0f4f8] font-medium text-sm">{match.team2}</span>
-                        <span className="text-xl">{match.flag2}</span>
+                      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                        <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team2}</span>
+                        <span className="shrink-0 text-xl">{match.flag2}</span>
                       </div>
                     </div>
                   </div>

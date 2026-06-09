@@ -115,27 +115,25 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           aria-modal="true"
           aria-label="Mobile navigation"
           className={cn(
-            'absolute inset-x-0 top-0 flex min-h-full flex-col items-center bg-[#0d1520] px-6 pb-10 pt-24 transition-transform duration-300 ease-out',
+            'absolute inset-x-0 top-0 box-border flex min-h-full w-full max-w-[100vw] flex-col overflow-x-hidden bg-[#0d1520] px-6 pb-10 pt-[4.5rem] transition-transform duration-300 ease-out',
             menuOpen ? 'translate-y-0' : '-translate-y-full',
           )}
         >
-          <nav className="flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
-            <div className="flex w-full flex-col gap-3">
-              <Link
-                href="/login?next=/create"
-                onClick={closeMenu}
-                className="w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
-              >
-                Create a Pool
-              </Link>
-              <Link
-                href="/login"
-                onClick={closeMenu}
-                className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
-              >
-                Login
-              </Link>
-            </div>
+          <nav className="flex w-full min-w-0 flex-col gap-4">
+            <Link
+              href="/login?next=/create"
+              onClick={closeMenu}
+              className="box-border w-full max-w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
+            >
+              Create a Pool
+            </Link>
+            <Link
+              href="/login"
+              onClick={closeMenu}
+              className="py-1 text-center text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+            >
+              Login
+            </Link>
           </nav>
         </div>
       </div>

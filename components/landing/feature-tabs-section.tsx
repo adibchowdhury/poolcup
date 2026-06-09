@@ -345,7 +345,7 @@ export function FeatureTabsSection() {
     >
       <div className="mx-auto max-w-6xl px-5 md:px-6">
         <div className="mx-auto max-w-6xl text-center">
-          <h2 className="font-display text-3xl tracking-wide text-[#f0f4f8] whitespace-nowrap sm:text-4xl lg:text-5xl">
+          <h2 className="text-balance font-display text-3xl tracking-wide text-[#f0f4f8] sm:text-4xl lg:text-5xl">
             Turn Every World Cup Match Into a Competition
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-[#5a7080]">
