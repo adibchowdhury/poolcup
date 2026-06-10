@@ -63,24 +63,23 @@ export function WinnerOnlyLockedRoundState({
   const { heading, subtext, ctaLabel, ctaTab } = getLockedRoundCopy(roundTab)
 
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-4 py-6 text-center">
+    <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-9 text-center">
       <Image
         src="/under-construction.png"
         alt=""
         width={800}
         height={438}
-        className="mb-5 h-auto w-[260px] sm:w-[364px]"
+        className="mb-8 h-auto w-[390px] sm:w-[546px]"
       />
-      <h2 className="font-display text-xl tracking-wide text-foreground">
+      <h2 className="font-display text-3xl tracking-wide text-foreground">
         {heading}
       </h2>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+      <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
         {subtext}
       </p>
       <Button
         type="button"
-        size="sm"
-        className="mt-5"
+        className="mt-8"
         onClick={() => onGoToTab(ctaTab)}
       >
         {ctaLabel}
