@@ -108,12 +108,20 @@ export async function fetchDashboardPools(
     }
   }
 
+  const classicMemberIds = validMemberships
+    .filter((row) => row.pools!.scoring_style !== 'winner')
+    .map((row) => row.id)
+  const winnerMemberIds = validMemberships
+    .filter((row) => row.pools!.scoring_style === 'winner')
+    .map((row) => row.id)
+
   const predictionsByMember = new Map<string, number>()
-  if (memberIds.length > 0) {
+
+  if (classicMemberIds.length > 0) {
     const { data: predictions } = await supabase
       .from('predictions')
       .select('member_id, match_id')
-      .in('member_id', memberIds)
+      .in('member_id', classicMemberIds)
 
     const distinctByMember = new Map<string, Set<string>>()
     for (const row of predictions ?? []) {
@@ -124,6 +132,20 @@ export async function fetchDashboardPools(
     }
     for (const [memberId, matchIds] of distinctByMember) {
       predictionsByMember.set(memberId, matchIds.size)
+    }
+  }
+
+  if (winnerMemberIds.length > 0) {
+    const { data: groupPredictions } = await supabase
+      .from('group_predictions')
+      .select('member_id')
+      .in('member_id', winnerMemberIds)
+
+    for (const row of groupPredictions ?? []) {
+      predictionsByMember.set(
+        row.member_id,
+        (predictionsByMember.get(row.member_id) ?? 0) + 1,
+      )
     }
   }
 
