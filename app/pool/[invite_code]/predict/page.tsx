@@ -12,9 +12,10 @@ import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
 import { WinnerOnlyPredictView } from '@/components/predict/winner-only-predict-view'
 import {
-  GroupKnockoutTabs,
-  type GroupKnockoutTabId,
+  ClassicRoundTabs,
+  type ClassicRoundTabId,
 } from '@/components/predict/group-knockout-tabs'
+import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
@@ -51,6 +52,15 @@ type ScoreInput = {
   score2: string
 }
 
+const CLASSIC_ROUND_TAB_ORDER: ClassicRoundTabId[] = [
+  'group',
+  'r32',
+  'r16',
+  'qf',
+  'sf',
+  'final',
+]
+
 const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
 
 type KnockoutRoundId = (typeof KNOCKOUT_ROUNDS)[number]
@@ -62,14 +72,6 @@ type MatchGroup = {
   title: string
   subtitle?: string
   matches: Match[]
-}
-
-const KNOCKOUT_SECTION_LABELS: Record<KnockoutRoundId, string> = {
-  r32: 'Round of 32',
-  r16: 'Round of 16',
-  qf: 'Quarter Finals',
-  sf: 'Semi Finals',
-  final: 'Final',
 }
 
 function isKnockoutRound(round: string): round is KnockoutRoundId {
@@ -96,9 +98,58 @@ function isPredicted(
   return entry?.score1 !== '' && entry?.score2 !== ''
 }
 
-function matchInTab(match: Match, tab: GroupKnockoutTabId): boolean {
-  if (tab === 'group') return match.round === 'group'
-  return isKnockoutRound(match.round)
+function matchInTab(match: Match, tab: ClassicRoundTabId): boolean {
+  return match.round === tab
+}
+
+function classicTabEmptyMessage(tab: ClassicRoundTabId): string {
+  const label = TOURNAMENT_ROUND_LABELS[tab]
+  if (tab === 'group') {
+    return 'Group stage fixtures will appear here once they are scheduled.'
+  }
+  if (tab === 'r32') {
+    return `${label} matchups are set once the group stage ends.`
+  }
+  if (tab === 'r16') {
+    return `${label} matchups are set once the Round of 32 ends.`
+  }
+  if (tab === 'qf') {
+    return `${label} matchups are set once the Round of 16 ends.`
+  }
+  if (tab === 'sf') {
+    return `${label} matchups are set once the quarter-finals end.`
+  }
+  return `${label} matchups are set once the semifinals end.`
+}
+
+function resolveDefaultClassicTab(
+  loaded: Match[],
+  initialScores: Record<string, ScoreInput>,
+): ClassicRoundTabId {
+  for (const tab of CLASSIC_ROUND_TAB_ORDER) {
+    if (
+      loaded.some(
+        (m) =>
+          matchInTab(m, tab) &&
+          !isMatchLocked(m.locked_at) &&
+          !isPredicted(m, initialScores),
+      )
+    ) {
+      return tab
+    }
+  }
+
+  if (!loaded.some((m) => isKnockoutRound(m.round))) {
+    return 'group'
+  }
+
+  for (const tab of CLASSIC_ROUND_TAB_ORDER) {
+    if (loaded.some((m) => matchInTab(m, tab))) {
+      return tab
+    }
+  }
+
+  return 'group'
 }
 
 function formatShortDate(iso: string): string {
@@ -152,29 +203,6 @@ function buildGroupStageSections(matches: Match[]): MatchGroup[] {
   return buildMatchdayGroups(matches)
 }
 
-function buildKnockoutSections(matches: Match[]): MatchGroup[] {
-  const sections: MatchGroup[] = []
-
-  for (const round of KNOCKOUT_ROUNDS) {
-    const roundMatches = matches
-      .filter((m) => m.round === round)
-      .sort(
-        (a, b) =>
-          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
-      )
-    if (roundMatches.length === 0) continue
-
-    sections.push({
-      id: round,
-      title: KNOCKOUT_SECTION_LABELS[round].toUpperCase(),
-      subtitle: formatShortDate(roundMatches[0].kickoff_at),
-      matches: roundMatches,
-    })
-  }
-
-  return sections
-}
-
 function toSectionMatch(
   match: Match,
   scores: Record<string, ScoreInput>,
@@ -220,7 +248,7 @@ export default function PredictPage() {
   const [scores, setScores] = useState<Record<string, ScoreInput>>({})
   const [baselineScores, setBaselineScores] = useState<Record<string, ScoreInput>>({})
   const [savedMatchIds, setSavedMatchIds] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<GroupKnockoutTabId>('group')
+  const [activeTab, setActiveTab] = useState<ClassicRoundTabId>('group')
   const [pageLoading, setPageLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [notMember, setNotMember] = useState(false)
@@ -304,23 +332,7 @@ export default function PredictPage() {
     }
 
     const loaded = (matchesData ?? []) as Match[]
-    const defaultTab: GroupKnockoutTabId = loaded.some(
-      (m) =>
-        matchInTab(m, 'group') &&
-        !isMatchLocked(m.locked_at) &&
-        !isPredicted(m, initialScores),
-    )
-      ? 'group'
-      : loaded.some(
-            (m) =>
-              matchInTab(m, 'knockout') &&
-              !isMatchLocked(m.locked_at) &&
-              !isPredicted(m, initialScores),
-          )
-        ? 'knockout'
-        : loaded.some((m) => matchInTab(m, 'group'))
-          ? 'group'
-          : 'knockout'
+    const defaultTab = resolveDefaultClassicTab(loaded, initialScores)
 
     setPool(poolData as Pool)
     setMemberId(memberData.id)
@@ -351,8 +363,16 @@ export default function PredictPage() {
   )
 
   const sections = useMemo(() => {
-    if (activeTab === 'group') return buildGroupStageSections(tabMatches)
-    return buildKnockoutSections(tabMatches)
+    if (activeTab !== 'group') return []
+    return buildGroupStageSections(tabMatches)
+  }, [tabMatches, activeTab])
+
+  const knockoutTabMatches = useMemo(() => {
+    if (activeTab === 'group') return []
+    return [...tabMatches].sort(
+      (a, b) =>
+        new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+    )
   }, [tabMatches, activeTab])
 
   const defaultOpenSectionId = useMemo(() => {
@@ -582,7 +602,7 @@ export default function PredictPage() {
 
           <ProgressHeader current={predictedCount} total={totalMatches || 48} />
 
-          <GroupKnockoutTabs activeId={activeTab} onChange={setActiveTab} />
+          <ClassicRoundTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
       </header>
 
@@ -624,28 +644,53 @@ export default function PredictPage() {
         )}
 
         <div key={activeTab} className="space-y-2">
-          {sections.length === 0 ? (
+          {activeTab === 'group' ? (
+            sections.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {classicTabEmptyMessage('group')}
+              </p>
+            ) : (
+              sections.map((group) => (
+                <MatchSection
+                  key={group.id}
+                  id={group.id}
+                  title={group.title}
+                  subtitle={group.subtitle}
+                  matches={group.matches.map((m) =>
+                    toSectionMatch(m, scores, savedMatchIds),
+                  )}
+                  predictedInSection={
+                    group.matches.filter((m) => isPredicted(m, scores)).length
+                  }
+                  defaultOpen={group.id === defaultOpenSectionId}
+                  onHomeScoreChange={(id, v) => updateScore(id, 'score1', v)}
+                  onAwayScoreChange={(id, v) => updateScore(id, 'score2', v)}
+                />
+              ))
+            )
+          ) : knockoutTabMatches.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No matches in this stage.
+              {classicTabEmptyMessage(activeTab)}
             </p>
           ) : (
-            sections.map((group) => (
-              <MatchSection
-                key={group.id}
-                id={group.id}
-                title={group.title}
-                subtitle={group.subtitle}
-                matches={group.matches.map((m) =>
-                  toSectionMatch(m, scores, savedMatchIds),
-                )}
-                predictedInSection={
-                  group.matches.filter((m) => isPredicted(m, scores)).length
-                }
-                defaultOpen={group.id === defaultOpenSectionId}
-                onHomeScoreChange={(id, v) => updateScore(id, 'score1', v)}
-                onAwayScoreChange={(id, v) => updateScore(id, 'score2', v)}
-              />
-            ))
+            <div className="flex flex-col gap-3">
+              {knockoutTabMatches.map((match) => {
+                const card = toSectionMatch(match, scores, savedMatchIds)
+                return (
+                  <CompactMatchRow
+                    key={match.id}
+                    homeTeam={card.homeTeam}
+                    awayTeam={card.awayTeam}
+                    homeScore={card.homeScore}
+                    awayScore={card.awayScore}
+                    isLocked={card.isLocked}
+                    isPredicted={card.isPredicted}
+                    onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
+                    onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
+                  />
+                )
+              })}
+            </div>
           )}
         </div>
       </main>
