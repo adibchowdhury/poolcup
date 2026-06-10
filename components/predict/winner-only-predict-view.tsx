@@ -15,6 +15,7 @@ import {
   isWinnerOnlyLockedRoundTab,
   type WinnerOnlyRoundTabId,
 } from '@/components/predict/winner-only-round-tabs'
+import { R32BracketScaffold } from '@/components/predict/r32-bracket-scaffold'
 import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
 import { recordWinnerOnlySaveActivity } from '@/src/lib/pool-activity'
@@ -449,7 +450,7 @@ export function WinnerOnlyPredictView({
 
       <main
         className={cn(
-          activeTab === 'bracket'
+          activeTab === 'bracket' || activeTab === 'r32'
             ? 'w-full min-w-0 max-w-full overflow-x-hidden py-4 md:overflow-x-visible'
             : 'mx-auto w-full min-w-0 max-w-3xl space-y-4 overflow-x-hidden px-4 py-4',
         )}
@@ -508,6 +509,8 @@ export function WinnerOnlyPredictView({
               </div>
             </div>
           )
+        ) : activeTab === 'r32' ? (
+          <R32BracketScaffold />
         ) : (
           <WinnerOnlyLockedRoundState
             roundTab={activeTab}
