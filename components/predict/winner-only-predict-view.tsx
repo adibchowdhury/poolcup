@@ -395,20 +395,22 @@ export function WinnerOnlyPredictView({
             <ScoringModeBadge scoringStyle={pool.scoring_style} />
           </div>
 
-          <div className="space-y-3">
-            <ProgressHeader
-              current={predictedGroupCount}
-              total={TOTAL_GROUPS}
-              label="Groups ranked"
-              labelFirst
-            />
-            <ProgressHeader
-              current={thirdPlacePickedCount}
-              total={REQUIRED_THIRD_PLACE_PICKS}
-              label="Best 3rd-place teams"
-              labelFirst
-            />
-          </div>
+          {activeTab === 'bracket' && (
+            <div className="space-y-3">
+              <ProgressHeader
+                current={predictedGroupCount}
+                total={TOTAL_GROUPS}
+                label="Groups ranked"
+                labelFirst
+              />
+              <ProgressHeader
+                current={thirdPlacePickedCount}
+                total={REQUIRED_THIRD_PLACE_PICKS}
+                label="Best 3rd-place teams"
+                labelFirst
+              />
+            </div>
+          )}
 
           <WinnerOnlyRoundTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
