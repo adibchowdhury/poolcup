@@ -10,9 +10,6 @@ export type WinnerOnlyRoundTabId =
   | 'sf'
   | 'final'
 
-export const WINNER_ONLY_LOCKED_ROUND_MESSAGE =
-  'These matches will be available once the previous round is complete.'
-
 export function isWinnerOnlyLockedRoundTab(tab: WinnerOnlyRoundTabId): boolean {
   return tab !== 'bracket'
 }

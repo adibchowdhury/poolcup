@@ -10,10 +10,10 @@ import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
 import {
   WinnerOnlyRoundTabs,
-  WINNER_ONLY_LOCKED_ROUND_MESSAGE,
   isWinnerOnlyLockedRoundTab,
   type WinnerOnlyRoundTabId,
 } from '@/components/predict/winner-only-round-tabs'
+import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
 import {
@@ -447,9 +447,10 @@ export function WinnerOnlyPredictView({
             </div>
           )
         ) : (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {WINNER_ONLY_LOCKED_ROUND_MESSAGE}
-          </p>
+          <WinnerOnlyLockedRoundState
+            roundTab={activeTab}
+            onGoToTab={setActiveTab}
+          />
         )}
       </main>
 
