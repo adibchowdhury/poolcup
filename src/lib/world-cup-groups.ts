@@ -193,8 +193,8 @@ export function rankingsEqual(a: string[], b: string[]): boolean {
   return a.every((team, index) => team === b[index])
 }
 
-/** World Cup 2026 group stage opens June 11, 2026 (UTC). */
-export const GROUP_STAGE_KICKOFF_LOCK = new Date('2026-06-11T00:00:00Z')
+/** First World Cup 2026 group-stage match kickoff (UTC). */
+export const GROUP_STAGE_KICKOFF_LOCK = new Date('2026-06-11T19:00:00Z')
 
 export function isGroupStageLocked(now = Date.now()): boolean {
   return now >= GROUP_STAGE_KICKOFF_LOCK.getTime()

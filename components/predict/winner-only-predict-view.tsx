@@ -242,6 +242,8 @@ export function WinnerOnlyPredictView({
   }, [])
 
   function handleTeamTap(groupLetter: string, teamName: string) {
+    if (groupStageLocked) return
+
     const group = groups.find((g) => g.letter === groupLetter)
     if (!group) return
 
@@ -262,6 +264,8 @@ export function WinnerOnlyPredictView({
   }
 
   function handleClearGroup(groupLetter: string) {
+    if (groupStageLocked) return
+
     setSaveSuccess(false)
     setSuccessMessage(null)
     setGroupRankings((prev) => {
@@ -275,6 +279,8 @@ export function WinnerOnlyPredictView({
   }
 
   function handleThirdPlaceTeamTap(teamName: string) {
+    if (groupStageLocked) return
+
     const available = getAvailableThirdPlaceTeams(groupRankings)
     if (!available.includes(teamName)) return
 
@@ -286,6 +292,12 @@ export function WinnerOnlyPredictView({
   }
 
   async function handleSave() {
+    if (groupStageLocked) {
+      setError('Predictions are locked')
+      window.setTimeout(() => setError(null), 3000)
+      return
+    }
+
     if (unsavedGroupCount === 0) return
 
     setSaving(true)
@@ -477,6 +489,7 @@ export function WinnerOnlyPredictView({
                       groupLetter={group.letter}
                       teams={group.teams}
                       standings={groupRankings[group.letter] ?? []}
+                      readOnly={groupStageLocked}
                       onTeamTap={(teamName) =>
                         handleTeamTap(group.letter, teamName)
                       }
@@ -509,7 +522,7 @@ export function WinnerOnlyPredictView({
           saving={saving}
           success={saveSuccess}
           complete={predictionsFullyComplete}
-          disabled={unsavedGroupCount === 0}
+          disabled={groupStageLocked || unsavedGroupCount === 0}
           onSave={handleSave}
         />
       )}

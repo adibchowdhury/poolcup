@@ -53,6 +53,7 @@ interface GroupStandingCardProps {
   groupLetter: string
   teams: string[]
   standings: string[]
+  readOnly?: boolean
   onTeamTap: (teamName: string) => void
   onClear: () => void
 }
@@ -61,6 +62,7 @@ export function GroupStandingCard({
   groupLetter,
   teams,
   standings,
+  readOnly = false,
   onTeamTap,
   onClear,
 }: GroupStandingCardProps) {
@@ -80,7 +82,7 @@ export function GroupStandingCard({
         <button
           type="button"
           onClick={onClear}
-          disabled={standings.length === 0}
+          disabled={readOnly || standings.length === 0}
           className="shrink-0 rounded px-1 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           Clear
@@ -97,10 +99,12 @@ export function GroupStandingCard({
               <li key={team} className="min-w-0">
                 <button
                   type="button"
+                  disabled={readOnly}
                   onClick={() => onTeamTap(team)}
                   className={cn(
                     'flex w-full min-w-0 max-w-full items-center gap-1 rounded-md border px-1.5 py-1.5 text-left transition-all duration-200',
                     rankStyles(rank),
+                    readOnly && 'cursor-default',
                   )}
                 >
                   <TeamFlagImage countryName={team} />
