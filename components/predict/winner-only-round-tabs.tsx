@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 
 export type WinnerOnlyRoundTabId =
   | 'bracket'
@@ -24,12 +25,12 @@ export function WinnerOnlyRoundTabs({
   onChange,
 }: WinnerOnlyRoundTabsProps) {
   const tabs: { id: WinnerOnlyRoundTabId; label: string }[] = [
-    { id: 'bracket', label: 'Group Stage' },
-    { id: 'r32', label: 'Round of 32' },
-    { id: 'r16', label: 'Round of 16' },
-    { id: 'qf', label: 'Quarterfinals' },
-    { id: 'sf', label: 'Semifinals' },
-    { id: 'final', label: 'Final' },
+    { id: 'bracket', label: TOURNAMENT_ROUND_LABELS.group },
+    { id: 'r32', label: TOURNAMENT_ROUND_LABELS.r32 },
+    { id: 'r16', label: TOURNAMENT_ROUND_LABELS.r16 },
+    { id: 'qf', label: TOURNAMENT_ROUND_LABELS.qf },
+    { id: 'sf', label: TOURNAMENT_ROUND_LABELS.sf },
+    { id: 'final', label: TOURNAMENT_ROUND_LABELS.final },
   ]
 
   return (

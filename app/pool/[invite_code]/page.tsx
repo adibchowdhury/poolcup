@@ -17,6 +17,7 @@ import {
   parseStandingsJson,
   parseThirdPlaceRankingsJson,
 } from '@/src/lib/world-cup-groups'
+import { deriveCurrentTournamentStage } from '@/src/lib/tournament-round-labels'
 
 type Pool = {
   id: string
@@ -64,15 +65,6 @@ type PredictionWithMatch = {
   matches: MatchForPrediction | MatchForPrediction[] | null
 }
 
-const ROUND_STAGE_LABELS: Record<string, string> = {
-  group: 'Group Stage',
-  r32: 'Round of 32',
-  r16: 'Round of 16',
-  qf: 'Quarter Finals',
-  sf: 'Semi Finals',
-  final: 'Final',
-}
-
 function formatTimeUntil(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now()
   if (ms <= 0) return 'Soon'
@@ -111,14 +103,6 @@ function sortPoolMembersForPreMatch(
     )
 
   return creator ? [creator, ...rest] : rest
-}
-
-function deriveStageLabel(roundCounts: Record<string, number>): string {
-  const entries = Object.entries(roundCounts).filter(([, n]) => n > 0)
-  if (entries.length === 0) return 'Group Stage'
-  const sorted = entries.sort((a, b) => b[1] - a[1])
-  const topRound = sorted[0][0]
-  return ROUND_STAGE_LABELS[topRound] ?? 'Group Stage'
 }
 
 export default function PoolPage() {
@@ -222,13 +206,17 @@ export default function PoolPage() {
 
     const matchesPlayedCount = matchesPlayed ?? 0
 
-    const { data: roundRows } = await supabase.from('matches').select('round')
+    const { data: stageMatchRows } = await supabase
+      .from('matches')
+      .select('round, kickoff_at, is_final')
+      .order('kickoff_at', { ascending: true })
 
-    const roundCounts: Record<string, number> = {}
-    for (const row of roundRows ?? []) {
-      const round = row.round as string
-      roundCounts[round] = (roundCounts[round] ?? 0) + 1
-    }
+    const currentStage = deriveCurrentTournamentStage(
+      (stageMatchRows ?? []) as Pick<
+        MatchForPrediction,
+        'round' | 'kickoff_at' | 'is_final'
+      >[],
+    )
 
     let nextMatchIn: string | null = null
     let nextMatchKickoffAt: string | null = null
@@ -356,7 +344,7 @@ export default function PoolPage() {
       inviteCode: pool.invite_code,
       name: pool.name,
       scoringStyle: pool.scoring_style,
-      stage: deriveStageLabel(roundCounts),
+      stage: currentStage,
       memberCount: poolMembers.length,
       matchesPlayed: matchesPlayedCount,
       totalMatches: totalMatches ?? 0,
