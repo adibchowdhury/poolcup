@@ -61,6 +61,31 @@ export async function proxy(request: NextRequest) {
     await supabase.auth.signOut({ scope: 'local' })
   }
 
+  if (user) {
+    const { pathname } = request.nextUrl
+
+    if (pathname === '/') {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/dashboard'
+      redirectUrl.search = ''
+
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      return copyCookies(supabaseResponse, redirectResponse)
+    }
+
+    if (pathname === '/login') {
+      const safeNext = resolveSafeRedirectPath(
+        request.nextUrl.searchParams.get('next'),
+      )
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = safeNext ?? '/dashboard'
+      redirectUrl.search = ''
+
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      return copyCookies(supabaseResponse, redirectResponse)
+    }
+  }
+
   if (!user && isProtectedPath(request.nextUrl.pathname)) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
