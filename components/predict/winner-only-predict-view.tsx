@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
+import { ThirdPlaceRankingPanel } from '@/components/pool/third-place-ranking-panel'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
+import { GroupStandingCard } from '@/components/predict/group-standing-card'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
@@ -377,9 +379,9 @@ export function WinnerOnlyPredictView({
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto max-w-3xl space-y-3 px-4 py-3 sm:py-4">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background pb-20">
+      <header className="sticky top-0 z-20 overflow-x-hidden border-b border-border/80 bg-background/95 backdrop-blur-md">
+        <div className="mx-auto min-w-0 max-w-3xl space-y-3 px-4 py-3 sm:py-4">
           <Link
             href={`/pool/${inviteCode}`}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -396,7 +398,7 @@ export function WinnerOnlyPredictView({
           </div>
 
           {activeTab === 'bracket' && (
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <ProgressHeader
                 current={predictedGroupCount}
                 total={TOTAL_GROUPS}
@@ -418,7 +420,9 @@ export function WinnerOnlyPredictView({
 
       <main
         className={cn(
-          activeTab === 'bracket' ? 'py-4' : 'mx-auto max-w-3xl space-y-4 px-4 py-4',
+          activeTab === 'bracket'
+            ? 'w-full min-w-0 max-w-full overflow-x-hidden py-4 md:overflow-x-visible'
+            : 'mx-auto w-full min-w-0 max-w-3xl space-y-4 overflow-x-hidden px-4 py-4',
         )}
       >
         {error && (
@@ -433,19 +437,45 @@ export function WinnerOnlyPredictView({
               Loading bracket…
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="w-full min-w-0 max-w-full space-y-4 overflow-x-hidden">
               <p className="mx-auto max-w-2xl px-4 text-center text-sm text-muted-foreground">
                 Rank each group from 1st to 4th, then rank your best 3rd-place
                 teams. Your knockout bracket fills in automatically as you go.
               </p>
-              <PoolBracketTab
-                groups={groups}
-                groupRankings={groupRankings}
-                thirdPlaceRankings={thirdPlaceRankings}
-                readOnly={groupStageLocked}
-                onTeamTap={handleTeamTap}
-                onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
-              />
+              <div className="hidden md:block">
+                <PoolBracketTab
+                  groups={groups}
+                  groupRankings={groupRankings}
+                  thirdPlaceRankings={thirdPlaceRankings}
+                  readOnly={groupStageLocked}
+                  onTeamTap={handleTeamTap}
+                  onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
+                />
+              </div>
+              <div className="w-full min-w-0 max-w-full space-y-3 px-4 md:hidden">
+                <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-1.5 min-[360px]:grid-cols-[repeat(2,minmax(0,1fr))] min-[360px]:gap-2 [&>*]:min-w-0">
+                  {groups.map((group) => (
+                    <GroupStandingCard
+                      key={group.letter}
+                      groupLetter={group.letter}
+                      teams={group.teams}
+                      standings={groupRankings[group.letter] ?? []}
+                      onTeamTap={(teamName) =>
+                        handleTeamTap(group.letter, teamName)
+                      }
+                      onClear={() => handleClearGroup(group.letter)}
+                    />
+                  ))}
+                </div>
+                <div className="w-full min-w-0">
+                  <ThirdPlaceRankingPanel
+                    groupRankings={groupRankings}
+                    thirdPlaceRankings={thirdPlaceRankings}
+                    readOnly={groupStageLocked}
+                    onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
+                  />
+                </div>
+              </div>
             </div>
           )
         ) : (

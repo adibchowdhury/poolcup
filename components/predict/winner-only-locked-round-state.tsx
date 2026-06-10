@@ -63,13 +63,13 @@ export function WinnerOnlyLockedRoundState({
   const { heading, subtext, ctaLabel, ctaTab } = getLockedRoundCopy(roundTab)
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-9 text-center">
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col items-center px-4 py-9 text-center">
       <Image
         src="/under-construction.png"
         alt=""
         width={800}
         height={438}
-        className="mb-8 h-auto w-[390px] sm:w-[546px]"
+        className="mb-8 h-auto w-full max-w-[390px] sm:max-w-[546px]"
       />
       <h2 className="font-display text-3xl tracking-wide text-foreground">
         {heading}
