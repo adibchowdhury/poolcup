@@ -15,15 +15,15 @@ import {
   Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PoolActivityFeed } from '@/components/pool/pool-activity-feed'
 import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardPodium } from '@/components/pool/leaderboard-podium'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
-import {
-  PoolPredictionsTab,
-  type UserPoolPrediction,
-} from '@/components/pool/pool-predictions-tab'
+import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
+import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
+import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import { trackEvent } from '@/src/lib/track'
 
 export type PoolHomeMeta = {
@@ -42,8 +42,11 @@ interface PoolHomeViewProps {
   pool: PoolHomeMeta
   members: LeaderboardMember[]
   userPredictions: UserPoolPrediction[]
+  winnerGroups: WinnerGroupPrediction[]
+  thirdPlaceTeams: string[]
   predictHref: string
-  yourPredictions: number
+  hasPredictions: boolean
+  currentUserId: string
   leaderboardLoading?: boolean
   canDelete?: boolean
   poolId?: string
@@ -81,8 +84,11 @@ export function PoolHomeView({
   pool,
   members,
   userPredictions,
+  winnerGroups,
+  thirdPlaceTeams,
   predictHref,
-  yourPredictions,
+  hasPredictions,
+  currentUserId,
   leaderboardLoading = false,
   canDelete,
   poolId,
@@ -90,9 +96,7 @@ export function PoolHomeView({
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState(
-    pool.matchesPlayed === 0 ? 'predictions' : 'leaderboard',
-  )
+  const [activeTab, setActiveTab] = useState('predictions')
 
   const copyInviteLink = () => {
     const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
@@ -153,7 +157,7 @@ export function PoolHomeView({
           </div>
         </header>
 
-        <main className="mx-auto max-w-4xl px-4 py-8">
+        <main className="mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8">
           <div className="mb-8 flex flex-wrap gap-3">
             <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
               <Users className="h-4 w-4 text-primary" />
@@ -177,7 +181,7 @@ export function PoolHomeView({
             </div>
           </div>
 
-          {yourPredictions === 0 && (
+          {!hasPredictions && (
             <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium text-foreground">
                 You haven&apos;t made your predictions yet
@@ -228,25 +232,30 @@ export function PoolHomeView({
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
-            className="mb-8 gap-6"
+            className="mb-8 w-full min-w-0 gap-6"
           >
-            <TabsList className="grid h-auto w-full max-w-xl grid-cols-2 p-1">
-              <TabsTrigger value="predictions" className="py-2">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3 p-1">
+              <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
                 Predictions
               </TabsTrigger>
-              <TabsTrigger value="leaderboard" className="py-2">
+              <TabsTrigger value="feed" className="px-2 py-2 text-xs sm:text-sm">
+                Feed
+              </TabsTrigger>
+              <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
                 Leaderboard
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="predictions" className="mt-0">
+            <TabsContent value="predictions" className="mt-0 w-full min-w-0">
               <PoolPredictionsTab
+                scoringStyle={pool.scoringStyle}
                 predictions={userPredictions}
+                winnerGroups={winnerGroups}
+                thirdPlaceTeams={thirdPlaceTeams}
                 totalMatches={pool.totalMatches}
                 predictHref={predictHref}
                 shareOpen={shareOpen}
                 onToggleShare={() => setShareOpen((o) => !o)}
-                nextMatchIn={pool.nextMatchIn}
                 inviteCopySlot={
                   <div className="rounded-2xl border border-border bg-card p-6">
                     <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
@@ -284,7 +293,17 @@ export function PoolHomeView({
               />
             </TabsContent>
 
-            <TabsContent value="leaderboard" className="mt-0">
+            <TabsContent value="feed" className="mt-0 w-full min-w-0">
+              {poolId ? (
+                <PoolActivityFeed
+                  poolId={poolId}
+                  inviteCode={pool.inviteCode}
+                  currentUserId={currentUserId}
+                />
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value="leaderboard" className="mt-0 w-full min-w-0">
               {leaderboardLoading ? (
                 <LeaderboardSkeleton />
               ) : (

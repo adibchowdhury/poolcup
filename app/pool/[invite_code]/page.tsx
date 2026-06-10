@@ -11,7 +11,12 @@ import {
 } from '@/components/pool/pool-home-view'
 import { PoolPageSkeleton } from '@/components/pool/pool-page-skeleton'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
-import type { UserPoolPrediction } from '@/components/pool/pool-predictions-tab'
+import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
+import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
+import {
+  parseStandingsJson,
+  parseThirdPlaceRankingsJson,
+} from '@/src/lib/world-cup-groups'
 
 type Pool = {
   id: string
@@ -125,6 +130,9 @@ export default function PoolPage() {
   const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
   const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
+  const [winnerGroups, setWinnerGroups] = useState<WinnerGroupPrediction[]>([])
+  const [thirdPlaceTeams, setThirdPlaceTeams] = useState<string[]>([])
+  const [hasPredictions, setHasPredictions] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -240,57 +248,107 @@ export default function PoolPage() {
     const currentMember = poolMembers.find((m) => m.user_id === user.id)
     setMemberId(currentMember?.id ?? null)
     const loadedUserPredictions: UserPoolPrediction[] = []
+    let loadedWinnerGroups: WinnerGroupPrediction[] = []
+    let loadedThirdPlaceTeams: string[] = []
+    let memberHasPredictions = false
 
     if (currentMember) {
-      const { data: userPredRows, error: userPredError } = await supabase
-        .from('predictions')
-        .select(
-          `
-          match_id,
-          pred_team1,
-          pred_team2,
-          matches (
-            id,
-            kickoff_at,
-            round,
-            group_name,
-            team1_name,
-            team2_name,
-            team1_flag,
-            team2_flag,
-            result_team1,
-            result_team2,
-            is_final
+      if (pool.scoring_style === 'winner') {
+        const [groupResult, thirdPlaceResult] = await Promise.all([
+          supabase
+            .from('group_predictions')
+            .select('group_name, standings')
+            .eq('pool_id', pool.id)
+            .eq('member_id', currentMember.id),
+          supabase
+            .from('third_place_rankings')
+            .select('rankings')
+            .eq('pool_id', pool.id)
+            .eq('user_id', user.id)
+            .maybeSingle(),
+        ])
+
+        if (groupResult.error) {
+          console.error(
+            'Failed to load group predictions:',
+            groupResult.error.message,
           )
-        `,
-        )
-        .eq('pool_id', pool.id)
-        .eq('member_id', currentMember.id)
-
-      if (userPredError) {
-        console.error('Failed to load user predictions:', userPredError.message)
-      } else {
-        for (const row of (userPredRows ?? []) as PredictionWithMatch[]) {
-          const matchRaw = row.matches
-          const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
-          if (!match) continue
-
-          loadedUserPredictions.push({
-            matchId: match.id,
-            kickoffAt: match.kickoff_at,
-            round: match.round,
-            groupName: match.group_name,
-            team1Name: match.team1_name,
-            team2Name: match.team2_name,
-            team1Flag: match.team1_flag,
-            team2Flag: match.team2_flag,
-            predTeam1: row.pred_team1,
-            predTeam2: row.pred_team2,
-            resultTeam1: match.result_team1,
-            resultTeam2: match.result_team2,
-            isFinal: match.is_final,
-          })
+        } else {
+          loadedWinnerGroups = (groupResult.data ?? [])
+            .map((row) => ({
+              groupName: String(row.group_name).toUpperCase(),
+              standings: parseStandingsJson(row.standings),
+            }))
+            .filter((group) => group.standings.length > 0)
+            .sort((a, b) => a.groupName.localeCompare(b.groupName))
         }
+
+        if (thirdPlaceResult.error) {
+          console.error(
+            'Failed to load third place rankings:',
+            thirdPlaceResult.error.message,
+          )
+        } else {
+          loadedThirdPlaceTeams = parseThirdPlaceRankingsJson(
+            thirdPlaceResult.data?.rankings,
+          )
+        }
+
+        memberHasPredictions =
+          loadedWinnerGroups.length > 0 || loadedThirdPlaceTeams.length > 0
+      } else {
+        const { data: userPredRows, error: userPredError } = await supabase
+          .from('predictions')
+          .select(
+            `
+            match_id,
+            pred_team1,
+            pred_team2,
+            matches (
+              id,
+              kickoff_at,
+              round,
+              group_name,
+              team1_name,
+              team2_name,
+              team1_flag,
+              team2_flag,
+              result_team1,
+              result_team2,
+              is_final
+            )
+          `,
+          )
+          .eq('pool_id', pool.id)
+          .eq('member_id', currentMember.id)
+
+        if (userPredError) {
+          console.error('Failed to load user predictions:', userPredError.message)
+        } else {
+          for (const row of (userPredRows ?? []) as PredictionWithMatch[]) {
+            const matchRaw = row.matches
+            const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
+            if (!match) continue
+
+            loadedUserPredictions.push({
+              matchId: match.id,
+              kickoffAt: match.kickoff_at,
+              round: match.round,
+              groupName: match.group_name,
+              team1Name: match.team1_name,
+              team2Name: match.team2_name,
+              team1Flag: match.team1_flag,
+              team2Flag: match.team2_flag,
+              predTeam1: row.pred_team1,
+              predTeam2: row.pred_team2,
+              resultTeam1: match.result_team1,
+              resultTeam2: match.result_team2,
+              isFinal: match.is_final,
+            })
+          }
+        }
+
+        memberHasPredictions = loadedUserPredictions.length > 0
       }
     }
 
@@ -306,6 +364,9 @@ export default function PoolPage() {
       nextMatchKickoffAt,
     })
     setUserPredictions(loadedUserPredictions)
+    setWinnerGroups(loadedWinnerGroups)
+    setThirdPlaceTeams(loadedThirdPlaceTeams)
+    setHasPredictions(memberHasPredictions)
     setPageLoading(false)
 
     const { data: cacheData, error: cacheError } = await supabase
@@ -405,15 +466,16 @@ export default function PoolPage() {
     )
   }
 
-  const yourPredictions = userPredictions.length
-
   return (
     <PoolHomeView
       pool={poolMeta}
       members={members}
       userPredictions={userPredictions}
+      winnerGroups={winnerGroups}
+      thirdPlaceTeams={thirdPlaceTeams}
       predictHref={`/pool/${inviteCode}/predict`}
-      yourPredictions={yourPredictions}
+      hasPredictions={hasPredictions}
+      currentUserId={user!.id}
       leaderboardLoading={leaderboardLoading}
       canDelete={canDelete}
       poolId={poolId ?? undefined}

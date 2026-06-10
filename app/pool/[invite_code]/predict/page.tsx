@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
+import { recordClassicMatchSaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
@@ -428,6 +429,17 @@ export default function PredictPage() {
     setSuccessMessage(null)
     setSaveSuccess(false)
 
+    const changedMatches = matches.filter((match) => {
+      if (isMatchLocked(match.locked_at)) return false
+      const entry = scores[match.id]
+      const baseline = baselineScores[match.id]
+      if (!entry || entry.score1 === '' || entry.score2 === '') return false
+      return (
+        entry.score1 !== (baseline?.score1 ?? '') ||
+        entry.score2 !== (baseline?.score2 ?? '')
+      )
+    })
+
     const rows = matches
       .filter((match) => {
         if (isMatchLocked(match.locked_at)) return false
@@ -474,6 +486,19 @@ export default function PredictPage() {
       })
       return next
     })
+    recordClassicMatchSaveActivity(
+      pool.id,
+      memberId,
+      changedMatches.map((match) => {
+        const baseline = baselineScores[match.id]
+        const hadPriorPrediction =
+          savedMatchIds.has(match.id) &&
+          baseline?.score1 !== '' &&
+          baseline?.score2 !== ''
+        return { matchId: match.id, hadPriorPrediction }
+      }),
+    )
+
     setSaveSuccess(true)
     setSuccessMessage(`Saved ${rows.length} prediction${rows.length === 1 ? '' : 's'}`)
     window.setTimeout(() => setSaveSuccess(false), 2000)

@@ -17,6 +17,7 @@ import {
 } from '@/components/predict/winner-only-round-tabs'
 import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
+import { recordWinnerOnlySaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import {
   WORLD_CUP_GROUP_LETTERS,
@@ -363,6 +364,22 @@ export function WinnerOnlyPredictView({
 
       setBaselineThirdPlaceRankings([...thirdPlaceRankings])
     }
+
+    const changedGroups = rows.map((row) => ({
+      groupName: row.group_name,
+      baselineWasEmpty: (baselineRankings[row.group_name] ?? []).length === 0,
+    }))
+
+    recordWinnerOnlySaveActivity(pool.id, memberId, {
+      changedGroups,
+      ...(thirdPlaceChanged
+        ? {
+            thirdPlace: {
+              baselineWasEmpty: baselineThirdPlaceRankings.length === 0,
+            },
+          }
+        : {}),
+    })
 
     setSaving(false)
     setSaveSuccess(true)
