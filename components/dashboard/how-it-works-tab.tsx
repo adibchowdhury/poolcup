@@ -1,42 +1,46 @@
 'use client'
 
-import {
-  Check,
-  Lock,
-  Star,
-  Target,
-  Trophy,
-  Zap,
-} from 'lucide-react'
+import { Check, Lock, Star, Target, Trophy, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PLAYER_LEVEL_TIERS } from '@/src/lib/player-level'
-import { POOL_SCORING_STYLE_OPTIONS } from '@/src/lib/scoring-style-display'
 
-const SCORING_STYLE_UI = [
+const SCORING_MODES = [
   {
-    ...POOL_SCORING_STYLE_OPTIONS[0],
-    accent: 'border-[#22c55e]/30 bg-[#22c55e]/5',
-    iconColor: 'text-[#22c55e]',
-    iconBg: 'bg-[#22c55e]/15',
-    icon: Zap,
-  },
-  {
-    ...POOL_SCORING_STYLE_OPTIONS[1],
+    id: 'classic',
+    label: 'Score Predictor',
+    intro: 'Predict the exact final score of every match.',
     accent: 'border-[#3b82f6]/30 bg-[#3b82f6]/5',
     iconColor: 'text-[#3b82f6]',
     iconBg: 'bg-[#3b82f6]/15',
     icon: Target,
+    rules: [
+      'Exact score — 5 points',
+      'Correct winner, wrong score — 2 points',
+      'Wrong prediction — 0 points',
+    ],
+    footer: 'Knockout rounds (Round of 32 → Final) score double.',
+  },
+  {
+    id: 'winner',
+    label: 'Winner Only',
+    intro:
+      "Predict each group's finishing order, plus the best third-place teams.",
+    accent: 'border-[#22c55e]/30 bg-[#22c55e]/5',
+    iconColor: 'text-[#22c55e]',
+    iconBg: 'bg-[#22c55e]/15',
+    icon: Zap,
+    rules: [
+      'Correct group winner — +5',
+      'Both qualifiers (top two, any order) — +3',
+      'Each team in its exact position — +2',
+      'Each correct best third-place team — +2',
+    ],
+    footer:
+      "Up to 16 points per group. Scored when each group finishes; picks lock at the group's first kickoff. Standings go by points (3 for a win, 1 for a draw), then goal difference, then goals scored.",
   },
 ] as const
 
-const XP_REWARDS = [
-  { label: 'Making predictions before kickoff', xp: 5, suffix: 'per match predicted' },
-  { label: 'Correct winner prediction', xp: 10 },
-  { label: 'Exact score prediction', xp: 25 },
-  { label: 'Completing all predictions for a matchday', xp: 50, suffix: 'bonus' },
-] as const
-
-function formatXp(value: number): string {
+function formatPoints(value: number): string {
   return value.toLocaleString()
 }
 
@@ -74,11 +78,11 @@ function getLevelProgress(
 }
 
 type HowItWorksTabProps = {
-  currentXp?: number
+  currentPoints?: number
 }
 
-export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
-  const xp = Math.max(0, currentXp)
+export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
+  const totalPoints = Math.max(0, currentPoints)
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-12">
@@ -92,115 +96,66 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
             <p className="text-sm text-muted-foreground">
               Each pool uses one scoring style — pick what fits your group
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You earn points from your predictions — they decide who wins each
+              pool, and your running total across all pools sets your level.
+            </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {SCORING_STYLE_UI.map((style) => {
-            const Icon = style.icon
+          {SCORING_MODES.map((mode) => {
+            const Icon = mode.icon
             return (
               <article
-                key={style.id}
+                key={mode.id}
                 className={cn(
-                  'rounded-2xl border p-5 transition-colors',
-                  style.accent,
+                  'flex h-full flex-col rounded-2xl border p-5 transition-colors',
+                  mode.accent,
                 )}
               >
-                <div className="mb-4 flex items-center gap-3">
+                <div className="mb-3 flex items-center gap-3">
                   <div
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-xl',
-                      style.iconBg,
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                      mode.iconBg,
                     )}
                   >
-                    <Icon className={cn('h-5 w-5', style.iconColor)} />
+                    <Icon className={cn('h-5 w-5', mode.iconColor)} />
                   </div>
                   <h3 className="font-display text-xl tracking-wide text-foreground">
-                    {style.label}
+                    {mode.label}
                   </h3>
                 </div>
 
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  {style.rules.map((rule) => (
+                <p className="mb-4 text-sm text-foreground">{mode.intro}</p>
+
+                <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
+                  {mode.rules.map((rule) => (
                     <li key={rule} className="flex gap-2">
-                      <span className={cn('mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', style.iconBg)} />
+                      <span
+                        className={cn(
+                          'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
+                          mode.iconBg,
+                        )}
+                      />
                       <span>{rule}</span>
                     </li>
                   ))}
                 </ul>
 
-                <p className={cn('mt-4 text-xs font-medium', style.iconColor)}>
-                  {style.tagline}
+                <p
+                  className={cn(
+                    'mt-4 border-t border-border/40 pt-4 text-xs leading-relaxed',
+                    mode.iconColor,
+                  )}
+                >
+                  {mode.footer}
                 </p>
               </article>
             )
           })}
         </div>
-
-        <div className="flex items-start gap-3 rounded-xl border border-[#ffb300]/25 bg-[#ffb300]/5 px-4 py-3">
-          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-[#ffb300]" />
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Score Predictor knockout rounds:</span>{' '}
-            points are doubled in the Round of 32 through the Final — exact scores
-            and correct winners earn twice as much.
-          </p>
-        </div>
-
-        <article className="rounded-2xl border border-[#22c55e]/30 bg-[#22c55e]/5 p-5 sm:p-6">
-          <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
-            Winner-Only pools
-          </h3>
-          <div className="mt-4 space-y-4 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              You predict how each group finishes — the full order of all four teams,
-              1st through 4th — plus a ranking of the best third-place teams. Points
-              are awarded after a group plays all its matches:
-            </p>
-            <ul className="space-y-2">
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
-                <span>
-                  <span className="font-medium text-foreground">+5</span> — you
-                  correctly pick the group winner (1st place)
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
-                <span>
-                  <span className="font-medium text-foreground">+3</span> — you
-                  correctly pick both qualifiers (the top two teams, in any order)
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
-                <span>
-                  <span className="font-medium text-foreground">+2</span> — for each
-                  team you place in its exact final position
-                </span>
-              </li>
-            </ul>
-            <p>
-              Points stack, so a perfectly predicted group is worth up to{' '}
-              <span className="font-medium text-foreground">16 points</span>.
-            </p>
-            <p>After every group has finished, your third-place ranking is scored:</p>
-            <ul className="space-y-2">
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
-                <span>
-                  <span className="font-medium text-foreground">+2</span> — for each
-                  team in your ranking that finishes as one of the eight best
-                  third-place teams
-                </span>
-              </li>
-            </ul>
-            <p>
-              Your picks for a group lock when that group&apos;s first match kicks
-              off. Final standings are decided by points (3 for a win, 1 for a draw),
-              then goal difference, then goals scored.
-            </p>
-          </div>
-        </article>
       </section>
 
       <section className="space-y-6">
@@ -208,93 +163,77 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
           <Star className="h-5 w-5 text-primary" />
           <div>
             <h2 className="font-display text-2xl tracking-wide text-foreground">
-              XP, Levels &amp; Badges
+              Levels &amp; Badges
             </h2>
             <p className="text-sm text-muted-foreground">
-              Earn XP across all pools to climb the ranks on your profile
+              Points come from your predictions in every pool (see scoring above).
+              Your total across all pools is your level.
             </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card/50 p-5">
-          <h3 className="font-display text-lg tracking-wide text-foreground">
-            How you earn XP
-          </h3>
-          <ul className="mt-4 space-y-3">
-            {XP_REWARDS.map((reward) => (
-              <li
-                key={reward.label}
-                className="flex items-center justify-between gap-4 text-sm"
-              >
-                <span className="text-muted-foreground">{reward.label}</span>
-                <span className="shrink-0 font-mono text-sm font-medium text-primary">
-                  +{reward.xp} XP{reward.suffix ? ` ${reward.suffix}` : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="space-y-2">
+        <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">
           <h3 className="font-display text-lg tracking-wide text-foreground">
             All 10 levels
           </h3>
-          <ul className="space-y-2">
+          <ul className="mt-3 divide-y divide-border/60">
             {PLAYER_LEVEL_TIERS.map((level, index) => {
               const { progressPercent, isUnlocked, isCurrent } = getLevelProgress(
                 index,
-                xp,
+                totalPoints,
               )
 
               return (
                 <li
                   key={level.level}
                   className={cn(
-                    'rounded-xl border px-4 py-3 transition-colors',
-                    isCurrent
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border bg-card/30',
+                    'flex items-center gap-3 py-2.5 first:pt-0 last:pb-0',
+                    isCurrent && 'rounded-lg bg-primary/5 px-2 -mx-2',
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold',
-                        isUnlocked
-                          ? 'bg-primary/15 text-primary'
-                          : 'bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {isUnlocked ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Lock className="h-3.5 w-3.5" />
-                      )}
+                  <div
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-bold',
+                      isUnlocked
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {isUnlocked ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <Lock className="h-3 w-3" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <p
+                        className={cn(
+                          'truncate',
+                          isCurrent
+                            ? 'font-medium text-foreground'
+                            : 'text-muted-foreground',
+                        )}
+                      >
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {level.level}.
+                        </span>{' '}
+                        {level.title}
+                      </p>
+                      <p className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {formatPoints(level.minPoints)} points
+                      </p>
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate font-medium text-foreground">
-                          <span className="text-muted-foreground">
-                            {level.level}.
-                          </span>{' '}
-                          {level.title}
-                        </p>
-                        <p className="shrink-0 font-mono text-xs text-muted-foreground">
-                          {formatXp(level.minPoints)} XP
-                        </p>
-                      </div>
-
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    {isCurrent ? (
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
                         <div
-                          className={cn(
-                            'h-full rounded-full transition-all',
-                            isUnlocked ? 'bg-primary' : 'bg-transparent',
-                          )}
+                          className="h-full rounded-full bg-primary transition-all"
                           style={{ width: `${progressPercent}%` }}
                         />
                       </div>
-                    </div>
+                    ) : null}
                   </div>
                 </li>
               )
