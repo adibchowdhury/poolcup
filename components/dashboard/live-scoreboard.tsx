@@ -21,15 +21,21 @@ const REFETCH_INTERVAL_MS = 60_000
 function LiveScoreboardSkeleton() {
   return (
     <div
-      className="animate-pulse rounded-2xl border border-border/80 bg-card/80 p-5 sm:p-6"
+      className="animate-pulse rounded-2xl border border-border/80 bg-card/80 p-3 sm:p-4"
       aria-busy="true"
       aria-label="Loading live scoreboard"
     >
-      <div className="mx-auto mb-4 h-5 w-24 rounded bg-muted" />
-      <div className="flex items-center justify-between gap-4">
-        <div className="h-10 w-28 rounded bg-muted" />
-        <div className="h-12 w-16 rounded bg-muted" />
-        <div className="h-10 w-28 rounded bg-muted" />
+      <div className="mb-2 h-5 w-24 rounded bg-muted" />
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex flex-1 flex-col items-center gap-1">
+          <div className="h-20 w-full max-w-[7rem] rounded bg-muted sm:h-28" />
+          <div className="h-5 w-24 rounded bg-muted" />
+        </div>
+        <div className="h-10 w-14 shrink-0 rounded bg-muted" />
+        <div className="flex flex-1 flex-col items-center gap-1">
+          <div className="h-20 w-full max-w-[7rem] rounded bg-muted sm:h-28" />
+          <div className="h-5 w-24 rounded bg-muted" />
+        </div>
       </div>
     </div>
   )
@@ -38,26 +44,19 @@ function LiveScoreboardSkeleton() {
 function ScoreboardTeam({
   name,
   dbFlag,
-  align,
 }: {
   name: string
   dbFlag: string | null
-  align: 'left' | 'right'
 }) {
   return (
-    <div
-      className={cn(
-        'flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3',
-        align === 'right' && 'flex-row-reverse text-right',
-      )}
-    >
+    <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1">
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
-        imgClassName="h-7 w-auto sm:h-8"
-        emojiClassName="text-2xl sm:text-3xl"
+        imgClassName="h-[4.5rem] w-full max-w-[8rem] object-contain sm:h-[6.5rem] sm:max-w-[9.5rem]"
+        emojiClassName="text-6xl sm:text-7xl"
       />
-      <span className="truncate text-sm font-semibold text-foreground sm:text-base">
+      <span className="line-clamp-2 w-full text-center text-lg font-bold leading-tight text-foreground sm:text-xl">
         {name}
       </span>
     </div>
@@ -94,12 +93,12 @@ function LiveScoreboardCard({
   return (
     <article
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-b from-[#0f1419] to-card p-5 shadow-lg sm:p-6',
+        'relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-b from-[#0f1419] to-card p-3 shadow-lg sm:p-4',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-primary/60 before:to-transparent',
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
-      <div className="mb-4 grid grid-cols-3 items-center gap-2">
+      <div className="mb-2 grid grid-cols-3 items-center gap-1">
         <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
           {roundLabel}
         </span>
@@ -126,22 +125,21 @@ function LiveScoreboardCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-0">
         <ScoreboardTeam
           name={match.team1_name}
           dbFlag={match.team1_flag}
-          align="left"
         />
 
-        <div className="flex shrink-0 flex-col items-center justify-center px-1 sm:px-2">
+        <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center sm:w-[5rem]">
           {isLive || mode === 'final' ? (
             <p className="font-display text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
               <span className="text-primary">{score1}</span>
-              <span className="mx-1.5 text-muted-foreground/80">–</span>
+              <span className="mx-1 text-muted-foreground/80 sm:mx-1.5">–</span>
               <span className="text-primary">{score2}</span>
             </p>
           ) : (
-            <span className="font-display text-lg uppercase tracking-[0.2em] text-muted-foreground sm:text-xl">
+            <span className="font-display text-2xl uppercase tracking-[0.2em] text-muted-foreground sm:text-3xl">
               vs
             </span>
           )}
@@ -150,12 +148,11 @@ function LiveScoreboardCard({
         <ScoreboardTeam
           name={match.team2_name}
           dbFlag={match.team2_flag}
-          align="right"
         />
       </div>
 
       {isUpcoming ? (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:justify-start">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:justify-start">
           <time dateTime={match.kickoff_at}>
             {formatFeaturedKickoffLocal(match.kickoff_at)}
           </time>
