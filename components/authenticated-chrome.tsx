@@ -68,7 +68,7 @@ export function AuthenticatedChrome() {
   }
 
   return (
-    <ReportIssueProvider userId={user.id}>
+    <ReportIssueProvider>
       <AuthenticatedChromeContent />
     </ReportIssueProvider>
   )

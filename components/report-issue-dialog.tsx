@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { supabase } from '@/src/lib/supabase'
 
 type ReportIssueContextValue = {
   openReportIssue: () => void
@@ -36,10 +35,8 @@ export function useReportIssue(): ReportIssueContextValue {
 }
 
 export function ReportIssueProvider({
-  userId,
   children,
 }: {
-  userId: string
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -77,23 +74,36 @@ export function ReportIssueProvider({
     setSubmitting(true)
     setError(null)
 
-    const { error: insertError } = await supabase.from('issue_reports').insert({
-      message: trimmed,
-      user_id: userId,
-      page_url: window.location.href,
-      user_agent: navigator.userAgent,
-      metadata: {
-        viewport: {
-          w: window.innerWidth,
-          h: window.innerHeight,
-        },
-      },
-    })
+    let response: Response
+    try {
+      response = await fetch('/api/report-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: trimmed,
+          page_url: window.location.href,
+          user_agent: navigator.userAgent,
+          metadata: {
+            viewport: {
+              w: window.innerWidth,
+              h: window.innerHeight,
+            },
+          },
+        }),
+      })
+    } catch {
+      setSubmitting(false)
+      setError('Something went wrong. Please try again.')
+      return
+    }
 
     setSubmitting(false)
 
-    if (insertError) {
-      setError(insertError.message || 'Something went wrong. Please try again.')
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string
+      } | null
+      setError(payload?.error || 'Something went wrong. Please try again.')
       return
     }
 
