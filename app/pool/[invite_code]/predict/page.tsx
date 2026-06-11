@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { recordClassicMatchSaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
@@ -236,6 +237,19 @@ function sectionNeedsAttention(
   )
 }
 
+function allClassicPredictionsComplete(
+  matches: Match[],
+  scores: Record<string, ScoreInput>,
+): boolean {
+  if (matches.length === 0) return false
+
+  return matches.every((match) => {
+    if (isMatchLocked(match.locked_at)) return true
+    const entry = scores[match.id]
+    return entry?.score1 !== '' && entry?.score2 !== ''
+  })
+}
+
 export default function PredictPage() {
   const params = useParams()
   const router = useRouter()
@@ -256,6 +270,7 @@ export default function PredictPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const predictionsCompletedTrackedRef = useRef(false)
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -518,6 +533,21 @@ export default function PredictPage() {
         return { matchId: match.id, hadPriorPrediction }
       }),
     )
+
+    for (const match of changedMatches) {
+      capturePostHog('prediction_submitted', {
+        pool_id: pool.id,
+        match_id: match.id,
+      })
+    }
+
+    if (
+      allClassicPredictionsComplete(matches, scores) &&
+      !predictionsCompletedTrackedRef.current
+    ) {
+      capturePostHog('predictions_completed', { pool_id: pool.id })
+      predictionsCompletedTrackedRef.current = true
+    }
 
     setSaveSuccess(true)
     setSuccessMessage(`Saved ${rows.length} prediction${rows.length === 1 ? '' : 's'}`)

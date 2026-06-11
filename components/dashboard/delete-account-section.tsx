@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resetPostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import {
   deleteCurrentUserAccount,
@@ -38,6 +39,7 @@ export function DeleteAccountSection({ userId, avatar }: DeleteAccountSectionPro
         throw deleteError
       }
 
+      resetPostHog()
       await supabase.auth.signOut({ scope: 'local' })
       router.push('/?accountDeleted=1')
     } catch (e) {

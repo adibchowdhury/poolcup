@@ -12,6 +12,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation'
 import { getCurrentUser } from './auth'
 import { getPendingJoinInvite } from './join-storage'
+import { identifyPostHogUser, resetPostHog } from './posthog-client'
 import { supabase } from './supabase'
 
 type AuthContextValue = {
@@ -48,7 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        resetPostHog()
+      } else if (session?.user) {
+        identifyPostHogUser(session.user.id, { email: session.user.email })
+      }
+
       if (mounted) {
         setUser(session?.user ?? null)
         setLoading(false)

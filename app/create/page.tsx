@@ -13,6 +13,7 @@ import {
   type PoolScoringStyleId,
 } from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
+import { capturePostHog, poolCreatedMode } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 
 const TOTAL_STEPS = 4
@@ -244,6 +245,10 @@ export default function CreatePoolPage() {
       id: pool.id,
       name: poolName.trim(),
       inviteCode: pool.invite_code,
+    })
+    capturePostHog('pool_created', {
+      mode: poolCreatedMode(scoringStyle),
+      pool_id: pool.id,
     })
     setStep(4)
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
@@ -18,6 +18,7 @@ import {
 import { R32BracketScaffold } from '@/components/predict/r32-bracket-scaffold'
 import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { recordWinnerOnlySaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import {
@@ -87,6 +88,7 @@ export function WinnerOnlyPredictView({
     Map<string, WorldCupGroupLetter>
   >(new Map())
   const [matchesLoading, setMatchesLoading] = useState(true)
+  const predictionsCompletedTrackedRef = useRef(false)
 
   const loadMatches = useCallback(async () => {
     setMatchesLoading(true)
@@ -393,6 +395,13 @@ export function WinnerOnlyPredictView({
           }
         : {}),
     })
+
+    capturePostHog('prediction_submitted', { pool_id: pool.id })
+
+    if (predictionsFullyComplete && !predictionsCompletedTrackedRef.current) {
+      capturePostHog('predictions_completed', { pool_id: pool.id })
+      predictionsCompletedTrackedRef.current = true
+    }
 
     setSaving(false)
     setSaveSuccess(true)

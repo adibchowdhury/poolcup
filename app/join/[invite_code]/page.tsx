@@ -8,6 +8,7 @@ import { PoolCupLogo } from '@/components/poolcup-logo'
 import { useAuth } from '@/src/lib/auth-context'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 
 type Pool = {
@@ -191,6 +192,10 @@ export default function JoinPoolPage() {
     trackEvent('join_completed', {
       poolId: pool.id,
       userId: user.id,
+    })
+    capturePostHog('pool_joined', {
+      pool_id: pool.id,
+      via: 'invite_code',
     })
 
     const { error: referralError } = await supabase.rpc('award_referral_points', {

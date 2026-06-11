@@ -137,6 +137,8 @@ export async function sendPasswordResetEmail(
 }
 
 export async function signOut(): Promise<{ error: Error | null }> {
+  const { resetPostHog } = await import('./posthog-client')
+  resetPostHog()
   const { error } = await supabase.auth.signOut()
   return { error: error ? new Error(error.message) : null }
 }
