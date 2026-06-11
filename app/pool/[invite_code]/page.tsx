@@ -110,6 +110,7 @@ export default function PoolPage() {
   const router = useRouter()
   const inviteCode = params.invite_code as string
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id
 
   const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
   const [members, setMembers] = useState<LeaderboardMember[]>([])
@@ -125,7 +126,7 @@ export default function PoolPage() {
   const [canDelete, setCanDelete] = useState(false)
 
   const loadPoolData = useCallback(async () => {
-    if (!user) return
+    if (!userId) return
 
     setPageLoading(true)
     setLeaderboardLoading(true)
@@ -148,7 +149,7 @@ export default function PoolPage() {
 
     const pool = poolData as Pool
     setPoolId(pool.id)
-    setCanDelete(pool.creator_id === user.id)
+    setCanDelete(pool.creator_id === userId)
 
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
@@ -233,7 +234,7 @@ export default function PoolPage() {
       nextMatchIn = formatTimeUntil(nextMatch.kickoff_at)
     }
 
-    const currentMember = poolMembers.find((m) => m.user_id === user.id)
+    const currentMember = poolMembers.find((m) => m.user_id === userId)
     setMemberId(currentMember?.id ?? null)
     const loadedUserPredictions: UserPoolPrediction[] = []
     let loadedWinnerGroups: WinnerGroupPrediction[] = []
@@ -252,7 +253,7 @@ export default function PoolPage() {
             .from('third_place_rankings')
             .select('rankings')
             .eq('pool_id', pool.id)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .maybeSingle(),
         ])
 
@@ -403,7 +404,7 @@ export default function PoolPage() {
     const leaderboardMembers: LeaderboardMember[] = entries.map((entry) => ({
       id: entry.member_id,
       name: entry.display_name,
-      isYou: user.id === entry.user_id,
+      isYou: userId === entry.user_id,
       avatar: entry.display_name.charAt(0).toUpperCase(),
       points: entry.points,
       correctPredictions: entry.correct_predictions,
@@ -414,18 +415,18 @@ export default function PoolPage() {
 
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)
-  }, [inviteCode, user])
+  }, [inviteCode, userId])
 
   useEffect(() => {
     if (authLoading) return
 
-    if (!user) {
+    if (!userId) {
       router.replace('/login')
       return
     }
 
     loadPoolData()
-  }, [authLoading, user, router, loadPoolData])
+  }, [authLoading, userId, router, loadPoolData])
 
   if (authLoading || (!user && !notFound)) {
     return <PoolPageSkeleton />

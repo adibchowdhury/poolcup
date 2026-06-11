@@ -255,6 +255,7 @@ export default function PredictPage() {
   const router = useRouter()
   const inviteCode = params.invite_code as string
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id
 
   const [pool, setPool] = useState<Pool | null>(null)
   const [memberId, setMemberId] = useState<string | null>(null)
@@ -273,7 +274,7 @@ export default function PredictPage() {
   const predictionsCompletedTrackedRef = useRef(false)
 
   const loadData = useCallback(async () => {
-    if (!user) return
+    if (!userId) return
 
     setPageLoading(true)
     setNotFound(false)
@@ -296,7 +297,7 @@ export default function PredictPage() {
       .from('pool_members')
       .select('id')
       .eq('pool_id', poolData.id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (memberError || !memberData) {
@@ -361,16 +362,16 @@ export default function PredictPage() {
     setSavedMatchIds(initialSaved)
     setActiveTab(defaultTab)
     setPageLoading(false)
-  }, [inviteCode, user])
+  }, [inviteCode, userId])
 
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
+    if (!userId) {
       router.replace('/login')
       return
     }
     loadData()
-  }, [authLoading, user, router, loadData])
+  }, [authLoading, userId, router, loadData])
 
   const tabMatches = useMemo(
     () => matches.filter((m) => matchInTab(m, activeTab)),

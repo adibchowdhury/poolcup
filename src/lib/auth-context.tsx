@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -28,9 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const userIdRef = useRef<string | null>(null)
 
   const refreshUser = useCallback(async () => {
     const { user: currentUser } = await getCurrentUser()
+    userIdRef.current = currentUser?.id ?? null
     setUser(currentUser)
   }, [])
 
@@ -40,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function init() {
       const { user: currentUser } = await getCurrentUser()
       if (mounted) {
+        userIdRef.current = currentUser?.id ?? null
         setUser(currentUser)
         setLoading(false)
       }
@@ -50,16 +54,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        resetPostHog()
-      } else if (session?.user) {
-        identifyPostHogUser(session.user.id, { email: session.user.email })
+      if (!mounted) return
+
+      // Supabase refreshes the JWT when the tab regains focus — same user, no UI work.
+      if (event === 'TOKEN_REFRESHED') {
+        return
       }
 
-      if (mounted) {
-        setUser(session?.user ?? null)
+      const nextUser = session?.user ?? null
+      const nextId = nextUser?.id ?? null
+      const prevId = userIdRef.current
+
+      if (event === 'SIGNED_OUT') {
+        if (prevId !== null) {
+          userIdRef.current = null
+          resetPostHog()
+          setUser(null)
+        }
         setLoading(false)
+        return
       }
+
+      // Duplicate SIGNED_IN / INITIAL_SESSION for the user already in context.
+      if (prevId !== null && prevId === nextId) {
+        setLoading(false)
+        return
+      }
+
+      if (nextId !== null && nextUser) {
+        userIdRef.current = nextId
+        identifyPostHogUser(nextId, { email: nextUser.email })
+        setUser(nextUser)
+      } else {
+        userIdRef.current = null
+        setUser(null)
+      }
+
+      setLoading(false)
     })
 
     return () => {
