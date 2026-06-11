@@ -18,7 +18,33 @@ function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
   return to
 }
 
+/** PostHog reverse proxy — rewrite with correct Host header (Vercel production). */
+function rewritePostHogProxy(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl
+  if (!pathname.startsWith('/sideline')) {
+    return null
+  }
+
+  const url = request.nextUrl.clone()
+  const isAsset =
+    url.pathname.startsWith('/sideline/static/') ||
+    url.pathname.startsWith('/sideline/array/')
+  const hostname = isAsset ? 'us-assets.i.posthog.com' : 'us.i.posthog.com'
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('host', hostname)
+  url.protocol = 'https'
+  url.hostname = hostname
+  url.port = '443'
+  url.pathname = url.pathname.replace(/^\/sideline/, '')
+  return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+}
+
 export async function proxy(request: NextRequest) {
+  const posthogRewrite = rewritePostHogProxy(request)
+  if (posthogRewrite) {
+    return posthogRewrite
+  }
+
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', request.nextUrl.pathname)
 
