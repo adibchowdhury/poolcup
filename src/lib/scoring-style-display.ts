@@ -2,11 +2,11 @@ export const POOL_SCORING_STYLE_OPTIONS = [
   {
     id: 'winner' as const,
     label: 'Winner Only',
-    tagline: 'Perfect for casual groups',
+    tagline: 'Predict full group standings',
     rules: [
-      'Pick which team wins each match',
-      'Correct winner: 2 points',
-      'Wrong prediction: 0 points',
+      'Rank all four teams in each group (1st through 4th)',
+      'Rank the eight best third-place teams',
+      'Points awarded after each group finishes playing',
     ],
   },
   {

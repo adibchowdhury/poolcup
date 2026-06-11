@@ -18,6 +18,8 @@ import {
   parseThirdPlaceRankingsJson,
 } from '@/src/lib/world-cup-groups'
 import { deriveCurrentTournamentStage } from '@/src/lib/tournament-round-labels'
+import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
+import { buildPoolLeaderboardMembers } from '@/src/lib/pool-leaderboard'
 
 type Pool = {
   id: string
@@ -32,16 +34,6 @@ type PoolMember = {
   user_id: string
   display_name: string
   joined_at: string
-}
-
-type LeaderboardEntry = {
-  rank: number
-  prev_rank: number | null
-  member_id: string
-  user_id: string
-  display_name: string
-  points: number
-  correct_predictions: number
 }
 
 type MatchForPrediction = {
@@ -77,32 +69,6 @@ function formatTimeUntil(iso: string): string {
   }
   if (hours > 0) return `${hours}h ${minutes}m`
   return `${minutes}m`
-}
-
-function getMovement(
-  rank: number,
-  prevRank: number | null,
-): 'up' | 'down' | 'none' {
-  if (prevRank == null || prevRank <= 0) return 'none'
-  const delta = prevRank - rank
-  if (delta > 0) return 'up'
-  if (delta < 0) return 'down'
-  return 'none'
-}
-
-function sortPoolMembersForPreMatch(
-  members: PoolMember[],
-  creatorUserId: string,
-): PoolMember[] {
-  const creator = members.find((m) => m.user_id === creatorUserId)
-  const rest = members
-    .filter((m) => m.user_id !== creatorUserId)
-    .sort(
-      (a, b) =>
-        new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime(),
-    )
-
-  return creator ? [creator, ...rest] : rest
 }
 
 export default function PoolPage() {
@@ -162,39 +128,15 @@ export default function PoolPage() {
     }
 
     const poolMembers = (membersData ?? []) as PoolMember[]
-    const memberById = new Map(poolMembers.map((m) => [m.id, m]))
-    const memberIds = poolMembers.map((m) => m.id)
+    const isWinnerPool = pool.scoring_style === 'winner'
 
-    const predictionsByMember = new Map<string, number>()
-    if (memberIds.length > 0) {
-      const { data: predictions } = await supabase
-        .from('predictions')
-        .select('member_id, match_id')
-        .eq('pool_id', pool.id)
-        .in('member_id', memberIds)
-
-      const distinct = new Map<string, Set<string>>()
-      for (const row of predictions ?? []) {
-        if (!distinct.has(row.member_id)) {
-          distinct.set(row.member_id, new Set())
-        }
-        distinct.get(row.member_id)!.add(row.match_id)
-      }
-      for (const [memberId, matchIds] of distinct) {
-        predictionsByMember.set(memberId, matchIds.size)
-      }
-    }
-
-    const buildFallbackEntries = (): LeaderboardEntry[] =>
-      poolMembers.map((member, index) => ({
-        rank: index + 1,
-        prev_rank: null,
-        member_id: member.id,
-        user_id: member.user_id,
-        display_name: member.display_name,
-        points: 0,
-        correct_predictions: 0,
-      }))
+    const { predictionsByMember } = await fetchMemberPredictionCounts(
+      supabase,
+      poolMembers.map((member) => ({
+        memberId: member.id,
+        scoringStyle: pool.scoring_style,
+      })),
+    )
 
     const { count: totalMatches } = await supabase
       .from('matches')
@@ -364,54 +306,19 @@ export default function PoolPage() {
       .eq('pool_id', pool.id)
       .order('rank', { ascending: true })
 
-    let entries: LeaderboardEntry[]
-
-    if (matchesPlayedCount === 0) {
-      const orderedMembers = sortPoolMembersForPreMatch(
-        poolMembers,
-        pool.creator_id,
-      )
-      entries = orderedMembers.map((member, index) => ({
-        rank: index + 1,
-        prev_rank: null,
-        member_id: member.id,
-        user_id: member.user_id,
-        display_name: member.display_name,
-        points: 0,
-        correct_predictions: 0,
-      }))
-    } else {
-      entries = buildFallbackEntries()
-
-      if (cacheError) {
-        console.error('Failed to load leaderboard:', cacheError.message)
-      } else if (cacheData && cacheData.length > 0) {
-        entries = cacheData.map((row) => {
-          const member = memberById.get(row.member_id)
-          return {
-            rank: row.rank,
-            prev_rank: row.prev_rank > 0 ? row.prev_rank : null,
-            member_id: row.member_id,
-            user_id: member?.user_id ?? '',
-            display_name: member?.display_name ?? 'Unknown',
-            points: row.total_points ?? 0,
-            correct_predictions: row.correct_winners ?? 0,
-          }
-        })
-      }
+    if (cacheError) {
+      console.error('Failed to load leaderboard:', cacheError.message)
     }
 
-    const leaderboardMembers: LeaderboardMember[] = entries.map((entry) => ({
-      id: entry.member_id,
-      name: entry.display_name,
-      isYou: userId === entry.user_id,
-      avatar: entry.display_name.charAt(0).toUpperCase(),
-      points: entry.points,
-      correctPredictions: entry.correct_predictions,
-      totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
-      movement: getMovement(entry.rank, entry.prev_rank),
-      streak: 0,
-    }))
+    const leaderboardMembers = buildPoolLeaderboardMembers({
+      poolMembers,
+      creatorUserId: pool.creator_id,
+      cacheRows: cacheData ?? null,
+      matchesPlayedCount,
+      currentUserId: userId,
+      predictionsByMember,
+      isWinnerPool,
+    })
 
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)

@@ -16,7 +16,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { PoolActivityFeed } from '@/components/pool/pool-activity-feed'
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
-import { LeaderboardGroupedList } from '@/components/pool/leaderboard-grouped-list'
+import {
+  buildLeaderboardPlaceGroups,
+  LeaderboardGroupedList,
+} from '@/components/pool/leaderboard-grouped-list'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
@@ -108,10 +111,18 @@ export function PoolHomeView({
     window.setTimeout(() => setCopied(false), 2000)
   }
 
-  const yourRank = members.findIndex((m) => m.isYou) + 1
   const yourData = members.find((m) => m.isYou)
-  const hasResults = pool.matchesPlayed > 0
+  const isWinnerPool = pool.scoringStyle === 'winner'
+  const hasResults =
+    pool.matchesPlayed > 0 ||
+    (isWinnerPool && members.some((member) => member.points > 0))
   const showPreMatchLeaderboardNote = !hasResults && members.length > 0
+  const yourPlaceGroup = yourData
+    ? buildLeaderboardPlaceGroups(members).find((group) =>
+        group.members.some((member) => member.id === yourData.id),
+      )
+    : undefined
+  const yourRank = yourPlaceGroup?.place ?? 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,10 +223,12 @@ export function PoolHomeView({
                       <div className="font-display text-2xl text-foreground">
                         {yourData.points} pts
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {yourData.correctPredictions}/{yourData.totalPredictions}{' '}
-                        correct
-                      </div>
+                      {!isWinnerPool ? (
+                        <div className="text-sm text-muted-foreground">
+                          {yourData.correctPredictions}/{yourData.totalPredictions}{' '}
+                          correct
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

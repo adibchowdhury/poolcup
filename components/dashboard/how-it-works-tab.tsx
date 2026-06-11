@@ -140,11 +140,67 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
         <div className="flex items-start gap-3 rounded-xl border border-[#ffb300]/25 bg-[#ffb300]/5 px-4 py-3">
           <Zap className="mt-0.5 h-4 w-4 shrink-0 text-[#ffb300]" />
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Knockout rounds:</span>{' '}
+            <span className="font-medium text-foreground">Score Predictor knockout rounds:</span>{' '}
             points are doubled in the Round of 32 through the Final — exact scores
             and correct winners earn twice as much.
           </p>
         </div>
+
+        <article className="rounded-2xl border border-[#22c55e]/30 bg-[#22c55e]/5 p-5 sm:p-6">
+          <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
+            Winner-Only pools
+          </h3>
+          <div className="mt-4 space-y-4 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              You predict how each group finishes — the full order of all four teams,
+              1st through 4th — plus a ranking of the best third-place teams. Points
+              are awarded after a group plays all its matches:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
+                <span>
+                  <span className="font-medium text-foreground">+5</span> — you
+                  correctly pick the group winner (1st place)
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
+                <span>
+                  <span className="font-medium text-foreground">+3</span> — you
+                  correctly pick both qualifiers (the top two teams, in any order)
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
+                <span>
+                  <span className="font-medium text-foreground">+2</span> — for each
+                  team you place in its exact final position
+                </span>
+              </li>
+            </ul>
+            <p>
+              Points stack, so a perfectly predicted group is worth up to{' '}
+              <span className="font-medium text-foreground">16 points</span>.
+            </p>
+            <p>After every group has finished, your third-place ranking is scored:</p>
+            <ul className="space-y-2">
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#22c55e]/60" />
+                <span>
+                  <span className="font-medium text-foreground">+2</span> — for each
+                  team in your ranking that finishes as one of the eight best
+                  third-place teams
+                </span>
+              </li>
+            </ul>
+            <p>
+              Your picks for a group lock when that group&apos;s first match kicks
+              off. Final standings are decided by points (3 for a win, 1 for a draw),
+              then goal difference, then goals scored.
+            </p>
+          </div>
+        </article>
       </section>
 
       <section className="space-y-6">
