@@ -27,6 +27,7 @@ export type GroupStageMatch = {
   group_name: string | null
   team1_name: string
   team2_name: string
+  kickoff_at?: string
 }
 
 /** Parse group letter from DB value (e.g. "A") or label (e.g. "Group A"). Rejects bad values like "S" from "Group Stage". */
@@ -193,11 +194,41 @@ export function rankingsEqual(a: string[], b: string[]): boolean {
   return a.every((team, index) => team === b[index])
 }
 
-/** First World Cup 2026 group-stage match kickoff (UTC). */
-export const GROUP_STAGE_KICKOFF_LOCK = new Date('2026-06-11T19:00:00Z')
+/** Earliest kickoff (ms) per group from loaded group-stage matches. */
+export function buildGroupFirstKickoffs(
+  matches: GroupStageMatch[],
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): Map<WorldCupGroupLetter, number> {
+  const firstKickoff = new Map<WorldCupGroupLetter, number>()
 
-export function isGroupStageLocked(now = Date.now()): boolean {
-  return now >= GROUP_STAGE_KICKOFF_LOCK.getTime()
+  for (const match of matches) {
+    if (!isGroupStageRound(match.round) || !match.kickoff_at) continue
+
+    const letter = resolveMatchGroupLetter(match, teamToGroup)
+    if (!letter) continue
+
+    const kickoffMs = new Date(match.kickoff_at).getTime()
+    if (Number.isNaN(kickoffMs)) continue
+
+    const existing = firstKickoff.get(letter)
+    if (existing === undefined || kickoffMs < existing) {
+      firstKickoff.set(letter, kickoffMs)
+    }
+  }
+
+  return firstKickoff
+}
+
+/** A group locks when its first match has kicked off (now >= earliest kickoff_at). */
+export function isGroupRankingLocked(
+  groupLetter: WorldCupGroupLetter,
+  matches: GroupStageMatch[],
+  now = Date.now(),
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): boolean {
+  const kickoffMs = buildGroupFirstKickoffs(matches, teamToGroup).get(groupLetter)
+  if (kickoffMs === undefined) return false
+  return now >= kickoffMs
 }
 
 /** Merge saved standings with default team list for display ordering. */

@@ -416,7 +416,7 @@ interface BracketVisualTreeProps {
   groups: WorldCupGroup[]
   groupRankings: GroupRankings
   thirdPlaceRankings: string[]
-  readOnly: boolean
+  isGroupLocked: (groupLetter: WorldCupGroupLetter) => boolean
   onTeamTap: (groupLetter: WorldCupGroupLetter, teamName: string) => void
   onThirdPlaceTeamTap: (teamName: string) => void
 }
@@ -425,7 +425,7 @@ export function BracketVisualTree({
   groups,
   groupRankings,
   thirdPlaceRankings,
-  readOnly,
+  isGroupLocked,
   onTeamTap,
   onThirdPlaceTeamTap,
 }: BracketVisualTreeProps) {
@@ -535,7 +535,7 @@ export function BracketVisualTree({
         standings={standings}
         registerTeamRef={registerTeamRef}
         align={align}
-        readOnly={readOnly}
+        readOnly={isGroupLocked(group.letter)}
         onTeamTap={(teamName) => onTeamTap(group.letter, teamName)}
       />
     )
@@ -585,7 +585,7 @@ export function BracketVisualTree({
         <ThirdPlaceRankingPanel
           groupRankings={groupRankings}
           thirdPlaceRankings={thirdPlaceRankings}
-          readOnly={readOnly}
+          readOnly={false}
           onThirdPlaceTeamTap={onThirdPlaceTeamTap}
         />
       </div>

@@ -28,7 +28,7 @@ import {
   countCompleteGroups,
   emptyGroupRankings,
   getAvailableThirdPlaceTeams,
-  isGroupStageLocked,
+  isGroupRankingLocked,
   parseStandingsJson,
   parseThirdPlaceRankingsJson,
   rankingsEqual,
@@ -96,7 +96,7 @@ export function WinnerOnlyPredictView({
     const [matchesResult, teamGroupResult] = await Promise.all([
       supabase
         .from('matches')
-        .select('round, group_name, team1_name, team2_name')
+        .select('round, group_name, team1_name, team2_name, kickoff_at')
         .eq('round', 'group')
         .order('kickoff_at', { ascending: true }),
       fetch('/api/team-group-map'),
@@ -238,14 +238,44 @@ export function WinnerOnlyPredictView({
     thirdPlaceRankings,
   ])
 
-  const groupStageLocked = isGroupStageLocked()
+  const isGroupLocked = useCallback(
+    (groupLetter: WorldCupGroupLetter) =>
+      isGroupRankingLocked(
+        groupLetter,
+        matches,
+        Date.now(),
+        teamToGroup.size > 0 ? teamToGroup : undefined,
+      ),
+    [matches, teamToGroup],
+  )
+
+  const canSaveChanges = useMemo(() => {
+    const hasUnlockedGroupSaves = groups.some((group) => {
+      const current = groupRankings[group.letter] ?? []
+      const baseline = baselineRankings[group.letter] ?? []
+      if (current.length === 0 || rankingsEqual(current, baseline)) return false
+      return !isGroupLocked(group.letter)
+    })
+    const thirdPlaceChanged = !rankingsEqual(
+      thirdPlaceRankings,
+      baselineThirdPlaceRankings,
+    )
+    return hasUnlockedGroupSaves || thirdPlaceChanged
+  }, [
+    baselineRankings,
+    baselineThirdPlaceRankings,
+    groupRankings,
+    groups,
+    isGroupLocked,
+    thirdPlaceRankings,
+  ])
 
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null)
   }, [])
 
   function handleTeamTap(groupLetter: string, teamName: string) {
-    if (groupStageLocked) return
+    if (isGroupLocked(groupLetter as WorldCupGroupLetter)) return
 
     const group = groups.find((g) => g.letter === groupLetter)
     if (!group) return
@@ -267,7 +297,7 @@ export function WinnerOnlyPredictView({
   }
 
   function handleClearGroup(groupLetter: string) {
-    if (groupStageLocked) return
+    if (isGroupLocked(groupLetter as WorldCupGroupLetter)) return
 
     setSaveSuccess(false)
     setSuccessMessage(null)
@@ -282,8 +312,6 @@ export function WinnerOnlyPredictView({
   }
 
   function handleThirdPlaceTeamTap(teamName: string) {
-    if (groupStageLocked) return
-
     const available = getAvailableThirdPlaceTeams(groupRankings)
     if (!available.includes(teamName)) return
 
@@ -295,13 +323,13 @@ export function WinnerOnlyPredictView({
   }
 
   async function handleSave() {
-    if (groupStageLocked) {
-      setError('Predictions are locked')
-      window.setTimeout(() => setError(null), 3000)
+    if (unsavedGroupCount === 0 || !canSaveChanges) {
+      if (unsavedGroupCount > 0 && !canSaveChanges) {
+        setError('Predictions are locked for those groups')
+        window.setTimeout(() => setError(null), 3000)
+      }
       return
     }
-
-    if (unsavedGroupCount === 0) return
 
     setSaving(true)
     setError(null)
@@ -317,6 +345,7 @@ export function WinnerOnlyPredictView({
         updated_at: new Date().toISOString(),
       }))
       .filter((row) => {
+        if (isGroupLocked(row.group_name as WorldCupGroupLetter)) return false
         const current = row.standings
         const baseline = baselineRankings[row.group_name] ?? []
         return current.length > 0 && !rankingsEqual(current, baseline)
@@ -492,7 +521,7 @@ export function WinnerOnlyPredictView({
                   groups={groups}
                   groupRankings={groupRankings}
                   thirdPlaceRankings={thirdPlaceRankings}
-                  readOnly={groupStageLocked}
+                  isGroupLocked={isGroupLocked}
                   onTeamTap={handleTeamTap}
                   onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
                 />
@@ -505,7 +534,7 @@ export function WinnerOnlyPredictView({
                       groupLetter={group.letter}
                       teams={group.teams}
                       standings={groupRankings[group.letter] ?? []}
-                      readOnly={groupStageLocked}
+                      readOnly={isGroupLocked(group.letter)}
                       onTeamTap={(teamName) =>
                         handleTeamTap(group.letter, teamName)
                       }
@@ -517,7 +546,7 @@ export function WinnerOnlyPredictView({
                   <ThirdPlaceRankingPanel
                     groupRankings={groupRankings}
                     thirdPlaceRankings={thirdPlaceRankings}
-                    readOnly={groupStageLocked}
+                    readOnly={false}
                     onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
                   />
                 </div>
@@ -540,7 +569,7 @@ export function WinnerOnlyPredictView({
           saving={saving}
           success={saveSuccess}
           complete={predictionsFullyComplete}
-          disabled={groupStageLocked || unsavedGroupCount === 0}
+          disabled={unsavedGroupCount === 0 || !canSaveChanges}
           onSave={handleSave}
         />
       )}
