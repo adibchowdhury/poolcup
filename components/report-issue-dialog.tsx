@@ -122,7 +122,7 @@ export function ReportIssueProvider({
     <ReportIssueContext.Provider value={value}>
       {children}
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="overflow-hidden sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Report an issue</DialogTitle>
             <DialogDescription>
@@ -135,17 +135,18 @@ export function ReportIssueProvider({
               Thanks, we got it
             </p>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="min-w-0 space-y-4">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="report-issue-message">What went wrong?</Label>
                 <Textarea
                   id="report-issue-message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Describe what you were doing, what you expected, and what happened instead…"
-                  rows={5}
+                  rows={4}
                   disabled={submitting}
                   aria-invalid={Boolean(error)}
+                  className="box-border field-sizing-fixed max-w-full min-w-0 resize-none overflow-x-hidden break-words whitespace-pre-wrap"
                 />
               </div>
 
