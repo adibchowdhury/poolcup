@@ -6,8 +6,7 @@ const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
 if (posthogKey) {
   posthog.init(posthogKey, {
-    api_host: '/sideline',
-    ui_host: 'https://us.posthog.com',
+    api_host: 'https://us.i.posthog.com',
     defaults: '2026-01-30',
   })
 }
