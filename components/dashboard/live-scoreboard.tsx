@@ -99,32 +99,31 @@ function LiveScoreboardCard({
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+      <div className="mb-4 grid grid-cols-3 items-center gap-2">
+        <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
           {roundLabel}
         </span>
 
         {isLive ? (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
-              <span className="stage-live-dot h-2 w-2 shrink-0 rounded-full" aria-hidden />
-              Live
-            </span>
-            {statusLabel ? (
-              <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground">
-                {statusLabel}
-              </span>
-            ) : null}
-          </div>
-        ) : isUpcoming ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-            Up next
+          <span className="justify-self-center inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-red-400">
+            <span className="stage-live-dot h-2 w-2 shrink-0 rounded-full" aria-hidden />
+            Live Score
           </span>
         ) : (
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {statusLabel}
-          </span>
+          <span />
         )}
+
+        <div className="justify-self-end">
+          {isUpcoming ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+              Up next
+            </span>
+          ) : !isLive ? (
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {statusLabel}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
