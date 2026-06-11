@@ -1,9 +1,18 @@
 import { redirect } from 'next/navigation'
 import { DashboardView } from '@/components/dashboard/dashboard-view'
 import { resolveUserDisplayName } from '@/src/lib/auth'
+import {
+  fetchMemberPredictionCounts,
+  sumMemberCounts,
+} from '@/src/lib/member-prediction-counts'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
+
+type MembershipRow = {
+  id: string
+  pools: { scoring_style: string } | { scoring_style: string }[] | null
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -29,33 +38,24 @@ export default async function DashboardPage({
 
   const { data: memberships, error: memberError } = await supabase
     .from('pool_members')
-    .select('id')
+    .select('id, pools(scoring_style)')
     .eq('user_id', user.id)
 
   if (memberError) {
     console.error('Failed to fetch pool memberships:', memberError.message)
   }
 
-  const memberIds = (memberships ?? []).map((row) => row.id)
+  const memberRows = (memberships ?? []) as MembershipRow[]
+  const memberContexts = memberRows.flatMap((row) => {
+    const poolRaw = row.pools
+    const pool = Array.isArray(poolRaw) ? poolRaw[0] : poolRaw
+    if (!pool) return []
+    return [{ memberId: row.id, scoringStyle: pool.scoring_style }]
+  })
+  const memberIds = memberContexts.map((row) => row.memberId)
 
-  const predictionsByMember = new Map<string, number>()
-  if (memberIds.length > 0) {
-    const { data: predictions } = await supabase
-      .from('predictions')
-      .select('member_id, match_id')
-      .in('member_id', memberIds)
-
-    const distinctByMember = new Map<string, Set<string>>()
-    for (const row of predictions ?? []) {
-      if (!distinctByMember.has(row.member_id)) {
-        distinctByMember.set(row.member_id, new Set())
-      }
-      distinctByMember.get(row.member_id)!.add(row.match_id)
-    }
-    for (const [memberId, matchIds] of distinctByMember) {
-      predictionsByMember.set(memberId, matchIds.size)
-    }
-  }
+  const { predictionsByMember, classicMatchPredictionsByMember } =
+    await fetchMemberPredictionCounts(supabase, memberContexts)
 
   const correctByMember = new Map<string, number>()
   if (memberIds.length > 0) {
@@ -69,16 +69,16 @@ export default async function DashboardPage({
     }
   }
 
-  let predictionsMade = 0
-  let totalCorrect = 0
-  for (const memberId of memberIds) {
-    predictionsMade += predictionsByMember.get(memberId) ?? 0
-    totalCorrect += correctByMember.get(memberId) ?? 0
-  }
+  const predictionsMade = sumMemberCounts(memberIds, predictionsByMember)
+  const classicMatchPredictionsMade = sumMemberCounts(
+    memberIds,
+    classicMatchPredictionsByMember,
+  )
+  const totalCorrect = sumMemberCounts(memberIds, correctByMember)
 
   const winRate =
-    predictionsMade > 0
-      ? Math.round((totalCorrect / predictionsMade) * 100)
+    classicMatchPredictionsMade > 0
+      ? Math.round((totalCorrect / classicMatchPredictionsMade) * 100)
       : null
 
   return (

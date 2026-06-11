@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 
 type MembershipRow = {
   id: string
@@ -108,46 +109,15 @@ export async function fetchDashboardPools(
     }
   }
 
-  const classicMemberIds = validMemberships
-    .filter((row) => row.pools!.scoring_style !== 'winner')
-    .map((row) => row.id)
-  const winnerMemberIds = validMemberships
-    .filter((row) => row.pools!.scoring_style === 'winner')
-    .map((row) => row.id)
+  const memberContexts = validMemberships.map((row) => ({
+    memberId: row.id,
+    scoringStyle: row.pools!.scoring_style,
+  }))
 
-  const predictionsByMember = new Map<string, number>()
-
-  if (classicMemberIds.length > 0) {
-    const { data: predictions } = await supabase
-      .from('predictions')
-      .select('member_id, match_id')
-      .in('member_id', classicMemberIds)
-
-    const distinctByMember = new Map<string, Set<string>>()
-    for (const row of predictions ?? []) {
-      if (!distinctByMember.has(row.member_id)) {
-        distinctByMember.set(row.member_id, new Set())
-      }
-      distinctByMember.get(row.member_id)!.add(row.match_id)
-    }
-    for (const [memberId, matchIds] of distinctByMember) {
-      predictionsByMember.set(memberId, matchIds.size)
-    }
-  }
-
-  if (winnerMemberIds.length > 0) {
-    const { data: groupPredictions } = await supabase
-      .from('group_predictions')
-      .select('member_id')
-      .in('member_id', winnerMemberIds)
-
-    for (const row of groupPredictions ?? []) {
-      predictionsByMember.set(
-        row.member_id,
-        (predictionsByMember.get(row.member_id) ?? 0) + 1,
-      )
-    }
-  }
+  const { predictionsByMember } = await fetchMemberPredictionCounts(
+    supabase,
+    memberContexts,
+  )
 
   const rankByMember = new Map<string, number>()
   if (memberIds.length > 0) {
