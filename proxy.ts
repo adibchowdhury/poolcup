@@ -132,6 +132,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/sideline/:path*',
     /*
      * Match all request paths except:
      * - api routes (each route handles its own auth)
