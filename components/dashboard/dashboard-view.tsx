@@ -21,6 +21,7 @@ import { SupportUsButton } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
+import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
@@ -741,6 +742,7 @@ function DashboardViewContent({
 
             <TabsContent value="pools" className="mt-4 space-y-6">
               <WorldCupUrgencyBanner />
+              <LiveScoreboard />
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />

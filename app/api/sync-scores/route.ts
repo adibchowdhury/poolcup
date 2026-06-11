@@ -135,6 +135,8 @@ async function runSync(): Promise<{
         result_team1: goals.resultTeam1,
         result_team2: goals.resultTeam2,
         is_final: isFinal,
+        status_short: fixture.fixture.status.short,
+        elapsed_minute: fixture.fixture.status.elapsed,
       })
       .eq('id', match.id)
 

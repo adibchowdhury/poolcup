@@ -7,7 +7,7 @@ export const FINAL_MATCH_STATUS = 'FT'
 export type ApiFootballFixture = {
   fixture: {
     id: number
-    status: { short: string }
+    status: { short: string; elapsed: number | null }
   }
   goals: {
     home: number | null

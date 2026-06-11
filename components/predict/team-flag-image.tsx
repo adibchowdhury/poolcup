@@ -10,12 +10,14 @@ import {
 
 interface TeamFlagImageProps {
   countryName: string
+  dbFlag?: string | null
   imgClassName?: string
   emojiClassName?: string
 }
 
 export function TeamFlagImage({
   countryName,
+  dbFlag = null,
   imgClassName = 'h-6 w-auto shrink-0',
   emojiClassName = 'text-xl leading-none',
 }: TeamFlagImageProps) {
@@ -30,7 +32,7 @@ export function TeamFlagImage({
   if (!showFlagImage || imageFailed) {
     return (
       <span className={cn('shrink-0', emojiClassName)} aria-hidden>
-        {resolveTeamFlagDisplay(countryName, null)}
+        {resolveTeamFlagDisplay(countryName, dbFlag)}
       </span>
     )
   }
