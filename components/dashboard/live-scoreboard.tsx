@@ -131,7 +131,14 @@ function LiveScoreboardCard({
           dbFlag={match.team1_flag}
         />
 
-        <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center sm:w-[5rem]">
+        <div
+          className={cn(
+            'flex shrink-0 flex-col items-center justify-center',
+            isUpcoming
+              ? 'w-[4.5rem] sm:w-auto sm:min-w-[11rem] sm:px-2'
+              : 'w-[4.5rem] sm:w-[5rem]',
+          )}
+        >
           {isLive || mode === 'final' ? (
             <p className="font-display text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
               <span className="text-primary">{score1}</span>
@@ -143,6 +150,19 @@ function LiveScoreboardCard({
               vs
             </span>
           )}
+          {isUpcoming ? (
+            <div className="mt-2 hidden w-full flex-col items-center gap-1 text-center text-xs text-muted-foreground sm:flex">
+              <time dateTime={match.kickoff_at}>
+                {formatFeaturedKickoffLocal(match.kickoff_at)}
+              </time>
+              {countdown ? (
+                <span className="inline-flex items-center gap-1 font-medium text-primary">
+                  <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {countdown}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <ScoreboardTeam
@@ -152,7 +172,7 @@ function LiveScoreboardCard({
       </div>
 
       {isUpcoming ? (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:justify-start">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:hidden">
           <time dateTime={match.kickoff_at}>
             {formatFeaturedKickoffLocal(match.kickoff_at)}
           </time>
