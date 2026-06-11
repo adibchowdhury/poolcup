@@ -438,12 +438,17 @@ export function WinnerOnlyPredictView({
 
           {activeTab === 'bracket' && (
             <div className="min-w-0 space-y-3">
-              <ProgressHeader
-                current={predictedGroupCount}
-                total={TOTAL_GROUPS}
-                label="Groups ranked"
-                labelFirst
-              />
+              <div className="space-y-1">
+                <ProgressHeader
+                  current={predictedGroupCount}
+                  total={TOTAL_GROUPS}
+                  label="Groups ranked"
+                  labelFirst
+                />
+                <p className="text-xs text-muted-foreground">
+                  Rank all 4 teams in each group to lock it in.
+                </p>
+              </div>
               <ProgressHeader
                 current={thirdPlacePickedCount}
                 total={REQUIRED_THIRD_PLACE_PICKS}
@@ -478,8 +483,9 @@ export function WinnerOnlyPredictView({
           ) : (
             <div className="w-full min-w-0 max-w-full space-y-4 overflow-x-hidden">
               <p className="mx-auto max-w-2xl px-4 text-center text-sm text-muted-foreground">
-                Rank each group from 1st to 4th, then rank your best 3rd-place
-                teams. Your knockout bracket fills in automatically as you go.
+                Rank all 4 teams in every group — 1st, 2nd, 3rd, and who gets
+                eliminated — then pick your best 3rd-place teams. Your knockout
+                bracket fills in automatically as you go.
               </p>
               <div className="hidden md:block">
                 <PoolBracketTab

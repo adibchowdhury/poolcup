@@ -7,6 +7,7 @@ import {
   hasFlagImage,
   resolveTeamFlagDisplay,
 } from '@/src/lib/team-flags'
+import { groupStageRankLabel } from '@/src/lib/world-cup-2026-bracket'
 import { getTeamRank } from '@/src/lib/world-cup-groups'
 
 function TeamFlagImage({ countryName }: { countryName: string }) {
@@ -114,13 +115,15 @@ export function GroupStandingCard({
                   {rank !== null && (
                     <span
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold',
+                        'shrink-0 font-mono font-bold',
+                        rank === 4
+                          ? 'rounded bg-muted/50 px-1 py-0.5 text-[8px] uppercase tracking-wide text-muted-foreground'
+                          : 'flex h-5 w-5 items-center justify-center rounded-full text-[10px]',
                         rank <= 2 && 'bg-primary/20 text-primary',
                         rank === 3 && 'bg-secondary/20 text-secondary',
-                        rank === 4 && 'bg-muted text-muted-foreground',
                       )}
                     >
-                      {rank}
+                      {groupStageRankLabel(rank)}
                     </span>
                   )}
                 </button>

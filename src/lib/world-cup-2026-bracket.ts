@@ -112,6 +112,12 @@ export function rankOrdinal(rank: number): string {
   return RANK_ORDINALS[rank - 1] ?? `${rank}th`
 }
 
+/** Group-stage position label shown on Winner-Only ranking UI (4th = eliminated). */
+export function groupStageRankLabel(rank: number): string {
+  if (rank === 4) return 'Eliminated'
+  return rankOrdinal(rank)
+}
+
 export function groupSourceKey(
   group: WorldCupGroupLetter,
   rank: 1 | 2,

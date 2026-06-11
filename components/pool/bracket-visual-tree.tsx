@@ -30,7 +30,7 @@ import {
   RIGHT_GROUP_LETTERS,
   groupSourceKey,
   isLeftGroup,
-  rankOrdinal,
+  groupStageRankLabel,
   r32TargetKey,
   type R32MatchupDef,
   type R32SlotRef,
@@ -73,13 +73,16 @@ function RankBadge({ rank }: { rank: number }) {
   return (
     <span
       className={cn(
-        'w-8 shrink-0 text-center font-mono text-xs font-semibold',
+        'shrink-0 text-center font-mono font-semibold',
+        rank === 4
+          ? 'w-auto min-w-[4.5rem] text-[9px] uppercase tracking-wide'
+          : 'w-8 text-xs',
         rank <= 2 && 'text-[#22c55e]',
         rank === 3 && 'text-amber-400',
         rank === 4 && 'text-[#4a5568]',
       )}
     >
-      {rankOrdinal(rank)}
+      {groupStageRankLabel(rank)}
     </span>
   )
 }
