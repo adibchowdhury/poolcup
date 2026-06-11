@@ -15,8 +15,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PoolActivityFeed } from '@/components/pool/pool-activity-feed'
-import { LeaderboardRow, type LeaderboardMember } from '@/components/pool/leaderboard-row'
-import { LeaderboardPodium } from '@/components/pool/leaderboard-podium'
+import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
+import { LeaderboardGroupedList } from '@/components/pool/leaderboard-grouped-list'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
@@ -112,7 +112,6 @@ export function PoolHomeView({
   const yourData = members.find((m) => m.isYou)
   const hasResults = pool.matchesPlayed > 0
   const showPreMatchLeaderboardNote = !hasResults && members.length > 0
-  const leaderboardTableMembers = hasResults ? members.slice(3) : members
 
   return (
     <div className="min-h-screen bg-background">
@@ -337,26 +336,7 @@ export function PoolHomeView({
                         </div>
                       ) : (
                         <>
-                          <LeaderboardPodium
-                            members={members}
-                            hasResults={hasResults}
-                          />
-
-                          <div className="mt-2 space-y-2 border-t border-border px-2 pb-2 pt-4">
-                            {leaderboardTableMembers.length > 0 ? (
-                              leaderboardTableMembers.map((member, index) => (
-                                <LeaderboardRow
-                                  key={member.id}
-                                  member={member}
-                                  rank={hasResults ? index + 4 : index + 1}
-                                />
-                              ))
-                            ) : (
-                              <p className="py-6 text-center text-sm text-muted-foreground/50">
-                                No other players yet
-                              </p>
-                            )}
-                          </div>
+                          <LeaderboardGroupedList members={members} />
 
                           {showPreMatchLeaderboardNote && (
                             <p className="mt-4 px-2 pb-2 text-center text-sm text-muted-foreground">
