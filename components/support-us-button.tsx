@@ -1,6 +1,7 @@
 'use client'
 
 import { Heart } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { capturePostHog } from '@/src/lib/posthog-client'
 
@@ -17,19 +18,24 @@ export function SupportUsButton({
   fullWidth,
 }: SupportUsButtonProps) {
   return (
-    <a
-      href={STRIPE_DONATE_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={() => capturePostHog('support_clicked')}
+    <Button
+      asChild
+      size="sm"
       className={cn(
-        'inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#4800AE] bg-[#4800AE] px-3 py-2 text-sm font-medium text-white transition-all hover:bg-[#5a10c4] hover:border-[#5a10c4] active:scale-95',
+        'border-[#4800AE] bg-[#4800AE] text-white hover:border-[#5a10c4] hover:bg-[#5a10c4] active:scale-95',
         fullWidth && 'w-full',
         className,
       )}
     >
-      <Heart className="h-3.5 w-3.5" aria-hidden />
-      Support Us
-    </a>
+      <a
+        href={STRIPE_DONATE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => capturePostHog('support_clicked')}
+      >
+        <Heart className="size-3.5" aria-hidden />
+        Support Us
+      </a>
+    </Button>
   )
 }
