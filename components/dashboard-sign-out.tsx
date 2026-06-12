@@ -7,16 +7,36 @@ import { Button } from '@/components/ui/button'
 
 export function DashboardSignOut({
   displayName,
+  menuItem = false,
+  onAfterClick,
 }: {
   displayName?: string | null
+  menuItem?: boolean
+  onAfterClick?: () => void
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function handleSignOut() {
     setLoading(true)
+    onAfterClick?.()
     await signOut()
     router.push('/')
+  }
+
+  if (menuItem) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        role="menuitem"
+        onClick={() => void handleSignOut()}
+        disabled={loading}
+        className="w-full justify-start text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        {loading ? 'Signing out…' : 'Sign out'}
+      </Button>
+    )
   }
 
   return (

@@ -11,11 +11,13 @@ const STRIPE_DONATE_URL =
 type SupportUsButtonProps = {
   className?: string
   fullWidth?: boolean
+  onNavigate?: () => void
 }
 
 export function SupportUsButton({
   className,
   fullWidth,
+  onNavigate,
 }: SupportUsButtonProps) {
   return (
     <Button
@@ -31,7 +33,10 @@ export function SupportUsButton({
         href={STRIPE_DONATE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => capturePostHog('support_clicked')}
+        onClick={() => {
+          capturePostHog('support_clicked')
+          onNavigate?.()
+        }}
       >
         <Heart className="size-3.5" aria-hidden />
         Support Us

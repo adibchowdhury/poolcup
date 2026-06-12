@@ -20,6 +20,7 @@ import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
+import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-nav-menu'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
@@ -47,7 +48,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnimatedNumber } from '@/hooks/use-animated-number'
@@ -403,150 +403,159 @@ function DashboardViewContent({
           <RedditAnnouncementBanner />
           <header className="border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 py-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex justify-center sm:justify-start">
-                <PoolCupLogo href="/dashboard" />
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <PoolCupLogo href="/dashboard" />
 
-              <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
+              <DashboardMobileNavMenu
+                className="sm:hidden"
+                displayName={headerName}
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+
+              <div className="hidden flex-wrap items-center gap-3 sm:flex">
                 <SupportUsButton />
                 <DashboardSignOut displayName={headerName} />
-                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                  <DialogTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" className="gap-2">
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl">
-                    <DialogHeader className="shrink-0">
-                      <DialogTitle>Settings</DialogTitle>
-                      <DialogDescription>
-                        Manage your account, security, and preferences.
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <h3 className="font-display text-xl tracking-wide">
-                          Account email
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Your email is used to sign in.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Current email</Label>
-                        <div className="h-9 w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                          {email}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="settings-new-email">New email (optional)</Label>
-                        <Input
-                          id="settings-new-email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="you@example.com"
-                          type="email"
-                          autoComplete="email"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Your project may send a confirmation link before the update
-                          takes effect.
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        {accountMessage ? (
-                          <p className="text-sm text-muted-foreground">{accountMessage}</p>
-                        ) : (
-                          <span />
-                        )}
-                        <Button
-                          type="button"
-                          onClick={handleSaveEmail}
-                          disabled={accountSaving || !canSaveEmail}
-                        >
-                          {accountSaving ? 'Saving…' : 'Update email'}
-                        </Button>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <h3 className="font-display text-xl tracking-wide">
-                          Password &amp; security
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Confirm your current password before choosing a new one.
-                        </p>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="settings-current-password">Current password</Label>
-                          <Input
-                            id="settings-current-password"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            type="password"
-                            autoComplete="current-password"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="settings-new-password">New password</Label>
-                          <Input
-                            id="settings-new-password"
-                            value={nextPassword}
-                            onChange={(e) => setNextPassword(e.target.value)}
-                            type="password"
-                            autoComplete="new-password"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="settings-confirm-new-password">
-                            Confirm new password
-                          </Label>
-                          <Input
-                            id="settings-confirm-new-password"
-                            value={confirmNextPassword}
-                            onChange={(e) => setConfirmNextPassword(e.target.value)}
-                            type="password"
-                            autoComplete="new-password"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        {passwordMessage ? (
-                          <p className="text-sm text-muted-foreground">{passwordMessage}</p>
-                        ) : (
-                          <span />
-                        )}
-                        <Button
-                          type="button"
-                          onClick={handleUpdatePassword}
-                          disabled={passwordSaving}
-                        >
-                          {passwordSaving ? 'Updating…' : 'Update password'}
-                        </Button>
-                      </div>
-
-                      <Separator />
-
-                      <DeleteAccountSection userId={userId} avatar={avatar} />
-                    </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
               </div>
             </div>
           </div>
         </header>
+
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl">
+            <DialogHeader className="shrink-0">
+              <DialogTitle>Settings</DialogTitle>
+              <DialogDescription>
+                Manage your account, security, and preferences.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="font-display text-xl tracking-wide">
+                  Account email
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Your email is used to sign in.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Current email</Label>
+                <div className="h-9 w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  {email}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="settings-new-email">New email (optional)</Label>
+                <Input
+                  id="settings-new-email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  type="email"
+                  autoComplete="email"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your project may send a confirmation link before the update
+                  takes effect.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                {accountMessage ? (
+                  <p className="text-sm text-muted-foreground">{accountMessage}</p>
+                ) : (
+                  <span />
+                )}
+                <Button
+                  type="button"
+                  onClick={handleSaveEmail}
+                  disabled={accountSaving || !canSaveEmail}
+                >
+                  {accountSaving ? 'Saving…' : 'Update email'}
+                </Button>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h3 className="font-display text-xl tracking-wide">
+                  Password &amp; security
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Confirm your current password before choosing a new one.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="settings-current-password">Current password</Label>
+                  <Input
+                    id="settings-current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    type="password"
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settings-new-password">New password</Label>
+                  <Input
+                    id="settings-new-password"
+                    value={nextPassword}
+                    onChange={(e) => setNextPassword(e.target.value)}
+                    type="password"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settings-confirm-new-password">
+                    Confirm new password
+                  </Label>
+                  <Input
+                    id="settings-confirm-new-password"
+                    value={confirmNextPassword}
+                    onChange={(e) => setConfirmNextPassword(e.target.value)}
+                    type="password"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                {passwordMessage ? (
+                  <p className="text-sm text-muted-foreground">{passwordMessage}</p>
+                ) : (
+                  <span />
+                )}
+                <Button
+                  type="button"
+                  onClick={handleUpdatePassword}
+                  disabled={passwordSaving}
+                >
+                  {passwordSaving ? 'Updating…' : 'Update password'}
+                </Button>
+              </div>
+
+              <Separator />
+
+              <DeleteAccountSection userId={userId} avatar={avatar} />
+            </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         </div>
 
         <main className="mx-auto max-w-6xl px-4 py-8">
