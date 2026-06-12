@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   formatPointsDelta,
@@ -16,15 +17,21 @@ type PointsHistoryFeedProps = {
   userId: string
   animKey: number
   active: boolean
+  className?: string
+  /** On viewports below lg, show a collapsed-by-default toggle header. Desktop is unchanged. */
+  mobileCollapsible?: boolean
 }
 
 export function PointsHistoryFeed({
   userId,
   animKey,
   active,
+  className,
+  mobileCollapsible = false,
 }: PointsHistoryFeedProps) {
   const [transactions, setTransactions] = useState<PointsTransactionRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [mobileExpanded, setMobileExpanded] = useState(false)
 
   const loadTransactions = useCallback(async () => {
     setLoading(true)
@@ -48,52 +55,92 @@ export function PointsHistoryFeed({
     void loadTransactions()
   }, [active, loadTransactions, animKey])
 
+  const countLabel =
+    !loading || transactions.length > 0 ? ` (${transactions.length})` : ''
+
+  const feedBody =
+    loading && transactions.length === 0 ? (
+      <p className="py-12 text-center text-sm text-muted-foreground">Loading…</p>
+    ) : transactions.length === 0 ? (
+      <p className="py-12 text-center text-sm text-muted-foreground">
+        Your glory story starts here 🏆
+      </p>
+    ) : (
+      <div className="profile-points-feed-scroll max-h-[500px] overflow-y-auto">
+        <ul className="divide-y divide-border/50">
+          {transactions.map((tx, index) => {
+            const description = getPointsTransactionDescription(tx.reason)
+            return (
+              <li
+                key={`${tx.id}-${animKey}`}
+                className={cn(
+                  'flex items-start gap-3 py-4 animate-in fade-in slide-in-from-bottom-4 fill-mode-both',
+                )}
+                style={{
+                  animationDuration: `${POINTS_FEED_ANIMATION_MS}ms`,
+                  animationDelay: `${index * POINTS_FEED_STAGGER_MS}ms`,
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground">{description}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatRelativeTimestamp(tx.created_at)}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-medium text-primary">
+                  {formatPointsDelta(tx.points)}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    )
+
   return (
-    <div className="w-full min-w-0 lg:flex-1 lg:max-w-md xl:max-w-lg">
-      <h2 className="font-display text-2xl tracking-wide text-foreground">
+    <div
+      className={cn(
+        'w-full min-w-0 lg:flex-1 lg:max-w-md xl:max-w-lg',
+        className,
+      )}
+    >
+      <h2
+        className={cn(
+          'font-display text-2xl tracking-wide text-foreground',
+          mobileCollapsible ? 'hidden lg:block' : 'block',
+        )}
+      >
         POINT HISTORY
       </h2>
 
-      <div className="mt-6">
-        {loading && transactions.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Loading…
-          </p>
-        ) : transactions.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            Your glory story starts here 🏆
-          </p>
-        ) : (
-          <div className="profile-points-feed-scroll max-h-[500px] overflow-y-auto">
-            <ul className="divide-y divide-border/50">
-            {transactions.map((tx, index) => {
-              const description = getPointsTransactionDescription(tx.reason)
-              return (
-                <li
-                  key={`${tx.id}-${animKey}`}
-                  className={cn(
-                    'flex items-start gap-3 py-4 animate-in fade-in slide-in-from-bottom-4 fill-mode-both',
-                  )}
-                  style={{
-                    animationDuration: `${POINTS_FEED_ANIMATION_MS}ms`,
-                    animationDelay: `${index * POINTS_FEED_STAGGER_MS}ms`,
-                  }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground">{description}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatRelativeTimestamp(tx.created_at)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-sm font-medium text-primary">
-                    {formatPointsDelta(tx.points)}
-                  </span>
-                </li>
-              )
-            })}
-            </ul>
-          </div>
+      {mobileCollapsible && (
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card/80 px-4 py-3 text-left transition-colors hover:bg-muted/40 lg:hidden"
+          aria-expanded={mobileExpanded}
+          aria-label="Toggle points history"
+          onClick={() => setMobileExpanded((open) => !open)}
+        >
+          <span className="font-display text-lg tracking-wide text-foreground">
+            Points history{countLabel}
+          </span>
+          <ChevronDown
+            className={cn(
+              'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+              mobileExpanded && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </button>
+      )}
+
+      <div
+        className={cn(
+          'mt-6',
+          mobileCollapsible && !mobileExpanded && 'hidden lg:block',
         )}
+      >
+        {feedBody}
       </div>
     </div>
   )
