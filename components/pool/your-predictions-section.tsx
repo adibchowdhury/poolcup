@@ -1,13 +1,32 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { sortClassicPredictionsForDisplay } from '@/src/lib/sort-classic-predictions'
+import {
+  type ClassicPredictionSortMode,
+  sortClassicPredictions,
+} from '@/src/lib/sort-classic-predictions'
 import {
   PredictionMatchCard,
   type UserPoolPrediction,
 } from '@/components/pool/prediction-match-card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { WORLD_CUP_GROUP_LETTERS } from '@/src/lib/world-cup-groups'
+
+const CLASSIC_SORT_OPTIONS: {
+  value: ClassicPredictionSortMode
+  label: string
+}[] = [
+  { value: 'kickoff', label: 'Kickoff time' },
+  { value: 'group', label: 'Group' },
+  { value: 'status', label: 'Status' },
+]
 
 export type WinnerGroupPrediction = {
   groupName: string
@@ -101,25 +120,57 @@ export function YourPredictionsSection({
   const hasClassicContent = classicPredictions.length > 0
   const hasContent = isWinnerOnly ? hasWinnerContent : hasClassicContent
   const totalGroups = WORLD_CUP_GROUP_LETTERS.length
+  const [classicSortMode, setClassicSortMode] =
+    useState<ClassicPredictionSortMode>('kickoff')
   const orderedClassicPredictions = useMemo(
-    () => sortClassicPredictionsForDisplay(classicPredictions),
-    [classicPredictions],
+    () => sortClassicPredictions(classicPredictions, classicSortMode),
+    [classicPredictions, classicSortMode],
   )
 
   return (
     <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
           Your predictions
         </h3>
-        {isWinnerOnly && (
+        {isWinnerOnly ? (
           <p className="text-sm text-muted-foreground">
             <span className="font-semibold text-primary">{winnerGroups.length}</span>
             {' of '}
             <span className="font-medium text-foreground">{totalGroups}</span>
             {' groups predicted'}
           </p>
-        )}
+        ) : hasClassicContent ? (
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="classic-predictions-sort"
+              className="text-sm text-muted-foreground"
+            >
+              Sort by
+            </label>
+            <Select
+              value={classicSortMode}
+              onValueChange={(value) =>
+                setClassicSortMode(value as ClassicPredictionSortMode)
+              }
+            >
+              <SelectTrigger
+                id="classic-predictions-sort"
+                size="sm"
+                className="min-w-[9.5rem] border-border bg-card text-foreground"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CLASSIC_SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
       </div>
 
       {!hasContent ? (
