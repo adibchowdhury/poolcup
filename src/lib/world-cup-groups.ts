@@ -317,13 +317,78 @@ export function getAvailableThirdPlaceTeams(
     .filter((team): team is string => team !== null)
 }
 
+/** Third-place teams the user picks to advance out of 12 group runners-up. */
+export const REQUIRED_THIRD_PLACE_ADVANCING = 8
+
+/** Dashboard progress: 12 group rankings + 8 third-place advancing picks. */
+export const WINNER_ONLY_DASHBOARD_PROGRESS_TOTAL = 12 + REQUIRED_THIRD_PLACE_ADVANCING
+
+export function computeWinnerOnlyDashboardProgress(
+  groupStandingsRows: string[][],
+  thirdPlaceRankings: string[],
+): number {
+  const completeGroups = groupStandingsRows.filter((standings) =>
+    isGroupRankingComplete(standings, 4),
+  ).length
+  const thirdPlaceAdvancing = Math.min(
+    thirdPlaceRankings.length,
+    REQUIRED_THIRD_PLACE_ADVANCING,
+  )
+  return completeGroups + thirdPlaceAdvancing
+}
+
+function fillRemainingThirdPlaceTeams(
+  rankings: string[],
+  availableTeams: string[],
+): string[] {
+  let result = rankings
+  for (const team of availableTeams) {
+    if (!result.includes(team)) {
+      result = tapTeamInGroup(result, team, availableTeams)
+    }
+  }
+  return result
+}
+
+/** Keep at most 8 advancing picks; when 8 are chosen, append the rest as eliminated. */
+export function normalizeThirdPlaceRankings(
+  rankings: string[],
+  availableTeams: string[],
+): string[] {
+  if (availableTeams.length === 0) return []
+
+  const availableSet = new Set(availableTeams)
+  let valid = rankings.filter((team) => availableSet.has(team))
+
+  if (valid.length > REQUIRED_THIRD_PLACE_ADVANCING) {
+    valid = valid.slice(0, REQUIRED_THIRD_PLACE_ADVANCING)
+  }
+
+  if (valid.length === REQUIRED_THIRD_PLACE_ADVANCING) {
+    return fillRemainingThirdPlaceTeams(valid, availableTeams)
+  }
+
+  return valid
+}
+
+/** After a third-place tap, auto-assign unranked teams as eliminated once 8 advance. */
+export function tapThirdPlaceTeamWithAutoEliminated(
+  rankings: string[],
+  teamName: string,
+  availableTeams: string[],
+): string[] {
+  const afterTap = tapTeamInGroup(rankings, teamName, availableTeams)
+  return normalizeThirdPlaceRankings(afterTap, availableTeams)
+}
+
 /** Drop rankings for teams no longer 3rd in any group. */
 export function syncThirdPlaceRankings(
   rankings: string[],
   groupRankings: GroupRankings,
 ): string[] {
-  const available = new Set(getAvailableThirdPlaceTeams(groupRankings))
-  return rankings.filter((team) => available.has(team))
+  const available = getAvailableThirdPlaceTeams(groupRankings)
+  const filtered = rankings.filter((team) => available.includes(team))
+  return normalizeThirdPlaceRankings(filtered, available)
 }
 
 export function parseThirdPlaceRankingsJson(value: unknown): string[] {

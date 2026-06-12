@@ -34,6 +34,7 @@ import {
   rankingsEqual,
   syncThirdPlaceRankings,
   tapGroupTeamWithAutoFourth,
+  tapThirdPlaceTeamWithAutoEliminated,
   tapTeamInGroup,
   type GroupRankings,
   type GroupStageMatch,
@@ -304,7 +305,7 @@ export function WinnerOnlyPredictView({
     setSaveSuccess(false)
     setSuccessMessage(null)
     setThirdPlaceRankings((prev) =>
-      tapTeamInGroup(prev, teamName, available),
+      tapThirdPlaceTeamWithAutoEliminated(prev, teamName, available),
     )
   }
 

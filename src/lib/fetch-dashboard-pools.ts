@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
+import {
+  computeWinnerOnlyDashboardProgress,
+  parseStandingsJson,
+  parseThirdPlaceRankingsJson,
+  WINNER_ONLY_DASHBOARD_PROGRESS_TOTAL,
+} from '@/src/lib/world-cup-groups'
 
 type MembershipRow = {
   id: string
@@ -114,10 +120,61 @@ export async function fetchDashboardPools(
     scoringStyle: row.pools!.scoring_style,
   }))
 
+  const classicMemberContexts = memberContexts.filter(
+    (row) => row.scoringStyle !== 'winner',
+  )
+
   const { predictionsByMember } = await fetchMemberPredictionCounts(
     supabase,
-    memberContexts,
+    classicMemberContexts,
   )
+
+  const winnerMemberships = validMemberships.filter(
+    (row) => row.pools!.scoring_style === 'winner',
+  )
+  const winnerProgressByMember = new Map<string, number>()
+
+  if (winnerMemberships.length > 0) {
+    const winnerMemberIds = winnerMemberships.map((row) => row.id)
+    const winnerPoolIds = winnerMemberships.map((row) => row.pool_id)
+
+    const { data: groupRows } = await supabase
+      .from('group_predictions')
+      .select('member_id, standings')
+      .in('member_id', winnerMemberIds)
+
+    const standingsByMember = new Map<string, string[][]>()
+    for (const row of groupRows ?? []) {
+      const standings = parseStandingsJson(row.standings)
+      const existing = standingsByMember.get(row.member_id) ?? []
+      existing.push(standings)
+      standingsByMember.set(row.member_id, existing)
+    }
+
+    const thirdPlaceByPool = new Map<string, string[]>()
+    const { data: thirdPlaceRows } = await supabase
+      .from('third_place_rankings')
+      .select('pool_id, rankings')
+      .in('pool_id', winnerPoolIds)
+      .eq('user_id', userId)
+
+    for (const row of thirdPlaceRows ?? []) {
+      thirdPlaceByPool.set(
+        row.pool_id,
+        parseThirdPlaceRankingsJson(row.rankings),
+      )
+    }
+
+    for (const row of winnerMemberships) {
+      winnerProgressByMember.set(
+        row.id,
+        computeWinnerOnlyDashboardProgress(
+          standingsByMember.get(row.id) ?? [],
+          thirdPlaceByPool.get(row.pool_id) ?? [],
+        ),
+      )
+    }
+  }
 
   const rankByMember = new Map<string, number>()
   if (memberIds.length > 0) {
@@ -133,7 +190,13 @@ export async function fetchDashboardPools(
 
   const pools: DashboardPoolCardData[] = validMemberships.map((row) => {
     const pool = row.pools!
-    const yourPredictions = predictionsByMember.get(row.id) ?? 0
+    const isWinnerPool = pool.scoring_style === 'winner'
+    const yourPredictions = isWinnerPool
+      ? (winnerProgressByMember.get(row.id) ?? 0)
+      : (predictionsByMember.get(row.id) ?? 0)
+    const poolTotalPredictions = isWinnerPool
+      ? WINNER_ONLY_DASHBOARD_PROGRESS_TOTAL
+      : totalPredictions
     return {
       id: pool.id,
       name: pool.name,
@@ -143,7 +206,7 @@ export async function fetchDashboardPools(
       members: memberCountByPool.get(pool.id) ?? 1,
       memberAvatars: memberAvatarsByPool.get(pool.id) ?? [],
       yourRank: rankByMember.get(row.id) ?? null,
-      totalPredictions,
+      totalPredictions: poolTotalPredictions,
       yourPredictions,
       nextMatchKickoffAt,
       predictionsLocked,
