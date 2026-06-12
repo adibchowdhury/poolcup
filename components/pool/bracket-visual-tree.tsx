@@ -164,15 +164,33 @@ function BracketGroupCard({
         align === 'right' && 'items-end',
       )}
     >
-      <p
+      <div className="mb-1 flex w-full items-center justify-between gap-2">
+        <p
+          className={cn(
+            'shrink-0 text-[10px] font-semibold uppercase tracking-wider',
+            readOnly ? 'text-[#64748b]' : 'text-[#22c55e]',
+          )}
+        >
+          Group {group.letter}
+        </p>
+        {readOnly && (
+          <span className="shrink-0 text-right text-[10px] font-normal normal-case tracking-normal text-[#94a3b8]">
+            Locked — matches started
+          </span>
+        )}
+      </div>
+      <div
         className={cn(
-          'mb-1 w-full text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]',
-          align === 'right' ? 'text-right' : 'text-left',
+          'relative z-[1] w-full overflow-hidden rounded border',
+          readOnly ? 'border-[#334155]/90 bg-[#0f172a]/40' : 'border-[#1e293b]',
         )}
       >
-        Group {group.letter}
-      </p>
-      <div className="relative z-[1] w-full overflow-hidden rounded border border-[#1e293b]">
+        {readOnly && (
+          <div
+            className="pointer-events-none absolute inset-0 z-10 bg-[#0f172a]/35 ring-1 ring-inset ring-[#475569]/40"
+            aria-hidden
+          />
+        )}
         {group.teams.length === 0 ? (
           <p className="px-3 py-2 text-xs text-[#64748b]">No teams loaded yet.</p>
         ) : (

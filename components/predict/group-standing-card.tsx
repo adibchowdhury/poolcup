@@ -71,29 +71,45 @@ export function GroupStandingCard({
 
   return (
     <article
+      aria-label={
+        readOnly
+          ? `Group ${groupLetter}, locked — matches started`
+          : `Group ${groupLetter}`
+      }
       className={cn(
-        'min-w-0 overflow-hidden rounded-lg border border-border/90 bg-card/90 p-2 shadow-sm backdrop-blur-sm',
-        complete && 'border-primary/20',
+        'relative min-w-0 overflow-hidden rounded-lg border bg-card/90 p-2 shadow-sm backdrop-blur-sm',
+        complete && !readOnly && 'border-primary/20',
+        readOnly
+          ? 'border-muted-foreground/45 bg-muted/25'
+          : 'border-border/90',
       )}
     >
-      <div className="mb-1.5 flex min-w-0 items-center justify-between gap-1">
+      <div className="relative z-[1] mb-1.5 flex min-w-0 items-center justify-between gap-2">
         <h3 className="min-w-0 truncate font-display text-xs tracking-wide text-foreground uppercase">
           Group {groupLetter}
         </h3>
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={readOnly || standings.length === 0}
-          className="shrink-0 rounded px-1 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-        >
-          Clear
-        </button>
+        {readOnly ? (
+          <span className="shrink-0 text-right text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+            Locked — matches started
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={standings.length === 0}
+            className="shrink-0 rounded px-1 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {teams.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No teams loaded yet.</p>
+        <p className="relative z-[1] text-sm text-muted-foreground">
+          No teams loaded yet.
+        </p>
       ) : (
-        <ul className="flex min-w-0 flex-col gap-1">
+        <ul className="relative z-[1] flex min-w-0 flex-col gap-1">
           {teams.map((team) => {
             const rank = getTeamRank(standings, team)
             return (
@@ -131,6 +147,13 @@ export function GroupStandingCard({
             )
           })}
         </ul>
+      )}
+
+      {readOnly && (
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] rounded-lg bg-muted/20 ring-1 ring-inset ring-muted-foreground/25"
+          aria-hidden
+        />
       )}
     </article>
   )
