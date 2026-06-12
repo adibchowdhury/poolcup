@@ -1,5 +1,6 @@
 'use client'
 
+import { MatchPicksExpander } from '@/components/pool/match-picks-expander'
 import { cn } from '@/lib/utils'
 import {
   getPredictionOutcome,
@@ -41,8 +42,12 @@ function formatRoundLabel(round: string, groupName: string | null): string {
 
 export function PredictionMatchCard({
   prediction,
+  poolId,
+  currentUserId,
 }: {
   prediction: UserPoolPrediction
+  poolId?: string
+  currentUserId?: string
 }) {
   const hasResult =
     prediction.isFinal &&
@@ -113,6 +118,18 @@ export function PredictionMatchCard({
           </span>
         </div>
       </div>
+
+      {poolId && currentUserId ? (
+        <MatchPicksExpander
+          poolId={poolId}
+          matchId={prediction.matchId}
+          kickoffAt={prediction.kickoffAt}
+          isFinal={prediction.isFinal}
+          resultTeam1={prediction.resultTeam1}
+          resultTeam2={prediction.resultTeam2}
+          currentUserId={currentUserId}
+        />
+      ) : null}
     </article>
   )
 }

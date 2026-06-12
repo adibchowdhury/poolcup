@@ -79,6 +79,7 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "postcss": "^8.5",
+    "supabase": "^2.106.0",
     "tailwindcss": "^4.2.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

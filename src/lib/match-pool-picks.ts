@@ -1,0 +1,117 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { getPredictionOutcome } from '@/src/lib/prediction-scoring'
+
+export type MatchPoolPick = {
+  memberId: string
+  displayName: string
+  userId: string
+  predTeam1: number
+  predTeam2: number
+  points: number | null
+}
+
+type PredictionRow = {
+  pred_team1: number
+  pred_team2: number
+  member_id: string
+  pool_members:
+    | { display_name: string; user_id: string }
+    | { display_name: string; user_id: string }[]
+    | null
+}
+
+function resolvePoints(
+  isFinal: boolean,
+  resultTeam1: number | null,
+  resultTeam2: number | null,
+  predTeam1: number,
+  predTeam2: number,
+): number | null {
+  if (
+    !isFinal ||
+    resultTeam1 == null ||
+    resultTeam2 == null
+  ) {
+    return null
+  }
+
+  return getPredictionOutcome(
+    predTeam1,
+    predTeam2,
+    resultTeam1,
+    resultTeam2,
+  ).points
+}
+
+function sortPicks(picks: MatchPoolPick[], isFinal: boolean): MatchPoolPick[] {
+  return [...picks].sort((a, b) => {
+    if (isFinal) {
+      const pointsA = a.points ?? 0
+      const pointsB = b.points ?? 0
+      if (pointsB !== pointsA) return pointsB - pointsA
+    }
+    return a.displayName.localeCompare(b.displayName, undefined, {
+      sensitivity: 'base',
+    })
+  })
+}
+
+export async function fetchMatchPoolPicks(
+  supabase: SupabaseClient,
+  poolId: string,
+  matchId: string,
+  {
+    isFinal,
+    resultTeam1,
+    resultTeam2,
+  }: {
+    isFinal: boolean
+    resultTeam1: number | null
+    resultTeam2: number | null
+  },
+): Promise<{ picks: MatchPoolPick[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from('predictions')
+    .select(
+      `
+      pred_team1,
+      pred_team2,
+      member_id,
+      pool_members!inner (
+        display_name,
+        user_id
+      )
+    `,
+    )
+    .eq('pool_id', poolId)
+    .eq('match_id', matchId)
+
+  if (error) {
+    return { picks: [], error: error.message }
+  }
+
+  const picks: MatchPoolPick[] = []
+
+  for (const row of (data ?? []) as PredictionRow[]) {
+    const memberRaw = row.pool_members
+    const member = Array.isArray(memberRaw) ? memberRaw[0] : memberRaw
+    if (!member) continue
+
+    picks.push({
+      memberId: row.member_id,
+      displayName: member.display_name,
+      userId: member.user_id,
+      predTeam1: row.pred_team1,
+      predTeam2: row.pred_team2,
+      points: resolvePoints(
+        isFinal,
+        resultTeam1,
+        resultTeam2,
+        row.pred_team1,
+        row.pred_team2,
+      ),
+    })
+  }
+
+  return { picks: sortPicks(picks, isFinal), error: null }
+}

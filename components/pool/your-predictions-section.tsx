@@ -17,6 +17,8 @@ type YourPredictionsSectionProps = {
   classicPredictions: UserPoolPrediction[]
   winnerGroups: WinnerGroupPrediction[]
   thirdPlaceTeams: string[]
+  poolId?: string
+  currentUserId?: string
 }
 
 function GroupRankBadge({ rank }: { rank: number }) {
@@ -89,6 +91,8 @@ export function YourPredictionsSection({
   classicPredictions,
   winnerGroups,
   thirdPlaceTeams,
+  poolId,
+  currentUserId,
 }: YourPredictionsSectionProps) {
   const isWinnerOnly = scoringStyle === 'winner'
   const hasWinnerContent = winnerGroups.length > 0 || thirdPlaceTeams.length > 0
@@ -129,7 +133,11 @@ export function YourPredictionsSection({
         <ul className="space-y-3">
           {classicPredictions.map((prediction) => (
             <li key={prediction.matchId}>
-              <PredictionMatchCard prediction={prediction} />
+              <PredictionMatchCard
+                prediction={prediction}
+                poolId={poolId}
+                currentUserId={currentUserId}
+              />
             </li>
           ))}
         </ul>

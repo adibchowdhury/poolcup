@@ -270,6 +270,8 @@ export function PoolHomeView({
                 thirdPlaceTeams={thirdPlaceTeams}
                 totalMatches={pool.totalMatches}
                 predictHref={predictHref}
+                poolId={poolId}
+                currentUserId={currentUserId}
                 shareOpen={shareOpen}
                 onToggleShare={() => setShareOpen((o) => !o)}
                 inviteCopySlot={

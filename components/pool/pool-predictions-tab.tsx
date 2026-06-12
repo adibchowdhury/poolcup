@@ -21,6 +21,8 @@ type PoolPredictionsTabProps = {
   shareOpen: boolean
   onToggleShare: () => void
   inviteCopySlot: React.ReactNode
+  poolId?: string
+  currentUserId?: string
 }
 
 export function PoolPredictionsTab({
@@ -33,6 +35,8 @@ export function PoolPredictionsTab({
   shareOpen,
   onToggleShare,
   inviteCopySlot,
+  poolId,
+  currentUserId,
 }: PoolPredictionsTabProps) {
   const isWinnerOnly = scoringStyle === 'winner'
   const unpredictedCount = isWinnerOnly
@@ -105,6 +109,8 @@ export function PoolPredictionsTab({
         classicPredictions={predictions}
         winnerGroups={winnerGroups}
         thirdPlaceTeams={thirdPlaceTeams}
+        poolId={poolId}
+        currentUserId={currentUserId}
       />
     </div>
   )
