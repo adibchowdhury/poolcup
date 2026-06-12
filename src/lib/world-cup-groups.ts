@@ -185,6 +185,21 @@ export function tapTeamInGroup(
   return [...standings, teamName]
 }
 
+/** After a group tap, assign the sole remaining team to 4th when 3 of 4 are ranked. */
+export function tapGroupTeamWithAutoFourth(
+  standings: string[],
+  teamName: string,
+  teamsInGroup: string[],
+): string[] {
+  const afterTap = tapTeamInGroup(standings, teamName, teamsInGroup)
+  if (teamsInGroup.length !== 4 || afterTap.length !== 3) return afterTap
+
+  const remaining = teamsInGroup.filter((team) => !afterTap.includes(team))
+  if (remaining.length !== 1) return afterTap
+
+  return tapTeamInGroup(afterTap, remaining[0]!, teamsInGroup)
+}
+
 export function clearGroupRankings(): string[] {
   return []
 }

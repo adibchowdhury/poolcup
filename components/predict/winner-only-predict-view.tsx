@@ -33,6 +33,7 @@ import {
   parseThirdPlaceRankingsJson,
   rankingsEqual,
   syncThirdPlaceRankings,
+  tapGroupTeamWithAutoFourth,
   tapTeamInGroup,
   type GroupRankings,
   type GroupStageMatch,
@@ -285,7 +286,7 @@ export function WinnerOnlyPredictView({
     setGroupRankings((prev) => {
       const next = {
         ...prev,
-        [groupLetter]: tapTeamInGroup(
+        [groupLetter]: tapGroupTeamWithAutoFourth(
           prev[groupLetter] ?? [],
           teamName,
           group.teams,
