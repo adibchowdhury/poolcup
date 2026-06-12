@@ -386,12 +386,15 @@ CREATE OR REPLACE FUNCTION public.handle_issue_report_email()
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
+declare
+  v_secret text;
 begin
+  select value into v_secret from private.app_secrets where key = 'bug_webhook_secret';
   perform net.http_post(
     url := 'https://pyydeixbkzzyezjuqted.supabase.co/functions/v1/send-bug-ack',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-webhook-secret', '419f18161d42f07e5acfa71bb29acbaa58a515a0aaba774f689deb6db86392b4'
+      'x-webhook-secret', coalesce(v_secret, '')
     ),
     body := jsonb_build_object(
       'type', 'INSERT',
