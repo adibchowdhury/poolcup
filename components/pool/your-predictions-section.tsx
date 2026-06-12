@@ -130,9 +130,9 @@ export function YourPredictionsSection({
           ) : null}
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2">
           {classicPredictions.map((prediction) => (
-            <li key={prediction.matchId}>
+            <li key={prediction.matchId} className="min-w-0">
               <PredictionMatchCard
                 prediction={prediction}
                 poolId={poolId}
