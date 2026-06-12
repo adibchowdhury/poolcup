@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { RedditAnnouncementBanner } from '@/components/reddit-announcement-banner'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
@@ -398,12 +399,16 @@ function DashboardViewContent({
       </div>
 
       <div className="relative z-10">
-        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+        <div className="z-50 md:sticky md:top-0">
+          <RedditAnnouncementBanner />
+          <header className="border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <PoolCupLogo href="/dashboard" />
+              <div className="flex justify-center sm:justify-start">
+                <PoolCupLogo href="/dashboard" />
+              </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
                 <SupportUsButton />
                 <DashboardSignOut displayName={headerName} />
                 <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -542,6 +547,7 @@ function DashboardViewContent({
             </div>
           </div>
         </header>
+        </div>
 
         <main className="mx-auto max-w-6xl px-4 py-8">
           {passwordResetSuccess && (

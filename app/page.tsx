@@ -1,3 +1,4 @@
+import { RedditAnnouncementBanner } from '@/components/reddit-announcement-banner'
 import LandingPage from '@/components/pages/landing-page'
 
 const jsonLd = {
@@ -23,6 +24,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <RedditAnnouncementBanner />
       <LandingPage />
     </>
   )
