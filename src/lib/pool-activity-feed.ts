@@ -2,6 +2,12 @@ import { supabase } from '@/src/lib/supabase'
 
 export type PoolActivitySubjectType = 'group' | 'third_place' | 'match'
 
+export type PoolActivityPointsReason =
+  | 'exact_score'
+  | 'correct_winner'
+  | 'winner_group'
+  | 'third_place'
+
 export type PoolActivityFeedItem = {
   id: string
   type: string
@@ -9,11 +15,21 @@ export type PoolActivityFeedItem = {
   groupName: string | null
   matchId: string | null
   areaLabel: string
+  matchContext: string | null
+  points: number | null
+  reason: string | null
   createdAt: string
   memberId: string
   actorUserId: string
   displayName: string
   avatar: string | null
+}
+
+const POINTS_REASON_LABELS: Record<PoolActivityPointsReason, string> = {
+  exact_score: 'nailed the exact score',
+  correct_winner: 'called the winner',
+  winner_group: 'called the group standings',
+  third_place: 'called the third-place qualifiers',
 }
 
 const MATCH_ROUND_LABELS: Record<string, string> = {
@@ -38,6 +54,8 @@ type PoolActivityQueryRow = {
   subject_type: string | null
   group_name: string | null
   match_id: string | null
+  points: number | null
+  reason: string | null
   created_at: string
   member_id: string
   pool_members:
@@ -52,8 +70,12 @@ type PoolActivityQueryRow = {
     | null
 }
 
+function formatMatchMatchup(match: MatchLabelRow): string {
+  return `${match.team1_name} vs ${match.team2_name}`
+}
+
 function formatMatchAreaLabel(match: MatchLabelRow): string {
-  const matchup = `${match.team1_name} vs ${match.team2_name}`
+  const matchup = formatMatchMatchup(match)
   const roundLabel = MATCH_ROUND_LABELS[match.round]
   return roundLabel ? `${roundLabel}: ${matchup}` : matchup
 }
@@ -105,6 +127,41 @@ export function getPoolActivityMessage(
   }
 }
 
+export function getPointsEarnedReasonLabel(reason: string): string {
+  const label = POINTS_REASON_LABELS[reason as PoolActivityPointsReason]
+  if (label) return label
+  return reason.replace(/_/g, ' ')
+}
+
+export function buildPointsEarnedContext(activity: PoolActivityFeedItem): string {
+  if (activity.subjectType === 'match' && activity.matchContext) {
+    return activity.matchContext
+  }
+
+  if (activity.subjectType === 'group' && activity.groupName) {
+    return `Group ${activity.groupName}`
+  }
+
+  if (activity.subjectType === 'third_place') {
+    return 'the best third-place teams'
+  }
+
+  return activity.areaLabel
+}
+
+export function getPoolActivityPointsEarnedMessage(
+  activity: PoolActivityFeedItem,
+  currentUserId: string,
+): { actor: string; points: number; reasonLabel: string; context: string } {
+  const isYou = activity.actorUserId === currentUserId
+  const actor = isYou ? 'You' : activity.displayName
+  const points = Math.max(0, activity.points ?? 0)
+  const reasonLabel = getPointsEarnedReasonLabel(activity.reason ?? '')
+  const context = buildPointsEarnedContext(activity)
+
+  return { actor, points, reasonLabel, context }
+}
+
 export async function fetchPoolActivityFeed(
   poolId: string,
 ): Promise<{ items: PoolActivityFeedItem[]; error: string | null }> {
@@ -117,6 +174,8 @@ export async function fetchPoolActivityFeed(
       subject_type,
       group_name,
       match_id,
+      points,
+      reason,
       created_at,
       member_id,
       pool_members (
@@ -192,6 +251,8 @@ export async function fetchPoolActivityFeed(
       : row.pool_members
     const actorUserId = member?.user_id ?? ''
     const subjectType = row.subject_type as PoolActivitySubjectType | null
+    const match =
+      row.match_id != null ? matchLabels.get(row.match_id) : undefined
 
     return {
       id: row.id,
@@ -205,6 +266,9 @@ export async function fetchPoolActivityFeed(
         row.match_id,
         matchLabels,
       ),
+      matchContext: match ? formatMatchMatchup(match) : null,
+      points: row.points,
+      reason: row.reason,
       createdAt: row.created_at,
       memberId: row.member_id,
       actorUserId,

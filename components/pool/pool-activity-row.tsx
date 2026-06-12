@@ -3,8 +3,10 @@
 import Image from 'next/image'
 import { formatRelativeTimestamp } from '@/src/lib/points-transaction-feed'
 import { getAvatarSrc } from '@/src/lib/avatars'
+import { cn } from '@/lib/utils'
 import {
   getPoolActivityMessage,
+  getPoolActivityPointsEarnedMessage,
   type PoolActivityFeedItem,
 } from '@/src/lib/pool-activity-feed'
 
@@ -44,9 +46,54 @@ function ActivityAvatar({
   )
 }
 
-export function PoolActivityRow({ activity, currentUserId }: PoolActivityRowProps) {
+function PointsEarnedActivityBody({
+  activity,
+  currentUserId,
+}: {
+  activity: PoolActivityFeedItem
+  currentUserId: string
+}) {
+  const { actor, points, reasonLabel, context } =
+    getPoolActivityPointsEarnedMessage(activity, currentUserId)
+
+  return (
+    <p className="text-sm text-foreground">
+      <span className="font-semibold">{actor}</span>
+      <span className="text-muted-foreground"> earned </span>
+      <span
+        className={cn(
+          'mx-0.5 inline-flex items-center rounded-full bg-primary/15 px-1.5 py-0.5',
+          'font-mono text-xs font-semibold tabular-nums text-primary',
+        )}
+      >
+        +{points}
+      </span>
+      <span className="text-muted-foreground">
+        {' '}
+        — {reasonLabel} on {context}.
+      </span>
+    </p>
+  )
+}
+
+function PredictionActivityBody({
+  activity,
+  currentUserId,
+}: {
+  activity: PoolActivityFeedItem
+  currentUserId: string
+}) {
   const { actor, action } = getPoolActivityMessage(activity, currentUserId)
 
+  return (
+    <p className="text-sm text-foreground">
+      <span className="font-semibold">{actor}</span>{' '}
+      <span className="text-muted-foreground">{action}</span>
+    </p>
+  )
+}
+
+export function PoolActivityRow({ activity, currentUserId }: PoolActivityRowProps) {
   return (
     <article
       data-activity-id={activity.id}
@@ -54,10 +101,17 @@ export function PoolActivityRow({ activity, currentUserId }: PoolActivityRowProp
     >
       <ActivityAvatar displayName={activity.displayName} avatar={activity.avatar} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-foreground">
-          <span className="font-semibold">{actor}</span>{' '}
-          <span className="text-muted-foreground">{action}</span>
-        </p>
+        {activity.type === 'points_earned' ? (
+          <PointsEarnedActivityBody
+            activity={activity}
+            currentUserId={currentUserId}
+          />
+        ) : (
+          <PredictionActivityBody
+            activity={activity}
+            currentUserId={currentUserId}
+          />
+        )}
         <p className="mt-1 text-xs text-muted-foreground" suppressHydrationWarning>
           {formatRelativeTimestamp(activity.createdAt)}
         </p>
