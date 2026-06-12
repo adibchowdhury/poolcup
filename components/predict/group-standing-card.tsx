@@ -56,7 +56,6 @@ interface GroupStandingCardProps {
   standings: string[]
   readOnly?: boolean
   onTeamTap: (teamName: string) => void
-  onClear: () => void
 }
 
 export function GroupStandingCard({
@@ -65,7 +64,6 @@ export function GroupStandingCard({
   standings,
   readOnly = false,
   onTeamTap,
-  onClear,
 }: GroupStandingCardProps) {
   const complete = standings.length === teams.length && teams.length > 0
 
@@ -84,23 +82,14 @@ export function GroupStandingCard({
           : 'border-border/90',
       )}
     >
-      <div className="relative z-[1] mb-1.5 flex min-w-0 items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate font-display text-xs tracking-wide text-foreground uppercase">
+      <div className="relative z-[1] mb-1.5 min-w-0">
+        <h3 className="font-display text-xs tracking-wide text-foreground uppercase">
           Group {groupLetter}
         </h3>
-        {readOnly ? (
-          <span className="shrink-0 text-right text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+        {readOnly && (
+          <p className="mt-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
             Locked — matches started
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={onClear}
-            disabled={standings.length === 0}
-            className="shrink-0 rounded px-1 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-          >
-            Clear
-          </button>
+          </p>
         )}
       </div>
 

@@ -297,21 +297,6 @@ export function WinnerOnlyPredictView({
     })
   }
 
-  function handleClearGroup(groupLetter: string) {
-    if (isGroupLocked(groupLetter as WorldCupGroupLetter)) return
-
-    setSaveSuccess(false)
-    setSuccessMessage(null)
-    setGroupRankings((prev) => {
-      const next = {
-        ...prev,
-        [groupLetter]: [],
-      }
-      setThirdPlaceRankings((tp) => syncThirdPlaceRankings(tp, next))
-      return next
-    })
-  }
-
   function handleThirdPlaceTeamTap(teamName: string) {
     const available = getAvailableThirdPlaceTeams(groupRankings)
     if (!available.includes(teamName)) return
@@ -539,7 +524,6 @@ export function WinnerOnlyPredictView({
                       onTeamTap={(teamName) =>
                         handleTeamTap(group.letter, teamName)
                       }
-                      onClear={() => handleClearGroup(group.letter)}
                     />
                   ))}
                 </div>
