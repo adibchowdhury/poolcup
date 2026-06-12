@@ -1,6 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { sortClassicPredictionsForDisplay } from '@/src/lib/sort-classic-predictions'
 import {
   PredictionMatchCard,
   type UserPoolPrediction,
@@ -99,6 +101,10 @@ export function YourPredictionsSection({
   const hasClassicContent = classicPredictions.length > 0
   const hasContent = isWinnerOnly ? hasWinnerContent : hasClassicContent
   const totalGroups = WORLD_CUP_GROUP_LETTERS.length
+  const orderedClassicPredictions = useMemo(
+    () => sortClassicPredictionsForDisplay(classicPredictions),
+    [classicPredictions],
+  )
 
   return (
     <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8">
@@ -131,7 +137,7 @@ export function YourPredictionsSection({
         </div>
       ) : (
         <ul className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2">
-          {classicPredictions.map((prediction) => (
+          {orderedClassicPredictions.map((prediction) => (
             <li key={prediction.matchId} className="min-w-0">
               <PredictionMatchCard
                 prediction={prediction}
