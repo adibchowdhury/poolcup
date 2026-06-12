@@ -234,6 +234,30 @@ export function buildGroupFirstKickoffs(
   return firstKickoff
 }
 
+/** Latest kickoff (ms) among all group-stage matches (A–L). */
+export function getLatestGroupStageKickoffMs(
+  matches: GroupStageMatch[],
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): number | undefined {
+  let latestKickoff: number | undefined
+
+  for (const match of matches) {
+    if (!isGroupStageRound(match.round) || !match.kickoff_at) continue
+
+    const letter = resolveMatchGroupLetter(match, teamToGroup)
+    if (!letter) continue
+
+    const kickoffMs = new Date(match.kickoff_at).getTime()
+    if (Number.isNaN(kickoffMs)) continue
+
+    if (latestKickoff === undefined || kickoffMs > latestKickoff) {
+      latestKickoff = kickoffMs
+    }
+  }
+
+  return latestKickoff
+}
+
 /** A group locks when its first match has kicked off (now >= earliest kickoff_at). */
 export function isGroupRankingLocked(
   groupLetter: WorldCupGroupLetter,
@@ -244,6 +268,19 @@ export function isGroupRankingLocked(
   const kickoffMs = buildGroupFirstKickoffs(matches, teamToGroup).get(groupLetter)
   if (kickoffMs === undefined) return false
   return now >= kickoffMs
+}
+
+export const THIRD_PLACE_LOCKED_LABEL = 'Locked — group stage finished'
+
+/** Third-place picks lock once the last group-stage match has kicked off. */
+export function isThirdPlaceRankingLocked(
+  matches: GroupStageMatch[],
+  now = Date.now(),
+  teamToGroup?: Map<string, WorldCupGroupLetter>,
+): boolean {
+  const latestKickoffMs = getLatestGroupStageKickoffMs(matches, teamToGroup)
+  if (latestKickoffMs === undefined) return false
+  return now >= latestKickoffMs
 }
 
 /** Merge saved standings with default team list for display ordering. */

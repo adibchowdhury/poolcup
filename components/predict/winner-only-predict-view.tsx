@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { useClientNow } from '@/hooks/use-client-now'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
 import { ThirdPlaceRankingPanel } from '@/components/pool/third-place-ranking-panel'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
@@ -28,7 +29,9 @@ import {
   countCompleteGroups,
   emptyGroupRankings,
   getAvailableThirdPlaceTeams,
+  getLatestGroupStageKickoffMs,
   isGroupRankingLocked,
+  isThirdPlaceRankingLocked,
   parseStandingsJson,
   parseThirdPlaceRankingsJson,
   rankingsEqual,
@@ -36,6 +39,7 @@ import {
   tapGroupTeamWithAutoFourth,
   tapThirdPlaceTeamWithAutoEliminated,
   tapTeamInGroup,
+  THIRD_PLACE_LOCKED_LABEL,
   type GroupRankings,
   type GroupStageMatch,
   type WorldCupGroupLetter,
@@ -69,6 +73,7 @@ export function WinnerOnlyPredictView({
   inviteCode,
 }: WinnerOnlyPredictViewProps) {
   const { user } = useAuth()
+  const { mounted, nowMs } = useClientNow(1000)
   const [activeTab, setActiveTab] = useState<WinnerOnlyRoundTabId>('bracket')
   const [groupRankings, setGroupRankings] = useState<GroupRankings>(
     emptyGroupRankings(),
@@ -245,7 +250,26 @@ export function WinnerOnlyPredictView({
       isGroupRankingLocked(
         groupLetter,
         matches,
-        Date.now(),
+        mounted ? nowMs : Date.now(),
+        teamToGroup.size > 0 ? teamToGroup : undefined,
+      ),
+    [matches, mounted, nowMs, teamToGroup],
+  )
+
+  const isThirdPlaceLocked = useMemo(
+    () =>
+      isThirdPlaceRankingLocked(
+        matches,
+        mounted ? nowMs : Date.now(),
+        teamToGroup.size > 0 ? teamToGroup : undefined,
+      ),
+    [matches, mounted, nowMs, teamToGroup],
+  )
+
+  const thirdPlaceLockKickoffAtMs = useMemo(
+    () =>
+      getLatestGroupStageKickoffMs(
+        matches,
         teamToGroup.size > 0 ? teamToGroup : undefined,
       ),
     [matches, teamToGroup],
@@ -262,13 +286,15 @@ export function WinnerOnlyPredictView({
       thirdPlaceRankings,
       baselineThirdPlaceRankings,
     )
-    return hasUnlockedGroupSaves || thirdPlaceChanged
+    const thirdPlaceSaveable = thirdPlaceChanged && !isThirdPlaceLocked
+    return hasUnlockedGroupSaves || thirdPlaceSaveable
   }, [
     baselineRankings,
     baselineThirdPlaceRankings,
     groupRankings,
     groups,
     isGroupLocked,
+    isThirdPlaceLocked,
     thirdPlaceRankings,
   ])
 
@@ -299,6 +325,8 @@ export function WinnerOnlyPredictView({
   }
 
   function handleThirdPlaceTeamTap(teamName: string) {
+    if (isThirdPlaceLocked) return
+
     const available = getAvailableThirdPlaceTeams(groupRankings)
     if (!available.includes(teamName)) return
 
@@ -312,7 +340,15 @@ export function WinnerOnlyPredictView({
   async function handleSave() {
     if (unsavedGroupCount === 0 || !canSaveChanges) {
       if (unsavedGroupCount > 0 && !canSaveChanges) {
-        setError('Predictions are locked for those groups')
+        const thirdPlaceChanged = !rankingsEqual(
+          thirdPlaceRankings,
+          baselineThirdPlaceRankings,
+        )
+        if (thirdPlaceChanged && isThirdPlaceLocked) {
+          setError(THIRD_PLACE_LOCKED_LABEL)
+        } else {
+          setError('Predictions are locked for those groups')
+        }
         window.setTimeout(() => setError(null), 3000)
       }
       return
@@ -338,13 +374,19 @@ export function WinnerOnlyPredictView({
         return current.length > 0 && !rankingsEqual(current, baseline)
       })
 
-    const thirdPlaceChanged = !rankingsEqual(
-      thirdPlaceRankings,
-      baselineThirdPlaceRankings,
-    )
+    const thirdPlaceChanged =
+      !isThirdPlaceLocked &&
+      !rankingsEqual(thirdPlaceRankings, baselineThirdPlaceRankings)
 
     if (rows.length === 0 && !thirdPlaceChanged) {
       setSaving(false)
+      if (
+        !rankingsEqual(thirdPlaceRankings, baselineThirdPlaceRankings) &&
+        isThirdPlaceLocked
+      ) {
+        setError(THIRD_PLACE_LOCKED_LABEL)
+        window.setTimeout(() => setError(null), 3000)
+      }
       return
     }
 
@@ -389,7 +431,17 @@ export function WinnerOnlyPredictView({
 
       if (thirdPlaceError) {
         setSaving(false)
-        setError(thirdPlaceError.message)
+        if (
+          isThirdPlaceRankingLocked(
+            matches,
+            Date.now(),
+            teamToGroup.size > 0 ? teamToGroup : undefined,
+          )
+        ) {
+          setError(THIRD_PLACE_LOCKED_LABEL)
+        } else {
+          setError(thirdPlaceError.message)
+        }
         return
       }
 
@@ -461,7 +513,7 @@ export function WinnerOnlyPredictView({
                   label="Groups ranked"
                   labelFirst
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-amber-400">
                   Rank all 4 teams in each group to lock it in.
                 </p>
               </div>
@@ -509,6 +561,8 @@ export function WinnerOnlyPredictView({
                   groupRankings={groupRankings}
                   thirdPlaceRankings={thirdPlaceRankings}
                   isGroupLocked={isGroupLocked}
+                  isThirdPlaceLocked={isThirdPlaceLocked}
+                  thirdPlaceLockKickoffAtMs={thirdPlaceLockKickoffAtMs}
                   onTeamTap={handleTeamTap}
                   onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
                 />
@@ -532,7 +586,8 @@ export function WinnerOnlyPredictView({
                   <ThirdPlaceRankingPanel
                     groupRankings={groupRankings}
                     thirdPlaceRankings={thirdPlaceRankings}
-                    readOnly={false}
+                    locked={isThirdPlaceLocked}
+                    lockKickoffAtMs={thirdPlaceLockKickoffAtMs}
                     onThirdPlaceTeamTap={handleThirdPlaceTeamTap}
                   />
                 </div>

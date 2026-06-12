@@ -8,6 +8,8 @@ interface PoolBracketTabProps {
   groupRankings: GroupRankings
   thirdPlaceRankings: string[]
   isGroupLocked: (groupLetter: WorldCupGroupLetter) => boolean
+  isThirdPlaceLocked?: boolean
+  thirdPlaceLockKickoffAtMs?: number
   onTeamTap: (groupLetter: WorldCupGroupLetter, teamName: string) => void
   onThirdPlaceTeamTap: (teamName: string) => void
 }
@@ -17,6 +19,8 @@ export function PoolBracketTab({
   groupRankings,
   thirdPlaceRankings,
   isGroupLocked,
+  isThirdPlaceLocked = false,
+  thirdPlaceLockKickoffAtMs,
   onTeamTap,
   onThirdPlaceTeamTap,
 }: PoolBracketTabProps) {
@@ -26,6 +30,8 @@ export function PoolBracketTab({
       groupRankings={groupRankings}
       thirdPlaceRankings={thirdPlaceRankings}
       isGroupLocked={isGroupLocked}
+      isThirdPlaceLocked={isThirdPlaceLocked}
+      thirdPlaceLockKickoffAtMs={thirdPlaceLockKickoffAtMs}
       onTeamTap={onTeamTap}
       onThirdPlaceTeamTap={onThirdPlaceTeamTap}
     />

@@ -2,10 +2,12 @@
 
 import { cn } from '@/lib/utils'
 import { rankOrdinal } from '@/src/lib/world-cup-2026-bracket'
+import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   getTeamRank,
   getThirdPlaceSlots,
+  THIRD_PLACE_LOCKED_LABEL,
   type GroupRankings,
 } from '@/src/lib/world-cup-groups'
 
@@ -105,28 +107,70 @@ function ThirdPlaceTeamRow({
 interface ThirdPlaceRankingPanelProps {
   groupRankings: GroupRankings
   thirdPlaceRankings: string[]
-  readOnly: boolean
+  readOnly?: boolean
+  locked?: boolean
+  /** Latest group-stage kickoff (ms); shown in the unlock heads-up notice. */
+  lockKickoffAtMs?: number
   onThirdPlaceTeamTap: (teamName: string) => void
 }
 
 export function ThirdPlaceRankingPanel({
   groupRankings,
   thirdPlaceRankings,
-  readOnly,
+  readOnly = false,
+  locked = false,
+  lockKickoffAtMs,
   onThirdPlaceTeamTap,
 }: ThirdPlaceRankingPanelProps) {
   const slots = getThirdPlaceSlots(groupRankings)
   const pickedCount = Math.min(thirdPlaceRankings.length, 8)
+  const interactionDisabled = readOnly || locked
+  const lockDeadlineIso =
+    lockKickoffAtMs != null
+      ? new Date(lockKickoffAtMs).toISOString()
+      : null
 
   return (
     <div className="relative z-[1] flex min-w-0 flex-1 flex-col self-stretch">
-      <p className="mb-1 text-right text-[10px] font-semibold uppercase tracking-wider text-[#22c55e]">
-        3rd Place Teams
-      </p>
+      {!locked && lockDeadlineIso && (
+        <p className="mb-1 text-xs text-amber-400">
+          Third-place rankings lock when the final group-stage match kicks off (
+          <time dateTime={lockDeadlineIso}>
+            {formatFeaturedKickoffLocal(lockDeadlineIso)}
+          </time>
+          ).
+        </p>
+      )}
+      <div className="mb-1 flex w-full items-center justify-between gap-2">
+        <p
+          className={cn(
+            'shrink-0 text-[10px] font-semibold uppercase tracking-wider',
+            locked ? 'text-[#64748b]' : 'text-[#22c55e]',
+          )}
+        >
+          3rd Place Teams
+        </p>
+        {locked && (
+          <span className="shrink-0 text-right text-[10px] font-normal normal-case tracking-normal text-[#94a3b8]">
+            {THIRD_PLACE_LOCKED_LABEL}
+          </span>
+        )}
+      </div>
       <p className="mb-1 text-right font-mono text-[10px] text-[#64748b]">
         {pickedCount}/8 picked
       </p>
-      <div className="relative z-[1] w-full rounded border border-[#1e293b]">
+      <div
+        className={cn(
+          'relative z-[1] w-full overflow-hidden rounded border',
+          locked ? 'border-[#334155]/90 bg-[#0f172a]/40' : 'border-[#1e293b]',
+        )}
+      >
+        {locked && (
+          <div
+            className="pointer-events-none absolute inset-0 z-10 bg-[#0f172a]/35 ring-1 ring-inset ring-[#475569]/40"
+            aria-hidden
+          />
+        )}
         {slots.map((slot) => {
           if (!slot.team) {
             return (
@@ -144,7 +188,7 @@ export function ThirdPlaceRankingPanel({
               team={slot.team}
               group={slot.group}
               rank={rank}
-              readOnly={readOnly}
+              readOnly={interactionDisabled}
               onTeamTap={() => onThirdPlaceTeamTap(slot.team!)}
             />
           )
