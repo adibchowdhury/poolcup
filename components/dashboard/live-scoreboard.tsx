@@ -1,15 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Clock } from 'lucide-react'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
-import { useClientNow } from '@/hooks/use-client-now'
 import { cn } from '@/lib/utils'
 import {
   type FeaturedMatch,
   type FeaturedMatchMode,
   fetchFeaturedMatch,
-  formatFeaturedCountdown,
   formatFeaturedKickoffLocal,
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
@@ -17,6 +14,96 @@ import {
 import { supabase } from '@/src/lib/supabase'
 
 const REFETCH_INTERVAL_MS = 60_000
+const COUNTDOWN_TICK_MS = 1000
+
+function padCountdownUnit(value: number): string {
+  return value.toString().padStart(2, '0')
+}
+
+function formatFeaturedMatchCountdown(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const days = Math.floor(totalSeconds / 86_400)
+  const hours = Math.floor((totalSeconds % 86_400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (days > 0) {
+    return `${days}d ${hours}h ${padCountdownUnit(minutes)}m ${padCountdownUnit(seconds)}s`
+  }
+
+  return `${padCountdownUnit(hours)}:${padCountdownUnit(minutes)}:${padCountdownUnit(seconds)}`
+}
+
+function useKickoffCountdown(kickoffAt: string) {
+  const [mounted, setMounted] = useState(false)
+  const [nowMs, setNowMs] = useState(0)
+
+  useEffect(() => {
+    setMounted(true)
+    setNowMs(Date.now())
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, COUNTDOWN_TICK_MS)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
+  const remainingMs = mounted
+    ? new Date(kickoffAt).getTime() - nowMs
+    : null
+
+  return {
+    mounted,
+    isKickingOff: remainingMs != null && remainingMs <= 0,
+    label:
+      remainingMs != null && remainingMs > 0
+        ? formatFeaturedMatchCountdown(remainingMs)
+        : null,
+  }
+}
+
+function FeaturedMatchCountdownDisplay({
+  mounted,
+  isKickingOff,
+  label,
+}: {
+  mounted: boolean
+  isKickingOff: boolean
+  label: string | null
+}) {
+  if (!mounted) {
+    return (
+      <span
+        className="font-mono text-xl font-bold tabular-nums text-[#ffb300] sm:text-2xl lg:text-3xl"
+        aria-hidden
+      >
+        —:——:——
+      </span>
+    )
+  }
+
+  if (isKickingOff) {
+    return (
+      <span
+        className="inline-flex items-center gap-2 font-display text-xl font-bold uppercase tracking-wide text-primary animate-pulse sm:text-2xl lg:text-3xl"
+        suppressHydrationWarning
+      >
+        <span className="stage-live-dot h-2.5 w-2.5 shrink-0 rounded-full" aria-hidden />
+        Kicking off
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className="font-mono text-xl font-bold leading-none tabular-nums text-[#ffb300] sm:text-2xl lg:text-3xl"
+      suppressHydrationWarning
+    >
+      {label}
+    </span>
+  )
+}
 
 function LiveScoreboardSkeleton() {
   return (
@@ -66,13 +153,9 @@ function ScoreboardTeam({
 function LiveScoreboardCard({
   match,
   mode,
-  mounted,
-  nowMs,
 }: {
   match: FeaturedMatch
   mode: FeaturedMatchMode
-  mounted: boolean
-  nowMs: number
 }) {
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.group_name)
   const isLive = mode === 'live'
@@ -82,13 +165,10 @@ function LiveScoreboardCard({
     match.elapsed_minute,
     match.is_final || mode === 'final',
   )
-  const countdown =
-    mounted && isUpcoming
-      ? formatFeaturedCountdown(match.kickoff_at, nowMs)
-      : null
 
   const score1 = match.result_team1 ?? 0
   const score2 = match.result_team2 ?? 0
+  const kickoffCountdown = useKickoffCountdown(match.kickoff_at)
 
   return (
     <article
@@ -151,16 +231,14 @@ function LiveScoreboardCard({
             </span>
           )}
           {isUpcoming ? (
-            <div className="mt-2 hidden w-full flex-col items-center gap-1 text-center text-xs text-muted-foreground sm:flex">
-              <time dateTime={match.kickoff_at}>
+            <div className="mt-2 hidden w-full flex-col items-center gap-2 px-1 text-center sm:flex">
+              <FeaturedMatchCountdownDisplay {...kickoffCountdown} />
+              <time
+                dateTime={match.kickoff_at}
+                className="text-xs text-muted-foreground"
+              >
                 {formatFeaturedKickoffLocal(match.kickoff_at)}
               </time>
-              {countdown ? (
-                <span className="inline-flex items-center gap-1 font-medium text-primary">
-                  <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  {countdown}
-                </span>
-              ) : null}
             </div>
           ) : null}
         </div>
@@ -172,16 +250,14 @@ function LiveScoreboardCard({
       </div>
 
       {isUpcoming ? (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:hidden">
-          <time dateTime={match.kickoff_at}>
+        <div className="mt-3 flex flex-col items-center gap-2 px-1 text-center sm:hidden">
+          <FeaturedMatchCountdownDisplay {...kickoffCountdown} />
+          <time
+            dateTime={match.kickoff_at}
+            className="text-xs text-muted-foreground"
+          >
             {formatFeaturedKickoffLocal(match.kickoff_at)}
           </time>
-          {countdown ? (
-            <span className="inline-flex items-center gap-1 font-medium text-primary">
-              <Clock className="h-3.5 w-3.5" aria-hidden />
-              {countdown}
-            </span>
-          ) : null}
         </div>
       ) : null}
     </article>
@@ -193,7 +269,6 @@ export function LiveScoreboard() {
   const [mode, setMode] = useState<FeaturedMatchMode | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { mounted, nowMs } = useClientNow(1000)
 
   const loadFeaturedMatch = useCallback(async (showLoading: boolean) => {
     if (showLoading) setLoading(true)
@@ -232,12 +307,5 @@ export function LiveScoreboard() {
     return null
   }
 
-  return (
-    <LiveScoreboardCard
-      match={match}
-      mode={mode}
-      mounted={mounted}
-      nowMs={nowMs}
-    />
-  )
+  return <LiveScoreboardCard match={match} mode={mode} />
 }
