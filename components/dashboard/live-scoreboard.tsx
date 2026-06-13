@@ -174,7 +174,7 @@ function LiveScoreboardCard({
     <article
       className={cn(
         'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.14),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] p-3 sm:p-4',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/55 before:to-transparent',
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
