@@ -31,22 +31,38 @@ export async function fetchMemberPredictionCounts(
     .map((row) => row.memberId)
 
   if (classicMemberIds.length > 0) {
+    const { data: settledMatches } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('is_final', true)
+
+    const settledMatchIds = new Set((settledMatches ?? []).map((row) => row.id))
+
     const { data: predictions } = await supabase
       .from('predictions')
       .select('member_id, match_id')
       .in('member_id', classicMemberIds)
 
     const distinctByMember = new Map<string, Set<string>>()
+    const settledDistinctByMember = new Map<string, Set<string>>()
     for (const row of predictions ?? []) {
       if (!distinctByMember.has(row.member_id)) {
         distinctByMember.set(row.member_id, new Set())
       }
       distinctByMember.get(row.member_id)!.add(row.match_id)
+
+      if (settledMatchIds.has(row.match_id)) {
+        if (!settledDistinctByMember.has(row.member_id)) {
+          settledDistinctByMember.set(row.member_id, new Set())
+        }
+        settledDistinctByMember.get(row.member_id)!.add(row.match_id)
+      }
     }
     for (const [memberId, matchIds] of distinctByMember) {
-      const count = matchIds.size
-      predictionsByMember.set(memberId, count)
-      classicMatchPredictionsByMember.set(memberId, count)
+      predictionsByMember.set(memberId, matchIds.size)
+    }
+    for (const [memberId, matchIds] of settledDistinctByMember) {
+      classicMatchPredictionsByMember.set(memberId, matchIds.size)
     }
   }
 
