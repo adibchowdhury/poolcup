@@ -173,11 +173,34 @@ function LiveScoreboardCard({
   return (
     <article
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-b from-[#0f1419] to-card p-3 shadow-lg sm:p-4',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-primary/60 before:to-transparent',
+        'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.18),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] p-3 sm:p-4',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent',
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-30"
+        style={{
+          background:
+            'radial-gradient(80% 60% at 20% 15%, hsl(var(--primary) / 0.40), transparent 55%), radial-gradient(70% 60% at 85% 25%, rgba(255,179,0,0.16), transparent 55%), #0D1F14',
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20"
+        style={{
+          background: 'rgba(176, 224, 196, 0.05)',
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.03) 8%, transparent 16%)',
+        }}
+      />
       <div className="mb-2 grid grid-cols-3 items-center gap-1">
         <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
           {roundLabel}
