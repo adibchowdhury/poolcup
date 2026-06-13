@@ -54,6 +54,24 @@ export default function RootLayout({
         className="font-sans antialiased bg-[#080b0f] text-[#f0f4f8]"
         suppressHydrationWarning
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+  if (typeof Node === 'function' && Node.prototype) {
+    var origRemove = Node.prototype.removeChild;
+    Node.prototype.removeChild = function(child){
+      if (child.parentNode !== this) { return child; }
+      return origRemove.apply(this, arguments);
+    };
+    var origInsert = Node.prototype.insertBefore;
+    Node.prototype.insertBefore = function(newNode, refNode){
+      if (refNode && refNode.parentNode !== this) { return newNode; }
+      return origInsert.apply(this, arguments);
+    };
+  }
+})();`,
+          }}
+        />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-green-500 focus:text-black focus:rounded"
