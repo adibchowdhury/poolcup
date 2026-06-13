@@ -15,7 +15,6 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { RedditAnnouncementBanner } from '@/components/reddit-announcement-banner'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { SupportUsButton } from '@/components/support-us-button'
@@ -400,7 +399,6 @@ function DashboardViewContent({
 
       <div className="relative z-10">
         <div className="z-50 md:sticky md:top-0">
-          <RedditAnnouncementBanner />
           <header className="border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 py-4">
             <div className="flex items-center justify-between gap-3">
