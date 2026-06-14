@@ -10,6 +10,8 @@ export const FEATURED_LIVE_STATUS_SHORTS = [
   'LIVE',
 ] as const
 
+const LIVE_MAX_AGE_MINUTES = 210
+
 const FEATURED_MATCH_COLUMNS =
   'team1_name, team2_name, team1_flag, team2_flag, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
 
@@ -99,12 +101,16 @@ export async function fetchFeaturedMatch(
   supabase: SupabaseClient,
 ): Promise<{ match: FeaturedMatch | null; mode: FeaturedMatchMode | null }> {
   const nowIso = new Date().toISOString()
+  const liveKickoffCutoff = new Date(
+    Date.now() - LIVE_MAX_AGE_MINUTES * 60_000,
+  ).toISOString()
 
   const { data: liveByStatus, error: liveStatusError } = await supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
     .eq('is_final', false)
+    .gt('kickoff_at', liveKickoffCutoff)
     .order('kickoff_at', { ascending: false })
     .limit(1)
 
@@ -121,6 +127,7 @@ export async function fetchFeaturedMatch(
     .select(FEATURED_MATCH_COLUMNS)
     .lte('kickoff_at', nowIso)
     .eq('is_final', false)
+    .gt('kickoff_at', liveKickoffCutoff)
     .order('kickoff_at', { ascending: false })
     .limit(1)
 
