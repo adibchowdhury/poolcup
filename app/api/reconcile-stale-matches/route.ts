@@ -27,6 +27,16 @@ type CandidateRow = {
   result_team2: number | null
   is_final: boolean
   kickoff_at: string
+  status_short: string | null
+  elapsed_minute: number | null
+}
+
+type MatchLiveUpdatePayload = {
+  status_short: string
+  elapsed_minute?: number
+  updated_at?: string
+  result_team1?: number
+  result_team2?: number
 }
 
 function isAuthorized(request: Request): boolean {
@@ -65,7 +75,7 @@ async function runReconcile(): Promise<{
   const { data: candidateRows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at',
+      'id, fixture_id, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute',
     )
     .eq('is_final', false)
     .lt('kickoff_at', kickoffCutoff)
@@ -173,22 +183,42 @@ async function runReconcile(): Promise<{
 
     stillLive += 1
 
-    const unchanged =
-      match.result_team1 === update.result_team1 &&
-      match.result_team2 === update.result_team2
+    const apiElapsed = update.elapsed_minute
+    const apiStatusShort = update.status_short
 
-    if (unchanged) {
+    const scoreOrFinalChanged =
+      match.result_team1 !== update.result_team1 ||
+      match.result_team2 !== update.result_team2
+
+    const elapsedChanged =
+      apiElapsed != null && apiElapsed !== match.elapsed_minute
+
+    const statusChanged = apiStatusShort !== match.status_short
+
+    if (!scoreOrFinalChanged && !elapsedChanged && !statusChanged) {
       continue
+    }
+
+    const updatePayload: MatchLiveUpdatePayload = {
+      status_short: apiStatusShort,
+    }
+
+    if (apiElapsed != null) {
+      updatePayload.elapsed_minute = apiElapsed
+    }
+
+    if (elapsedChanged) {
+      updatePayload.updated_at = new Date().toISOString()
+    }
+
+    if (scoreOrFinalChanged) {
+      updatePayload.result_team1 = update.result_team1
+      updatePayload.result_team2 = update.result_team2
     }
 
     const { error: updateError } = await supabase
       .from('matches')
-      .update({
-        result_team1: update.result_team1,
-        result_team2: update.result_team2,
-        status_short: update.status_short,
-        elapsed_minute: update.elapsed_minute,
-      })
+      .update(updatePayload)
       .eq('id', match.id)
 
     if (updateError) {

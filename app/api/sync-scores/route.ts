@@ -24,6 +24,17 @@ type MatchRow = {
   result_team1: number | null
   result_team2: number | null
   is_final: boolean
+  status_short: string | null
+  elapsed_minute: number | null
+}
+
+type MatchLiveUpdatePayload = {
+  status_short: string
+  elapsed_minute?: number
+  updated_at?: string
+  result_team1?: number
+  result_team2?: number
+  is_final?: boolean
 }
 
 function isAuthorized(request: Request): boolean {
@@ -114,7 +125,9 @@ async function runSync(): Promise<{
 
   const { data: matchRows, error: loadError } = await supabase
     .from('matches')
-    .select('id, fixture_id, result_team1, result_team2, is_final')
+    .select(
+      'id, fixture_id, result_team1, result_team2, is_final, status_short, elapsed_minute',
+    )
     .in('fixture_id', fixtureIds)
 
   if (loadError) {
@@ -155,25 +168,45 @@ async function runSync(): Promise<{
       continue
     }
 
-    const unchanged =
-      match.result_team1 === goals.resultTeam1 &&
-      match.result_team2 === goals.resultTeam2 &&
-      match.is_final === isFinal
+    const apiElapsed = fixture.fixture.status.elapsed
+    const apiStatusShort = fixture.fixture.status.short
 
-    if (unchanged) {
+    const scoreOrFinalChanged =
+      match.result_team1 !== goals.resultTeam1 ||
+      match.result_team2 !== goals.resultTeam2 ||
+      match.is_final !== isFinal
+
+    const elapsedChanged =
+      apiElapsed != null && apiElapsed !== match.elapsed_minute
+
+    const statusChanged = apiStatusShort !== match.status_short
+
+    if (!scoreOrFinalChanged && !elapsedChanged && !statusChanged) {
       matchesSkipped += 1
       continue
     }
 
+    const updatePayload: MatchLiveUpdatePayload = {
+      status_short: apiStatusShort,
+    }
+
+    if (apiElapsed != null) {
+      updatePayload.elapsed_minute = apiElapsed
+    }
+
+    if (elapsedChanged) {
+      updatePayload.updated_at = new Date().toISOString()
+    }
+
+    if (scoreOrFinalChanged) {
+      updatePayload.result_team1 = goals.resultTeam1
+      updatePayload.result_team2 = goals.resultTeam2
+      updatePayload.is_final = isFinal
+    }
+
     const { error: updateError } = await supabase
       .from('matches')
-      .update({
-        result_team1: goals.resultTeam1,
-        result_team2: goals.resultTeam2,
-        is_final: isFinal,
-        status_short: fixture.fixture.status.short,
-        elapsed_minute: fixture.fixture.status.elapsed,
-      })
+      .update(updatePayload)
       .eq('id', match.id)
 
     if (updateError) {
@@ -183,17 +216,19 @@ async function runSync(): Promise<{
 
     matchesUpdated += 1
 
-    const { error: rpcError } = await supabase.rpc('calculate_match_points', {
-      p_match_id: match.id,
-    })
-
-    if (rpcError) {
-      errors.push({
-        fixtureId,
-        message: `calculate_match_points: ${rpcError.message}`,
+    if (scoreOrFinalChanged) {
+      const { error: rpcError } = await supabase.rpc('calculate_match_points', {
+        p_match_id: match.id,
       })
-    } else {
-      pointsRecalculated += 1
+
+      if (rpcError) {
+        errors.push({
+          fixtureId,
+          message: `calculate_match_points: ${rpcError.message}`,
+        })
+      } else {
+        pointsRecalculated += 1
+      }
     }
   }
 
