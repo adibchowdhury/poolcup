@@ -201,14 +201,14 @@ function ScoreboardTeam({
   dbFlag: string | null
 }) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1">
+    <div className="mx-auto flex w-max min-w-0 max-w-full flex-col items-center justify-center gap-0 sm:mx-0 sm:w-full sm:max-w-none sm:flex-1 sm:gap-1">
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
-        imgClassName="h-[4.5rem] w-full max-w-[8rem] object-contain sm:h-[6.5rem] sm:max-w-[9.5rem]"
-        emojiClassName="text-6xl sm:text-7xl"
+        imgClassName="h-[7.3125rem] w-[7.3125rem] shrink-0 object-contain sm:h-[6.5rem] sm:w-full sm:max-w-[9.5rem]"
+        emojiClassName="text-8xl sm:text-7xl"
       />
-      <span className="line-clamp-2 w-full text-center text-lg font-bold leading-tight text-foreground sm:text-xl">
+      <span className="-mt-0.5 line-clamp-2 max-w-full text-center text-lg font-bold leading-tight text-foreground sm:mt-0 sm:w-full sm:text-xl">
         {name}
       </span>
     </div>
@@ -223,6 +223,12 @@ function LiveScoreboardCard({
   mode: FeaturedMatchMode
 }) {
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.group_name)
+  const groupPillLabel =
+    match.round === 'group' && match.group_name
+      ? `Group ${match.group_name}`
+      : roundLabel
+  const mobileStageSecondaryLabel =
+    match.round === 'group' ? 'Group Stage' : roundLabel
   const isLive = mode === 'live'
   const isUpcoming = mode === 'upcoming'
   const statusLabel = formatFeaturedMatchStatusLabel(
@@ -246,7 +252,7 @@ function LiveScoreboardCard({
   return (
     <article
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.14),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] p-3 sm:p-4',
+        'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.14),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] px-2 py-1 sm:p-4',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/55 before:to-transparent',
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
@@ -274,10 +280,87 @@ function LiveScoreboardCard({
             'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.022) 8%, transparent 16%)',
         }}
       />
-      <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+      <p className="mb-0 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:mb-1 sm:text-left sm:text-[10px] sm:font-medium sm:text-muted-foreground/80">
         {FEATURED_COMPETITION_LABEL}
       </p>
-      <div className="mb-2 grid grid-cols-3 items-center gap-1">
+
+      <div className="mb-0 flex flex-col gap-0 sm:hidden">
+        <div className="grid grid-cols-2 items-center gap-0.5">
+          <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            {groupPillLabel}
+          </span>
+
+          <div className="justify-self-end">
+            {isUpcoming ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                Up next
+              </span>
+            ) : isLive ? (
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {mobileStageSecondaryLabel}
+              </span>
+            ) : (
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {statusLabel}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {isLive ? (
+          <div className="mt-0.5 flex flex-col items-center justify-center gap-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-red-400">
+              <span className="stage-live-dot h-2 w-2 shrink-0 rounded-full" aria-hidden />
+              Live Score
+            </span>
+            <span
+              className="mt-0.5 -mb-1.5 text-xs font-medium tabular-nums tracking-wide text-primary"
+              suppressHydrationWarning
+            >
+              {liveTopRightLabel}
+            </span>
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] justify-items-center gap-0',
+            isLive ? '-mt-3.5 items-start' : '-mt-0.5 items-center',
+          )}
+        >
+          <ScoreboardTeam
+            name={match.team1_name}
+            dbFlag={match.team1_flag}
+          />
+
+          <div
+            className={cn(
+              'flex shrink-0 flex-col items-center justify-center',
+              isUpcoming ? 'px-1' : 'w-[4.5rem]',
+              isLive && 'h-[7.3125rem]',
+            )}
+          >
+            {isLive || mode === 'final' ? (
+              <p className="font-display text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
+                <span className="text-primary">{score1}</span>
+                <span className="mx-1 text-muted-foreground/80 sm:mx-1.5">–</span>
+                <span className="text-primary">{score2}</span>
+              </p>
+            ) : (
+              <span className="font-display text-2xl uppercase tracking-[0.2em] text-muted-foreground sm:text-3xl">
+                vs
+              </span>
+            )}
+          </div>
+
+          <ScoreboardTeam
+            name={match.team2_name}
+            dbFlag={match.team2_flag}
+          />
+        </div>
+      </div>
+
+      <div className="mb-2 hidden grid-cols-3 items-center gap-1 sm:grid">
         <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
           {roundLabel}
         </span>
@@ -311,7 +394,7 @@ function LiveScoreboardCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-0">
+      <div className="hidden items-center gap-0 sm:flex">
         <ScoreboardTeam
           name={match.team1_name}
           dbFlag={match.team1_flag}
@@ -356,7 +439,7 @@ function LiveScoreboardCard({
       </div>
 
       {isUpcoming ? (
-        <div className="mt-3 flex flex-col items-center gap-2 px-1 text-center sm:hidden">
+        <div className="mt-1.5 flex flex-col items-center gap-1 px-1 text-center sm:hidden">
           <FeaturedMatchCountdownDisplay {...kickoffCountdown} />
           <time
             dateTime={match.kickoff_at}
