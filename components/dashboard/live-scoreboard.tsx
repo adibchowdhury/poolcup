@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   type FeaturedMatch,
   type FeaturedMatchMode,
+  FEATURED_COMPETITION_LABEL,
   fetchFeaturedMatch,
   formatFeaturedKickoffLocal,
   formatFeaturedMatchRoundLabel,
@@ -13,7 +14,7 @@ import {
 } from '@/src/lib/featured-match'
 import { supabase } from '@/src/lib/supabase'
 
-const REFETCH_INTERVAL_MS = 60_000
+const REFETCH_INTERVAL_MS = 30_000
 const COUNTDOWN_TICK_MS = 1000
 
 function padCountdownUnit(value: number): string {
@@ -32,6 +33,70 @@ function formatFeaturedMatchCountdown(ms: number): string {
   }
 
   return `${padCountdownUnit(hours)}:${padCountdownUnit(minutes)}:${padCountdownUnit(seconds)}`
+}
+
+function formatMatchClockSeconds(totalSeconds: number): string {
+  const clamped = Math.max(0, Math.floor(totalSeconds))
+  const minutes = Math.floor(clamped / 60)
+  const seconds = clamped % 60
+  return `${padCountdownUnit(minutes)}:${padCountdownUnit(seconds)}`
+}
+
+function computeLiveMatchClockDisplay(
+  kickoffAt: string,
+  statusShort: string | null,
+  nowMs: number,
+): string | null {
+  const status = (statusShort ?? '').trim().toUpperCase()
+  if (!status) return null
+
+  if (status === 'HT') return 'Halftime'
+  if (status === 'P') return 'Penalties'
+
+  const kickoffMs = new Date(kickoffAt).getTime()
+  const elapsedSeconds = (nowMs - kickoffMs) / 1000
+
+  if (status === '1H') {
+    return formatMatchClockSeconds(elapsedSeconds)
+  }
+
+  if (status === '2H') {
+    const secondHalfElapsedSeconds = elapsedSeconds - 60 * 60
+    return formatMatchClockSeconds(45 * 60 + secondHalfElapsedSeconds)
+  }
+
+  if (status === 'ET') {
+    const extraTimeElapsedSeconds = elapsedSeconds - 120 * 60
+    return formatMatchClockSeconds(90 * 60 + extraTimeElapsedSeconds)
+  }
+
+  return null
+}
+
+function useLiveMatchClock(
+  match: Pick<FeaturedMatch, 'kickoff_at' | 'status_short'>,
+): string | null {
+  const [mounted, setMounted] = useState(false)
+  const [nowMs, setNowMs] = useState(0)
+
+  useEffect(() => {
+    setMounted(true)
+    setNowMs(Date.now())
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, COUNTDOWN_TICK_MS)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
+  if (!mounted) return null
+
+  return computeLiveMatchClockDisplay(
+    match.kickoff_at,
+    match.status_short,
+    nowMs,
+  )
 }
 
 function useKickoffCountdown(kickoffAt: string) {
@@ -169,6 +234,14 @@ function LiveScoreboardCard({
   const score1 = match.result_team1 ?? 0
   const score2 = match.result_team2 ?? 0
   const kickoffCountdown = useKickoffCountdown(match.kickoff_at)
+  const liveClockLabel = useLiveMatchClock(match)
+  const liveTopRightLabel =
+    liveClockLabel ??
+    formatFeaturedMatchStatusLabel(
+      match.status_short,
+      match.elapsed_minute,
+      match.is_final,
+    )
 
   return (
     <article
@@ -201,6 +274,9 @@ function LiveScoreboardCard({
             'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.022) 8%, transparent 16%)',
         }}
       />
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+        {FEATURED_COMPETITION_LABEL}
+      </p>
       <div className="mb-2 grid grid-cols-3 items-center gap-1">
         <span className="justify-self-start rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
           {roundLabel}
@@ -220,11 +296,18 @@ function LiveScoreboardCard({
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
               Up next
             </span>
-          ) : !isLive ? (
+          ) : isLive ? (
+            <span
+              className="text-xs font-medium tabular-nums tracking-wide text-primary"
+              suppressHydrationWarning
+            >
+              {liveTopRightLabel}
+            </span>
+          ) : (
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {statusLabel}
             </span>
-          ) : null}
+          )}
         </div>
       </div>
 

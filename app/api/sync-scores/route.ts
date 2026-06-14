@@ -42,6 +42,9 @@ function isAuthorized(request: Request): boolean {
   return false
 }
 
+const LIVE_WINDOW_MAX_AGE_MINUTES = 210
+const LIVE_WINDOW_PRE_KICKOFF_MINUTES = 5
+
 async function runSync(): Promise<{
   date: string
   matchesChecked: number
@@ -49,7 +52,41 @@ async function runSync(): Promise<{
   matchesSkipped: number
   pointsRecalculated: number
   errors: SyncError[]
+  skipped?: string
 }> {
+  const supabase = createAdminSupabaseClient()
+  const nowMs = Date.now()
+  const windowStart = new Date(
+    nowMs - LIVE_WINDOW_MAX_AGE_MINUTES * 60_000,
+  ).toISOString()
+  const windowEnd = new Date(
+    nowMs + LIVE_WINDOW_PRE_KICKOFF_MINUTES * 60_000,
+  ).toISOString()
+
+  const { data: liveWindowMatches, error: liveWindowError } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('is_final', false)
+    .lte('kickoff_at', windowEnd)
+    .gt('kickoff_at', windowStart)
+    .limit(1)
+
+  if (liveWindowError) {
+    throw new Error(`Failed to check live window: ${liveWindowError.message}`)
+  }
+
+  if (!liveWindowMatches?.[0]) {
+    return {
+      date: todayUtcDateString(),
+      matchesChecked: 0,
+      matchesUpdated: 0,
+      matchesSkipped: 0,
+      pointsRecalculated: 0,
+      errors: [],
+      skipped: 'no_live_window',
+    }
+  }
+
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) {
     throw new Error('API_FOOTBALL_KEY is not configured')
@@ -57,7 +94,6 @@ async function runSync(): Promise<{
 
   const date = todayUtcDateString()
   const fixtures = await fetchTodayFixtures(apiKey, date)
-  const supabase = createAdminSupabaseClient()
 
   const syncableFixtures = fixtures.filter((fixture) =>
     isSyncableStatus(fixture.fixture.status.short),

@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/sync-scores",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/reconcile-stale-matches",

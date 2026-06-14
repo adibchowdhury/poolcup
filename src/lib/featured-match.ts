@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+export const FEATURED_COMPETITION_LABEL = 'FIFA World Cup 2026'
+
 export const FEATURED_LIVE_STATUS_SHORTS = [
   '1H',
   'HT',
@@ -46,7 +48,7 @@ export function formatFeaturedMatchRoundLabel(
   groupName: string | null,
 ): string {
   if (round === 'group' && groupName) {
-    return `Group ${groupName}`
+    return `Group Stage · Group ${groupName}`
   }
   return ROUND_LABELS[round] ?? round
 }
