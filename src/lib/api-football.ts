@@ -4,6 +4,8 @@ export const LIVE_MATCH_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'P'])
 
 export const FINAL_MATCH_STATUS = 'FT'
 
+export const FINISHED_MATCH_STATUSES = new Set(['FT', 'AET', 'PEN'])
+
 export type ApiFootballFixture = {
   fixture: {
     id: number
@@ -57,6 +59,80 @@ export async function fetchTodayFixtures(
   }
 
   return raw.response ?? []
+}
+
+export function buildFixtureByIdUrl(fixtureId: string): string {
+  const params = new URLSearchParams({ id: fixtureId })
+  return `${API_FOOTBALL_BASE}/fixtures?${params.toString()}`
+}
+
+export async function fetchFixtureById(
+  apiKey: string,
+  fixtureId: string,
+): Promise<ApiFootballFixture | null> {
+  const url = buildFixtureByIdUrl(fixtureId)
+
+  const res = await fetch(url, {
+    headers: { 'x-apisports-key': apiKey },
+    cache: 'no-store',
+  })
+
+  const raw = (await res.json()) as ApiFootballResponse
+
+  if (!res.ok) {
+    throw new Error(
+      `API-Football request failed: ${res.status} ${res.statusText}`,
+    )
+  }
+
+  if (raw.errors && Object.keys(raw.errors).length > 0) {
+    throw new Error(`API-Football error: ${JSON.stringify(raw.errors)}`)
+  }
+
+  const fixtures = raw.response ?? []
+  return fixtures[0] ?? null
+}
+
+export type MatchUpdateFromFixture = {
+  result_team1: number
+  result_team2: number
+  status_short: string
+  elapsed_minute: number | null
+  is_final: boolean
+}
+
+export function deriveMatchUpdateFromFixture(
+  fixture: ApiFootballFixture,
+): MatchUpdateFromFixture | null {
+  const goals = parseFixtureGoals(fixture)
+  if (!goals) return null
+
+  const statusShort = fixture.fixture.status.short.trim()
+  const status = statusShort.toUpperCase()
+
+  if (status === 'NS' || status === '') return null
+
+  if (FINISHED_MATCH_STATUSES.has(status)) {
+    return {
+      result_team1: goals.resultTeam1,
+      result_team2: goals.resultTeam2,
+      status_short: fixture.fixture.status.short,
+      elapsed_minute: fixture.fixture.status.elapsed,
+      is_final: true,
+    }
+  }
+
+  if (LIVE_MATCH_STATUSES.has(status)) {
+    return {
+      result_team1: goals.resultTeam1,
+      result_team2: goals.resultTeam2,
+      status_short: fixture.fixture.status.short,
+      elapsed_minute: fixture.fixture.status.elapsed,
+      is_final: false,
+    }
+  }
+
+  return null
 }
 
 export function isSyncableStatus(statusShort: string): boolean {
