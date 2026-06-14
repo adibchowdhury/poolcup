@@ -90,6 +90,9 @@ export default function PoolPage() {
   const [poolId, setPoolId] = useState<string | null>(null)
   const [memberId, setMemberId] = useState<string | null>(null)
   const [canDelete, setCanDelete] = useState(false)
+  const [avatarByMemberId, setAvatarByMemberId] = useState(
+    () => new Map<string, string | null>(),
+  )
 
   const loadPoolData = useCallback(async () => {
     if (!userId) return
@@ -107,6 +110,7 @@ export default function PoolPage() {
     if (poolError || !poolData) {
       setPoolMeta(null)
       setMembers([])
+      setAvatarByMemberId(new Map())
       setNotFound(true)
       setPageLoading(false)
       setLeaderboardLoading(false)
@@ -128,6 +132,24 @@ export default function PoolPage() {
     }
 
     const poolMembers = (membersData ?? []) as PoolMember[]
+
+    const avatarByMemberId = new Map<string, string | null>()
+    const { data: avatarRows, error: avatarError } = await supabase.rpc(
+      'get_pool_member_avatars',
+      { p_pool_id: pool.id },
+    )
+
+    if (avatarError) {
+      console.error('Failed to load member avatars:', avatarError.message)
+    } else {
+      for (const row of avatarRows ?? []) {
+        const memberId = String(row.member_id)
+        avatarByMemberId.set(memberId, row.avatar ?? null)
+      }
+    }
+
+    setAvatarByMemberId(avatarByMemberId)
+
     const isWinnerPool = pool.scoring_style === 'winner'
 
     const { predictionsByMember } = await fetchMemberPredictionCounts(
@@ -318,6 +340,7 @@ export default function PoolPage() {
       currentUserId: userId,
       predictionsByMember,
       isWinnerPool,
+      avatarsByMemberId: avatarByMemberId,
     })
 
     setMembers(leaderboardMembers)
@@ -376,6 +399,7 @@ export default function PoolPage() {
       canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}
+      avatarsByMemberId={avatarByMemberId}
     />
   )
 }

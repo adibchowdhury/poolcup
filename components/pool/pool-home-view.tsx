@@ -53,6 +53,7 @@ interface PoolHomeViewProps {
   canDelete?: boolean
   poolId?: string
   memberId?: string
+  avatarsByMemberId: Map<string, string | null>
 }
 
 function formatNextMatchCountdown(ms: number): string {
@@ -95,6 +96,7 @@ export function PoolHomeView({
   canDelete,
   poolId,
   memberId,
+  avatarsByMemberId,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -317,6 +319,7 @@ export function PoolHomeView({
                   poolId={poolId}
                   inviteCode={pool.inviteCode}
                   currentUserId={currentUserId}
+                  avatarsByMemberId={avatarsByMemberId}
                 />
               ) : null}
             </TabsContent>

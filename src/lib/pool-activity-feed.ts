@@ -22,7 +22,6 @@ export type PoolActivityFeedItem = {
   memberId: string
   actorUserId: string
   displayName: string
-  avatar: string | null
 }
 
 const POINTS_REASON_LABELS: Record<PoolActivityPointsReason, string> = {
@@ -216,35 +215,6 @@ export async function fetchPoolActivityFeed(
     }
   }
 
-  const userIds = [
-    ...new Set(
-      rows
-        .map((row) => {
-          const member = Array.isArray(row.pool_members)
-            ? row.pool_members[0]
-            : row.pool_members
-          return member?.user_id
-        })
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ]
-
-  const avatarByUserId = new Map<string, string | null>()
-  if (userIds.length > 0) {
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select('id, avatar')
-      .in('id', userIds)
-
-    if (usersError) {
-      console.error('Failed to load activity avatars:', usersError.message)
-    } else {
-      for (const user of usersData ?? []) {
-        avatarByUserId.set(user.id, user.avatar ?? null)
-      }
-    }
-  }
-
   const items: PoolActivityFeedItem[] = rows.map((row) => {
     const member = Array.isArray(row.pool_members)
       ? row.pool_members[0]
@@ -273,7 +243,6 @@ export async function fetchPoolActivityFeed(
       memberId: row.member_id,
       actorUserId,
       displayName: member?.display_name?.trim() || 'Member',
-      avatar: avatarByUserId.get(actorUserId) ?? null,
     }
   })
 

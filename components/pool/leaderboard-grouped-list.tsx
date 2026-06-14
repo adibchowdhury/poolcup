@@ -1,8 +1,10 @@
 'use client'
 
+import Image from 'next/image'
 import { Medal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
+import { getAvatarSrc } from '@/src/lib/avatars'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
@@ -103,13 +105,23 @@ function GroupedMemberRow({ member }: { member: LeaderboardMember }) {
     >
       <div
         className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm',
+          'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm',
           member.isYou
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted text-foreground',
         )}
       >
-        {member.avatar}
+        {member.avatar ? (
+          <Image
+            src={getAvatarSrc(member.avatar)}
+            alt=""
+            width={40}
+            height={40}
+            className="size-10 shrink-0 object-cover object-top"
+          />
+        ) : (
+          member.name.charAt(0).toUpperCase()
+        )}
       </div>
 
       <div className="min-w-0 flex-1">

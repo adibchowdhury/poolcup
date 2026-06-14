@@ -13,6 +13,7 @@ import {
 type PoolActivityRowProps = {
   activity: PoolActivityFeedItem
   currentUserId: string
+  avatarsByMemberId: Map<string, string | null>
 }
 
 function ActivityAvatar({
@@ -93,13 +94,19 @@ function PredictionActivityBody({
   )
 }
 
-export function PoolActivityRow({ activity, currentUserId }: PoolActivityRowProps) {
+export function PoolActivityRow({
+  activity,
+  currentUserId,
+  avatarsByMemberId,
+}: PoolActivityRowProps) {
+  const avatar = avatarsByMemberId.get(activity.memberId) ?? null
+
   return (
     <article
       data-activity-id={activity.id}
       className="flex min-w-0 items-start gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
     >
-      <ActivityAvatar displayName={activity.displayName} avatar={activity.avatar} />
+      <ActivityAvatar displayName={activity.displayName} avatar={avatar} />
       <div className="min-w-0 flex-1">
         {activity.type === 'points_earned' ? (
           <PointsEarnedActivityBody

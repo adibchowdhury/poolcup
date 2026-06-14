@@ -24,6 +24,7 @@ type BuildPoolLeaderboardParams = {
   currentUserId: string
   predictionsByMember: Map<string, number>
   isWinnerPool: boolean
+  avatarsByMemberId: Map<string, string | null>
 }
 
 function sortPoolMembersForPreMatch(
@@ -66,6 +67,7 @@ export function buildPoolLeaderboardMembers({
   currentUserId,
   predictionsByMember,
   isWinnerPool,
+  avatarsByMemberId,
 }: BuildPoolLeaderboardParams): LeaderboardMember[] {
   const cacheByMember = new Map(
     (cacheRows ?? []).map((row) => [row.member_id, row]),
@@ -125,7 +127,7 @@ export function buildPoolLeaderboardMembers({
     id: entry.member_id,
     name: entry.display_name,
     isYou: currentUserId === entry.user_id,
-    avatar: entry.display_name.charAt(0).toUpperCase(),
+    avatar: avatarsByMemberId.get(entry.member_id) ?? null,
     points: entry.points,
     correctPredictions: entry.correct_predictions,
     totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,

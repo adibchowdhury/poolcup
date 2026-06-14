@@ -13,12 +13,14 @@ type PoolActivityFeedProps = {
   poolId: string
   inviteCode: string
   currentUserId: string
+  avatarsByMemberId: Map<string, string | null>
 }
 
 export function PoolActivityFeed({
   poolId,
   inviteCode,
   currentUserId,
+  avatarsByMemberId,
 }: PoolActivityFeedProps) {
   const [items, setItems] = useState<PoolActivityFeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,7 +81,11 @@ export function PoolActivityFeed({
     <ul className="w-full min-w-0 max-w-full space-y-2">
       {items.map((activity) => (
         <li key={activity.id}>
-          <PoolActivityRow activity={activity} currentUserId={currentUserId} />
+          <PoolActivityRow
+            activity={activity}
+            currentUserId={currentUserId}
+            avatarsByMemberId={avatarsByMemberId}
+          />
         </li>
       ))}
     </ul>
