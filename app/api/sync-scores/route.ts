@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import {
   fetchTodayFixtures,
-  FINAL_MATCH_STATUS,
+  isFinalStatus,
   isSyncableStatus,
   LIVE_MATCH_STATUSES,
   parseFixtureGoals,
@@ -111,7 +111,7 @@ async function runSync(): Promise<{
     }
 
     const status = fixture.fixture.status.short.trim().toUpperCase()
-    const isFinal = status === FINAL_MATCH_STATUS
+    const isFinal = isFinalStatus(fixture.fixture.status.short)
     const isLive = LIVE_MATCH_STATUSES.has(status)
 
     if (!isFinal && !isLive) {

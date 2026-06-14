@@ -2,9 +2,13 @@ const API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
 
 export const LIVE_MATCH_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'P'])
 
-export const FINAL_MATCH_STATUS = 'FT'
+export const FINAL_MATCH_STATUSES = ['FT', 'AET', 'PEN'] as const
 
-export const FINISHED_MATCH_STATUSES = new Set(['FT', 'AET', 'PEN'])
+const FINAL_MATCH_STATUS_SET = new Set<string>(FINAL_MATCH_STATUSES)
+
+export function isFinalStatus(statusShort: string): boolean {
+  return FINAL_MATCH_STATUS_SET.has(statusShort.trim().toUpperCase())
+}
 
 export type ApiFootballFixture = {
   fixture: {
@@ -112,7 +116,7 @@ export function deriveMatchUpdateFromFixture(
 
   if (status === 'NS' || status === '') return null
 
-  if (FINISHED_MATCH_STATUSES.has(status)) {
+  if (isFinalStatus(statusShort)) {
     return {
       result_team1: goals.resultTeam1,
       result_team2: goals.resultTeam2,
@@ -137,7 +141,7 @@ export function deriveMatchUpdateFromFixture(
 
 export function isSyncableStatus(statusShort: string): boolean {
   const status = statusShort.trim().toUpperCase()
-  return status === FINAL_MATCH_STATUS || LIVE_MATCH_STATUSES.has(status)
+  return isFinalStatus(status) || LIVE_MATCH_STATUSES.has(status)
 }
 
 export function parseFixtureGoals(
