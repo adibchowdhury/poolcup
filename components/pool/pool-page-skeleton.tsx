@@ -31,12 +31,6 @@ export function PoolPageSkeleton() {
         </header>
 
         <main className="mx-auto max-w-4xl px-4 py-8">
-          <div className="mb-8 flex flex-wrap gap-3">
-            <ShimmerBlock className="h-10 w-36 rounded-full" />
-            <ShimmerBlock className="h-10 w-44 rounded-full" />
-            <ShimmerBlock className="h-10 w-32 rounded-full" />
-          </div>
-
           <ShimmerBlock className="mb-8 h-[72px] w-full rounded-2xl" />
 
           <div className="mb-8 grid h-auto w-full max-w-xl grid-cols-2 gap-1 rounded-lg bg-muted p-1">

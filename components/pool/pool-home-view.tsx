@@ -3,10 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useClientNow } from '@/hooks/use-client-now'
 import {
   ArrowLeft,
-  Calendar,
   Check,
   Copy,
   Flame,
@@ -61,33 +59,6 @@ interface PoolHomeViewProps {
   avatarsByMemberId: Map<string, string | null>
   poolCreatorUserId?: string
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
-}
-
-function formatNextMatchCountdown(ms: number): string {
-  if (ms <= 0) return 'Soon'
-  const totalMinutes = Math.ceil(ms / 60_000)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24)
-    return `${days}d ${hours % 24}h`
-  }
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
-}
-
-function PoolNextMatchCountdown({ kickoffAt }: { kickoffAt: string }) {
-  const { mounted, nowMs } = useClientNow(60_000)
-
-  const label = mounted
-    ? formatNextMatchCountdown(new Date(kickoffAt).getTime() - nowMs)
-    : '—'
-
-  return (
-    <span className="text-sm font-medium" suppressHydrationWarning>
-      Next match in {label}
-    </span>
-  )
 }
 
 export function PoolHomeView({
@@ -203,39 +174,6 @@ export function PoolHomeView({
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
         >
-          <div
-            className={cn(
-              'mb-8 flex flex-wrap gap-3',
-              activeTab === 'chat' && showChatTab ? 'hidden sm:flex' : 'flex',
-            )}
-          >
-            <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
-              <Users className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">
-                {pool.memberCount} {pool.memberCount === 1 ? 'Member' : 'Members'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
-              <Calendar className="h-4 w-4 text-[#ffb300]" />
-              {pool.matchesPlayed === 0 && pool.nextMatchKickoffAt ? (
-                <PoolNextMatchCountdown kickoffAt={pool.nextMatchKickoffAt} />
-              ) : (
-                <span className="text-sm font-medium">
-                  {pool.matchesPlayed} Matches played
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
-              <span
-                className="stage-live-dot h-2.5 w-2.5 shrink-0 rounded-full"
-                aria-hidden
-              />
-              <span className="text-sm font-medium">
-                Currently in: {pool.stage}
-              </span>
-            </div>
-          </div>
-
           {!hasPredictions && (
             <div
               className={cn(
