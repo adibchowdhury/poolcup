@@ -443,34 +443,6 @@ end;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.notify_issue_report()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  perform net.http_post(
-    url := 'https://ntfy.sh',
-    headers := jsonb_build_object('Content-Type', 'application/json'),
-    body := jsonb_build_object(
-      'topic', 'poolcup-bugs',
-      'title', 'New PoolCup Bug Report',
-      'tags', jsonb_build_array('lady_beetle'),
-      'message',
-        left(NEW.message, 500) ||
-        case
-          when NEW.page_url is not null and NEW.page_url <> ''
-          then E'\n\nPage: ' || NEW.page_url
-          else ''
-        end
-    )
-  );
-  return NEW;
-end;
-$function$
-;
-
 CREATE OR REPLACE FUNCTION public.on_match_final_score_winners()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -865,7 +837,6 @@ CREATE POLICY users_own ON public.users AS PERMISSIVE FOR ALL TO public
 -- TRIGGERS
 -- ============================================================
 
-CREATE TRIGGER issue_reports_notify AFTER INSERT ON public.issue_reports FOR EACH ROW EXECUTE FUNCTION notify_issue_report();
 CREATE TRIGGER on_issue_report_created AFTER INSERT ON public.issue_reports FOR EACH ROW EXECUTE FUNCTION handle_issue_report_email();
 CREATE TRIGGER trg_score_winners_on_final AFTER UPDATE OF is_final ON public.matches FOR EACH ROW EXECUTE FUNCTION on_match_final_score_winners();
 CREATE TRIGGER new_user_signup AFTER INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION supabase_functions.http_request('https://ntfy.sh/poolcup-signups', 'POST', '{"Content-type":"application/json","Title":"New PoolCup Signup!"}', '{}', '5000');
