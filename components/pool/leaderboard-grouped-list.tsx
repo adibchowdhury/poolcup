@@ -1,15 +1,28 @@
 'use client'
 
+import { useId, useState } from 'react'
 import Image from 'next/image'
-import { Medal } from 'lucide-react'
+import { ChevronDown, Medal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
+import type {
+  LeaderboardMember,
+  LeaderboardPointBreakdownItem,
+} from '@/components/pool/leaderboard-row'
 import { getAvatarSrc } from '@/src/lib/avatars'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
   2: '#888780',
   3: '#D85A30',
+}
+
+const ROUND_LABELS: Record<string, string> = {
+  group: 'Group stage',
+  r32: 'Round of 32',
+  r16: 'Round of 16',
+  qf: 'Quarter-finals',
+  sf: 'Semi-finals',
+  final: 'Final',
 }
 
 export type LeaderboardPlaceGroup = {
@@ -56,6 +69,15 @@ export function buildLeaderboardPlaceGroups(
   return groups
 }
 
+function formatBreakdownMatchLabel(item: LeaderboardPointBreakdownItem): string {
+  const matchup = `${item.team1Name} vs ${item.team2Name}`
+  if (item.round === 'group' && item.groupName) {
+    return `Group ${item.groupName}: ${matchup}`
+  }
+  const roundLabel = ROUND_LABELS[item.round]
+  return roundLabel ? `${roundLabel}: ${matchup}` : matchup
+}
+
 function PlaceBadge({ place }: { place: number }) {
   if (place >= 1 && place <= 3) {
     return (
@@ -95,7 +117,72 @@ function PlaceHeader({ place, memberCount }: { place: number; memberCount: numbe
   )
 }
 
-function GroupedMemberRow({ member }: { member: LeaderboardMember }) {
+function MemberAvatar({ member }: { member: LeaderboardMember }) {
+  return (
+    <div
+      className={cn(
+        'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm',
+        member.isYou
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-muted text-foreground',
+      )}
+    >
+      {member.avatar ? (
+        <Image
+          src={getAvatarSrc(member.avatar)}
+          alt=""
+          width={40}
+          height={40}
+          className="size-10 shrink-0 object-cover object-top"
+        />
+      ) : (
+        member.name.charAt(0).toUpperCase()
+      )}
+    </div>
+  )
+}
+
+function MemberNameBlock({ member }: { member: LeaderboardMember }) {
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className={cn(
+            'truncate font-medium',
+            member.isYou ? 'text-primary' : 'text-foreground',
+          )}
+        >
+          {member.name}
+        </span>
+        {member.isYou ? (
+          <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary">
+            you
+          </span>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function BreakdownLine({ item }: { item: LeaderboardPointBreakdownItem }) {
+  return (
+    <li className="border-b border-border/40 px-3 py-2.5 last:border-b-0 sm:px-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
+          {formatBreakdownMatchLabel(item)}
+        </p>
+        <p className="text-xs font-semibold text-muted-foreground sm:shrink-0 sm:text-sm">
+          {item.reasonLabel} ·{' '}
+          <span className="font-mono tabular-nums text-primary">
+            +{item.pointsAwarded} pts
+          </span>
+        </p>
+      </div>
+    </li>
+  )
+}
+
+function GroupedMemberRowStatic({ member }: { member: LeaderboardMember }) {
   return (
     <div
       className={cn(
@@ -103,45 +190,8 @@ function GroupedMemberRow({ member }: { member: LeaderboardMember }) {
         member.isYou && 'bg-primary/5',
       )}
     >
-      <div
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm',
-          member.isYou
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-foreground',
-        )}
-      >
-        {member.avatar ? (
-          <Image
-            src={getAvatarSrc(member.avatar)}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 shrink-0 object-cover object-top"
-          />
-        ) : (
-          member.name.charAt(0).toUpperCase()
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className={cn(
-              'truncate font-medium',
-              member.isYou ? 'text-primary' : 'text-foreground',
-            )}
-          >
-            {member.name}
-          </span>
-          {member.isYou ? (
-            <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary">
-              you
-            </span>
-          ) : null}
-        </div>
-      </div>
-
+      <MemberAvatar member={member} />
+      <MemberNameBlock member={member} />
       <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground sm:text-base">
         {member.points} pts
       </span>
@@ -149,10 +199,96 @@ function GroupedMemberRow({ member }: { member: LeaderboardMember }) {
   )
 }
 
+function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  const breakdown = member.pointBreakdown ?? []
+  const breakdownTotal = breakdown.reduce(
+    (sum, item) => sum + item.pointsAwarded,
+    0,
+  )
+
+  return (
+    <div
+      className={cn(
+        'border-t border-border/60 first:border-t-0',
+        member.isYou && 'bg-primary/5',
+      )}
+    >
+      <button
+        type="button"
+        className={cn(
+          'flex w-full items-center gap-3 px-3 py-3 text-left sm:gap-4 sm:px-4',
+          'transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        )}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <MemberAvatar member={member} />
+        <MemberNameBlock member={member} />
+        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground sm:text-base">
+          {member.points} pts
+        </span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+          aria-hidden
+        />
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-label={`${member.name} points breakdown`}
+        hidden={!open}
+        className="border-t border-border/40 bg-muted/10"
+      >
+        {breakdown.length === 0 ? (
+          <p className="px-3 py-3 text-sm text-muted-foreground sm:px-4">
+            No points earned yet
+          </p>
+        ) : (
+          <>
+            <ul className="divide-y divide-border/30">
+              {breakdown.map((item) => (
+                <BreakdownLine key={item.matchId} item={item} />
+              ))}
+            </ul>
+            <div className="flex justify-end border-t border-border/40 px-3 py-2.5 sm:px-4">
+              <span className="text-sm font-semibold tabular-nums text-foreground">
+                Total: {breakdownTotal} pts
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GroupedMemberRow({
+  member,
+  isClassicPool,
+}: {
+  member: LeaderboardMember
+  isClassicPool: boolean
+}) {
+  if (!isClassicPool) {
+    return <GroupedMemberRowStatic member={member} />
+  }
+
+  return <GroupedMemberRowExpandable member={member} />
+}
+
 export function LeaderboardGroupedList({
   members,
+  isClassicPool = false,
 }: {
   members: LeaderboardMember[]
+  isClassicPool?: boolean
 }) {
   const groups = buildLeaderboardPlaceGroups(members)
 
@@ -175,7 +311,11 @@ export function LeaderboardGroupedList({
           <PlaceHeader place={group.place} memberCount={group.members.length} />
           <div className="border-t border-border/60 bg-card/40">
             {group.members.map((member) => (
-              <GroupedMemberRow key={member.id} member={member} />
+              <GroupedMemberRow
+                key={member.id}
+                member={member}
+                isClassicPool={isClassicPool}
+              />
             ))}
           </div>
         </section>

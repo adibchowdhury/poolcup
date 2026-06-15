@@ -10,7 +10,10 @@ import {
   type PoolHomeMeta,
 } from '@/components/pool/pool-home-view'
 import { PoolPageSkeleton } from '@/components/pool/pool-page-skeleton'
-import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
+import type {
+  LeaderboardMember,
+  LeaderboardPointBreakdownItem,
+} from '@/components/pool/leaderboard-row'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import {
@@ -19,7 +22,12 @@ import {
 } from '@/src/lib/world-cup-groups'
 import { deriveCurrentTournamentStage } from '@/src/lib/tournament-round-labels'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
-import { buildPoolLeaderboardMembers } from '@/src/lib/pool-leaderboard'
+import {
+  buildPoolLeaderboardMembers,
+  fetchPoolLeaderboardPointBreakdown,
+  verifyLeaderboardBreakdownPointDerivation,
+  verifyLeaderboardBreakdownTotals,
+} from '@/src/lib/pool-leaderboard'
 
 type Pool = {
   id: string
@@ -332,6 +340,19 @@ export default function PoolPage() {
       console.error('Failed to load leaderboard:', cacheError.message)
     }
 
+    let breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]> | undefined
+
+    if (!isWinnerPool) {
+      const { breakdownByMember: loadedBreakdown, error: breakdownError } =
+        await fetchPoolLeaderboardPointBreakdown(supabase, pool.id)
+
+      if (breakdownError) {
+        console.error('Failed to load leaderboard breakdown:', breakdownError)
+      }
+
+      breakdownByMember = loadedBreakdown
+    }
+
     const leaderboardMembers = buildPoolLeaderboardMembers({
       poolMembers,
       creatorUserId: pool.creator_id,
@@ -341,7 +362,26 @@ export default function PoolPage() {
       predictionsByMember,
       isWinnerPool,
       avatarsByMemberId: avatarByMemberId,
+      breakdownByMember,
     })
+
+    if (!isWinnerPool) {
+      const verification = verifyLeaderboardBreakdownTotals(leaderboardMembers)
+      if (!verification.ok) {
+        console.error(
+          'Leaderboard breakdown totals do not match header points:',
+          verification.mismatches,
+        )
+      }
+
+      const derivation = verifyLeaderboardBreakdownPointDerivation(leaderboardMembers)
+      if (!derivation.ok) {
+        console.warn(
+          'Leaderboard breakdown helper points differ from points_awarded (display uses points_awarded):',
+          derivation.divergences,
+        )
+      }
+    }
 
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)

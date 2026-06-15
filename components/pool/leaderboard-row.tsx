@@ -5,6 +5,21 @@ import { cn } from '@/lib/utils'
 import { LeaderboardAccuracyBlock } from '@/components/pool/leaderboard-accuracy'
 import { getAvatarSrc } from '@/src/lib/avatars'
 
+export type LeaderboardPointBreakdownItem = {
+  matchId: string
+  predTeam1: number
+  predTeam2: number
+  pointsAwarded: number
+  reasonLabel: string
+  team1Name: string
+  team2Name: string
+  resultTeam1: number
+  resultTeam2: number
+  round: string
+  groupName: string | null
+  kickoffAt: string
+}
+
 export type LeaderboardMember = {
   id: string
   name: string
@@ -15,6 +30,8 @@ export type LeaderboardMember = {
   totalPredictions: number
   movement: 'up' | 'down' | 'none'
   streak: number
+  /** Classic pools only: scored matches with points_awarded > 0, kickoff desc. */
+  pointBreakdown?: LeaderboardPointBreakdownItem[]
 }
 
 interface LeaderboardRowProps {

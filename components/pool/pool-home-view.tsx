@@ -354,7 +354,10 @@ export function PoolHomeView({
                         </div>
                       ) : (
                         <>
-                          <LeaderboardGroupedList members={members} />
+                          <LeaderboardGroupedList
+                            members={members}
+                            isClassicPool={!isWinnerPool}
+                          />
 
                           {showPreMatchLeaderboardNote && (
                             <p className="mt-4 px-2 pb-2 text-center text-sm text-muted-foreground">
