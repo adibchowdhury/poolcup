@@ -5,6 +5,8 @@ import Link from 'next/link'
 import {
   BookOpen,
   Calendar,
+  Heart,
+  Mail,
   Pencil,
   Plus,
   Settings,
@@ -15,9 +17,18 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DashboardSignOut } from '@/components/dashboard-sign-out'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useDashboardSignOut } from '@/components/dashboard-sign-out'
 import { PoolCupLogo } from '@/components/poolcup-logo'
-import { SupportUsButton } from '@/components/support-us-button'
+import { STRIPE_DONATE_URL } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-nav-menu'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
@@ -95,6 +106,11 @@ function AnimatedTotalPointsDisplay({ target }: { target: number }) {
   return <>{displayed.toLocaleString()}</>
 }
 
+function getAvatarInitial(name: string): string {
+  const trimmed = name.trim()
+  return trimmed.charAt(0).toUpperCase() || '?'
+}
+
 function DashboardViewContent({
   userId,
   email,
@@ -131,6 +147,7 @@ function DashboardViewContent({
   const [activeTab, setActiveTab] = useState(() =>
     dashboardTabFromParam(searchParams.get('tab')),
   )
+  const { handleSignOut, loading: signOutLoading } = useDashboardSignOut()
 
   useEffect(() => {
     setActiveTab(dashboardTabFromParam(searchParams.get('tab')))
@@ -407,22 +424,71 @@ function DashboardViewContent({
               <DashboardMobileNavMenu
                 className="sm:hidden"
                 displayName={headerName}
+                email={email}
                 onOpenSettings={() => setSettingsOpen(true)}
               />
 
-              <div className="hidden flex-wrap items-center gap-3 sm:flex">
-                <SupportUsButton />
-                <DashboardSignOut displayName={headerName} />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
+              <div className="hidden shrink-0 sm:flex">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <span className="max-w-[10rem] truncate text-sm font-medium text-foreground">
+                        {headerName.trim() || 'Account'}
+                      </span>
+                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-border bg-muted ring-1 ring-border/80">
+                        <Avatar className="size-full">
+                          <AvatarImage
+                            src={getAvatarSrc(selectedAvatar)}
+                            alt=""
+                            className="object-cover object-center"
+                          />
+                          <AvatarFallback className="bg-muted font-medium text-muted-foreground">
+                            {getAvatarInitial(headerName)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                      {email}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={STRIPE_DONATE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Heart className="h-4 w-4" />
+                        Support Us
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/contact">
+                        <Mail className="h-4 w-4" />
+                        Contact
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={signOutLoading}
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        void handleSignOut()
+                      }}
+                    >
+                      {signOutLoading ? 'Signing out…' : 'Sign out'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>

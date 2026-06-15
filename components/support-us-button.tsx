@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { capturePostHog } from '@/src/lib/posthog-client'
 
-const STRIPE_DONATE_URL =
+export const STRIPE_DONATE_URL =
   'https://donate.stripe.com/aFa9ASayG42Q9P5g1K4ZG00'
 
 type SupportUsButtonProps = {

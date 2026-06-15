@@ -1,9 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from '@/src/lib/auth'
 import { Button } from '@/components/ui/button'
+
+export function useDashboardSignOut(onAfterClick?: () => void) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+
+  const handleSignOut = useCallback(async () => {
+    setLoading(true)
+    onAfterClick?.()
+    await signOut()
+    router.push('/')
+  }, [onAfterClick, router])
+
+  return { handleSignOut, loading }
+}
 
 export function DashboardSignOut({
   displayName,
@@ -14,15 +28,7 @@ export function DashboardSignOut({
   menuItem?: boolean
   onAfterClick?: () => void
 }) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-
-  async function handleSignOut() {
-    setLoading(true)
-    onAfterClick?.()
-    await signOut()
-    router.push('/')
-  }
+  const { handleSignOut, loading } = useDashboardSignOut(onAfterClick)
 
   if (menuItem) {
     return (
@@ -50,7 +56,7 @@ export function DashboardSignOut({
         type="button"
         variant="outline"
         size="sm"
-        onClick={handleSignOut}
+        onClick={() => void handleSignOut()}
         disabled={loading}
         className="text-muted-foreground hover:text-foreground"
       >
