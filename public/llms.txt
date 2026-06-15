@@ -33,7 +33,7 @@ Member-only flows such as `/dashboard`, `/create`, `/pool/{invite_code}`, and `/
 
 ## Contact
 
-- Support email: support@poolcup.app
+- Support email: support@getpoolcup.com
 - Contact form: https://www.getpoolcup.com/contact
 
 ## Tech summary

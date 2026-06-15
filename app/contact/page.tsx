@@ -10,12 +10,17 @@ import { SiteFooter } from '@/components/site-footer'
 const inputClassName =
   'w-full rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30'
 
-const contactDetails = [
+const contactDetails: {
+  icon: typeof Mail
+  title: string
+  detail: string
+  href?: string
+}[] = [
   {
     icon: Mail,
     title: 'Email',
-    detail: 'support@poolcup.app',
-    href: 'mailto:support@poolcup.app',
+    detail: 'support@getpoolcup.com',
+    href: 'mailto:support@getpoolcup.com',
   },
   {
     icon: Phone,
@@ -27,14 +32,48 @@ const contactDetails = [
     title: 'Office',
     detail: 'Remote — worldwide',
   },
-] as const
+]
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitError(null)
+    setSubmitting(true)
+
+    const form = e.currentTarget
+    const data = new FormData(form)
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: data.get('firstName'),
+          lastName: data.get('lastName'),
+          email: data.get('email'),
+          message: data.get('message'),
+          company: data.get('company'),
+        }),
+      })
+
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(json.error ?? 'Failed to send message')
+      }
+
+      setSubmitted(true)
+      form.reset()
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Failed to send message',
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -113,13 +152,24 @@ export default function ContactPage() {
                       type="button"
                       variant="outline"
                       className="mt-6"
-                      onClick={() => setSubmitted(false)}
+                      onClick={() => {
+                        setSubmitted(false)
+                        setSubmitError(null)
+                      }}
                     >
                       Send another message
                     </Button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    <input
+                      type="text"
+                      name="company"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      aria-hidden="true"
+                      className="absolute left-[-9999px] h-0 w-0 opacity-0"
+                    />
                     <div className="grid gap-6 sm:grid-cols-2">
                       <div>
                         <label
@@ -186,11 +236,15 @@ export default function ContactPage() {
                         placeholder="Tell us how we can help — pool setup, invites, scoring, or anything else…"
                       />
                     </div>
+                    {submitError ? (
+                      <p className="text-sm text-destructive">{submitError}</p>
+                    ) : null}
                     <Button
                       type="submit"
+                      disabled={submitting}
                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                      Send message
+                      {submitting ? 'Sending…' : 'Send message'}
                     </Button>
                   </form>
                 )}

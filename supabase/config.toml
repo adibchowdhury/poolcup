@@ -1,0 +1,2 @@
+[functions.send-bug-ack]
+verify_jwt = false
