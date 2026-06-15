@@ -845,21 +845,8 @@ function DashboardViewContent({
               <ActivePoolsTab userId={userId} />
             </TabsContent>
 
-            <TabsContent value="games" className="mt-4">
-              <div className="mx-auto w-full max-w-3xl">
-                <div className="mb-6 flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <div>
-                    <h2 className="font-display text-2xl tracking-wide text-foreground">
-                      Upcoming Games
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Next fixtures you can predict before kickoff
-                    </p>
-                  </div>
-                </div>
-                <UpcomingGamesTab />
-              </div>
+            <TabsContent value="games" className="mt-2">
+              <UpcomingGamesTab />
             </TabsContent>
 
             <TabsContent value="how-it-works" className="mt-4">
