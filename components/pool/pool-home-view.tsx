@@ -14,7 +14,6 @@ import {
   Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PoolActivityFeed } from '@/components/pool/pool-activity-feed'
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import {
   buildLeaderboardPlaceGroups,
@@ -252,12 +251,9 @@ export function PoolHomeView({
             onValueChange={setActiveTab}
             className="mb-8 w-full min-w-0 gap-6"
           >
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3 p-1">
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-2 p-1">
               <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
                 Predictions
-              </TabsTrigger>
-              <TabsTrigger value="feed" className="px-2 py-2 text-xs sm:text-sm">
-                Feed
               </TabsTrigger>
               <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
                 Leaderboard
@@ -311,17 +307,6 @@ export function PoolHomeView({
                   </div>
                 }
               />
-            </TabsContent>
-
-            <TabsContent value="feed" className="mt-0 w-full min-w-0">
-              {poolId ? (
-                <PoolActivityFeed
-                  poolId={poolId}
-                  inviteCode={pool.inviteCode}
-                  currentUserId={currentUserId}
-                  avatarsByMemberId={avatarsByMemberId}
-                />
-              ) : null}
             </TabsContent>
 
             <TabsContent value="leaderboard" className="mt-0 w-full min-w-0">

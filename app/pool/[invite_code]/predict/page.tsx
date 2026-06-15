@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import { recordClassicMatchSaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
@@ -522,18 +521,6 @@ export default function PredictPage() {
       })
       return next
     })
-    recordClassicMatchSaveActivity(
-      pool.id,
-      memberId,
-      changedMatches.map((match) => {
-        const baseline = baselineScores[match.id]
-        const hadPriorPrediction =
-          savedMatchIds.has(match.id) &&
-          baseline?.score1 !== '' &&
-          baseline?.score2 !== ''
-        return { matchId: match.id, hadPriorPrediction }
-      }),
-    )
 
     for (const match of changedMatches) {
       capturePostHog('prediction_submitted', {

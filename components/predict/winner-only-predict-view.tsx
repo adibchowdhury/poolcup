@@ -20,7 +20,6 @@ import { R32BracketScaffold } from '@/components/predict/r32-bracket-scaffold'
 import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import { recordWinnerOnlySaveActivity } from '@/src/lib/pool-activity'
 import { supabase } from '@/src/lib/supabase'
 import {
   WORLD_CUP_GROUP_LETTERS,
@@ -447,22 +446,6 @@ export function WinnerOnlyPredictView({
 
       setBaselineThirdPlaceRankings([...thirdPlaceRankings])
     }
-
-    const changedGroups = rows.map((row) => ({
-      groupName: row.group_name,
-      baselineWasEmpty: (baselineRankings[row.group_name] ?? []).length === 0,
-    }))
-
-    recordWinnerOnlySaveActivity(pool.id, memberId, {
-      changedGroups,
-      ...(thirdPlaceChanged
-        ? {
-            thirdPlace: {
-              baselineWasEmpty: baselineThirdPlaceRankings.length === 0,
-            },
-          }
-        : {}),
-    })
 
     capturePostHog('prediction_submitted', { pool_id: pool.id })
 
