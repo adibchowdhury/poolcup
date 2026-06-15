@@ -87,26 +87,44 @@ const NAME_ALIASES: Record<string, string> = {
 
 /** PNG slugs in public/flags/ (filename without .png). */
 export const FLAG_IMAGE_SLUGS = new Set([
+  'algeria',
+  'argentina',
   'australia',
+  'austria',
   'belgium',
   'bosnia',
   'brazil',
   'canada',
   'cape_verde',
+  'columbia',
+  'congo',
+  'croatia',
   'curacao',
   'czech_republic',
   'ecuador',
   'egypt',
+  'england',
+  'france',
   'germany',
+  'ghana',
   'haiti',
+  'iraq',
+  'iran',
   'ivory_coast',
   'japan',
+  'jordan',
   'mexico',
   'morocco',
   'netherlands',
+  'new_zealand',
+  'norway',
+  'panama',
   'paraguay',
+  'portugal',
   'qatar',
+  'saudi_arabia',
   'scotland',
+  'senegal',
   'south_africa',
   'south_korea',
   'spain',
@@ -116,10 +134,11 @@ export const FLAG_IMAGE_SLUGS = new Set([
   'turkiye',
   'uruguay',
   'usa',
+  'uzbekistan',
 ])
 
 /** Intentionally no PNG yet — use emoji/initials fallback. */
-const TEAM_NAMES_WITHOUT_FLAG_IMAGE = new Set(['saudi arabia'])
+const TEAM_NAMES_WITHOUT_FLAG_IMAGE = new Set<string>()
 
 /** API / display names that do not match filename slugs after normalization. */
 const TEAM_FLAG_IMAGE_ALIASES: Record<string, string> = {
@@ -154,6 +173,12 @@ const TEAM_FLAG_IMAGE_ALIASES: Record<string, string> = {
   'cape verde islands': 'cape_verde',
   'cabo verde': 'cape_verde',
   cabo_verde: 'cape_verde',
+  colombia: 'columbia',
+  'dr congo': 'congo',
+  'congo dr': 'congo',
+  'democratic republic of the congo': 'congo',
+  'democratic republic of congo': 'congo',
+  'congo democratic republic': 'congo',
 }
 
 function normalizeTeamNameKey(name: string): string {
