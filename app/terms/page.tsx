@@ -69,11 +69,11 @@ export default function TermsPage() {
               3. Accounts & Eligibility
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              You must provide accurate registration information and keep your account
-              credentials secure. You are responsible for activity under your account.
-              You must be old enough to enter a binding agreement where you live (and at
-              least 13 years old). One person may not maintain multiple accounts to
-              manipulate pools or leaderboards.
+              You must be at least 13 years old to create an account or use PoolCup.
+              By using the Service you confirm that you meet this requirement. You must
+              provide accurate registration information and keep your account credentials
+              secure. You are responsible for activity under your account. One person
+              may not maintain multiple accounts to manipulate pools or leaderboards.
             </p>
           </section>
 

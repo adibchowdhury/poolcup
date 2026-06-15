@@ -9,6 +9,7 @@ import {
   PoolHomeView,
   type PoolHomeMeta,
 } from '@/components/pool/pool-home-view'
+import type { PoolChatMemberProfile } from '@/components/pool/pool-chat-tab'
 import { PoolPageSkeleton } from '@/components/pool/pool-page-skeleton'
 import type {
   LeaderboardMember,
@@ -101,6 +102,10 @@ export default function PoolPage() {
   const [avatarByMemberId, setAvatarByMemberId] = useState(
     () => new Map<string, string | null>(),
   )
+  const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(null)
+  const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
+    () => new Map<string, PoolChatMemberProfile>(),
+  )
 
   const loadPoolData = useCallback(async () => {
     if (!userId) return
@@ -127,6 +132,7 @@ export default function PoolPage() {
 
     const pool = poolData as Pool
     setPoolId(pool.id)
+    setPoolCreatorUserId(pool.creator_id)
     setCanDelete(pool.creator_id === userId)
 
     const { data: membersData, error: membersError } = await supabase
@@ -157,6 +163,15 @@ export default function PoolPage() {
     }
 
     setAvatarByMemberId(avatarByMemberId)
+
+    const profilesByUserId = new Map<string, PoolChatMemberProfile>()
+    for (const member of poolMembers) {
+      profilesByUserId.set(member.user_id, {
+        displayName: member.display_name,
+        avatar: avatarByMemberId.get(member.id) ?? null,
+      })
+    }
+    setMemberProfilesByUserId(profilesByUserId)
 
     const isWinnerPool = pool.scoring_style === 'winner'
 
@@ -440,6 +455,8 @@ export default function PoolPage() {
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}
       avatarsByMemberId={avatarByMemberId}
+      poolCreatorUserId={poolCreatorUserId ?? undefined}
+      memberProfilesByUserId={memberProfilesByUserId}
     />
   )
 }

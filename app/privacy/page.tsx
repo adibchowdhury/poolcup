@@ -113,7 +113,18 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-display text-2xl tracking-wide">5. Cookies</h2>
+            <h2 className="font-display text-2xl tracking-wide">
+              5. Data Retention
+            </h2>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              Pool chat messages are retained for 90 days, after which they are
+              automatically deleted. Messages that have been reported may be retained
+              longer where necessary to review and act on the report.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-display text-2xl tracking-wide">6. Cookies</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               We use cookies and similar technologies to keep you signed in, remember
               preferences, and understand how the site is used. You can control cookies
@@ -126,7 +137,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-display text-2xl tracking-wide">6. Your Rights</h2>
+            <h2 className="font-display text-2xl tracking-wide">7. Your Rights</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Depending on where you live, you may have rights to access, correct,
               export, or delete your personal data, or to object to certain processing.
@@ -143,7 +154,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-display text-2xl tracking-wide">
-              7. Children&apos;s Privacy
+              8. Children&apos;s Privacy
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               PoolCup is not directed at children under 13 (or the minimum age required
@@ -155,7 +166,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-display text-2xl tracking-wide">
-              8. Changes to This Policy
+              9. Changes to This Policy
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               We may update this policy from time to time. The &quot;Last updated&quot;
@@ -165,7 +176,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-display text-2xl tracking-wide">9. Contact Us</h2>
+            <h2 className="font-display text-2xl tracking-wide">10. Contact Us</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Questions about this policy? Email{' '}
               <a

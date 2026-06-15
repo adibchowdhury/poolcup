@@ -24,7 +24,12 @@ import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
+import {
+  PoolChatTab,
+  type PoolChatMemberProfile,
+} from '@/components/pool/pool-chat-tab'
 import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
+import { cn } from '@/lib/utils'
 import { trackEvent } from '@/src/lib/track'
 
 export type PoolHomeMeta = {
@@ -53,6 +58,8 @@ interface PoolHomeViewProps {
   poolId?: string
   memberId?: string
   avatarsByMemberId: Map<string, string | null>
+  poolCreatorUserId?: string
+  memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
 }
 
 function formatNextMatchCountdown(ms: number): string {
@@ -96,6 +103,8 @@ export function PoolHomeView({
   poolId,
   memberId,
   avatarsByMemberId,
+  poolCreatorUserId,
+  memberProfilesByUserId,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -124,6 +133,7 @@ export function PoolHomeView({
       )
     : undefined
   const yourRank = yourPlaceGroup?.place ?? 0
+  const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
 
   return (
     <div className="min-h-screen bg-background">
@@ -251,13 +261,23 @@ export function PoolHomeView({
             onValueChange={setActiveTab}
             className="mb-8 w-full min-w-0 gap-6"
           >
-            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-2 p-1">
+            <TabsList
+              className={cn(
+                'grid h-auto w-full max-w-2xl p-1',
+                showChatTab ? 'grid-cols-3' : 'grid-cols-2',
+              )}
+            >
               <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
                 Predictions
               </TabsTrigger>
               <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
                 Leaderboard
               </TabsTrigger>
+              {showChatTab ? (
+                <TabsTrigger value="chat" className="px-2 py-2 text-xs sm:text-sm">
+                  Chat
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
             <TabsContent value="predictions" className="mt-0 w-full min-w-0">
@@ -356,6 +376,17 @@ export function PoolHomeView({
                 </>
               )}
             </TabsContent>
+
+            {showChatTab && poolId && poolCreatorUserId && memberProfilesByUserId ? (
+              <TabsContent value="chat" className="mt-0 w-full min-w-0">
+                <PoolChatTab
+                  poolId={poolId}
+                  currentUserId={currentUserId}
+                  poolCreatorUserId={poolCreatorUserId}
+                  memberProfilesByUserId={memberProfilesByUserId}
+                />
+              </TabsContent>
+            ) : null}
           </Tabs>
         </main>
       </div>
