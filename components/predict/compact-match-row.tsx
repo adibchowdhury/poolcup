@@ -1,12 +1,14 @@
 'use client'
 
 import { Check } from 'lucide-react'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { cn } from '@/lib/utils'
-import { resolveTeamFlag, type ResolvedTeamFlag } from '@/src/lib/team-flags'
+import type { ResolvedTeamFlag } from '@/src/lib/team-flags'
 
 export interface CompactTeam {
   name: string
   flag: ResolvedTeamFlag
+  dbFlag?: string | null
 }
 
 export interface CompactMatchRowProps {
@@ -21,21 +23,25 @@ export interface CompactMatchRowProps {
   variant?: 'compact' | 'prominent'
 }
 
-function TeamFlagBadge({ flag }: { flag: ResolvedTeamFlag }) {
-  if (flag.kind === 'emoji') {
-    return (
-      <span className="shrink-0 text-lg leading-none" aria-hidden>
-        {flag.value}
-      </span>
-    )
-  }
+function RowTeamFlag({
+  countryName,
+  dbFlag,
+  prominent,
+}: {
+  countryName: string
+  dbFlag?: string | null
+  prominent: boolean
+}) {
   return (
-    <span
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted font-mono text-[10px] font-bold text-muted-foreground"
-      aria-hidden
-    >
-      {flag.value}
-    </span>
+    <TeamFlagImage
+      countryName={countryName}
+      dbFlag={dbFlag}
+      imgClassName={cn(
+        'w-auto shrink-0 object-cover',
+        prominent ? 'h-7' : 'h-6',
+      )}
+      emojiClassName={cn('leading-none', prominent ? 'text-xl' : 'text-lg')}
+    />
   )
 }
 
@@ -94,7 +100,11 @@ export function CompactMatchRow({
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <TeamFlagBadge flag={homeTeam.flag} />
+        <RowTeamFlag
+          countryName={homeTeam.name}
+          dbFlag={homeTeam.dbFlag}
+          prominent={prominent}
+        />
         <span
           className={cn(
             'font-semibold text-foreground',
@@ -138,7 +148,11 @@ export function CompactMatchRow({
         >
           {awayTeam.name}
         </span>
-        <TeamFlagBadge flag={awayTeam.flag} />
+        <RowTeamFlag
+          countryName={awayTeam.name}
+          dbFlag={awayTeam.dbFlag}
+          prominent={prominent}
+        />
       </div>
 
       {isPredicted && filled && !isLocked && (

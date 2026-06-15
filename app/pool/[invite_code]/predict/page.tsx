@@ -215,10 +215,12 @@ function toSectionMatch(
     homeTeam: {
       name: match.team1_name,
       flag: resolveTeamFlag(match.team1_name, match.team1_flag),
+      dbFlag: match.team1_flag,
     },
     awayTeam: {
       name: match.team2_name,
       flag: resolveTeamFlag(match.team2_name, match.team2_flag),
+      dbFlag: match.team2_flag,
     },
     homeScore: entry.score1,
     awayScore: entry.score2,
