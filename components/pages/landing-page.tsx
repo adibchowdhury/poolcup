@@ -9,8 +9,14 @@ import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
+import { TeamFlagImage } from "@/components/predict/team-flag-image"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
+
+const DEMO_FLAG_CLASS = {
+  imgClassName: "h-5 w-auto shrink-0 object-cover",
+  emojiClassName: "text-xl leading-none",
+} as const
 
 function heroReveal(isVisible: boolean) {
   return cn(
@@ -45,9 +51,9 @@ function getHeroDaysStat(mounted: boolean, nowMs: number) {
 }
 
 const matchesData = [
-  { id: 1, team1: "Mexico", flag1: "🇲🇽", team2: "S.Africa", flag2: "🇿🇦", score1: "2", score2: "1", completed: true },
-  { id: 2, team1: "Brazil", flag1: "🇧🇷", team2: "Argentina", flag2: "🇦🇷", score1: "", score2: "", completed: false },
-  { id: 3, team1: "England", flag1: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", team2: "France", flag2: "🇫🇷", score1: "", score2: "", completed: false },
+  { id: 1, team1: "Mexico", team2: "S.Africa", score1: "2", score2: "1", completed: true },
+  { id: 2, team1: "Brazil", team2: "Argentina", score1: "", score2: "", completed: false },
+  { id: 3, team1: "England", team2: "France", score1: "", score2: "", completed: false },
 ]
 
 const leaderboardData = [
@@ -341,7 +347,10 @@ export default function LandingPage() {
                   >
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="shrink-0 text-xl">{match.flag1}</span>
+                        <TeamFlagImage
+                          countryName={match.team1}
+                          {...DEMO_FLAG_CLASS}
+                        />
                         <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team1}</span>
                       </div>
 
@@ -372,7 +381,10 @@ export default function LandingPage() {
 
                       <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                         <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team2}</span>
-                        <span className="shrink-0 text-xl">{match.flag2}</span>
+                        <TeamFlagImage
+                          countryName={match.team2}
+                          {...DEMO_FLAG_CLASS}
+                        />
                       </div>
                     </div>
                   </div>
