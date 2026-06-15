@@ -152,10 +152,10 @@ export default function SecurityPage() {
             </p>
             <p className="mt-2">
               <a
-                href="mailto:security@getpoolcup.com"
+                href="mailto:support@getpoolcup.com"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                security@getpoolcup.com
+                support@getpoolcup.com
               </a>
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">

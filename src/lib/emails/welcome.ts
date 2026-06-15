@@ -107,6 +107,7 @@ export async function sendWelcomeEmail({
   const { error } = await resend.emails.send({
     from: TRANSACTIONAL_EMAIL_FROM,
     to: email,
+    replyTo: 'support@getpoolcup.com',
     subject: 'Welcome to PoolCup 🏆',
     html: buildWelcomeEmailHtml(firstName),
   })

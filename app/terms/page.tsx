@@ -195,10 +195,10 @@ export default function TermsPage() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Questions about these Terms? Email{' '}
               <a
-                href="mailto:legal@getpoolcup.com"
+                href="mailto:support@getpoolcup.com"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                legal@getpoolcup.com
+                support@getpoolcup.com
               </a>{' '}
               or visit our{' '}
               <Link href="/contact" className="text-primary underline-offset-4 hover:underline">

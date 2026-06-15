@@ -132,10 +132,10 @@ export default function PrivacyPage() {
               export, or delete your personal data, or to object to certain processing.
               To make a request, email us at{' '}
               <a
-                href="mailto:privacy@getpoolcup.com"
+                href="mailto:support@getpoolcup.com"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                privacy@getpoolcup.com
+                support@getpoolcup.com
               </a>
               . We will respond within a reasonable timeframe.
             </p>
@@ -169,10 +169,10 @@ export default function PrivacyPage() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Questions about this policy? Email{' '}
               <a
-                href="mailto:privacy@getpoolcup.com"
+                href="mailto:support@getpoolcup.com"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                privacy@getpoolcup.com
+                support@getpoolcup.com
               </a>{' '}
               or use our{' '}
               <Link href="/contact" className="text-primary underline-offset-4 hover:underline">

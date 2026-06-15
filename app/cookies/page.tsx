@@ -144,10 +144,10 @@ export default function CookiesPage() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Questions about cookies or this policy? Email{' '}
               <a
-                href="mailto:privacy@getpoolcup.com"
+                href="mailto:support@getpoolcup.com"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                privacy@getpoolcup.com
+                support@getpoolcup.com
               </a>{' '}
               or use our{' '}
               <Link href="/contact" className="text-primary underline-offset-4 hover:underline">
