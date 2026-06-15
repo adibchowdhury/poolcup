@@ -28,6 +28,11 @@ type PoolChatTabProps = {
   currentUserId: string
   poolCreatorUserId: string
   memberProfilesByUserId: Map<string, PoolChatMemberProfile>
+  /** Hides the tab heading (pool page Chat tab, Match Room embed). */
+  hideHeading?: boolean
+  embedded?: boolean
+  /** Pool page Chat tab: edge-to-edge layout on mobile. */
+  fullBleedMobile?: boolean
 }
 
 function resolveAuthor(
@@ -99,7 +104,7 @@ function ChatMessageRow({
   return (
     <div
       className={cn(
-        'flex gap-2',
+        'flex w-full min-w-0 max-w-full gap-2',
         isYou ? 'flex-row-reverse' : 'flex-row',
       )}
     >
@@ -107,7 +112,7 @@ function ChatMessageRow({
 
       <div
         className={cn(
-          'flex min-w-0 max-w-[85%] flex-col gap-1',
+          'flex min-w-0 max-w-[calc(100%-2.5rem)] flex-col gap-1',
           isYou ? 'items-end' : 'items-start',
         )}
       >
@@ -180,6 +185,9 @@ export function PoolChatTab({
   currentUserId,
   poolCreatorUserId,
   memberProfilesByUserId,
+  hideHeading = false,
+  embedded = false,
+  fullBleedMobile = false,
 }: PoolChatTabProps) {
   const [messages, setMessages] = useState<PoolMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -342,25 +350,47 @@ export function PoolChatTab({
 
   const trimmedDraft = draft.trim()
   const canSend = trimmedDraft.length > 0 && !sending
+  const showHeading = !hideHeading && !embedded
 
   return (
-    <div className="w-full min-w-0">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
-          <MessageCircle className="relative h-6 w-6 text-primary" />
+    <div
+      className={cn(
+        'w-full min-w-0',
+        fullBleedMobile &&
+          'max-sm:flex max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:flex-col',
+      )}
+    >
+      {showHeading ? (
+        <div className="mb-4 flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
+            <MessageCircle className="relative h-6 w-6 text-primary" />
+          </div>
+          <h2 className="font-display text-2xl tracking-wide text-foreground">
+            CHAT
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
         </div>
-        <h2 className="font-display text-2xl tracking-wide text-foreground">
-          CHAT
-        </h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
-      </div>
+      ) : null}
 
-      <div className="flex h-[min(32rem,calc(100dvh-16rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card">
+      <div
+        className={cn(
+          'flex flex-col overflow-hidden rounded-2xl border border-border bg-card',
+          fullBleedMobile
+            ? 'max-sm:min-h-0 max-sm:flex-1 max-sm:rounded-none max-sm:border-x-0 sm:h-[min(32rem,calc(100dvh-16rem))]'
+            : 'h-[min(32rem,calc(100dvh-16rem))]',
+        )}
+      >
         <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          <div
+            className={cn(
+              'min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4',
+              fullBleedMobile &&
+                'max-sm:overflow-x-hidden max-sm:scrollbar-none max-sm:overscroll-contain',
+            )}
+          >
             {loading ? (
               <div className="space-y-4">
                 {[0, 1, 2].map((i) => (
@@ -420,7 +450,10 @@ export function PoolChatTab({
 
           <form
             onSubmit={(event) => void handleSend(event)}
-            className="flex shrink-0 items-center gap-2 border-t border-border/60 p-3"
+            className={cn(
+              'flex shrink-0 items-center gap-2 border-t border-border/60 p-3',
+              fullBleedMobile && 'max-sm:px-4 max-sm:py-3',
+            )}
           >
             <Input
               value={draft}

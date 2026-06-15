@@ -20,6 +20,7 @@ import {
   LeaderboardGroupedList,
 } from '@/components/pool/leaderboard-grouped-list'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
+import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
@@ -134,17 +135,35 @@ export function PoolHomeView({
     : undefined
   const yourRank = yourPlaceGroup?.place ?? 0
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
+  const isMobileChatShell = activeTab === 'chat' && showChatTab
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={cn(
+        'min-h-screen bg-background',
+        isMobileChatShell &&
+          'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-hidden',
+      )}
+    >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute right-20 top-40 h-96 w-96 rounded-full bg-[#ffb300]/5 blur-3xl" />
         <div className="absolute bottom-20 left-1/3 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
       </div>
 
-      <div className="relative z-10">
-        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <div
+        className={cn(
+          'relative z-10',
+          isMobileChatShell &&
+            'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden',
+        )}
+      >
+        <header
+          className={cn(
+            'sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl',
+            isMobileChatShell && 'max-sm:shrink-0',
+          )}
+        >
           <div className="mx-auto max-w-4xl px-4 py-4">
             <div className="flex items-center gap-4">
               <Link
@@ -177,8 +196,19 @@ export function PoolHomeView({
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8">
-          <div className="mb-8 flex flex-wrap gap-3">
+        <main
+          className={cn(
+            'mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8',
+            isMobileChatShell &&
+              'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
+          )}
+        >
+          <div
+            className={cn(
+              'mb-8 flex flex-wrap gap-3',
+              activeTab === 'chat' && showChatTab ? 'hidden sm:flex' : 'flex',
+            )}
+          >
             <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 hover-lift">
               <Users className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">
@@ -207,7 +237,12 @@ export function PoolHomeView({
           </div>
 
           {!hasPredictions && (
-            <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              className={cn(
+                'mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between',
+                isMobileChatShell && 'max-sm:hidden',
+              )}
+            >
               <p className="text-sm font-medium text-foreground">
                 You haven&apos;t made your predictions yet
               </p>
@@ -221,7 +256,7 @@ export function PoolHomeView({
             </div>
           )}
 
-          {yourData && yourData.points > 0 && (
+          {activeTab !== 'chat' && yourData && yourData.points > 0 ? (
             <div className="mb-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -254,17 +289,22 @@ export function PoolHomeView({
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
-            className="mb-8 w-full min-w-0 gap-6"
+            className={cn(
+              'mb-8 w-full min-w-0 gap-6',
+              isMobileChatShell &&
+                'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:gap-2 max-sm:overflow-hidden',
+            )}
           >
             <TabsList
               className={cn(
                 'grid h-auto w-full max-w-2xl p-1',
                 showChatTab ? 'grid-cols-3' : 'grid-cols-2',
+                isMobileChatShell && 'max-sm:mx-4 max-sm:max-w-none max-sm:shrink-0',
               )}
             >
               <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
@@ -378,8 +418,19 @@ export function PoolHomeView({
             </TabsContent>
 
             {showChatTab && poolId && poolCreatorUserId && memberProfilesByUserId ? (
-              <TabsContent value="chat" className="mt-0 w-full min-w-0">
+              <TabsContent
+                value="chat"
+                className={cn(
+                  'mt-0 w-full min-w-0',
+                  'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden',
+                )}
+              >
+                <div className="mb-4 max-sm:mb-2 max-sm:shrink-0 max-sm:px-4">
+                  <LiveScoreboard compact />
+                </div>
                 <PoolChatTab
+                  hideHeading
+                  fullBleedMobile
                   poolId={poolId}
                   currentUserId={currentUserId}
                   poolCreatorUserId={poolCreatorUserId}

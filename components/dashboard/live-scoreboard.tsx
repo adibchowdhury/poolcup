@@ -132,18 +132,25 @@ function FeaturedMatchCountdownDisplay({
   mounted,
   isKickingOff,
   label,
+  compact = false,
 }: {
   mounted: boolean
   isKickingOff: boolean
   label: string | null
+  compact?: boolean
 }) {
   if (!mounted) {
     return (
       <span
-        className="font-mono text-xl font-bold tabular-nums text-[#ffb300] sm:text-2xl lg:text-3xl"
+        className={cn(
+          'font-mono font-bold tabular-nums text-[#ffb300]',
+          compact
+            ? 'text-xs'
+            : 'text-xl sm:text-2xl lg:text-3xl',
+        )}
         aria-hidden
       >
-        —:——:——
+        {compact ? '—:——' : '—:——:——'}
       </span>
     )
   }
@@ -151,10 +158,13 @@ function FeaturedMatchCountdownDisplay({
   if (isKickingOff) {
     return (
       <span
-        className="inline-flex items-center gap-2 font-display text-xl font-bold uppercase tracking-wide text-primary animate-pulse sm:text-2xl lg:text-3xl"
+        className={cn(
+          'inline-flex items-center gap-1.5 font-display font-bold uppercase tracking-wide text-primary animate-pulse',
+          compact ? 'text-[10px]' : 'text-xl sm:text-2xl lg:text-3xl',
+        )}
         suppressHydrationWarning
       >
-        <span className="stage-live-dot h-2.5 w-2.5 shrink-0 rounded-full" aria-hidden />
+        <span className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full" aria-hidden />
         Kicking off
       </span>
     )
@@ -162,7 +172,10 @@ function FeaturedMatchCountdownDisplay({
 
   return (
     <span
-      className="font-mono text-xl font-bold leading-none tabular-nums text-[#ffb300] sm:text-2xl lg:text-3xl"
+      className={cn(
+        'font-mono font-bold leading-none tabular-nums text-[#ffb300]',
+        compact ? 'text-xs' : 'text-xl sm:text-2xl lg:text-3xl',
+      )}
       suppressHydrationWarning
     >
       {label}
@@ -170,7 +183,26 @@ function FeaturedMatchCountdownDisplay({
   )
 }
 
-function LiveScoreboardSkeleton() {
+export function LiveScoreboardSkeleton({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div
+        className="animate-pulse rounded-xl border border-border/80 bg-card/80 px-3 py-2.5"
+        aria-busy="true"
+        aria-label="Loading live scoreboard"
+      >
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded bg-muted" />
+          <div className="h-3 flex-1 rounded bg-muted" />
+          <div className="h-5 w-10 shrink-0 rounded bg-muted" />
+          <div className="h-3 flex-1 rounded bg-muted" />
+          <div className="h-6 w-6 rounded bg-muted" />
+          <div className="h-8 w-12 shrink-0 rounded bg-muted" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className="animate-pulse rounded-2xl border border-border/80 bg-card/80 p-3 sm:p-4"
@@ -215,13 +247,154 @@ function ScoreboardTeam({
   )
 }
 
-function LiveScoreboardCard({
+function CompactScoreboardTeam({
+  name,
+  dbFlag,
+  align,
+}: {
+  name: string
+  dbFlag: string | null
+  align: 'left' | 'right'
+}) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-1 items-center gap-1.5',
+        align === 'right' && 'flex-row-reverse',
+      )}
+    >
+      <TeamFlagImage
+        countryName={name}
+        dbFlag={dbFlag}
+        imgClassName="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7"
+        emojiClassName="text-base sm:text-lg"
+      />
+      <span className="truncate text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
+        {name}
+      </span>
+    </div>
+  )
+}
+
+function CompactLiveScoreboardCard({
   match,
   mode,
 }: {
   match: FeaturedMatch
   mode: FeaturedMatchMode
 }) {
+  const isLive = mode === 'live'
+  const isUpcoming = mode === 'upcoming'
+  const statusLabel = formatFeaturedMatchStatusLabel(
+    match.status_short,
+    match.elapsed_minute,
+    match.is_final || mode === 'final',
+  )
+  const score1 = match.result_team1 ?? 0
+  const score2 = match.result_team2 ?? 0
+  const kickoffCountdown = useKickoffCountdown(match.kickoff_at)
+  const liveClockLabel = useLiveMatchClock(match)
+  const liveTopRightLabel =
+    liveClockLabel ??
+    formatFeaturedMatchStatusLabel(
+      match.status_short,
+      match.elapsed_minute,
+      match.is_final,
+    )
+
+  return (
+    <article
+      className={cn(
+        'relative overflow-hidden rounded-xl border border-white/15 backdrop-blur-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.1)] px-2.5 py-2 sm:px-3 sm:py-2.5',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/40 before:to-transparent',
+      )}
+      aria-label={`${match.team1_name} vs ${match.team2_name}`}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            'radial-gradient(80% 80% at 50% 0%, hsl(var(--primary) / 0.28), transparent 70%), #0D1F14',
+        }}
+      />
+      <div className="relative flex items-center gap-1.5 sm:gap-2">
+        <CompactScoreboardTeam
+          name={match.team1_name}
+          dbFlag={match.team1_flag}
+          align="left"
+        />
+
+        <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-1">
+          {isLive || mode === 'final' ? (
+            <p className="font-display text-base leading-none tracking-wide text-foreground tabular-nums sm:text-lg">
+              <span className="text-primary">{score1}</span>
+              <span className="mx-0.5 text-muted-foreground/80">–</span>
+              <span className="text-primary">{score2}</span>
+            </p>
+          ) : (
+            <>
+              <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+                vs
+              </span>
+              {isUpcoming ? (
+                <FeaturedMatchCountdownDisplay compact {...kickoffCountdown} />
+              ) : null}
+            </>
+          )}
+        </div>
+
+        <CompactScoreboardTeam
+          name={match.team2_name}
+          dbFlag={match.team2_flag}
+          align="right"
+        />
+
+        <div className="ml-0.5 shrink-0 border-l border-white/10 pl-2 sm:pl-2.5">
+          {isLive ? (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-red-400">
+                <span
+                  className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
+                  aria-hidden
+                />
+                Live
+              </span>
+              <span
+                className="text-[10px] font-medium tabular-nums leading-none text-primary sm:text-xs"
+                suppressHydrationWarning
+              >
+                {liveTopRightLabel}
+              </span>
+            </div>
+          ) : isUpcoming ? (
+            <span className="text-[9px] font-bold uppercase tracking-wide text-primary sm:text-[10px]">
+              Up next
+            </span>
+          ) : (
+            <span className="max-w-[4.5rem] text-right text-[9px] font-medium uppercase leading-tight tracking-wide text-muted-foreground sm:max-w-none sm:text-[10px]">
+              {statusLabel}
+            </span>
+          )}
+        </div>
+      </div>
+    </article>
+  )
+}
+
+export function LiveScoreboardCard({
+  match,
+  mode,
+  compact = false,
+}: {
+  match: FeaturedMatch
+  mode: FeaturedMatchMode
+  compact?: boolean
+}) {
+  if (compact) {
+    return <CompactLiveScoreboardCard match={match} mode={mode} />
+  }
+
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.group_name)
   const groupPillLabel =
     match.round === 'group' && match.group_name
@@ -453,7 +626,7 @@ function LiveScoreboardCard({
   )
 }
 
-export function LiveScoreboard() {
+export function useFeaturedMatch() {
   const [match, setMatch] = useState<FeaturedMatch | null>(null)
   const [mode, setMode] = useState<FeaturedMatchMode | null>(null)
   const [loading, setLoading] = useState(true)
@@ -488,13 +661,19 @@ export function LiveScoreboard() {
     return () => window.clearInterval(interval)
   }, [loadFeaturedMatch])
 
+  return { match, mode, loading, error }
+}
+
+export function LiveScoreboard({ compact = false }: { compact?: boolean } = {}) {
+  const { match, mode, loading, error } = useFeaturedMatch()
+
   if (loading) {
-    return <LiveScoreboardSkeleton />
+    return <LiveScoreboardSkeleton compact={compact} />
   }
 
   if (error || !match || !mode) {
     return null
   }
 
-  return <LiveScoreboardCard match={match} mode={mode} />
+  return <LiveScoreboardCard match={match} mode={mode} compact={compact} />
 }
