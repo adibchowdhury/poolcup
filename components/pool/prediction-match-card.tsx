@@ -8,6 +8,8 @@ import {
   getCompactMatchRowContainerClassName,
   getCompactMatchRowScoreColumnClassName,
   getCompactMatchRowTeamsRowClassName,
+  getPastMatchBodyTextClassName,
+  getPastMatchMetaTextClassName,
   PredictScoreInput,
 } from '@/components/predict/predict-match-row-shared'
 import {
@@ -191,6 +193,8 @@ export function PredictionMatchCard({
   const inputsShowPredicted = hasClassicPredictionScores(score1, score2)
   const showPicksExpander = Boolean(poolId && currentUserId && hasKickedOff)
   const showCardFooter = hasResult || showPicksExpander
+  const pastMetaTextClassName = getPastMatchMetaTextClassName()
+  const pastBodyTextClassName = getPastMatchBodyTextClassName()
 
   const persistScores = useCallback(async () => {
     if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
@@ -355,7 +359,12 @@ export function PredictionMatchCard({
         )}
       >
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
-          <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <span
+            className={cn(
+              'rounded-md bg-muted px-2.5 py-1 text-xs font-medium',
+              isReadOnly ? pastMetaTextClassName : 'text-muted-foreground',
+            )}
+          >
             {formatRoundLabel(prediction.round, prediction.groupName)}
           </span>
           {outcome ? (
@@ -366,7 +375,7 @@ export function PredictionMatchCard({
                   ? 'text-primary'
                   : outcome.kind === 'winner'
                     ? 'text-[#ffb300]'
-                    : 'text-muted-foreground',
+                    : pastMetaTextClassName,
               )}
             >
               {getPredictionOutcomeLabel(outcome.kind)} · +{outcome.points} pts
@@ -405,23 +414,35 @@ export function PredictionMatchCard({
                 score2={prediction.predTeam2!}
               />
             ) : hasResult ? (
-              <span className="text-center text-[10px] text-muted-foreground">
+              <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
                 No prediction
               </span>
             ) : isReadOnly ? (
-              <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span
+                className={cn(
+                  'rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider',
+                  pastMetaTextClassName,
+                )}
+              >
                 Locked
               </span>
             ) : null}
             <div className="flex flex-col items-center gap-0.5">
-              <span className="text-[10px] text-muted-foreground">Your prediction</span>
+              <span
+                className={cn(
+                  'text-[10px]',
+                  isReadOnly ? pastMetaTextClassName : 'text-muted-foreground',
+                )}
+              >
+                Your prediction
+              </span>
               {saveStatus === 'saving' ? (
                 <span className="text-[10px] text-muted-foreground">Saving…</span>
               ) : saveStatus === 'saved' ? (
                 <span className="text-[10px] font-medium text-primary">Saved</span>
               ) : null}
               {lockedNotice ? (
-                <span className="text-center text-[10px] text-muted-foreground">
+                <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
                   This match has locked
                 </span>
               ) : null}
@@ -437,7 +458,7 @@ export function PredictionMatchCard({
         {showCardFooter ? (
           <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
             {hasResult ? (
-              <p className="text-center text-xs text-muted-foreground">
+              <p className={cn('text-center text-xs', pastBodyTextClassName)}>
                 Actual: {prediction.resultTeam1} – {prediction.resultTeam2}
               </p>
             ) : null}
