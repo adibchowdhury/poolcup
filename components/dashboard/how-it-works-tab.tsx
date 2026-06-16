@@ -15,8 +15,9 @@ const SCORING_MODES = [
     icon: Target,
     rules: [
       'Exact score — 5 points',
-      'Correct winner on a win/loss, wrong score — 2 points',
-      'Non-exact draw or wrong outcome — 0 points',
+      'Correct draw (not the exact score) — 3 points',
+      'Correct winner, wrong score — 2 points',
+      'Wrong outcome — 0 points',
     ],
     footer: 'Knockout rounds (Round of 32 → Final) score double.',
   },

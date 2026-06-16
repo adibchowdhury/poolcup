@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 /** Set to ~24h after deploy; banner auto-hides after this instant. */
 export const SCORING_NOTICE_EXPIRES_AT = new Date('2026-06-17T21:00:00-05:00')
 
-const DISMISS_STORAGE_KEY = 'poolcup_scoring_notice_dismissed'
+const DISMISS_STORAGE_KEY = 'poolcup_scoring_notice_dismissed_v2'
 
 export function ScoringUpdateNoticeBanner() {
   const [visible, setVisible] = useState(false)
@@ -40,9 +40,9 @@ export function ScoringUpdateNoticeBanner() {
     >
       <p className="font-semibold text-foreground">Scoring update</p>
       <p className="mt-1 text-muted-foreground">
-        Correctly predicting a draw no longer earns points, since a draw has no
-        winner. Predicting the exact scoreline of a draw still earns full points.
-        This change applied to every player equally.
+        Correctly predicting a draw now earns 3 points, more than a correct
+        winner, and an exact score still earns 5. Your points have been updated
+        automatically. Thanks for the feedback.
       </p>
       <Button
         type="button"

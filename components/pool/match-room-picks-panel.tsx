@@ -38,6 +38,8 @@ function getLiveStatusLabel(kind: PredictionOutcomeKind): string {
   switch (kind) {
     case 'exact':
       return 'Exact'
+    case 'draw':
+      return 'Correct draw'
     case 'winner':
       return 'Correct winner'
     case 'wrong':
@@ -83,6 +85,8 @@ function getPillLabel(kind: PredictionOutcomeKind | 'pending'): string {
   switch (kind) {
     case 'exact':
       return 'Exact'
+    case 'draw':
+      return 'Draw'
     case 'winner':
       return 'Winner'
     case 'wrong':
@@ -105,6 +109,8 @@ function PickStatusPill({
         'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
         kind === 'exact' &&
           'border border-emerald-500/40 bg-emerald-500/15 text-emerald-400',
+        kind === 'draw' &&
+          'border border-sky-500/40 bg-sky-500/15 text-sky-400',
         kind === 'winner' &&
           'border border-amber-500/40 bg-amber-500/15 text-amber-400',
         (kind === 'wrong' || kind === 'pending') &&
