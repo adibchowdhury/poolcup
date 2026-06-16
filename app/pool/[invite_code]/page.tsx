@@ -93,6 +93,7 @@ export default function PoolPage() {
   const [winnerGroups, setWinnerGroups] = useState<WinnerGroupPrediction[]>([])
   const [thirdPlaceTeams, setThirdPlaceTeams] = useState<string[]>([])
   const [hasPredictions, setHasPredictions] = useState(false)
+  const [openUnpredictedCount, setOpenUnpredictedCount] = useState(0)
   const [pageLoading, setPageLoading] = useState(true)
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -227,6 +228,7 @@ export default function PoolPage() {
     let loadedWinnerGroups: WinnerGroupPrediction[] = []
     let loadedThirdPlaceTeams: string[] = []
     let memberHasPredictions = false
+    let loadedOpenUnpredictedCount = 0
 
     if (currentMember) {
       if (pool.scoring_style === 'winner') {
@@ -325,6 +327,25 @@ export default function PoolPage() {
         }
 
         memberHasPredictions = loadedUserPredictions.length > 0
+
+        const predictedMatchIds = new Set(
+          loadedUserPredictions.map((prediction) => prediction.matchId),
+        )
+        const { data: openMatchRows, error: openMatchError } = await supabase
+          .from('matches')
+          .select('id')
+          .gt('locked_at', new Date().toISOString())
+
+        if (openMatchError) {
+          console.error(
+            'Failed to load open matches for prediction count:',
+            openMatchError.message,
+          )
+        } else {
+          loadedOpenUnpredictedCount = (openMatchRows ?? []).filter(
+            (row) => !predictedMatchIds.has(String(row.id)),
+          ).length
+        }
       }
     }
 
@@ -343,6 +364,7 @@ export default function PoolPage() {
     setWinnerGroups(loadedWinnerGroups)
     setThirdPlaceTeams(loadedThirdPlaceTeams)
     setHasPredictions(memberHasPredictions)
+    setOpenUnpredictedCount(loadedOpenUnpredictedCount)
     setPageLoading(false)
 
     const { data: cacheData, error: cacheError } = await supabase
@@ -449,6 +471,7 @@ export default function PoolPage() {
       thirdPlaceTeams={thirdPlaceTeams}
       predictHref={`/pool/${inviteCode}/predict`}
       hasPredictions={hasPredictions}
+      openUnpredictedCount={openUnpredictedCount}
       currentUserId={user!.id}
       leaderboardLoading={leaderboardLoading}
       canDelete={canDelete}

@@ -52,6 +52,7 @@ interface PoolHomeViewProps {
   thirdPlaceTeams: string[]
   predictHref: string
   hasPredictions: boolean
+  openUnpredictedCount?: number
   currentUserId: string
   leaderboardLoading?: boolean
   canDelete?: boolean
@@ -70,6 +71,7 @@ export function PoolHomeView({
   thirdPlaceTeams,
   predictHref,
   hasPredictions,
+  openUnpredictedCount = 0,
   currentUserId,
   leaderboardLoading = false,
   canDelete,
@@ -299,7 +301,7 @@ export function PoolHomeView({
                 predictions={userPredictions}
                 winnerGroups={winnerGroups}
                 thirdPlaceTeams={thirdPlaceTeams}
-                totalMatches={pool.totalMatches}
+                openUnpredictedCount={openUnpredictedCount}
                 predictHref={predictHref}
                 poolId={poolId}
                 currentUserId={currentUserId}

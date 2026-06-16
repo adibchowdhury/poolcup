@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ChevronRight, Share2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import {
   YourPredictionsSection,
@@ -16,7 +17,7 @@ type PoolPredictionsTabProps = {
   predictions: UserPoolPrediction[]
   winnerGroups: WinnerGroupPrediction[]
   thirdPlaceTeams: string[]
-  totalMatches: number
+  openUnpredictedCount: number
   predictHref: string
   shareOpen: boolean
   onToggleShare: () => void
@@ -30,7 +31,7 @@ export function PoolPredictionsTab({
   predictions,
   winnerGroups,
   thirdPlaceTeams,
-  totalMatches,
+  openUnpredictedCount,
   predictHref,
   shareOpen,
   onToggleShare,
@@ -39,9 +40,7 @@ export function PoolPredictionsTab({
   currentUserId,
 }: PoolPredictionsTabProps) {
   const isWinnerOnly = scoringStyle === 'winner'
-  const unpredictedCount = isWinnerOnly
-    ? 0
-    : Math.max(0, totalMatches - predictions.length)
+  const hasOpenUnpredicted = !isWinnerOnly && openUnpredictedCount > 0
   const hasAnyPredictions = predictions.length > 0 || winnerGroups.length > 0
   const makePredictionsLabel = hasAnyPredictions
     ? 'Update predictions'
@@ -49,12 +48,12 @@ export function PoolPredictionsTab({
 
   return (
     <div className="w-full min-w-0 space-y-4">
-      {unpredictedCount > 0 && (
+      {hasOpenUnpredicted && (
         <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-foreground">
             You still have{' '}
-            <span className="font-semibold text-primary">{unpredictedCount}</span>{' '}
-            {unpredictedCount === 1 ? 'match' : 'matches'} without a prediction.
+            <span className="font-semibold text-primary">{openUnpredictedCount}</span>{' '}
+            {openUnpredictedCount === 1 ? 'match' : 'matches'} without a prediction.
           </p>
           <Button
             asChild
@@ -66,25 +65,32 @@ export function PoolPredictionsTab({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Button
-          asChild
-          size="lg"
-          variant="default"
-          className={
-            hasAnyPredictions
-              ? 'group h-14 w-full gap-3 bg-primary font-display text-lg tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift'
-              : 'group h-16 w-full gap-3 bg-primary font-display text-xl tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift'
-          }
-        >
-          <Link href={predictHref}>
-            <Zap className={hasAnyPredictions ? 'h-5 w-5' : 'h-6 w-6'} />
-            {makePredictionsLabel}
-            {!hasAnyPredictions ? (
-              <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-            ) : null}
-          </Link>
-        </Button>
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-4',
+          !hasOpenUnpredicted && 'sm:grid-cols-2',
+        )}
+      >
+        {!hasOpenUnpredicted ? (
+          <Button
+            asChild
+            size="lg"
+            variant="default"
+            className={
+              hasAnyPredictions
+                ? 'group h-14 w-full gap-3 bg-primary font-display text-lg tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift'
+                : 'group h-16 w-full gap-3 bg-primary font-display text-xl tracking-wide text-primary-foreground hover:bg-primary/90 hover-lift'
+            }
+          >
+            <Link href={predictHref}>
+              <Zap className={hasAnyPredictions ? 'h-5 w-5' : 'h-6 w-6'} />
+              {makePredictionsLabel}
+              {!hasAnyPredictions ? (
+                <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              ) : null}
+            </Link>
+          </Button>
+        ) : null}
 
         <Button
           type="button"
