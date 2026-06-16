@@ -12,6 +12,7 @@ import {
   hasAuthenticatedBottomBar,
   isAuthenticatedAppPath,
 } from '@/src/lib/authenticated-paths'
+import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 
 function ReportIssueFab({ className }: { className?: string }) {
   const { openReportIssue } = useReportIssue()
@@ -41,6 +42,7 @@ function ReportIssueFab({ className }: { className?: string }) {
 
 function AuthenticatedChromeContent() {
   const pathname = usePathname() ?? ''
+  const { mobileChatActive } = useMobileChatChrome()
   const bottomOffset = hasAuthenticatedBottomBar(pathname)
     ? 'bottom-20 sm:bottom-24'
     : 'bottom-4 sm:bottom-6'
@@ -51,6 +53,7 @@ function AuthenticatedChromeContent() {
         className={cn(
           'pointer-events-auto absolute right-4',
           bottomOffset,
+          mobileChatActive && 'max-sm:hidden',
         )}
       >
         <ReportIssueFab />

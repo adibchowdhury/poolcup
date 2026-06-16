@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -30,6 +30,7 @@ import {
 import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import { cn } from '@/lib/utils'
 import { trackEvent } from '@/src/lib/track'
+import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -107,13 +108,19 @@ export function PoolHomeView({
   const yourRank = yourPlaceGroup?.place ?? 0
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
   const isMobileChatShell = activeTab === 'chat' && showChatTab
+  const { setMobileChatActive } = useMobileChatChrome()
+
+  useEffect(() => {
+    setMobileChatActive(isMobileChatShell)
+    return () => setMobileChatActive(false)
+  }, [isMobileChatShell, setMobileChatActive])
 
   return (
     <div
       className={cn(
         'min-h-screen bg-background',
         isMobileChatShell &&
-          'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-hidden',
+          'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
       )}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -126,7 +133,7 @@ export function PoolHomeView({
         className={cn(
           'relative z-10',
           isMobileChatShell &&
-            'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden',
+            'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
         )}
       >
         <header
@@ -161,6 +168,7 @@ export function PoolHomeView({
                   poolName={pool.name}
                   redirectTo="/dashboard"
                   triggerVariant="outline"
+                  mobileIconOnly
                 />
               )}
             </div>
@@ -171,7 +179,7 @@ export function PoolHomeView({
           className={cn(
             'mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8',
             isMobileChatShell &&
-              'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
+              'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
         >
           {!hasPredictions && (
@@ -195,7 +203,7 @@ export function PoolHomeView({
           )}
 
           {activeTab !== 'chat' && yourData && yourData.points > 0 ? (
-            <div className="mb-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6">
+            <div className="mb-8 hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6 sm:block">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="mb-1 text-sm text-muted-foreground">Your Position</div>
@@ -235,28 +243,30 @@ export function PoolHomeView({
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
               isMobileChatShell &&
-                'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:gap-2 max-sm:overflow-hidden',
+                'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:gap-2 max-sm:overflow-x-hidden max-sm:overflow-hidden',
             )}
           >
-            <TabsList
-              className={cn(
-                'grid h-auto w-full max-w-2xl p-1',
-                showChatTab ? 'grid-cols-3' : 'grid-cols-2',
-                isMobileChatShell && 'max-sm:mx-4 max-sm:max-w-none max-sm:shrink-0',
-              )}
-            >
-              <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
-                Predictions
-              </TabsTrigger>
-              <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
-                Leaderboard
-              </TabsTrigger>
-              {showChatTab ? (
-                <TabsTrigger value="chat" className="px-2 py-2 text-xs sm:text-sm">
-                  Chat
+            <div className={cn(isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4')}>
+              <TabsList
+                className={cn(
+                  'grid h-auto w-full max-w-2xl p-1',
+                  showChatTab ? 'grid-cols-3' : 'grid-cols-2',
+                  isMobileChatShell && 'max-sm:max-w-none max-sm:shrink-0',
+                )}
+              >
+                <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
+                  Predictions
                 </TabsTrigger>
-              ) : null}
-            </TabsList>
+                <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
+                  Leaderboard
+                </TabsTrigger>
+                {showChatTab ? (
+                  <TabsTrigger value="chat" className="px-2 py-2 text-xs sm:text-sm">
+                    Chat
+                  </TabsTrigger>
+                ) : null}
+              </TabsList>
+            </div>
 
             <TabsContent value="predictions" className="mt-0 w-full min-w-0">
               <PoolPredictionsTab
@@ -363,7 +373,7 @@ export function PoolHomeView({
                   'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden',
                 )}
               >
-                <div className="mb-4 max-sm:mb-2 max-sm:shrink-0 max-sm:px-4">
+                <div className="mb-4 py-3 max-sm:shrink-0 max-sm:px-4">
                   <LiveScoreboard compact />
                 </div>
                 <PoolChatTab

@@ -200,7 +200,14 @@ export function PoolChatTab({
   const [reportedIds, setReportedIds] = useState<Set<string>>(() => new Set())
   const [reportNotice, setReportNotice] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const isPoolCreator = currentUserId === poolCreatorUserId
+
+  const focusInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      inputRef.current?.focus()
+    })
+  }, [])
 
   const appendMessage = useCallback((message: PoolMessage) => {
     setMessages((prev) => {
@@ -297,6 +304,7 @@ export function PoolChatTab({
     if (error) {
       console.error('Failed to send message:', error.message)
       setSendError('Could not send message.')
+      focusInput()
       return
     }
 
@@ -304,6 +312,7 @@ export function PoolChatTab({
       appendMessage(data as PoolMessage)
     }
     setDraft('')
+    focusInput()
   }
 
   async function handleDelete(messageId: string) {
@@ -456,15 +465,20 @@ export function PoolChatTab({
             )}
           >
             <Input
+              ref={inputRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Message your pool…"
-              disabled={sending}
               maxLength={500}
               className="min-w-0 flex-1"
               aria-label="Chat message"
             />
-            <Button type="submit" disabled={!canSend} className="shrink-0 gap-2">
+            <Button
+              type="submit"
+              disabled={!canSend}
+              className="shrink-0 gap-2"
+              onMouseDown={(event) => event.preventDefault()}
+            >
               <Send className="h-4 w-4" />
               Send
             </Button>

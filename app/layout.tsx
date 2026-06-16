@@ -11,6 +11,7 @@ import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
 import { AuthProvider } from '@/src/lib/auth-context'
+import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
 
 const defaultTitle = 'PoolCup - World Cup 2026 Prediction Pool'
@@ -79,8 +80,10 @@ export default function RootLayout({
           Skip to content
         </a>
         <AuthProvider>
-          {children}
-          <AuthenticatedChrome />
+          <MobileChatChromeProvider>
+            {children}
+            <AuthenticatedChrome />
+          </MobileChatChromeProvider>
         </AuthProvider>
         <Analytics />
       </body>
