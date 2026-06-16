@@ -10,7 +10,11 @@ import { secureCompare } from '@/src/lib/secure-compare'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const STALE_CUTOFF_MINUTES = 180
+const STALE_CUTOFF_MINUTES = 135
+/** Force-close when API feed is still "live" this long after kickoff. Safe for
+ *  standard group matches (~90+ stoppage). Raise or make round-aware before
+ *  syncing knockout extra time / penalties (feed can stay live 120+ min). */
+const FORCE_FINAL_MINUTES = 135
 const MAX_CANDIDATES = 20
 
 type ReconcileError = {
@@ -174,6 +178,58 @@ async function runReconcile(): Promise<{
       try {
         await sendOpsNtfy(
           `Reconciled ${label} -> ${score} ${update.status_short}`,
+        )
+      } catch (notifyError) {
+        console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+      }
+      continue
+    }
+
+    const minutesSinceKickoff =
+      (Date.now() - new Date(match.kickoff_at).getTime()) / 60_000
+
+    if (minutesSinceKickoff > FORCE_FINAL_MINUTES) {
+      const nowIso = new Date().toISOString()
+      const { error: updateError } = await supabase
+        .from('matches')
+        .update({
+          result_team1: update.result_team1,
+          result_team2: update.result_team2,
+          is_final: true,
+          status_short: 'FT',
+          updated_at: nowIso,
+        })
+        .eq('id', match.id)
+
+      if (updateError) {
+        errors.push({ fixtureId, message: updateError.message })
+        continue
+      }
+
+      const { error: rpcError } = await supabase.rpc('calculate_match_points', {
+        p_match_id: match.id,
+      })
+
+      if (rpcError) {
+        errors.push({
+          fixtureId,
+          message: `calculate_match_points: ${rpcError.message}`,
+        })
+        try {
+          await sendOpsNtfy(
+            `Error: auto-closed ${label} (fixture ${fixtureId}) in DB but calculate_match_points failed: ${rpcError.message}`,
+          )
+        } catch (notifyError) {
+          console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+        }
+        continue
+      }
+
+      finalized += 1
+      const score = `${update.result_team1}-${update.result_team2}`
+      try {
+        await sendOpsNtfy(
+          `Auto-closed ${label} (fixture ${fixtureId}) on last known score ${score} FT — API feed was still live ${Math.floor(minutesSinceKickoff)}m after kickoff. Sanity-check this result.`,
         )
       } catch (notifyError) {
         console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
