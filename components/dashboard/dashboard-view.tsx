@@ -35,6 +35,7 @@ import { DeleteAccountSection } from '@/components/dashboard/delete-account-sect
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
+import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
   prefetchUpcomingMatches,
@@ -623,6 +624,8 @@ function DashboardViewContent({
         </div>
 
         <main className="mx-auto max-w-6xl px-4 py-8">
+          <ScoringUpdateNoticeBanner />
+
           {passwordResetSuccess && (
             <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
               Your password has been updated successfully.
