@@ -246,7 +246,11 @@ export function PoolHomeView({
                 'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:gap-2 max-sm:overflow-x-hidden max-sm:overflow-hidden',
             )}
           >
-            <div className={cn(isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4')}>
+            <div
+              className={cn(
+                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
+              )}
+            >
               <TabsList
                 className={cn(
                   'grid h-auto w-full max-w-2xl p-1',
