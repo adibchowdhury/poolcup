@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   getPredictionOutcome,
   getPredictionOutcomeLabel,
+  type MatchScoringStyle,
 } from '@/src/lib/prediction-scoring'
 
 export type UserPoolPrediction = {
@@ -66,10 +67,12 @@ export function PredictionMatchCard({
   prediction,
   poolId,
   currentUserId,
+  scoringStyle = 'classic',
 }: {
   prediction: UserPoolPrediction
   poolId?: string
   currentUserId?: string
+  scoringStyle?: MatchScoringStyle
 }) {
   const hasResult =
     prediction.isFinal &&
@@ -82,6 +85,7 @@ export function PredictionMatchCard({
         prediction.predTeam2,
         prediction.resultTeam1!,
         prediction.resultTeam2!,
+        scoringStyle,
       )
     : null
 
@@ -137,6 +141,7 @@ export function PredictionMatchCard({
         <MatchPicksExpander
           poolId={poolId}
           matchId={prediction.matchId}
+          scoringStyle={scoringStyle}
           kickoffAt={prediction.kickoffAt}
           isFinal={prediction.isFinal}
           resultTeam1={prediction.resultTeam1}

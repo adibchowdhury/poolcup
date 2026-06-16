@@ -13,11 +13,13 @@ import {
   fetchMatchPoolPicks,
   type MatchPoolPick,
 } from '@/src/lib/match-pool-picks'
+import type { MatchScoringStyle } from '@/src/lib/prediction-scoring'
 import { supabase } from '@/src/lib/supabase'
 
 type MatchPicksExpanderProps = {
   poolId: string
   matchId: string
+  scoringStyle: MatchScoringStyle
   kickoffAt: string
   isFinal: boolean
   resultTeam1: number | null
@@ -74,6 +76,7 @@ function PickRow({
 export function MatchPicksExpander({
   poolId,
   matchId,
+  scoringStyle,
   kickoffAt,
   isFinal,
   resultTeam1,
@@ -97,6 +100,7 @@ export function MatchPicksExpander({
       isFinal,
       resultTeam1,
       resultTeam2,
+      scoringStyle,
     })
 
     if (result.error) {
@@ -107,7 +111,7 @@ export function MatchPicksExpander({
     }
 
     setLoading(false)
-  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2])
+  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2, scoringStyle])
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)

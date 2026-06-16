@@ -6,6 +6,7 @@ import {
   type ClassicPredictionSortMode,
   sortClassicPredictions,
 } from '@/src/lib/sort-classic-predictions'
+import { normalizeMatchScoringStyle } from '@/src/lib/prediction-scoring'
 import {
   PredictionMatchCard,
   type UserPoolPrediction,
@@ -116,6 +117,7 @@ export function YourPredictionsSection({
   currentUserId,
 }: YourPredictionsSectionProps) {
   const isWinnerOnly = scoringStyle === 'winner'
+  const matchScoringStyle = normalizeMatchScoringStyle(scoringStyle)
   const hasWinnerContent = winnerGroups.length > 0 || thirdPlaceTeams.length > 0
   const hasClassicContent = classicPredictions.length > 0
   const hasContent = isWinnerOnly ? hasWinnerContent : hasClassicContent
@@ -194,6 +196,7 @@ export function YourPredictionsSection({
                 prediction={prediction}
                 poolId={poolId}
                 currentUserId={currentUserId}
+                scoringStyle={matchScoringStyle}
               />
             </li>
           ))}

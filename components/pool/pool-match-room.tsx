@@ -22,6 +22,10 @@ import {
 } from '@/components/pool/match-room-picks-panel'
 import { isMatchKickedOff } from '@/src/lib/match-lock'
 import {
+  normalizeMatchScoringStyle,
+  type MatchScoringStyle,
+} from '@/src/lib/prediction-scoring'
+import {
   PoolChatTab,
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
@@ -31,6 +35,7 @@ type PoolMatchRoomProps = {
   poolId: string
   memberId: string
   poolName: string
+  scoringStyle: string
   memberCount: number
   currentUserId: string
   poolCreatorUserId: string
@@ -65,6 +70,7 @@ export function PoolMatchRoom({
   poolId,
   memberId,
   poolName,
+  scoringStyle,
   memberCount,
   currentUserId,
   poolCreatorUserId,
@@ -75,6 +81,9 @@ export function PoolMatchRoom({
   const { match, mode, loading, error } = useFeaturedMatch()
   const { mounted, nowMs } = useClientNow(1_000)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
+
+  const matchScoringStyle: MatchScoringStyle =
+    normalizeMatchScoringStyle(scoringStyle)
 
   const hasKickedOff =
     mounted &&
@@ -176,6 +185,7 @@ export function PoolMatchRoom({
               <MatchRoomPicksPanel
                 poolId={poolId}
                 matchId={match.id}
+                scoringStyle={matchScoringStyle}
                 currentUserId={currentUserId}
                 avatarsByMemberId={avatarsByMemberId}
                 isFinal={match.is_final || mode === 'final'}

@@ -1,5 +1,7 @@
 export type PredictionOutcomeKind = 'exact' | 'winner' | 'wrong'
 
+export type MatchScoringStyle = 'classic' | 'winner'
+
 export type PredictionOutcome = {
   points: number
   kind: PredictionOutcomeKind
@@ -14,17 +16,36 @@ function matchWinner(
   return 'draw'
 }
 
+export function normalizeMatchScoringStyle(scoringStyle: string): MatchScoringStyle {
+  return scoringStyle === 'winner' ? 'winner' : 'classic'
+}
+
 export function getPredictionOutcome(
   predTeam1: number,
   predTeam2: number,
   resultTeam1: number,
   resultTeam2: number,
+  scoringStyle: MatchScoringStyle = 'classic',
 ): PredictionOutcome {
+  if (scoringStyle === 'winner') {
+    if (
+      (predTeam1 > predTeam2 && resultTeam1 > resultTeam2) ||
+      (predTeam1 < predTeam2 && resultTeam1 < resultTeam2)
+    ) {
+      return { points: 2, kind: 'winner' }
+    }
+
+    return { points: 0, kind: 'wrong' }
+  }
+
   if (predTeam1 === resultTeam1 && predTeam2 === resultTeam2) {
     return { points: 5, kind: 'exact' }
   }
 
-  if (matchWinner(predTeam1, predTeam2) === matchWinner(resultTeam1, resultTeam2)) {
+  const predictedWinner = matchWinner(predTeam1, predTeam2)
+  const actualWinner = matchWinner(resultTeam1, resultTeam2)
+
+  if (predictedWinner === actualWinner && predictedWinner !== 'draw') {
     return { points: 2, kind: 'winner' }
   }
 

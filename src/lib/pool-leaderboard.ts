@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   getPredictionOutcome,
   getPredictionOutcomeLabel,
+  type MatchScoringStyle,
 } from '@/src/lib/prediction-scoring'
 
 export type PoolLeaderboardMember = {
@@ -103,6 +104,7 @@ function hasLeaderboardCacheData(
 export async function fetchPoolLeaderboardPointBreakdown(
   supabase: SupabaseClient,
   poolId: string,
+  scoringStyle: MatchScoringStyle = 'classic',
 ): Promise<{
   breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]>
   error: string | null
@@ -150,6 +152,7 @@ export async function fetchPoolLeaderboardPointBreakdown(
       row.pred_team2,
       match.result_team1,
       match.result_team2,
+      scoringStyle,
     )
 
     const item: LeaderboardPointBreakdownItem = {
@@ -222,6 +225,7 @@ export function verifyLeaderboardBreakdownTotals(members: LeaderboardMember[]): 
 
 export function verifyLeaderboardBreakdownPointDerivation(
   members: LeaderboardMember[],
+  scoringStyle: MatchScoringStyle = 'classic',
 ): {
   ok: boolean
   divergences: Array<{
@@ -251,6 +255,7 @@ export function verifyLeaderboardBreakdownPointDerivation(
         item.predTeam2,
         item.resultTeam1,
         item.resultTeam2,
+        scoringStyle,
       )
 
       if (outcome.points !== item.pointsAwarded) {

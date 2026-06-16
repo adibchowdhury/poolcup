@@ -12,6 +12,7 @@ import {
 import {
   getPredictionOutcome,
   getPredictionOutcomeLabel,
+  type MatchScoringStyle,
   type PredictionOutcomeKind,
 } from '@/src/lib/prediction-scoring'
 import { supabase } from '@/src/lib/supabase'
@@ -19,6 +20,7 @@ import { supabase } from '@/src/lib/supabase'
 type MatchRoomPicksPanelProps = {
   poolId: string
   matchId: string
+  scoringStyle: MatchScoringStyle
   currentUserId: string
   avatarsByMemberId: Map<string, string | null>
   isFinal: boolean
@@ -48,6 +50,7 @@ function enrichPick(
   isFinal: boolean,
   resultTeam1: number | null,
   resultTeam2: number | null,
+  scoringStyle: MatchScoringStyle,
 ): EnrichedPick {
   if (resultTeam1 == null || resultTeam2 == null) {
     return {
@@ -63,6 +66,7 @@ function enrichPick(
     pick.predTeam2,
     resultTeam1,
     resultTeam2,
+    scoringStyle,
   )
 
   return {
@@ -255,6 +259,7 @@ function PickListItem({
 export function MatchRoomPicksPanel({
   poolId,
   matchId,
+  scoringStyle,
   currentUserId,
   avatarsByMemberId,
   isFinal,
@@ -273,6 +278,7 @@ export function MatchRoomPicksPanel({
       isFinal,
       resultTeam1,
       resultTeam2,
+      scoringStyle,
     })
 
     if (result.error) {
@@ -283,7 +289,7 @@ export function MatchRoomPicksPanel({
     }
 
     setLoading(false)
-  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2])
+  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2, scoringStyle])
 
   useEffect(() => {
     void loadPicks()
@@ -301,7 +307,9 @@ export function MatchRoomPicksPanel({
     if (!picks) return []
 
     return picks
-      .map((pick) => enrichPick(pick, isFinal, resultTeam1, resultTeam2))
+      .map((pick) =>
+        enrichPick(pick, isFinal, resultTeam1, resultTeam2, scoringStyle),
+      )
       .sort((a, b) => {
         if (b.projectedPoints !== a.projectedPoints) {
           return b.projectedPoints - a.projectedPoints
@@ -310,7 +318,7 @@ export function MatchRoomPicksPanel({
           sensitivity: 'base',
         })
       })
-  }, [picks, isFinal, resultTeam1, resultTeam2])
+  }, [picks, isFinal, resultTeam1, resultTeam2, scoringStyle])
 
   const yourPick = enrichedPicks.find((pick) => pick.userId === currentUserId)
   const otherPicks = enrichedPicks.filter((pick) => pick.userId !== currentUserId)

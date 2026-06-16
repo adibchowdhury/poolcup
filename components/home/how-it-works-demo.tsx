@@ -17,12 +17,12 @@ const SCORING_OPTIONS: {
     id: 'classic',
     label: 'Score Predictor',
     description:
-      'Predict the exact final score. Exact score = 5 pts, correct winner = 2 pts.',
+      'Predict the exact final score. Exact score = 5 pts. Correct winner on a win/loss = 2 pts. Non-exact draws score 0.',
   },
   {
     id: 'winner',
     label: 'Winner Only',
-    description: 'Just pick who wins each match. Correct winner = 2 pts.',
+    description: 'Just pick who wins each match. Correct winner = 2 pts. Draws score 0.',
   },
 ]
 

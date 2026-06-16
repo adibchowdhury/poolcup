@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getPredictionOutcome } from '@/src/lib/prediction-scoring'
+import {
+  getPredictionOutcome,
+  type MatchScoringStyle,
+} from '@/src/lib/prediction-scoring'
 
 export type MatchPoolPick = {
   memberId: string
@@ -26,6 +29,7 @@ function resolvePoints(
   resultTeam2: number | null,
   predTeam1: number,
   predTeam2: number,
+  scoringStyle: MatchScoringStyle,
 ): number | null {
   if (
     !isFinal ||
@@ -40,6 +44,7 @@ function resolvePoints(
     predTeam2,
     resultTeam1,
     resultTeam2,
+    scoringStyle,
   ).points
 }
 
@@ -64,10 +69,12 @@ export async function fetchMatchPoolPicks(
     isFinal,
     resultTeam1,
     resultTeam2,
+    scoringStyle,
   }: {
     isFinal: boolean
     resultTeam1: number | null
     resultTeam2: number | null
+    scoringStyle: MatchScoringStyle
   },
 ): Promise<{ picks: MatchPoolPick[]; error: string | null }> {
   const { data, error } = await supabase
@@ -109,6 +116,7 @@ export async function fetchMatchPoolPicks(
         resultTeam2,
         row.pred_team1,
         row.pred_team2,
+        scoringStyle,
       ),
     })
   }

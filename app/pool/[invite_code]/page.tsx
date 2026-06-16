@@ -381,7 +381,7 @@ export default function PoolPage() {
 
     if (!isWinnerPool) {
       const { breakdownByMember: loadedBreakdown, error: breakdownError } =
-        await fetchPoolLeaderboardPointBreakdown(supabase, pool.id)
+        await fetchPoolLeaderboardPointBreakdown(supabase, pool.id, 'classic')
 
       if (breakdownError) {
         console.error('Failed to load leaderboard breakdown:', breakdownError)
@@ -411,7 +411,10 @@ export default function PoolPage() {
         )
       }
 
-      const derivation = verifyLeaderboardBreakdownPointDerivation(leaderboardMembers)
+      const derivation = verifyLeaderboardBreakdownPointDerivation(
+        leaderboardMembers,
+        'classic',
+      )
       if (!derivation.ok) {
         console.warn(
           'Leaderboard breakdown helper points differ from points_awarded (display uses points_awarded):',

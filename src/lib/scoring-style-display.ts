@@ -16,8 +16,8 @@ export const POOL_SCORING_STYLE_OPTIONS = [
     rules: [
       'Predict the exact final score of each match',
       'Exact score: 5 points',
-      'Correct winner but wrong score: 2 points',
-      'Wrong prediction: 0 points',
+      'Correct winner on a win/loss, wrong score: 2 points',
+      'Non-exact draw or wrong outcome: 0 points',
     ],
   },
 ] as const
