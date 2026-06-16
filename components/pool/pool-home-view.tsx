@@ -142,24 +142,43 @@ export function PoolHomeView({
             isMobileChatShell && 'max-sm:shrink-0',
           )}
         >
-          <div className="mx-auto max-w-4xl px-4 py-4">
-            <div className="flex items-center gap-4">
+          <div className="mx-auto max-w-4xl px-4 py-4 max-sm:py-2.5">
+            <div className="flex items-center gap-4 max-sm:items-start max-sm:gap-2">
               <Link
                 href="/dashboard"
-                className="group rounded-lg p-2 transition-colors hover:bg-muted"
+                className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted max-sm:p-1.5"
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </Link>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                <div className="hidden sm:block">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                      {pool.name}
+                    </h1>
+                    <ScoringModeBadge scoringStyle={pool.scoringStyle} />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Invite:</span>
+                    <code className="font-mono text-primary">{pool.inviteCode}</code>
+                  </div>
+                </div>
+                <div className="sm:hidden">
+                  <h1 className="truncate font-display text-lg tracking-wide text-foreground">
                     {pool.name}
                   </h1>
-                  <ScoringModeBadge scoringStyle={pool.scoringStyle} />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Invite:</span>
-                  <code className="font-mono text-primary">{pool.inviteCode}</code>
+                  <div className="mt-1 flex min-w-0 items-center gap-2">
+                    <ScoringModeBadge
+                      scoringStyle={pool.scoringStyle}
+                      className="shrink-0"
+                    />
+                    <div className="flex min-w-0 items-center gap-1.5 truncate rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                      <span className="shrink-0">Invite:</span>
+                      <code className="truncate font-mono text-primary">
+                        {pool.inviteCode}
+                      </code>
+                    </div>
+                  </div>
                 </div>
               </div>
               {canDelete && poolId && (
@@ -248,7 +267,8 @@ export function PoolHomeView({
           >
             <div
               className={cn(
-                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
+                'max-sm:mt-3',
+                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
               )}
             >
               <TabsList
