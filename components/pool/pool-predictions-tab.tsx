@@ -1,9 +1,16 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Share2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ProgressHeader } from '@/components/predict/progress-header'
 import { cn } from '@/lib/utils'
+import {
+  classicMatchTotalCount,
+  countClassicPredictedScores,
+} from '@/src/lib/classic-prediction-progress'
+import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import {
   YourPredictionsSection,
@@ -15,63 +22,67 @@ export type { UserPoolPrediction } from '@/components/pool/prediction-match-card
 type PoolPredictionsTabProps = {
   scoringStyle: string
   predictions: UserPoolPrediction[]
+  totalMatchCount: number
   winnerGroups: WinnerGroupPrediction[]
   thirdPlaceTeams: string[]
-  openUnpredictedCount: number
   predictHref: string
   shareOpen: boolean
   onToggleShare: () => void
   inviteCopySlot: React.ReactNode
   poolId?: string
+  memberId?: string
   currentUserId?: string
+  onPredictionSaved?: (
+    matchId: string,
+    predTeam1: number,
+    predTeam2: number,
+  ) => void
+  onPredictionRemoved?: (matchId: string) => void
 }
 
 export function PoolPredictionsTab({
   scoringStyle,
   predictions,
+  totalMatchCount,
   winnerGroups,
   thirdPlaceTeams,
-  openUnpredictedCount,
   predictHref,
   shareOpen,
   onToggleShare,
   inviteCopySlot,
   poolId,
+  memberId,
   currentUserId,
+  onPredictionSaved,
+  onPredictionRemoved,
 }: PoolPredictionsTabProps) {
   const isWinnerOnly = scoringStyle === 'winner'
-  const hasOpenUnpredicted = !isWinnerOnly && openUnpredictedCount > 0
-  const hasAnyPredictions = predictions.length > 0 || winnerGroups.length > 0
+  const predictedMatchCount = useMemo(
+    () =>
+      countClassicPredictedScores(
+        predictions.map((prediction) => ({
+          score1: String(prediction.predTeam1 ?? ''),
+          score2: String(prediction.predTeam2 ?? ''),
+        })),
+      ),
+    [predictions],
+  )
+  const classicMatchTotal = classicMatchTotalCount(totalMatchCount)
+  const hasAnyPredictions =
+    predictions.some(hasStoredClassicMatchPrediction) || winnerGroups.length > 0
   const makePredictionsLabel = hasAnyPredictions
     ? 'Update predictions'
     : 'Make Predictions'
 
   return (
     <div className="w-full min-w-0 space-y-4">
-      {hasOpenUnpredicted && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-foreground">
-            You still have{' '}
-            <span className="font-semibold text-primary">{openUnpredictedCount}</span>{' '}
-            {openUnpredictedCount === 1 ? 'match' : 'matches'} without a prediction.
-          </p>
-          <Button
-            asChild
-            size="sm"
-            className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Link href={predictHref}>Complete predictions</Link>
-          </Button>
-        </div>
-      )}
-
       <div
         className={cn(
           'grid grid-cols-1 gap-4',
-          !hasOpenUnpredicted && 'sm:grid-cols-2',
+          isWinnerOnly && 'sm:grid-cols-2',
         )}
       >
-        {!hasOpenUnpredicted ? (
+        {isWinnerOnly ? (
           <Button
             asChild
             size="lg"
@@ -108,6 +119,13 @@ export function PoolPredictionsTab({
         </Button>
       </div>
 
+      {!isWinnerOnly ? (
+        <ProgressHeader
+          current={predictedMatchCount}
+          total={classicMatchTotal}
+        />
+      ) : null}
+
       {shareOpen && inviteCopySlot}
 
       <YourPredictionsSection
@@ -116,7 +134,10 @@ export function PoolPredictionsTab({
         winnerGroups={winnerGroups}
         thirdPlaceTeams={thirdPlaceTeams}
         poolId={poolId}
+        memberId={memberId}
         currentUserId={currentUserId}
+        onPredictionSaved={onPredictionSaved}
+        onPredictionRemoved={onPredictionRemoved}
       />
     </div>
   )

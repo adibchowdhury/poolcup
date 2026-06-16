@@ -216,6 +216,10 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
     !pool.predictionsLocked &&
     nextKickoffMs != null &&
     nextKickoffMs > nowMs
+  const predictButtonHref =
+    pool.scoringStyle === 'winner'
+      ? `/pool/${pool.inviteCode}/predict`
+      : `/pool/${pool.inviteCode}`
 
   const copyCode = () => {
     const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
@@ -365,7 +369,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
                   size="sm"
                   className="gap-1.5 bg-primary px-4 font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90"
                 >
-                  <Link href={`/pool/${pool.inviteCode}/predict`}>
+                  <Link href={predictButtonHref}>
                     <Zap className="h-4 w-4 fill-current" aria-hidden />
                     {predictionsComplete
                       ? 'Update Predictions'

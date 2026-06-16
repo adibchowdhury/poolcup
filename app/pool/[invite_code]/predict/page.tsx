@@ -15,10 +15,21 @@ import {
   ClassicRoundTabs,
   type ClassicRoundTabId,
 } from '@/components/predict/group-knockout-tabs'
-import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
+import {
+  classicRoundTabEmptyMessage,
+  isKnockoutRound,
+  matchInClassicRoundTab,
+  resolveDefaultClassicRoundTab,
+  type KnockoutRoundId,
+} from '@/src/lib/classic-round-tab-logic'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
+import {
+  classicMatchTotalCount,
+  countClassicPredictedScores,
+  hasClassicPredictionScores,
+} from '@/src/lib/classic-prediction-progress'
 
 type ScoringStyle = 'classic' | 'winner' | 'exact'
 
@@ -52,19 +63,6 @@ type ScoreInput = {
   score2: string
 }
 
-const CLASSIC_ROUND_TAB_ORDER: ClassicRoundTabId[] = [
-  'group',
-  'r32',
-  'r16',
-  'qf',
-  'sf',
-  'final',
-]
-
-const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
-
-type KnockoutRoundId = (typeof KNOCKOUT_ROUNDS)[number]
-
 type MatchGroupId = KnockoutRoundId | `group-${string}` | `matchday-${string}`
 
 type MatchGroup = {
@@ -72,10 +70,6 @@ type MatchGroup = {
   title: string
   subtitle?: string
   matches: Match[]
-}
-
-function isKnockoutRound(round: string): round is KnockoutRoundId {
-  return (KNOCKOUT_ROUNDS as readonly string[]).includes(round)
 }
 
 function isMatchLocked(lockedAt: string | null): boolean {
@@ -94,62 +88,8 @@ function isPredicted(
   match: Match,
   scores: Record<string, ScoreInput>,
 ): boolean {
-  const entry = scores[match.id]
-  return entry?.score1 !== '' && entry?.score2 !== ''
-}
-
-function matchInTab(match: Match, tab: ClassicRoundTabId): boolean {
-  return match.round === tab
-}
-
-function classicTabEmptyMessage(tab: ClassicRoundTabId): string {
-  const label = TOURNAMENT_ROUND_LABELS[tab]
-  if (tab === 'group') {
-    return 'Group stage fixtures will appear here once they are scheduled.'
-  }
-  if (tab === 'r32') {
-    return `${label} matchups are set once the group stage ends.`
-  }
-  if (tab === 'r16') {
-    return `${label} matchups are set once the Round of 32 ends.`
-  }
-  if (tab === 'qf') {
-    return `${label} matchups are set once the Round of 16 ends.`
-  }
-  if (tab === 'sf') {
-    return `${label} matchups are set once the quarter-finals end.`
-  }
-  return `${label} matchups are set once the semifinals end.`
-}
-
-function resolveDefaultClassicTab(
-  loaded: Match[],
-  initialScores: Record<string, ScoreInput>,
-): ClassicRoundTabId {
-  for (const tab of CLASSIC_ROUND_TAB_ORDER) {
-    if (
-      loaded.some(
-        (m) =>
-          matchInTab(m, tab) &&
-          !isMatchLocked(m.locked_at) &&
-          !isPredicted(m, initialScores),
-      )
-    ) {
-      return tab
-    }
-  }
-
-  if (!loaded.some((m) => isKnockoutRound(m.round))) {
-    return 'group'
-  }
-
-  for (const tab of CLASSIC_ROUND_TAB_ORDER) {
-    if (loaded.some((m) => matchInTab(m, tab))) {
-      return tab
-    }
-  }
-
-  return 'group'
+  const entry = scores[match.id] ?? { score1: '', score2: '' }
+  return hasClassicPredictionScores(entry.score1, entry.score2)
 }
 
 function formatShortDate(iso: string): string {
@@ -349,7 +289,9 @@ export default function PredictPage() {
     }
 
     const loaded = (matchesData ?? []) as Match[]
-    const defaultTab = resolveDefaultClassicTab(loaded, initialScores)
+    const defaultTab = resolveDefaultClassicRoundTab(loaded, (match) =>
+      !isMatchLocked(match.locked_at) && !isPredicted(match, initialScores),
+    )
 
     setPool(poolData as Pool)
     setMemberId(memberData.id)
@@ -375,7 +317,7 @@ export default function PredictPage() {
   }, [authLoading, userId, router, loadData])
 
   const tabMatches = useMemo(
-    () => matches.filter((m) => matchInTab(m, activeTab)),
+    () => matches.filter((m) => matchInClassicRoundTab(m.round, activeTab)),
     [matches, activeTab],
   )
 
@@ -400,7 +342,10 @@ export default function PredictPage() {
   }, [sections, scores])
 
   const predictedCount = useMemo(
-    () => matches.filter((m) => isPredicted(m, scores)).length,
+    () =>
+      countClassicPredictedScores(
+        matches.map((match) => scores[match.id] ?? { score1: '', score2: '' }),
+      ),
     [matches, scores],
   )
 
@@ -409,7 +354,7 @@ export default function PredictPage() {
     [tabMatches, scores],
   )
 
-  const totalMatches = matches.length
+  const totalMatches = classicMatchTotalCount(matches.length)
 
   const priorityMatches = useMemo(() => {
     return matches
@@ -620,7 +565,7 @@ export default function PredictPage() {
             </p>
           </div>
 
-          <ProgressHeader current={predictedCount} total={totalMatches || 48} />
+          <ProgressHeader current={predictedCount} total={totalMatches} />
 
           <ClassicRoundTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
@@ -667,7 +612,7 @@ export default function PredictPage() {
           {activeTab === 'group' ? (
             sections.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                {classicTabEmptyMessage('group')}
+                {classicRoundTabEmptyMessage('group')}
               </p>
             ) : (
               sections.map((group) => (
@@ -690,7 +635,7 @@ export default function PredictPage() {
             )
           ) : knockoutTabMatches.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              {classicTabEmptyMessage(activeTab)}
+              {classicRoundTabEmptyMessage(activeTab)}
             </p>
           ) : (
             <div className="flex flex-col gap-3">

@@ -125,7 +125,7 @@ export function MatchPicksExpander({
   }
 
   return (
-    <Collapsible open={open} onOpenChange={handleOpenChange} className="mt-4">
+    <Collapsible open={open} onOpenChange={handleOpenChange}>
       <CollapsibleTrigger
         type="button"
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/50 hover:text-foreground"

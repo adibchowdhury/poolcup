@@ -8,7 +8,7 @@ import {
 
 export type ClassicRoundTabId = TournamentRoundCode
 
-const CLASSIC_ROUND_TAB_ORDER: ClassicRoundTabId[] = [
+export const CLASSIC_ROUND_TAB_ORDER: ClassicRoundTabId[] = [
   'group',
   'r32',
   'r16',

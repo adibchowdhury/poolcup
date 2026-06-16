@@ -52,12 +52,17 @@ interface PoolHomeViewProps {
   thirdPlaceTeams: string[]
   predictHref: string
   hasPredictions: boolean
-  openUnpredictedCount?: number
   currentUserId: string
   leaderboardLoading?: boolean
   canDelete?: boolean
   poolId?: string
   memberId?: string
+  onPredictionSaved?: (
+    matchId: string,
+    predTeam1: number,
+    predTeam2: number,
+  ) => void
+  onPredictionRemoved?: (matchId: string) => void
   avatarsByMemberId: Map<string, string | null>
   poolCreatorUserId?: string
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
@@ -71,12 +76,13 @@ export function PoolHomeView({
   thirdPlaceTeams,
   predictHref,
   hasPredictions,
-  openUnpredictedCount = 0,
   currentUserId,
   leaderboardLoading = false,
   canDelete,
   poolId,
   memberId,
+  onPredictionSaved,
+  onPredictionRemoved,
   avatarsByMemberId,
   poolCreatorUserId,
   memberProfilesByUserId,
@@ -204,7 +210,7 @@ export function PoolHomeView({
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
         >
-          {!hasPredictions && (
+          {!hasPredictions && isWinnerPool && (
             <div
               className={cn(
                 'mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between',
@@ -223,41 +229,6 @@ export function PoolHomeView({
               </Button>
             </div>
           )}
-
-          {activeTab !== 'chat' && yourData && yourData.points > 0 ? (
-            <div className="mb-8 hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6 sm:block">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="mb-1 text-sm text-muted-foreground">Your Position</div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="font-display text-5xl text-primary">
-                      #{yourRank}
-                    </span>
-                    <div>
-                      <div className="font-display text-2xl text-foreground">
-                        {yourData.points} pts
-                      </div>
-                      {!isWinnerPool ? (
-                        <div className="text-sm text-muted-foreground">
-                          {yourData.correctPredictions}/{yourData.totalPredictions}{' '}
-                          correct
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                {yourData.streak >= 2 && (
-                  <div className="rounded-xl border border-[#ffb300]/30 bg-[#ffb300]/20 p-4 text-center">
-                    <Flame className="mx-auto mb-1 h-8 w-8 text-[#ffb300]" />
-                    <div className="font-display text-xl text-[#ffb300]">
-                      {yourData.streak}
-                    </div>
-                    <div className="text-xs text-[#ffb300]/80">streak</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : null}
 
           <Tabs
             value={activeTab}
@@ -295,16 +266,54 @@ export function PoolHomeView({
               </TabsList>
             </div>
 
+            {activeTab === 'leaderboard' && yourData && yourData.points > 0 ? (
+              <div className="hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6 sm:block">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="mb-1 text-sm text-muted-foreground">Your Position</div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-display text-5xl text-primary">
+                        #{yourRank}
+                      </span>
+                      <div>
+                        <div className="font-display text-2xl text-foreground">
+                          {yourData.points} pts
+                        </div>
+                        {!isWinnerPool ? (
+                          <div className="text-sm text-muted-foreground">
+                            {yourData.correctPredictions}/{yourData.totalPredictions}{' '}
+                            correct
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  {yourData.streak >= 2 && (
+                    <div className="rounded-xl border border-[#ffb300]/30 bg-[#ffb300]/20 p-4 text-center">
+                      <Flame className="mx-auto mb-1 h-8 w-8 text-[#ffb300]" />
+                      <div className="font-display text-xl text-[#ffb300]">
+                        {yourData.streak}
+                      </div>
+                      <div className="text-xs text-[#ffb300]/80">streak</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             <TabsContent value="predictions" className="mt-0 w-full min-w-0">
               <PoolPredictionsTab
                 scoringStyle={pool.scoringStyle}
                 predictions={userPredictions}
+                totalMatchCount={pool.totalMatches}
                 winnerGroups={winnerGroups}
                 thirdPlaceTeams={thirdPlaceTeams}
-                openUnpredictedCount={openUnpredictedCount}
                 predictHref={predictHref}
                 poolId={poolId}
+                memberId={memberId}
                 currentUserId={currentUserId}
+                onPredictionSaved={onPredictionSaved}
+                onPredictionRemoved={onPredictionRemoved}
                 shareOpen={shareOpen}
                 onToggleShare={() => setShareOpen((o) => !o)}
                 inviteCopySlot={

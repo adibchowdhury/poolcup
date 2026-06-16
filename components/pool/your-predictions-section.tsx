@@ -1,7 +1,17 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import {
+  ClassicRoundTabs,
+  type ClassicRoundTabId,
+} from '@/components/predict/group-knockout-tabs'
+import {
+  classicRoundTabEmptyMessage,
+  matchInClassicRoundTab,
+  resolveDefaultClassicRoundTabForPredictions,
+} from '@/src/lib/classic-round-tab-logic'
+import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
 import {
   type ClassicPredictionSortMode,
   sortClassicPredictions,
@@ -42,6 +52,13 @@ type YourPredictionsSectionProps = {
   thirdPlaceTeams: string[]
   poolId?: string
   currentUserId?: string
+  memberId?: string
+  onPredictionSaved?: (
+    matchId: string,
+    predTeam1: number,
+    predTeam2: number,
+  ) => void
+  onPredictionRemoved?: (matchId: string) => void
 }
 
 function GroupRankBadge({ rank }: { rank: number }) {
@@ -115,19 +132,46 @@ export function YourPredictionsSection({
   winnerGroups,
   thirdPlaceTeams,
   poolId,
+  memberId,
   currentUserId,
+  onPredictionSaved,
+  onPredictionRemoved,
 }: YourPredictionsSectionProps) {
   const isWinnerOnly = scoringStyle === 'winner'
   const matchScoringStyle = normalizeMatchScoringStyle(scoringStyle)
   const hasWinnerContent = winnerGroups.length > 0 || thirdPlaceTeams.length > 0
   const hasClassicContent = classicPredictions.length > 0
-  const hasContent = isWinnerOnly ? hasWinnerContent : hasClassicContent
   const totalGroups = WORLD_CUP_GROUP_LETTERS.length
+  const [activeRoundTab, setActiveRoundTab] = useState<ClassicRoundTabId>('group')
+  const defaultRoundTabSetRef = useRef(false)
   const [classicSortMode, setClassicSortMode] =
     useState<ClassicPredictionSortMode>('kickoff-newest')
+
+  useEffect(() => {
+    const predictedClassicPredictions = classicPredictions.filter(
+      hasStoredClassicMatchPrediction,
+    )
+    if (defaultRoundTabSetRef.current || predictedClassicPredictions.length === 0) {
+      return
+    }
+
+    setActiveRoundTab(
+      resolveDefaultClassicRoundTabForPredictions(predictedClassicPredictions),
+    )
+    defaultRoundTabSetRef.current = true
+  }, [classicPredictions])
+
+  const stageFilteredPredictions = useMemo(
+    () =>
+      classicPredictions.filter((prediction) =>
+        matchInClassicRoundTab(prediction.round, activeRoundTab),
+      ),
+    [classicPredictions, activeRoundTab],
+  )
+
   const orderedClassicPredictions = useMemo(
-    () => sortClassicPredictions(classicPredictions, classicSortMode),
-    [classicPredictions, classicSortMode],
+    () => sortClassicPredictions(stageFilteredPredictions, classicSortMode),
+    [stageFilteredPredictions, classicSortMode],
   )
 
   return (
@@ -176,7 +220,16 @@ export function YourPredictionsSection({
         ) : null}
       </div>
 
-      {!hasContent ? (
+      {hasClassicContent && !isWinnerOnly ? (
+        <div className="mb-4 min-w-0">
+          <ClassicRoundTabs
+            activeId={activeRoundTab}
+            onChange={setActiveRoundTab}
+          />
+        </div>
+      ) : null}
+
+      {isWinnerOnly && !hasWinnerContent ? (
         <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
           Nothing saved yet. Use Make Predictions above to get started.
         </p>
@@ -189,6 +242,10 @@ export function YourPredictionsSection({
             <ThirdPlaceCard teams={thirdPlaceTeams} />
           ) : null}
         </div>
+      ) : orderedClassicPredictions.length === 0 ? (
+        <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+          {classicRoundTabEmptyMessage(activeRoundTab)}
+        </p>
       ) : (
         <ul className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2">
           {orderedClassicPredictions.map((prediction) => (
@@ -196,8 +253,11 @@ export function YourPredictionsSection({
               <PredictionMatchCard
                 prediction={prediction}
                 poolId={poolId}
+                memberId={memberId}
                 currentUserId={currentUserId}
                 scoringStyle={matchScoringStyle}
+                onPredictionSaved={onPredictionSaved}
+                onPredictionRemoved={onPredictionRemoved}
               />
             </li>
           ))}

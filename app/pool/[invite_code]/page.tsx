@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/src/lib/auth-context'
@@ -24,6 +24,14 @@ import {
 import { deriveCurrentTournamentStage } from '@/src/lib/tournament-round-labels'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 import {
+  mergeMatchesWithPredictions,
+  type ClassicMatchRow,
+  type ClassicPredictionRow,
+  allClassicPredictionsComplete,
+  hasStoredClassicMatchPrediction,
+} from '@/src/lib/merge-classic-match-predictions'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import {
   buildPoolLeaderboardMembers,
   fetchPoolLeaderboardPointBreakdown,
   verifyLeaderboardBreakdownPointDerivation,
@@ -45,26 +53,7 @@ type PoolMember = {
   joined_at: string
 }
 
-type MatchForPrediction = {
-  id: string
-  kickoff_at: string
-  round: string
-  group_name: string | null
-  team1_name: string
-  team2_name: string
-  team1_flag: string | null
-  team2_flag: string | null
-  result_team1: number | null
-  result_team2: number | null
-  is_final: boolean
-}
-
-type PredictionWithMatch = {
-  match_id: string
-  pred_team1: number
-  pred_team2: number
-  matches: MatchForPrediction | MatchForPrediction[] | null
-}
+type MatchForPrediction = ClassicMatchRow
 
 function formatTimeUntil(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now()
@@ -87,13 +76,14 @@ export default function PoolPage() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id
 
+  const predictionsCompletedTrackedRef = useRef(false)
+
   const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
   const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
   const [winnerGroups, setWinnerGroups] = useState<WinnerGroupPrediction[]>([])
   const [thirdPlaceTeams, setThirdPlaceTeams] = useState<string[]>([])
   const [hasPredictions, setHasPredictions] = useState(false)
-  const [openUnpredictedCount, setOpenUnpredictedCount] = useState(0)
   const [pageLoading, setPageLoading] = useState(true)
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -107,6 +97,41 @@ export default function PoolPage() {
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
     () => new Map<string, PoolChatMemberProfile>(),
   )
+
+  const handlePredictionSaved = useCallback(
+    (matchId: string, predTeam1: number, predTeam2: number) => {
+      setUserPredictions((previous) => {
+        const updated = previous.map((prediction) =>
+          prediction.matchId === matchId
+            ? { ...prediction, predTeam1, predTeam2 }
+            : prediction,
+        )
+
+        if (
+          poolMeta?.scoringStyle !== 'winner' &&
+          allClassicPredictionsComplete(updated) &&
+          !predictionsCompletedTrackedRef.current &&
+          poolId
+        ) {
+          capturePostHog('predictions_completed', { pool_id: poolId })
+          predictionsCompletedTrackedRef.current = true
+        }
+
+        return updated
+      })
+    },
+    [poolMeta?.scoringStyle, poolId],
+  )
+
+  const handlePredictionRemoved = useCallback((matchId: string) => {
+    setUserPredictions((previous) =>
+      previous.map((prediction) =>
+        prediction.matchId === matchId
+          ? { ...prediction, predTeam1: null, predTeam2: null }
+          : prediction,
+      ),
+    )
+  }, [])
 
   const loadPoolData = useCallback(async () => {
     if (!userId) return
@@ -224,11 +249,10 @@ export default function PoolPage() {
 
     const currentMember = poolMembers.find((m) => m.user_id === userId)
     setMemberId(currentMember?.id ?? null)
-    const loadedUserPredictions: UserPoolPrediction[] = []
+    let loadedUserPredictions: UserPoolPrediction[] = []
     let loadedWinnerGroups: WinnerGroupPrediction[] = []
     let loadedThirdPlaceTeams: string[] = []
     let memberHasPredictions = false
-    let loadedOpenUnpredictedCount = 0
 
     if (currentMember) {
       if (pool.scoring_style === 'winner') {
@@ -275,77 +299,37 @@ export default function PoolPage() {
         memberHasPredictions =
           loadedWinnerGroups.length > 0 || loadedThirdPlaceTeams.length > 0
       } else {
-        const { data: userPredRows, error: userPredError } = await supabase
-          .from('predictions')
-          .select(
-            `
-            match_id,
-            pred_team1,
-            pred_team2,
-            matches (
-              id,
-              kickoff_at,
-              round,
-              group_name,
-              team1_name,
-              team2_name,
-              team1_flag,
-              team2_flag,
-              result_team1,
-              result_team2,
-              is_final
+        const [matchesResult, userPredResult] = await Promise.all([
+          supabase
+            .from('matches')
+            .select(
+              'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final',
             )
-          `,
-          )
-          .eq('pool_id', pool.id)
-          .eq('member_id', currentMember.id)
+            .order('kickoff_at', { ascending: true }),
+          supabase
+            .from('predictions')
+            .select('match_id, pred_team1, pred_team2')
+            .eq('pool_id', pool.id)
+            .eq('member_id', currentMember.id),
+        ])
 
-        if (userPredError) {
-          console.error('Failed to load user predictions:', userPredError.message)
-        } else {
-          for (const row of (userPredRows ?? []) as PredictionWithMatch[]) {
-            const matchRaw = row.matches
-            const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
-            if (!match) continue
-
-            loadedUserPredictions.push({
-              matchId: match.id,
-              kickoffAt: match.kickoff_at,
-              round: match.round,
-              groupName: match.group_name,
-              team1Name: match.team1_name,
-              team2Name: match.team2_name,
-              team1Flag: match.team1_flag,
-              team2Flag: match.team2_flag,
-              predTeam1: row.pred_team1,
-              predTeam2: row.pred_team2,
-              resultTeam1: match.result_team1,
-              resultTeam2: match.result_team2,
-              isFinal: match.is_final,
-            })
-          }
-        }
-
-        memberHasPredictions = loadedUserPredictions.length > 0
-
-        const predictedMatchIds = new Set(
-          loadedUserPredictions.map((prediction) => prediction.matchId),
-        )
-        const { data: openMatchRows, error: openMatchError } = await supabase
-          .from('matches')
-          .select('id')
-          .gt('locked_at', new Date().toISOString())
-
-        if (openMatchError) {
+        if (matchesResult.error) {
           console.error(
-            'Failed to load open matches for prediction count:',
-            openMatchError.message,
+            'Failed to load matches for predictions:',
+            matchesResult.error.message,
           )
-        } else {
-          loadedOpenUnpredictedCount = (openMatchRows ?? []).filter(
-            (row) => !predictedMatchIds.has(String(row.id)),
-          ).length
         }
+
+        if (userPredResult.error) {
+          console.error('Failed to load user predictions:', userPredResult.error.message)
+        }
+
+        const matchRows = (matchesResult.data ?? []) as ClassicMatchRow[]
+        const predictionRows = (userPredResult.data ?? []) as ClassicPredictionRow[]
+
+        loadedUserPredictions = mergeMatchesWithPredictions(matchRows, predictionRows)
+
+        memberHasPredictions = loadedUserPredictions.some(hasStoredClassicMatchPrediction)
       }
     }
 
@@ -364,7 +348,6 @@ export default function PoolPage() {
     setWinnerGroups(loadedWinnerGroups)
     setThirdPlaceTeams(loadedThirdPlaceTeams)
     setHasPredictions(memberHasPredictions)
-    setOpenUnpredictedCount(loadedOpenUnpredictedCount)
     setPageLoading(false)
 
     const { data: cacheData, error: cacheError } = await supabase
@@ -474,12 +457,13 @@ export default function PoolPage() {
       thirdPlaceTeams={thirdPlaceTeams}
       predictHref={`/pool/${inviteCode}/predict`}
       hasPredictions={hasPredictions}
-      openUnpredictedCount={openUnpredictedCount}
       currentUserId={user!.id}
       leaderboardLoading={leaderboardLoading}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}
+      onPredictionSaved={handlePredictionSaved}
+      onPredictionRemoved={handlePredictionRemoved}
       avatarsByMemberId={avatarByMemberId}
       poolCreatorUserId={poolCreatorUserId ?? undefined}
       memberProfilesByUserId={memberProfilesByUserId}
