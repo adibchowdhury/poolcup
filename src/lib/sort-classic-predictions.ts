@@ -1,7 +1,11 @@
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { WORLD_CUP_GROUP_LETTERS } from '@/src/lib/world-cup-groups'
 
-export type ClassicPredictionSortMode = 'kickoff' | 'group' | 'status'
+export type ClassicPredictionSortMode =
+  | 'kickoff-newest'
+  | 'kickoff-oldest'
+  | 'group'
+  | 'status'
 
 const KNOCKOUT_ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'final'] as const
 
@@ -80,9 +84,12 @@ export function sortClassicPredictions(
     case 'status':
       sorted.sort(compareByStatusThenKickoff)
       break
-    case 'kickoff':
-    default:
+    case 'kickoff-oldest':
       sorted.sort(compareKickoffThenMatchId)
+      break
+    case 'kickoff-newest':
+    default:
+      sorted.sort((a, b) => -compareKickoffThenMatchId(a, b))
       break
   }
 

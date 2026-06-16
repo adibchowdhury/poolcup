@@ -24,7 +24,8 @@ const CLASSIC_SORT_OPTIONS: {
   value: ClassicPredictionSortMode
   label: string
 }[] = [
-  { value: 'kickoff', label: 'Kickoff time' },
+  { value: 'kickoff-newest', label: 'Kickoff: newest' },
+  { value: 'kickoff-oldest', label: 'Kickoff: oldest' },
   { value: 'group', label: 'Group' },
   { value: 'status', label: 'Status' },
 ]
@@ -123,7 +124,7 @@ export function YourPredictionsSection({
   const hasContent = isWinnerOnly ? hasWinnerContent : hasClassicContent
   const totalGroups = WORLD_CUP_GROUP_LETTERS.length
   const [classicSortMode, setClassicSortMode] =
-    useState<ClassicPredictionSortMode>('kickoff')
+    useState<ClassicPredictionSortMode>('kickoff-newest')
   const orderedClassicPredictions = useMemo(
     () => sortClassicPredictions(classicPredictions, classicSortMode),
     [classicPredictions, classicSortMode],
@@ -131,7 +132,7 @@ export function YourPredictionsSection({
 
   return (
     <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
         <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
           Your predictions
         </h3>
