@@ -197,6 +197,7 @@ export function PoolHomeView({
         <main
           className={cn(
             'mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8',
+            'max-sm:pt-0 max-sm:pb-8',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
