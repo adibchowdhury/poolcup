@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { LeaderboardMemberAvatar } from '@/components/pool/leaderboard-grouped-list'
 import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
@@ -160,9 +160,47 @@ export function ChatsPageView({
     setLoading(false)
   }, [userId])
 
+  const inboxRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleInboxRefresh = useCallback(() => {
+    if (inboxRefreshTimerRef.current) {
+      clearTimeout(inboxRefreshTimerRef.current)
+    }
+
+    inboxRefreshTimerRef.current = setTimeout(() => {
+      inboxRefreshTimerRef.current = null
+      void loadInbox()
+    }, 400)
+  }, [loadInbox])
+
   useEffect(() => {
     void loadInbox()
   }, [loadInbox])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`chats-inbox-pool-messages-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'pool_messages',
+        },
+        () => {
+          scheduleInboxRefresh()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      if (inboxRefreshTimerRef.current) {
+        clearTimeout(inboxRefreshTimerRef.current)
+        inboxRefreshTimerRef.current = null
+      }
+      void supabase.removeChannel(channel)
+    }
+  }, [userId, scheduleInboxRefresh])
 
   useEffect(() => {
     function handleVisible() {
