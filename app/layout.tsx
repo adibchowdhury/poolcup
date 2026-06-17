@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { headers } from 'next/headers'
+import { Suspense } from 'react'
 import '@fontsource/bebas-neue'
 import '@fontsource/dm-sans/400.css'
 import '@fontsource/dm-sans/500.css'
@@ -11,6 +12,7 @@ import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
 import { ReportIssueProvider } from '@/components/report-issue-dialog'
+import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
 import { AuthProvider } from '@/src/lib/auth-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
@@ -83,8 +85,12 @@ export default function RootLayout({
         <AuthProvider>
           <MobileChatChromeProvider>
             <ReportIssueProvider>
-              {children}
-              <AuthenticatedChrome />
+              <Suspense fallback={null}>
+                <UnreadChatCountProvider>
+                  {children}
+                  <AuthenticatedChrome />
+                </UnreadChatCountProvider>
+              </Suspense>
             </ReportIssueProvider>
           </MobileChatChromeProvider>
         </AuthProvider>

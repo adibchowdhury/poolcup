@@ -30,6 +30,23 @@ export function getPoolLeaderboardHref(inviteCode: string): string {
   return `/pool/${inviteCode}?tab=leaderboard`
 }
 
+export async function fetchUnreadChatCount(
+  supabase: SupabaseClient,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('get_unread_chat_count')
+
+  if (error) {
+    console.error('Failed to fetch unread chat count:', error.message)
+    return 0
+  }
+
+  if (typeof data === 'number' && Number.isFinite(data)) {
+    return Math.max(0, Math.floor(data))
+  }
+
+  return 0
+}
+
 export async function fetchPoolUnreadCounts(
   supabase: SupabaseClient,
 ): Promise<Map<string, number>> {

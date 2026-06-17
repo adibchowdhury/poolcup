@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { LeaderboardMemberAvatar } from '@/components/pool/leaderboard-grouped-list'
+import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { cn } from '@/lib/utils'
@@ -134,9 +135,7 @@ function ChatInboxRow({
 
         {hasUnread ? (
           <div className="flex shrink-0 self-center">
-            <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-foreground">
-              {item.unread_count > 99 ? '99+' : item.unread_count}
-            </span>
+            <ChatUnreadCountBadge count={item.unread_count} />
           </div>
         ) : null}
       </Link>

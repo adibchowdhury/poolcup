@@ -11,6 +11,8 @@ import {
   User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
+import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import {
   hasAuthenticatedBottomBar,
   isAuthenticatedAppPath,
@@ -55,6 +57,7 @@ function MobileBottomNavContent() {
 
   const tabParam = searchParams.get('tab')
   const activeId = resolveMobileBottomNavActive(pathname, tabParam)
+  const unreadChatCount = useUnreadChatCount()
   const onPredictPage = hasAuthenticatedBottomBar(pathname)
   const visible =
     isAuthenticatedAppPath(pathname) &&
@@ -88,7 +91,17 @@ function MobileBottomNavContent() {
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className="relative shrink-0">
+                <Icon className="h-5 w-5" aria-hidden />
+                {item.id === 'chat' ? (
+                  <span className="pointer-events-none absolute -right-1.5 -top-1">
+                    <ChatUnreadCountBadge
+                      count={unreadChatCount}
+                      className="min-h-4 min-w-4 px-1 text-[9px] leading-none"
+                    />
+                  </span>
+                ) : null}
+              </span>
               <span className="max-w-full truncate">{item.label}</span>
             </Link>
           )

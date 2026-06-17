@@ -11,6 +11,8 @@ import {
 type MobileChatChromeContextValue = {
   mobileChatActive: boolean
   setMobileChatActive: (active: boolean) => void
+  openChatPoolId: string | null
+  setOpenChatPoolId: (poolId: string | null) => void
 }
 
 const MobileChatChromeContext =
@@ -18,9 +20,15 @@ const MobileChatChromeContext =
 
 export function MobileChatChromeProvider({ children }: { children: ReactNode }) {
   const [mobileChatActive, setMobileChatActive] = useState(false)
+  const [openChatPoolId, setOpenChatPoolId] = useState<string | null>(null)
   const value = useMemo(
-    () => ({ mobileChatActive, setMobileChatActive }),
-    [mobileChatActive],
+    () => ({
+      mobileChatActive,
+      setMobileChatActive,
+      openChatPoolId,
+      setOpenChatPoolId,
+    }),
+    [mobileChatActive, openChatPoolId],
   )
 
   return (

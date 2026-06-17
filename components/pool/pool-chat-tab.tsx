@@ -12,6 +12,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { emitPoolMarkedRead, markPoolRead } from '@/src/lib/pool-unread-counts'
+import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import {
   ALLOWED_CHAT_REACTIONS,
   aggregateReactions,
@@ -402,6 +403,14 @@ export function PoolChatTab({
   const isAtBottomRef = useRef(true)
   const hasInitialScrolledRef = useRef(false)
   const isPoolCreator = currentUserId === poolCreatorUserId
+  const { setOpenChatPoolId } = useMobileChatChrome()
+
+  useEffect(() => {
+    setOpenChatPoolId(poolId)
+    return () => {
+      setOpenChatPoolId(null)
+    }
+  }, [poolId, setOpenChatPoolId])
 
   const reactionsByMessageId = useMemo(
     () => aggregateReactions(reactionRows, currentUserId),
