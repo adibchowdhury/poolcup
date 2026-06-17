@@ -9,6 +9,7 @@ import {
   type FormEvent,
 } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,25 @@ export function useReportIssue(): ReportIssueContextValue {
     throw new Error('useReportIssue must be used within ReportIssueProvider')
   }
   return context
+}
+
+export function ReportIssueButton({ className }: { className?: string }) {
+  const { openReportIssue } = useReportIssue()
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={openReportIssue}
+      className={cn(
+        'h-8 shrink-0 whitespace-nowrap px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:h-9 sm:px-3 sm:text-sm',
+        className,
+      )}
+    >
+      Report issue
+    </Button>
+  )
 }
 
 export function ReportIssueProvider({

@@ -10,6 +10,7 @@ import '@fontsource/space-mono/700.css'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
+import { ReportIssueProvider } from '@/components/report-issue-dialog'
 import { AuthProvider } from '@/src/lib/auth-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
@@ -81,8 +82,10 @@ export default function RootLayout({
         </a>
         <AuthProvider>
           <MobileChatChromeProvider>
-            {children}
-            <AuthenticatedChrome />
+            <ReportIssueProvider>
+              {children}
+              <AuthenticatedChrome />
+            </ReportIssueProvider>
           </MobileChatChromeProvider>
         </AuthProvider>
         <Analytics />

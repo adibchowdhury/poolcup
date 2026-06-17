@@ -31,7 +31,7 @@ import { PoolCupLogo } from '@/components/poolcup-logo'
 import { STRIPE_DONATE_URL } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-nav-menu'
-import { DashboardUnreadChatBubbles } from '@/components/dashboard/dashboard-unread-chat-bubbles'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
@@ -421,11 +421,11 @@ function DashboardViewContent({
         <div className="z-50 md:sticky md:top-0">
           <header className="border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
               <PoolCupLogo href="/dashboard" />
 
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                <DashboardUnreadChatBubbles className="justify-end" />
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
+                <ReportIssueButton />
 
                 <DashboardMobileNavMenu
                   className="sm:hidden"
