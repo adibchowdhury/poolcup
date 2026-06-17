@@ -1,27 +1,36 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { ChatsPageView } from '@/components/chat/chats-page-view'
-import { useAuth } from '@/src/lib/auth-context'
+import { resolveUserDisplayName } from '@/src/lib/auth'
+import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
-export default function ChatPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
+export const dynamic = 'force-dynamic'
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login?next=/chat')
-    }
-  }, [loading, user, router])
+export default async function ChatPage() {
+  const supabase = await createServerSupabaseClient()
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading…</p>
-      </div>
-    )
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?next=/chat')
   }
 
-  return <ChatsPageView userId={user.id} />
+  const { data: profile } = await supabase
+    .from('users')
+    .select('display_name, avatar')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  return (
+    <ChatsPageView
+      userId={user.id}
+      email={user.email ?? ''}
+      displayName={resolveUserDisplayName(
+        profile?.display_name,
+        user.user_metadata,
+      )}
+      avatar={profile?.avatar ?? null}
+    />
+  )
 }

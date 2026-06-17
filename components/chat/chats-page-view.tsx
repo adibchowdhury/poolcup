@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { LeaderboardMemberAvatar } from '@/components/pool/leaderboard-grouped-list'
+import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
+import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { cn } from '@/lib/utils'
 import {
   fetchPoolChatInbox,
@@ -19,11 +21,14 @@ import {
   markPoolRead,
   POOL_MARKED_READ_EVENT,
 } from '@/src/lib/pool-unread-counts'
-import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
+import { Tabs } from '@/components/ui/tabs'
 
 type ChatsPageViewProps = {
   userId: string
+  email: string
+  displayName?: string | null
+  avatar?: string | null
 }
 
 function ChatInboxRow({
@@ -139,7 +144,12 @@ function ChatInboxRow({
   )
 }
 
-export function ChatsPageView({ userId }: ChatsPageViewProps) {
+export function ChatsPageView({
+  userId,
+  email,
+  displayName,
+  avatar,
+}: ChatsPageViewProps) {
   const [items, setItems] = useState<PoolChatInboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -185,46 +195,52 @@ export function ChatsPageView({ userId }: ChatsPageViewProps) {
   }, [loadInbox])
 
   return (
-    <div className={cn('min-h-screen bg-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}>
-      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center px-4 py-3 sm:max-w-2xl sm:py-4">
+    <DashboardAppShell
+      userId={userId}
+      email={email}
+      displayName={displayName}
+      avatar={avatar}
+      mainClassName="py-6 sm:py-8"
+    >
+      <Tabs value="chat" className="gap-8">
+        <DashboardDesktopNav linkDashboardTabs />
+
+        <div className="mx-auto w-full max-w-2xl">
           <h1 className="font-display text-2xl tracking-wide text-foreground uppercase sm:text-3xl">
             Chats
           </h1>
-        </div>
-      </header>
 
-      <main className="mx-auto w-full max-w-lg sm:max-w-2xl">
-        {loading ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            Loading chats…
-          </p>
-        ) : error ? (
-          <p className="px-4 py-10 text-center text-sm text-destructive">{error}</p>
-        ) : items.length === 0 ? (
-          <div className="px-4 py-16 text-center">
-            <MessageCircle className="mx-auto h-10 w-10 text-muted-foreground/60" />
-            <p className="mt-4 text-base font-medium text-foreground">
-              No pool chats yet
+          {loading ? (
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Loading chats…
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Join or create a pool to start chatting with your group.
-            </p>
-            <Link
-              href="/dashboard?tab=pools"
-              className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              View pools
-            </Link>
-          </div>
-        ) : (
-          <ul>
-            {items.map((item) => (
-              <ChatInboxRow key={item.pool_id} item={item} userId={userId} />
-            ))}
-          </ul>
-        )}
-      </main>
-    </div>
+          ) : error ? (
+            <p className="mt-8 text-center text-sm text-destructive">{error}</p>
+          ) : items.length === 0 ? (
+            <div className="mt-12 text-center">
+              <MessageCircle className="mx-auto h-10 w-10 text-muted-foreground/60" />
+              <p className="mt-4 text-base font-medium text-foreground">
+                No pool chats yet
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Join or create a pool to start chatting with your group.
+              </p>
+              <Link
+                href="/dashboard?tab=pools"
+                className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                View pools
+              </Link>
+            </div>
+          ) : (
+            <ul className="mt-6 overflow-hidden rounded-xl border border-border/70">
+              {items.map((item) => (
+                <ChatInboxRow key={item.pool_id} item={item} userId={userId} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </Tabs>
+    </DashboardAppShell>
   )
 }
