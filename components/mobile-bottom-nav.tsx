@@ -4,10 +4,10 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
-  BookOpen,
   Calendar,
+  CircleHelp,
   MessageCircle,
-  Sparkles,
+  Trophy,
   User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,21 +32,21 @@ const NAV_ITEMS: {
   href: string
   icon: typeof User
 }[] = [
-  { id: 'profile', label: 'Profile', href: DASHBOARD_TAB_HREFS.profile, icon: User },
-  { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Sparkles },
+  { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Trophy },
   {
     id: 'upcoming',
-    label: 'Upcoming',
+    label: 'Matches',
     href: DASHBOARD_TAB_HREFS.upcoming,
     icon: Calendar,
   },
+  { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
+  { id: 'profile', label: 'Profile', href: DASHBOARD_TAB_HREFS.profile, icon: User },
   {
     id: 'how-it-works',
-    label: 'How it works',
+    label: 'Help',
     href: DASHBOARD_TAB_HREFS['how-it-works'],
-    icon: BookOpen,
+    icon: CircleHelp,
   },
-  { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
 ]
 
 function MobileBottomNavContent() {
@@ -93,7 +93,7 @@ function MobileBottomNavContent() {
             >
               {item.id === 'chat' ? (
                 <ChatNavIconWithBadge
-                  icon={Icon}
+                  icon={MessageCircle}
                   count={unreadChatCount}
                   variant="footer"
                 />
