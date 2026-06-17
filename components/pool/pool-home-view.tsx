@@ -32,8 +32,6 @@ import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-s
 import { cn } from '@/lib/utils'
 import { trackEvent } from '@/src/lib/track'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
-import { emitPoolMarkedRead, markPoolRead } from '@/src/lib/pool-unread-counts'
-import { supabase } from '@/src/lib/supabase'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -143,13 +141,6 @@ export function PoolHomeView({
     setMobileChatActive(isMobileChatShell)
     return () => setMobileChatActive(false)
   }, [isMobileChatShell, setMobileChatActive])
-
-  useEffect(() => {
-    if (activeTab !== 'chat' || !poolId) return
-
-    emitPoolMarkedRead(poolId)
-    void markPoolRead(supabase, poolId)
-  }, [activeTab, poolId])
 
   return (
     <div
@@ -440,14 +431,16 @@ export function PoolHomeView({
                 <div className="mb-4 py-3 max-sm:shrink-0 max-sm:px-4">
                   <LiveScoreboard compact />
                 </div>
-                <PoolChatTab
-                  hideHeading
-                  fullBleedMobile
-                  poolId={poolId}
-                  currentUserId={currentUserId}
-                  poolCreatorUserId={poolCreatorUserId}
-                  memberProfilesByUserId={memberProfilesByUserId}
-                />
+                {activeTab === 'chat' ? (
+                  <PoolChatTab
+                    hideHeading
+                    fullBleedMobile
+                    poolId={poolId}
+                    currentUserId={currentUserId}
+                    poolCreatorUserId={poolCreatorUserId}
+                    memberProfilesByUserId={memberProfilesByUserId}
+                  />
+                ) : null}
               </TabsContent>
             ) : null}
           </Tabs>

@@ -24,8 +24,16 @@ export async function fetchPoolUnreadCounts(
   return counts
 }
 
-export function markPoolRead(supabase: SupabaseClient, poolId: string) {
-  return supabase.rpc('mark_pool_read', { p_pool_id: poolId })
+export async function markPoolRead(
+  supabase: SupabaseClient,
+  poolId: string,
+): Promise<boolean> {
+  const { error } = await supabase.rpc('mark_pool_read', { p_pool_id: poolId })
+  if (error) {
+    console.error('Failed to mark pool read:', error.message)
+    return false
+  }
+  return true
 }
 
 export function emitPoolMarkedRead(poolId: string) {

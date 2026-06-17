@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import { ActivePoolsSkeleton } from '@/components/dashboard/pool-card-skeleton'
@@ -16,12 +17,18 @@ interface ActivePoolsTabProps {
 }
 
 export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
+  const pathname = usePathname()
   const [pools, setPools] = useState<DashboardPoolCardData[]>([])
   const [unreadByPoolId, setUnreadByPoolId] = useState<Map<string, number>>(
     () => new Map(),
   )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const refreshUnreadCounts = useCallback(async () => {
+    const counts = await fetchPoolUnreadCounts(supabase)
+    setUnreadByPoolId(counts)
+  }, [])
 
   const loadPools = useCallback(async () => {
     setLoading(true)
@@ -41,6 +48,26 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
   useEffect(() => {
     void loadPools()
   }, [loadPools])
+
+  useEffect(() => {
+    if (pathname !== '/dashboard') return
+    void refreshUnreadCounts()
+  }, [pathname, refreshUnreadCounts])
+
+  useEffect(() => {
+    function handleVisible() {
+      if (document.visibilityState === 'visible' && pathname === '/dashboard') {
+        void refreshUnreadCounts()
+      }
+    }
+
+    window.addEventListener('focus', handleVisible)
+    document.addEventListener('visibilitychange', handleVisible)
+    return () => {
+      window.removeEventListener('focus', handleVisible)
+      document.removeEventListener('visibilitychange', handleVisible)
+    }
+  }, [pathname, refreshUnreadCounts])
 
   useEffect(() => {
     function handlePoolMarkedRead(event: Event) {

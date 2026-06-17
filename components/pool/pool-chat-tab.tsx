@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { getAvatarSrc } from '@/src/lib/avatars'
 import { formatRelativeTimestamp } from '@/src/lib/points-transaction-feed'
+import { emitPoolMarkedRead, markPoolRead } from '@/src/lib/pool-unread-counts'
 import { supabase } from '@/src/lib/supabase'
 
 export type PoolChatMemberProfile = {
@@ -240,6 +241,20 @@ export function PoolChatTab({
   useEffect(() => {
     void loadMessages()
   }, [loadMessages])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      const marked = await markPoolRead(supabase, poolId)
+      if (cancelled || !marked) return
+      emitPoolMarkedRead(poolId)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [poolId])
 
   useEffect(() => {
     const channel = supabase
