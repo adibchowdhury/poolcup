@@ -31,6 +31,7 @@ import { PoolCupLogo } from '@/components/poolcup-logo'
 import { STRIPE_DONATE_URL } from '@/components/support-us-button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-nav-menu'
+import { DashboardUnreadChatBubbles } from '@/components/dashboard/dashboard-unread-chat-bubbles'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
@@ -422,15 +423,18 @@ function DashboardViewContent({
             <div className="flex items-center justify-between gap-3">
               <PoolCupLogo href="/dashboard" />
 
-              <DashboardMobileNavMenu
-                className="sm:hidden"
-                displayName={headerName}
-                email={email}
-                onOpenSettings={() => setSettingsOpen(true)}
-              />
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <DashboardUnreadChatBubbles className="justify-end" />
 
-              <div className="hidden shrink-0 sm:flex">
-                <DropdownMenu>
+                <DashboardMobileNavMenu
+                  className="sm:hidden"
+                  displayName={headerName}
+                  email={email}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                />
+
+                <div className="hidden shrink-0 sm:flex sm:items-center sm:gap-2">
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
@@ -490,6 +494,7 @@ function DashboardViewContent({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
               </div>
             </div>
           </div>

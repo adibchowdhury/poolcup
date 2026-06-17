@@ -7,6 +7,25 @@ type PoolUnreadCountRow = {
   unread_count: number
 }
 
+export type UnreadChatRow = {
+  pool_id: string
+  pool_name: string
+  unread_count: number
+  last_message_at: string
+  invite_code: string
+}
+
+type UnreadChatRpcRow = {
+  pool_id: string
+  pool_name: string
+  unread_count: number
+  last_message_at: string
+}
+
+export function getPoolChatHref(inviteCode: string): string {
+  return `/pool/${inviteCode}?tab=chat`
+}
+
 export async function fetchPoolUnreadCounts(
   supabase: SupabaseClient,
 ): Promise<Map<string, number>> {
@@ -22,6 +41,42 @@ export async function fetchPoolUnreadCounts(
     counts.set(row.pool_id, row.unread_count)
   }
   return counts
+}
+
+export async function fetchMyUnreadChats(
+  supabase: SupabaseClient,
+): Promise<UnreadChatRow[]> {
+  const { data, error } = await supabase.rpc('get_my_unread_chats')
+
+  if (error) {
+    console.error('Failed to fetch unread chats:', error.message)
+    return []
+  }
+
+  const rows = (data ?? []) as UnreadChatRpcRow[]
+  if (rows.length === 0) return []
+
+  const poolIds = rows.map((row) => row.pool_id)
+  const { data: pools, error: poolsError } = await supabase
+    .from('pools')
+    .select('id, invite_code')
+    .in('id', poolIds)
+
+  if (poolsError) {
+    console.error('Failed to load pool invite codes:', poolsError.message)
+    return []
+  }
+
+  const inviteByPoolId = new Map(
+    (pools ?? []).map((pool) => [pool.id, pool.invite_code as string]),
+  )
+
+  return rows
+    .map((row) => ({
+      ...row,
+      invite_code: inviteByPoolId.get(row.pool_id) ?? '',
+    }))
+    .filter((row) => row.invite_code !== '')
 }
 
 export async function markPoolRead(
