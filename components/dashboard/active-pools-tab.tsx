@@ -5,6 +5,10 @@ import { PoolCard, type DashboardPoolCardData } from '@/components/dashboard/poo
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import { ActivePoolsSkeleton } from '@/components/dashboard/pool-card-skeleton'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
+import {
+  fetchPoolUnreadCounts,
+  POOL_MARKED_READ_EVENT,
+} from '@/src/lib/pool-unread-counts'
 import { supabase } from '@/src/lib/supabase'
 
 interface ActivePoolsTabProps {
@@ -13,6 +17,9 @@ interface ActivePoolsTabProps {
 
 export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
   const [pools, setPools] = useState<DashboardPoolCardData[]>([])
+  const [unreadByPoolId, setUnreadByPoolId] = useState<Map<string, number>>(
+    () => new Map(),
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,12 +27,13 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
     setLoading(true)
     setError(null)
 
-    const { pools: rows, error: fetchError } = await fetchDashboardPools(
-      supabase,
-      userId,
-    )
+    const [{ pools: rows, error: fetchError }, unreadCounts] = await Promise.all([
+      fetchDashboardPools(supabase, userId),
+      fetchPoolUnreadCounts(supabase),
+    ])
 
     setPools(rows)
+    setUnreadByPoolId(unreadCounts)
     setError(fetchError)
     setLoading(false)
   }, [userId])
@@ -33,6 +41,24 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
   useEffect(() => {
     void loadPools()
   }, [loadPools])
+
+  useEffect(() => {
+    function handlePoolMarkedRead(event: Event) {
+      const poolId = (event as CustomEvent<{ poolId: string }>).detail?.poolId
+      if (!poolId) return
+
+      setUnreadByPoolId((previous) => {
+        const next = new Map(previous)
+        next.set(poolId, 0)
+        return next
+      })
+    }
+
+    window.addEventListener(POOL_MARKED_READ_EVENT, handlePoolMarkedRead)
+    return () => {
+      window.removeEventListener(POOL_MARKED_READ_EVENT, handlePoolMarkedRead)
+    }
+  }, [])
 
   function handlePoolDeleted(poolId: string) {
     setPools((prev) => prev.filter((p) => p.id !== poolId))
@@ -58,6 +84,7 @@ export function ActivePoolsTab({ userId }: ActivePoolsTabProps) {
           <PoolCard
             key={pool.id}
             pool={pool}
+            unreadCount={unreadByPoolId.get(pool.id) ?? 0}
             onPoolDeleted={handlePoolDeleted}
           />
         ))}

@@ -76,9 +76,11 @@ const MAX_VISIBLE_MEMBER_AVATARS = 4
 function PoolMemberAvatars({
   members,
   memberAvatars,
+  unreadCount = 0,
 }: {
   members: number
   memberAvatars: PoolMemberAvatar[]
+  unreadCount?: number
 }) {
   const visible = memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
   const overflow = Math.max(0, members - MAX_VISIBLE_MEMBER_AVATARS)
@@ -92,6 +94,9 @@ function PoolMemberAvatars({
           accent
         />
         <span className="text-sm text-muted-foreground">Invite friends</span>
+        {unreadCount > 0 ? (
+          <span className="text-sm text-muted-foreground">💬 {unreadCount}</span>
+        ) : null}
       </div>
     )
   }
@@ -120,6 +125,9 @@ function PoolMemberAvatars({
       <span className="text-sm text-muted-foreground">
         {members} {members === 1 ? 'member' : 'members'}
       </span>
+      {unreadCount > 0 ? (
+        <span className="text-sm text-muted-foreground">💬 {unreadCount}</span>
+      ) : null}
     </div>
   )
 }
@@ -193,10 +201,11 @@ function NextMatchCountdown({
 
 interface PoolCardProps {
   pool: DashboardPoolCardData
+  unreadCount?: number
   onPoolDeleted?: (poolId: string) => void
 }
 
-export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
+export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const { mounted, nowMs } = useClientNow(1000)
   const totalMatches = pool.totalPredictions > 0 ? pool.totalPredictions : 72
@@ -264,6 +273,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
               <PoolMemberAvatars
                 members={pool.members}
                 memberAvatars={pool.memberAvatars}
+                unreadCount={unreadCount}
               />
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
