@@ -186,7 +186,8 @@ export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+    <div className="dashboard-pool-card rounded-2xl">
+      <div className="dashboard-pool-card-surface overflow-hidden rounded-2xl border border-border">
       <div className="border-b border-border px-[15px] py-[13px]">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-col gap-1">
@@ -357,6 +358,7 @@ export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps
             )}
           </span>
         </button>
+      </div>
       </div>
     </div>
   )
