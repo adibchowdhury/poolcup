@@ -1,14 +1,29 @@
 'use client'
 
-import Image from 'next/image'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Flag, MessageCircle, Send, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Flag, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { getAvatarSrc } from '@/src/lib/avatars'
-import { formatRelativeTimestamp } from '@/src/lib/points-transaction-feed'
 import { emitPoolMarkedRead, markPoolRead } from '@/src/lib/pool-unread-counts'
+import {
+  ALLOWED_CHAT_REACTIONS,
+  aggregateReactions,
+  avatarColorClassForUser,
+  buildChatListItems,
+  formatChatTimestamp,
+  initialsFromDisplayName,
+  isDuplicateReactionError,
+  type AggregatedReaction,
+  type MessageReactionRow,
+  type PoolChatMessage,
+} from '@/src/lib/pool-chat-helpers'
 import { supabase } from '@/src/lib/supabase'
 
 export type PoolChatMemberProfile = {
@@ -16,25 +31,18 @@ export type PoolChatMemberProfile = {
   avatar: string | null
 }
 
-type PoolMessage = {
-  id: string
-  pool_id: string
-  user_id: string
-  content: string
-  created_at: string
-}
-
 type PoolChatTabProps = {
   poolId: string
   currentUserId: string
   poolCreatorUserId: string
   memberProfilesByUserId: Map<string, PoolChatMemberProfile>
-  /** Hides the tab heading (pool page Chat tab, Match Room embed). */
   hideHeading?: boolean
   embedded?: boolean
-  /** Pool page Chat tab: edge-to-edge layout on mobile. */
   fullBleedMobile?: boolean
 }
+
+const LONG_PRESS_MS = 450
+const SCROLL_BOTTOM_THRESHOLD_PX = 48
 
 function resolveAuthor(
   userId: string,
@@ -48,76 +56,281 @@ function resolveAuthor(
   )
 }
 
-function ChatAuthorAvatar({
-  name,
-  avatar,
-  isYou,
+function ChatMonogramAvatar({
+  userId,
+  displayName,
 }: {
-  name: string
-  avatar: string | null
-  isYou: boolean
+  userId: string
+  displayName: string
 }) {
   return (
     <div
       className={cn(
-        'relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold',
-        isYou ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+        avatarColorClassForUser(userId),
       )}
+      aria-hidden
     >
-      {avatar ? (
-        <Image
-          src={getAvatarSrc(avatar)}
-          alt=""
-          width={32}
-          height={32}
-          className="size-8 shrink-0 object-cover object-top"
-        />
-      ) : (
-        name.charAt(0).toUpperCase()
-      )}
+      {initialsFromDisplayName(displayName)}
     </div>
   )
 }
 
-function ChatMessageRow({
+function ChatDayDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="h-px flex-1 bg-border/70" />
+      <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border/70" />
+    </div>
+  )
+}
+
+function ReactionChip({
+  reaction,
+  onToggle,
+}: {
+  reaction: AggregatedReaction
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'inline-flex min-h-8 items-center gap-1 rounded-full border px-2 text-xs transition-colors',
+        reaction.reactedByMe
+          ? 'border-primary/40 bg-primary/15 text-foreground'
+          : 'border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted/70',
+      )}
+      aria-label={`${reaction.count} ${reaction.emoji} reactions`}
+    >
+      <span>{reaction.emoji}</span>
+      <span className="font-mono tabular-nums">{reaction.count}</span>
+    </button>
+  )
+}
+
+function ChatMessageBubble({
   message,
-  author,
   isYou,
+  stacked,
+  reactions,
   canDelete,
   canReport,
-  onDelete,
-  onReport,
   reported,
   deleting,
   reporting,
+  onDelete,
+  onReport,
+  onToggleReaction,
 }: {
-  message: PoolMessage
-  author: PoolChatMemberProfile
+  message: PoolChatMessage
   isYou: boolean
+  stacked: boolean
+  reactions: AggregatedReaction[]
   canDelete: boolean
   canReport: boolean
-  onDelete: () => void
-  onReport: () => void
   reported: boolean
   deleting: boolean
   reporting: boolean
+  onDelete: () => void
+  onReport: () => void
+  onToggleReaction: (emoji: string) => void
 }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showActions = canDelete || canReport
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const startLongPress = useCallback(() => {
+    clearLongPress()
+    longPressTimerRef.current = setTimeout(() => {
+      setMenuOpen(true)
+    }, LONG_PRESS_MS)
+  }, [clearLongPress])
+
+  useEffect(() => clearLongPress, [clearLongPress])
+
   return (
     <div
       className={cn(
-        'flex w-full min-w-0 max-w-full gap-2',
-        isYou ? 'flex-row-reverse' : 'flex-row',
+        'group/message relative flex w-full min-w-0 max-w-full',
+        isYou ? 'justify-end' : 'justify-start',
+        stacked ? 'mt-0.5' : 'mt-1',
       )}
+      onTouchStart={showActions ? startLongPress : undefined}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
     >
-      <ChatAuthorAvatar name={author.displayName} avatar={author.avatar} isYou={isYou} />
-
       <div
         className={cn(
-          'flex min-w-0 max-w-[calc(100%-2.5rem)] flex-col gap-1',
+          'relative max-w-[min(100%,18rem)] sm:max-w-[min(100%,22rem)]',
           isYou ? 'items-end' : 'items-start',
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-1">
+          <div
+            className={cn(
+              'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
+              isYou
+                ? 'rounded-tr-md bg-primary/20 text-foreground ring-1 ring-primary/35'
+                : 'rounded-tl-md bg-muted/60 text-foreground',
+            )}
+          >
+            {message.content}
+          </div>
+
+          {showActions ? (
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:bg-muted/60 hover:text-foreground',
+                    'opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100',
+                    menuOpen && 'opacity-100',
+                  )}
+                  aria-label="Message actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={isYou ? 'end' : 'start'} className="w-52">
+                <div className="flex flex-wrap gap-1 border-b border-border/60 p-2">
+                  {ALLOWED_CHAT_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-lg hover:bg-muted"
+                      onClick={() => {
+                        onToggleReaction(emoji)
+                        setMenuOpen(false)
+                      }}
+                      aria-label={`React with ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                {canReport ? (
+                  <DropdownMenuItem
+                    disabled={reporting || reported}
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      onReport()
+                      setMenuOpen(false)
+                    }}
+                  >
+                    <Flag className="h-4 w-4" />
+                    {reported ? 'Reported' : 'Report'}
+                  </DropdownMenuItem>
+                ) : null}
+                {canDelete ? (
+                  <DropdownMenuItem
+                    disabled={deleting}
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      onDelete()
+                      setMenuOpen(false)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+
+        {reactions.length > 0 ? (
+          <div
+            className={cn(
+              'mt-1 flex flex-wrap gap-1',
+              isYou ? 'justify-end' : 'justify-start',
+            )}
+          >
+            {reactions.map((reaction) => (
+              <ReactionChip
+                key={`${message.id}-${reaction.emoji}`}
+                reaction={reaction}
+                onToggle={() => onToggleReaction(reaction.emoji)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function ChatMessageGroup({
+  userId,
+  messages,
+  currentUserId,
+  memberProfilesByUserId,
+  reactionsByMessageId,
+  isPoolCreator,
+  reportedIds,
+  deletingId,
+  reportingId,
+  onDelete,
+  onReport,
+  onToggleReaction,
+}: {
+  userId: string
+  messages: PoolChatMessage[]
+  currentUserId: string
+  memberProfilesByUserId: Map<string, PoolChatMemberProfile>
+  reactionsByMessageId: Map<string, AggregatedReaction[]>
+  isPoolCreator: boolean
+  reportedIds: Set<string>
+  deletingId: string | null
+  reportingId: string | null
+  onDelete: (messageId: string) => void
+  onReport: (message: PoolChatMessage) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+}) {
+  const isYou = userId === currentUserId
+  const author = resolveAuthor(userId, memberProfilesByUserId)
+  const firstMessage = messages[0]!
+
+  return (
+    <div
+      className={cn(
+        'flex w-full min-w-0 gap-2',
+        isYou ? 'flex-row-reverse' : 'flex-row',
+      )}
+    >
+      {isYou ? (
+        <div className="w-8 shrink-0" aria-hidden />
+      ) : (
+        <ChatMonogramAvatar userId={userId} displayName={author.displayName} />
+      )}
+
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col',
+          isYou ? 'items-end' : 'items-start',
+        )}
+      >
+        <div
+          className={cn(
+            'mb-0.5 flex items-center gap-2',
+            isYou ? 'flex-row-reverse' : 'flex-row',
+          )}
+        >
           <span
             className={cn(
               'text-xs font-semibold',
@@ -128,54 +341,35 @@ function ChatMessageRow({
           </span>
           <time
             className="text-[10px] text-muted-foreground"
-            dateTime={message.created_at}
+            dateTime={firstMessage.created_at}
             suppressHydrationWarning
           >
-            {formatRelativeTimestamp(message.created_at)}
+            {formatChatTimestamp(firstMessage.created_at)}
           </time>
         </div>
 
-        <div
-          className={cn(
-            'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words',
-            isYou
-              ? 'rounded-tr-md bg-primary/15 text-foreground ring-1 ring-primary/25'
-              : 'rounded-tl-md bg-muted/60 text-foreground',
-          )}
-        >
-          {message.content}
-        </div>
+        {messages.map((message, index) => {
+          const canDelete = isYou || isPoolCreator
+          const canReport = !isYou
 
-        {(canDelete || canReport) && (
-          <div className="flex items-center gap-1">
-            {canDelete && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
-                onClick={onDelete}
-                disabled={deleting}
-              >
-                <Trash2 className="h-3 w-3" />
-                Delete
-              </Button>
-            )}
-            {canReport && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 px-2 text-xs text-muted-foreground"
-                onClick={onReport}
-                disabled={reporting || reported}
-              >
-                <Flag className="h-3 w-3" />
-                {reported ? 'Reported' : 'Report'}
-              </Button>
-            )}
-          </div>
-        )}
+          return (
+            <ChatMessageBubble
+              key={message.id}
+              message={message}
+              isYou={isYou}
+              stacked={index > 0}
+              reactions={reactionsByMessageId.get(message.id) ?? []}
+              canDelete={canDelete}
+              canReport={canReport}
+              reported={reportedIds.has(message.id)}
+              deleting={deletingId === message.id}
+              reporting={reportingId === message.id}
+              onDelete={() => onDelete(message.id)}
+              onReport={() => onReport(message)}
+              onToggleReaction={(emoji) => onToggleReaction(message.id, emoji)}
+            />
+          )
+        })}
       </div>
     </div>
   )
@@ -190,7 +384,8 @@ export function PoolChatTab({
   embedded = false,
   fullBleedMobile = false,
 }: PoolChatTabProps) {
-  const [messages, setMessages] = useState<PoolMessage[]>([])
+  const [messages, setMessages] = useState<PoolChatMessage[]>([])
+  const [reactionRows, setReactionRows] = useState<MessageReactionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -200,9 +395,20 @@ export function PoolChatTab({
   const [reportingId, setReportingId] = useState<string | null>(null)
   const [reportedIds, setReportedIds] = useState<Set<string>>(() => new Set())
   const [reportNotice, setReportNotice] = useState<string | null>(null)
+  const [showNewMessagesPill, setShowNewMessagesPill] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const isAtBottomRef = useRef(true)
+  const hasInitialScrolledRef = useRef(false)
   const isPoolCreator = currentUserId === poolCreatorUserId
+
+  const reactionsByMessageId = useMemo(
+    () => aggregateReactions(reactionRows, currentUserId),
+    [reactionRows, currentUserId],
+  )
+
+  const chatListItems = useMemo(() => buildChatListItems(messages), [messages])
 
   const focusInput = useCallback(() => {
     requestAnimationFrame(() => {
@@ -210,12 +416,41 @@ export function PoolChatTab({
     })
   }, [])
 
-  const appendMessage = useCallback((message: PoolMessage) => {
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === message.id)) return prev
-      return [...prev, message]
+  const isNearBottom = useCallback(() => {
+    const container = scrollContainerRef.current
+    if (!container) return true
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      SCROLL_BOTTOM_THRESHOLD_PX
+    )
+  }, [])
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
+    isAtBottomRef.current = true
+    setShowNewMessagesPill(false)
+  }, [])
+
+  const appendMessage = useCallback((message: PoolChatMessage) => {
+    setMessages((previous) => {
+      if (previous.some((entry) => entry.id === message.id)) return previous
+      return [...previous, message]
     })
   }, [])
+
+  const loadReactions = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('message_reactions')
+      .select('message_id, user_id, emoji')
+      .eq('pool_id', poolId)
+
+    if (error) {
+      console.error('Failed to load message reactions:', error.message)
+      return
+    }
+
+    setReactionRows((data ?? []) as MessageReactionRow[])
+  }, [poolId])
 
   const loadMessages = useCallback(async () => {
     setLoading(true)
@@ -232,11 +467,13 @@ export function PoolChatTab({
       setLoadError('Could not load messages.')
       setMessages([])
     } else {
-      setMessages((data ?? []) as PoolMessage[])
+      setMessages((data ?? []) as PoolChatMessage[])
     }
 
+    await loadReactions()
     setLoading(false)
-  }, [poolId])
+    hasInitialScrolledRef.current = false
+  }, [poolId, loadReactions])
 
   useEffect(() => {
     void loadMessages()
@@ -268,7 +505,7 @@ export function PoolChatTab({
           filter: `pool_id=eq.${poolId}`,
         },
         (payload) => {
-          appendMessage(payload.new as PoolMessage)
+          appendMessage(payload.new as PoolChatMessage)
         },
       )
       .on(
@@ -282,7 +519,58 @@ export function PoolChatTab({
         (payload) => {
           const deletedId = (payload.old as { id?: string }).id
           if (!deletedId) return
-          setMessages((prev) => prev.filter((m) => m.id !== deletedId))
+          setMessages((previous) => previous.filter((entry) => entry.id !== deletedId))
+          setReactionRows((previous) =>
+            previous.filter((row) => row.message_id !== deletedId),
+          )
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message_reactions',
+          filter: `pool_id=eq.${poolId}`,
+        },
+        (payload) => {
+          const row = payload.new as MessageReactionRow
+          setReactionRows((previous) => {
+            if (
+              previous.some(
+                (entry) =>
+                  entry.message_id === row.message_id &&
+                  entry.user_id === row.user_id &&
+                  entry.emoji === row.emoji,
+              )
+            ) {
+              return previous
+            }
+            return [...previous, row]
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'message_reactions',
+          filter: `pool_id=eq.${poolId}`,
+        },
+        (payload) => {
+          const old = payload.old as Partial<MessageReactionRow>
+          if (!old.message_id || !old.user_id || !old.emoji) return
+          setReactionRows((previous) =>
+            previous.filter(
+              (entry) =>
+                !(
+                  entry.message_id === old.message_id &&
+                  entry.user_id === old.user_id &&
+                  entry.emoji === old.emoji
+                ),
+            ),
+          )
         },
       )
       .subscribe()
@@ -292,12 +580,31 @@ export function PoolChatTab({
     }
   }, [poolId, appendMessage])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useLayoutEffect(() => {
+    if (loading || messages.length === 0) return
 
-  async function handleSend(event: React.FormEvent) {
-    event.preventDefault()
+    if (!hasInitialScrolledRef.current) {
+      scrollToBottom('instant')
+      hasInitialScrolledRef.current = true
+      return
+    }
+
+    if (isAtBottomRef.current) {
+      scrollToBottom('smooth')
+    } else {
+      setShowNewMessagesPill(true)
+    }
+  }, [loading, messages, scrollToBottom])
+
+  const handleScroll = useCallback(() => {
+    const atBottom = isNearBottom()
+    isAtBottomRef.current = atBottom
+    if (atBottom) {
+      setShowNewMessagesPill(false)
+    }
+  }, [isNearBottom])
+
+  const sendMessage = useCallback(async () => {
     const content = draft.trim()
     if (!content || sending) return
 
@@ -324,19 +631,28 @@ export function PoolChatTab({
     }
 
     if (data) {
-      appendMessage(data as PoolMessage)
+      appendMessage(data as PoolChatMessage)
     }
     setDraft('')
     focusInput()
+  }, [appendMessage, currentUserId, draft, focusInput, poolId, sending])
+
+  async function handleSend(event: React.FormEvent) {
+    event.preventDefault()
+    await sendMessage()
+  }
+
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void sendMessage()
+    }
   }
 
   async function handleDelete(messageId: string) {
     setDeletingId(messageId)
 
-    const { error } = await supabase
-      .from('pool_messages')
-      .delete()
-      .eq('id', messageId)
+    const { error } = await supabase.from('pool_messages').delete().eq('id', messageId)
 
     setDeletingId(null)
 
@@ -345,10 +661,13 @@ export function PoolChatTab({
       return
     }
 
-    setMessages((prev) => prev.filter((m) => m.id !== messageId))
+    setMessages((previous) => previous.filter((entry) => entry.id !== messageId))
+    setReactionRows((previous) =>
+      previous.filter((row) => row.message_id !== messageId),
+    )
   }
 
-  async function handleReport(message: PoolMessage) {
+  async function handleReport(message: PoolChatMessage) {
     setReportingId(message.id)
     setReportNotice(null)
 
@@ -367,10 +686,79 @@ export function PoolChatTab({
       return
     }
 
-    setReportedIds((prev) => new Set(prev).add(message.id))
+    setReportedIds((previous) => new Set(previous).add(message.id))
     setReportNotice('Thanks — this message has been reported.')
     window.setTimeout(() => setReportNotice(null), 4000)
   }
+
+  const handleToggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      const existing = reactionRows.find(
+        (row) =>
+          row.message_id === messageId &&
+          row.user_id === currentUserId &&
+          row.emoji === emoji,
+      )
+
+      if (existing) {
+        setReactionRows((previous) =>
+          previous.filter(
+            (row) =>
+              !(
+                row.message_id === messageId &&
+                row.user_id === currentUserId &&
+                row.emoji === emoji
+              ),
+          ),
+        )
+
+        const { error } = await supabase
+          .from('message_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('emoji', emoji)
+
+        if (error) {
+          console.error('Failed to remove reaction:', error.message)
+          void loadReactions()
+        }
+        return
+      }
+
+      const optimisticRow: MessageReactionRow = {
+        message_id: messageId,
+        user_id: currentUserId,
+        emoji,
+      }
+      setReactionRows((previous) => [...previous, optimisticRow])
+
+      const { error } = await supabase.from('message_reactions').insert({
+        message_id: messageId,
+        pool_id: poolId,
+        emoji,
+      })
+
+      if (error) {
+        if (!isDuplicateReactionError(error)) {
+          console.error('Failed to add reaction:', error.message)
+        }
+        setReactionRows((previous) =>
+          previous.filter(
+            (row) =>
+              !(
+                row.message_id === messageId &&
+                row.user_id === currentUserId &&
+                row.emoji === emoji
+              ),
+          ),
+        )
+        if (!isDuplicateReactionError(error)) {
+          void loadReactions()
+        }
+      }
+    },
+    [currentUserId, loadReactions, poolId, reactionRows],
+  )
 
   const trimmedDraft = draft.trim()
   const canSend = trimmedDraft.length > 0 && !sending
@@ -407,19 +795,21 @@ export function PoolChatTab({
       >
         <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1 flex-col">
           <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
             className={cn(
-              'min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4',
+              'min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4',
               fullBleedMobile &&
                 'max-sm:overflow-x-hidden max-sm:scrollbar-none max-sm:overscroll-contain',
             )}
           >
             {loading ? (
               <div className="space-y-4">
-                {[0, 1, 2].map((i) => (
+                {[0, 1, 2].map((index) => (
                   <div
-                    key={i}
+                    key={index}
                     className="h-16 animate-pulse rounded-xl bg-muted/40"
                     aria-hidden
                   />
@@ -437,34 +827,44 @@ export function PoolChatTab({
                 </p>
               </div>
             ) : (
-              messages.map((message) => {
-                const isYou = message.user_id === currentUserId
-                const author = resolveAuthor(
-                  message.user_id,
-                  memberProfilesByUserId,
-                )
-                const canDelete = isYou || isPoolCreator
-                const canReport = !isYou
-
-                return (
-                  <ChatMessageRow
-                    key={message.id}
-                    message={message}
-                    author={author}
-                    isYou={isYou}
-                    canDelete={canDelete}
-                    canReport={canReport}
-                    onDelete={() => void handleDelete(message.id)}
-                    onReport={() => void handleReport(message)}
-                    reported={reportedIds.has(message.id)}
-                    deleting={deletingId === message.id}
-                    reporting={reportingId === message.id}
+              chatListItems.map((item) =>
+                item.type === 'day-divider' ? (
+                  <ChatDayDivider key={item.key} label={item.label} />
+                ) : (
+                  <ChatMessageGroup
+                    key={item.key}
+                    userId={item.group.userId}
+                    messages={item.group.messages}
+                    currentUserId={currentUserId}
+                    memberProfilesByUserId={memberProfilesByUserId}
+                    reactionsByMessageId={reactionsByMessageId}
+                    isPoolCreator={isPoolCreator}
+                    reportedIds={reportedIds}
+                    deletingId={deletingId}
+                    reportingId={reportingId}
+                    onDelete={(messageId) => void handleDelete(messageId)}
+                    onReport={(message) => void handleReport(message)}
+                    onToggleReaction={(messageId, emoji) =>
+                      void handleToggleReaction(messageId, emoji)
+                    }
                   />
-                )
-              })
+                ),
+              )
             )}
             <div ref={messagesEndRef} aria-hidden />
           </div>
+
+          {showNewMessagesPill ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-[4.75rem] z-10 flex justify-center px-4">
+              <button
+                type="button"
+                onClick={() => scrollToBottom('smooth')}
+                className="pointer-events-auto inline-flex min-h-10 items-center rounded-full border border-primary/30 bg-card/95 px-4 text-sm font-medium text-primary shadow-lg backdrop-blur-sm"
+              >
+                New messages ↓
+              </button>
+            </div>
+          ) : null}
 
           {reportNotice ? (
             <p className="border-t border-border/60 bg-muted/30 px-4 py-2 text-center text-xs text-muted-foreground">
@@ -475,27 +875,29 @@ export function PoolChatTab({
           <form
             onSubmit={(event) => void handleSend(event)}
             className={cn(
-              'flex shrink-0 items-center gap-2 border-t border-border/60 p-3',
+              'flex shrink-0 items-end gap-2 border-t border-border/60 p-3',
               fullBleedMobile && 'max-sm:px-4 max-sm:py-3',
             )}
           >
-            <Input
+            <Textarea
               ref={inputRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleDraftKeyDown}
               placeholder="Message your pool…"
               maxLength={500}
-              className="min-w-0 flex-1"
+              rows={1}
+              className="min-h-10 min-w-0 flex-1 resize-none py-2"
               aria-label="Chat message"
             />
             <Button
               type="submit"
               disabled={!canSend}
-              className="shrink-0 gap-2"
+              className="min-h-10 shrink-0 gap-2"
               onMouseDown={(event) => event.preventDefault()}
             >
               <Send className="h-4 w-4" />
-              Send
+              <span className="sr-only sm:not-sr-only">Send</span>
             </Button>
           </form>
 
