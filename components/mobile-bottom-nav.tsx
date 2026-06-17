@@ -11,7 +11,7 @@ import {
   User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
+import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import {
   hasAuthenticatedBottomBar,
@@ -71,10 +71,10 @@ function MobileBottomNavContent() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 backdrop-blur-md sm:hidden safe-area-pb"
+      className="fixed inset-x-0 bottom-0 z-50 overflow-visible border-t border-border/80 bg-background/95 backdrop-blur-md sm:hidden safe-area-pb"
       aria-label="Main navigation"
     >
-      <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-5 items-stretch px-1">
+      <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-5 items-stretch overflow-visible px-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const isActive = activeId === item.id
@@ -84,24 +84,22 @@ function MobileBottomNavContent() {
               key={item.id}
               href={item.href}
               className={cn(
-                'flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-[10px] font-medium transition-colors',
+                'flex min-w-0 flex-col items-center justify-center gap-0.5 overflow-visible px-0.5 py-1 text-[10px] font-medium transition-colors',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground',
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <span className="relative shrink-0">
-                <Icon className="h-5 w-5" aria-hidden />
-                {item.id === 'chat' ? (
-                  <span className="pointer-events-none absolute -right-1.5 -top-1">
-                    <ChatUnreadCountBadge
-                      count={unreadChatCount}
-                      className="min-h-4 min-w-4 px-1 text-[9px] leading-none"
-                    />
-                  </span>
-                ) : null}
-              </span>
+              {item.id === 'chat' ? (
+                <ChatNavIconWithBadge
+                  icon={Icon}
+                  count={unreadChatCount}
+                  variant="footer"
+                />
+              ) : (
+                <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              )}
               <span className="max-w-full truncate">{item.label}</span>
             </Link>
           )

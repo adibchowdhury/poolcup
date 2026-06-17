@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { BookOpen, Calendar, MessageCircle, Sparkles, User } from 'lucide-react'
-import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
+import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
 import { TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import {
@@ -84,15 +84,11 @@ export function DashboardDesktopNav({
       </DashboardNavTrigger>
       <TabsTrigger value="chat" asChild className={triggerClassName}>
         <Link href={CHAT_INBOX_HREF}>
-          <span className="relative shrink-0">
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            <span className="pointer-events-none absolute -right-1.5 -top-1.5">
-              <ChatUnreadCountBadge
-                count={unreadChatCount}
-                className="min-h-4 min-w-4 px-1 text-[9px] leading-none"
-              />
-            </span>
-          </span>
+          <ChatNavIconWithBadge
+            icon={MessageCircle}
+            count={unreadChatCount}
+            iconClassName="h-4 w-4"
+          />
           <span className="truncate">Chat</span>
         </Link>
       </TabsTrigger>
