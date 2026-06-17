@@ -30,7 +30,7 @@ import {
 } from '@/components/pool/pool-chat-tab'
 import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import { cn } from '@/lib/utils'
-import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import { CHAT_INBOX_HREF, MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 
@@ -186,8 +186,9 @@ export function PoolHomeView({
           <div className="mx-auto max-w-4xl px-4 py-4 max-sm:py-2.5">
             <div className="flex items-center gap-4 max-sm:items-start max-sm:gap-2">
               <Link
-                href="/dashboard"
+                href={isChatView ? CHAT_INBOX_HREF : '/dashboard'}
                 className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted max-sm:p-1.5"
+                aria-label={isChatView ? 'Back to chats' : 'Back to dashboard'}
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </Link>
