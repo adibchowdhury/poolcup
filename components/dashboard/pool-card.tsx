@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
+import { emitPoolMarkedRead } from '@/src/lib/pool-unread-counts'
 import { trackEvent } from '@/src/lib/track'
 
 export type PoolMemberAvatar = {
@@ -73,13 +74,43 @@ function getProgressBarColor(predictions: number, total: number): string {
 
 const MAX_VISIBLE_MEMBER_AVATARS = 4
 
+function UnreadChatBadge({
+  inviteCode,
+  poolId,
+  unreadCount,
+}: {
+  inviteCode: string
+  poolId: string
+  unreadCount: number
+}) {
+  if (unreadCount <= 0) return null
+
+  return (
+    <Link
+      href={`/pool/${inviteCode}?tab=chat`}
+      onClick={(event) => {
+        event.stopPropagation()
+        emitPoolMarkedRead(poolId)
+      }}
+      aria-label={`${unreadCount} unread messages, open chat`}
+      className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center text-sm text-muted-foreground"
+    >
+      💬 {unreadCount}
+    </Link>
+  )
+}
+
 function PoolMemberAvatars({
   members,
   memberAvatars,
+  inviteCode,
+  poolId,
   unreadCount = 0,
 }: {
   members: number
   memberAvatars: PoolMemberAvatar[]
+  inviteCode: string
+  poolId: string
   unreadCount?: number
 }) {
   const visible = memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
@@ -94,9 +125,11 @@ function PoolMemberAvatars({
           accent
         />
         <span className="text-sm text-muted-foreground">Invite friends</span>
-        {unreadCount > 0 ? (
-          <span className="text-sm text-muted-foreground">💬 {unreadCount}</span>
-        ) : null}
+        <UnreadChatBadge
+          inviteCode={inviteCode}
+          poolId={poolId}
+          unreadCount={unreadCount}
+        />
       </div>
     )
   }
@@ -125,9 +158,11 @@ function PoolMemberAvatars({
       <span className="text-sm text-muted-foreground">
         {members} {members === 1 ? 'member' : 'members'}
       </span>
-      {unreadCount > 0 ? (
-        <span className="text-sm text-muted-foreground">💬 {unreadCount}</span>
-      ) : null}
+      <UnreadChatBadge
+        inviteCode={inviteCode}
+        poolId={poolId}
+        unreadCount={unreadCount}
+      />
     </div>
   )
 }
@@ -273,6 +308,8 @@ export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps
               <PoolMemberAvatars
                 members={pool.members}
                 memberAvatars={pool.memberAvatars}
+                inviteCode={pool.inviteCode}
+                poolId={pool.id}
                 unreadCount={unreadCount}
               />
             </div>

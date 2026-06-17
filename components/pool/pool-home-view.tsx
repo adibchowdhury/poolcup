@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft,
@@ -91,7 +92,14 @@ export function PoolHomeView({
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('predictions')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'chat' || tab === 'leaderboard' || tab === 'predictions') {
+      return tab
+    }
+    return 'predictions'
+  })
 
   const copyInviteLink = () => {
     const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
@@ -119,6 +127,17 @@ export function PoolHomeView({
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
   const isMobileChatShell = activeTab === 'chat' && showChatTab
   const { setMobileChatActive } = useMobileChatChrome()
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'chat') {
+      setActiveTab(showChatTab ? 'chat' : 'predictions')
+      return
+    }
+    if (tab === 'leaderboard' || tab === 'predictions') {
+      setActiveTab(tab)
+    }
+  }, [searchParams, showChatTab])
 
   useEffect(() => {
     setMobileChatActive(isMobileChatShell)
