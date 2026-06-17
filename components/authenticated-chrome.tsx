@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { MobileBottomNav } from '@/components/mobile-bottom-nav'
 import {
   ReportIssueProvider,
   useReportIssue,
@@ -43,22 +44,28 @@ function ReportIssueFab({ className }: { className?: string }) {
 function AuthenticatedChromeContent() {
   const pathname = usePathname() ?? ''
   const { mobileChatActive } = useMobileChatChrome()
-  const bottomOffset = hasAuthenticatedBottomBar(pathname)
+  const onPredictPage = hasAuthenticatedBottomBar(pathname)
+  const bottomOffset = onPredictPage
     ? 'bottom-20 sm:bottom-24'
-    : 'bottom-4 sm:bottom-6'
+    : mobileChatActive
+      ? 'bottom-4 sm:bottom-6'
+      : 'max-sm:bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px)+0.5rem)] sm:bottom-6'
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-40">
-      <div
-        className={cn(
-          'pointer-events-auto absolute right-4',
-          bottomOffset,
-          mobileChatActive && 'max-sm:hidden',
-        )}
-      >
-        <ReportIssueFab />
+    <>
+      <MobileBottomNav />
+      <div className="pointer-events-none fixed inset-0 z-40">
+        <div
+          className={cn(
+            'pointer-events-auto absolute right-4',
+            bottomOffset,
+            mobileChatActive && 'max-sm:hidden',
+          )}
+        >
+          <ReportIssueFab />
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

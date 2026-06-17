@@ -30,6 +30,7 @@ import {
 } from '@/components/pool/pool-chat-tab'
 import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import { cn } from '@/lib/utils'
+import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 
@@ -123,7 +124,8 @@ export function PoolHomeView({
     : undefined
   const yourRank = yourPlaceGroup?.place ?? 0
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
-  const isMobileChatShell = activeTab === 'chat' && showChatTab
+  const isChatView = activeTab === 'chat' && showChatTab
+  const isMobileChatShell = isChatView
   const { setMobileChatActive } = useMobileChatChrome()
 
   useEffect(() => {
@@ -138,14 +140,26 @@ export function PoolHomeView({
   }, [searchParams, showChatTab])
 
   useEffect(() => {
-    setMobileChatActive(isMobileChatShell)
-    return () => setMobileChatActive(false)
+    const mediaQuery = window.matchMedia('(max-width: 639px)')
+
+    const syncMobileChatActive = () => {
+      setMobileChatActive(isMobileChatShell && mediaQuery.matches)
+    }
+
+    syncMobileChatActive()
+    mediaQuery.addEventListener('change', syncMobileChatActive)
+
+    return () => {
+      mediaQuery.removeEventListener('change', syncMobileChatActive)
+      setMobileChatActive(false)
+    }
   }, [isMobileChatShell, setMobileChatActive])
 
   return (
     <div
       className={cn(
         'min-h-screen bg-background',
+        !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
       )}
@@ -264,25 +278,21 @@ export function PoolHomeView({
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
               )}
             >
-              <TabsList
-                className={cn(
-                  'grid h-auto w-full max-w-2xl p-1',
-                  showChatTab ? 'grid-cols-3' : 'grid-cols-2',
-                  isMobileChatShell && 'max-sm:max-w-none max-sm:shrink-0',
-                )}
-              >
-                <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
-                  Predictions
-                </TabsTrigger>
-                <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
-                  Leaderboard
-                </TabsTrigger>
-                {showChatTab ? (
-                  <TabsTrigger value="chat" className="px-2 py-2 text-xs sm:text-sm">
-                    Chat
+              {!isChatView ? (
+                <TabsList
+                  className={cn(
+                    'grid h-auto w-full max-w-2xl grid-cols-2 p-1',
+                    isMobileChatShell && 'max-sm:max-w-none max-sm:shrink-0',
+                  )}
+                >
+                  <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
+                    Predictions
                   </TabsTrigger>
-                ) : null}
-              </TabsList>
+                  <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
+                    Leaderboard
+                  </TabsTrigger>
+                </TabsList>
+              ) : null}
             </div>
 
             {activeTab === 'leaderboard' && yourData && yourData.points > 0 ? (
@@ -431,7 +441,7 @@ export function PoolHomeView({
                 <div className="mb-4 py-3 max-sm:shrink-0 max-sm:px-4">
                   <LiveScoreboard compact />
                 </div>
-                {activeTab === 'chat' ? (
+                {isChatView ? (
                   <PoolChatTab
                     hideHeading
                     fullBleedMobile

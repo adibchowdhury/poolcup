@@ -15,6 +15,8 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog, poolCreatedMode } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
+import { cn } from '@/lib/utils'
+import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
 const TOTAL_STEPS = 4
 
@@ -361,7 +363,12 @@ export default function CreatePoolPage() {
 
   if (authLoading || !user) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
+      <main
+        className={cn(
+          'min-h-screen bg-[#080b0f] flex items-center justify-center',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
         <p className="text-[#5a7080]">Loading…</p>
       </main>
     )
@@ -374,7 +381,12 @@ export default function CreatePoolPage() {
     selectedSport === 'soccer' ? SOCCER_EVENTS : []
 
   return (
-    <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10">
+    <main
+      className={cn(
+        'min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10',
+        MOBILE_BOTTOM_NAV_PAD_CLASS,
+      )}
+    >
       <div className={`w-full ${containerWidth}`}>
         <div className="rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl">
           {step === 1 ? (

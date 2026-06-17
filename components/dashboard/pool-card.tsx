@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Check,
   Copy,
-  MessageCircle,
   MoreVertical,
   Target,
   Trophy,
@@ -25,8 +24,6 @@ import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import {
-  emitPoolMarkedRead,
-  getPoolChatHref,
   getPoolLeaderboardHref,
 } from '@/src/lib/pool-unread-counts'
 import { trackEvent } from '@/src/lib/track'
@@ -109,40 +106,12 @@ function RankMedalChip({ place }: { place: number | null }) {
   )
 }
 
-function MetaUnreadChat({
-  inviteCode,
-  poolId,
-  unreadCount,
-}: {
-  inviteCode: string
-  poolId: string
-  unreadCount: number
-}) {
-  if (unreadCount <= 0) return null
-
-  return (
-    <Link
-      href={getPoolChatHref(inviteCode)}
-      onClick={(event) => {
-        event.stopPropagation()
-        emitPoolMarkedRead(poolId)
-      }}
-      aria-label={`${unreadCount} unread messages, open chat`}
-      className="ml-auto inline-flex min-h-10 items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-    >
-      <MessageCircle className="h-3.5 w-3.5" />
-      <span className="font-mono tabular-nums">{unreadCount}</span>
-    </Link>
-  )
-}
-
 interface PoolCardProps {
   pool: DashboardPoolCardData
-  unreadCount?: number
   onPoolDeleted?: (poolId: string) => void
 }
 
-export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps) {
+export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const deleteTriggerRef = useRef<HTMLDivElement>(null)
   const { mounted, nowMs } = useClientNow(1000)
@@ -287,11 +256,6 @@ export function PoolCard({ pool, unreadCount = 0, onPoolDeleted }: PoolCardProps
               ) : null}
             </div>
             <span className="text-sm text-muted-foreground">{playersLabel}</span>
-            <MetaUnreadChat
-              inviteCode={pool.inviteCode}
-              poolId={pool.id}
-              unreadCount={unreadCount}
-            />
           </div>
           <RankMedalChip place={pool.yourRank} />
         </div>

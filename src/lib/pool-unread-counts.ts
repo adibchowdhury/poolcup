@@ -86,8 +86,30 @@ export async function fetchMyUnreadChats(
 export async function markPoolRead(
   supabase: SupabaseClient,
   poolId: string,
+  userId?: string,
 ): Promise<boolean> {
-  const { error } = await supabase.rpc('mark_pool_read', { p_pool_id: poolId })
+  let resolvedUserId = userId
+  if (!resolvedUserId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    resolvedUserId = user?.id
+  }
+
+  if (!resolvedUserId) {
+    console.error('Failed to mark pool read: no authenticated user')
+    return false
+  }
+
+  const { error } = await supabase.from('pool_chat_reads').upsert(
+    {
+      pool_id: poolId,
+      user_id: resolvedUserId,
+      last_read_at: new Date().toISOString(),
+    },
+    { onConflict: 'pool_id,user_id' },
+  )
+
   if (error) {
     console.error('Failed to mark pool read:', error.message)
     return false

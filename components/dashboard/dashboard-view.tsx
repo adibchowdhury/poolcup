@@ -43,6 +43,7 @@ import {
   UpcomingGamesTab,
 } from '@/components/dashboard/upcoming-games-tab'
 import { cn } from '@/lib/utils'
+import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import {
   getAvatarSrc,
   resolveAvatarFilename,
@@ -628,7 +629,7 @@ function DashboardViewContent({
         </Dialog>
         </div>
 
-        <main className="mx-auto max-w-6xl px-4 py-8">
+        <main className={cn('mx-auto max-w-6xl px-4 py-8', MOBILE_BOTTOM_NAV_PAD_CLASS)}>
           <ScoringUpdateNoticeBanner />
 
           {passwordResetSuccess && (
@@ -648,7 +649,7 @@ function DashboardViewContent({
             onValueChange={handleTabChange}
             className="gap-10"
           >
-            <TabsList className="mx-auto grid h-auto w-full max-w-3xl grid-cols-2 gap-1 p-1 sm:grid-cols-4">
+            <TabsList className="mx-auto hidden h-auto w-full max-w-3xl grid-cols-2 gap-1 p-1 sm:grid sm:grid-cols-4">
               <TabsTrigger value="profile" className="gap-1.5 px-2 py-2 text-xs sm:text-sm">
                 <User className="h-4 w-4 shrink-0" />
                 <span className="truncate">Profile</span>

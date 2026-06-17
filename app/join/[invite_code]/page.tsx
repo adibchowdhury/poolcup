@@ -10,6 +10,8 @@ import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
+import { cn } from '@/lib/utils'
+import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
 type Pool = {
   id: string
@@ -213,7 +215,12 @@ export default function JoinPoolPage() {
 
   if (authLoading || pageLoading) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center">
+      <main
+        className={cn(
+          'min-h-screen bg-[#080b0f] flex items-center justify-center',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
         <p className="text-[#5a7080]">Loading…</p>
       </main>
     )
@@ -221,7 +228,12 @@ export default function JoinPoolPage() {
 
   if (unavailable || !pool) {
     return (
-      <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4">
+      <main
+        className={cn(
+          'min-h-screen bg-[#080b0f] flex items-center justify-center px-4',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
         <div className="w-full max-w-md rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 text-center">
           <p className="text-lg font-semibold text-[#f0f4f8]">
             This pool is not available
@@ -239,7 +251,12 @@ export default function JoinPoolPage() {
       members.length === 1 ? '1 member' : `${members.length} members`
 
     return (
-      <main className="min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-10">
+      <main
+        className={cn(
+          'min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-10',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <div className="flex justify-center">
@@ -314,7 +331,12 @@ export default function JoinPoolPage() {
     : null
 
   return (
-    <main className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10">
+    <main
+      className={cn(
+        'min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10',
+        MOBILE_BOTTOM_NAV_PAD_CLASS,
+      )}
+    >
       <div className="w-full max-w-md">
         <div className="overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] shadow-xl">
           <div className="bg-gradient-to-br from-[#00e676]/20 to-[#111a27] p-6">

@@ -117,7 +117,15 @@ function PlaceHeader({ place, memberCount }: { place: number; memberCount: numbe
   )
 }
 
-function MemberAvatar({ member }: { member: LeaderboardMember }) {
+function MemberAvatar({
+  member,
+  className,
+  imageClassName,
+}: {
+  member: Pick<LeaderboardMember, 'name' | 'avatar' | 'isYou'>
+  className?: string
+  imageClassName?: string
+}) {
   return (
     <div
       className={cn(
@@ -125,6 +133,7 @@ function MemberAvatar({ member }: { member: LeaderboardMember }) {
         member.isYou
           ? 'bg-primary text-primary-foreground'
           : 'bg-muted text-foreground',
+        className,
       )}
     >
       {member.avatar ? (
@@ -133,7 +142,7 @@ function MemberAvatar({ member }: { member: LeaderboardMember }) {
           alt=""
           width={40}
           height={40}
-          className="size-10 shrink-0 object-cover object-top"
+          className={cn('size-10 shrink-0 object-cover object-top', imageClassName)}
         />
       ) : (
         member.name.charAt(0).toUpperCase()
@@ -141,6 +150,8 @@ function MemberAvatar({ member }: { member: LeaderboardMember }) {
     </div>
   )
 }
+
+export { MemberAvatar as LeaderboardMemberAvatar }
 
 function MemberNameBlock({ member }: { member: LeaderboardMember }) {
   return (

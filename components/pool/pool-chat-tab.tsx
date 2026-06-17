@@ -483,7 +483,7 @@ export function PoolChatTab({
     let cancelled = false
 
     void (async () => {
-      const marked = await markPoolRead(supabase, poolId)
+      const marked = await markPoolRead(supabase, poolId, currentUserId)
       if (cancelled || !marked) return
       emitPoolMarkedRead(poolId)
     })()
