@@ -6,10 +6,12 @@ import {
 } from '@/components/predict/compact-match-row-teams'
 import type { CompactTeam } from '@/components/predict/compact-match-row-types'
 import {
+  CompactMatchRowKickoffTime,
   CompactMatchRowPredictedBadge,
   CompactMatchRowScoreSeparator,
   getCompactMatchRowContainerClassName,
   getCompactMatchRowScoreGroupClassName,
+  getCompactMatchRowTeamsRowClassName,
   PredictScoreInput,
 } from '@/components/predict/predict-match-row-shared'
 
@@ -20,6 +22,7 @@ export interface CompactMatchRowProps {
   awayTeam: CompactTeam
   homeScore: string
   awayScore: string
+  kickoffAt?: string
   onHomeScoreChange: (value: string) => void
   onAwayScoreChange: (value: string) => void
   isLocked?: boolean
@@ -32,6 +35,7 @@ export function CompactMatchRow({
   awayTeam,
   homeScore,
   awayScore,
+  kickoffAt,
   onHomeScoreChange,
   onAwayScoreChange,
   isLocked = false,
@@ -49,41 +53,52 @@ export function CompactMatchRow({
         variant,
       })}
     >
-      <CompactMatchRowTeamHome
-        name={homeTeam.name}
-        dbFlag={homeTeam.dbFlag}
-        variant={variant}
-      />
+      {kickoffAt ? (
+        <div className="flex w-full justify-end pr-4">
+          <CompactMatchRowKickoffTime
+            kickoffAt={kickoffAt}
+            isLocked={isLocked}
+          />
+        </div>
+      ) : null}
 
-      <div className={getCompactMatchRowScoreGroupClassName()}>
-        {isLocked ? (
-          <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            Locked
-          </span>
-        ) : (
-          <>
-            <PredictScoreInput
-              value={homeScore}
-              onChange={onHomeScoreChange}
-              label={`${homeTeam.name} score`}
-              filled={homeScore !== ''}
-            />
-            <CompactMatchRowScoreSeparator />
-            <PredictScoreInput
-              value={awayScore}
-              onChange={onAwayScoreChange}
-              label={`${awayTeam.name} score`}
-              filled={awayScore !== ''}
-            />
-          </>
-        )}
+      <div className={getCompactMatchRowTeamsRowClassName()}>
+        <CompactMatchRowTeamHome
+          name={homeTeam.name}
+          dbFlag={homeTeam.dbFlag}
+          variant={variant}
+        />
+
+        <div className={getCompactMatchRowScoreGroupClassName()}>
+          {isLocked ? (
+            <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Locked
+            </span>
+          ) : (
+            <>
+              <PredictScoreInput
+                value={homeScore}
+                onChange={onHomeScoreChange}
+                label={`${homeTeam.name} score`}
+                filled={homeScore !== ''}
+              />
+              <CompactMatchRowScoreSeparator />
+              <PredictScoreInput
+                value={awayScore}
+                onChange={onAwayScoreChange}
+                label={`${awayTeam.name} score`}
+                filled={awayScore !== ''}
+              />
+            </>
+          )}
+        </div>
+
+        <CompactMatchRowTeamAway
+          name={awayTeam.name}
+          dbFlag={awayTeam.dbFlag}
+          variant={variant}
+        />
       </div>
-
-      <CompactMatchRowTeamAway
-        name={awayTeam.name}
-        dbFlag={awayTeam.dbFlag}
-        variant={variant}
-      />
 
       <CompactMatchRowPredictedBadge
         isPredicted={isPredicted}

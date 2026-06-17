@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  CompactMatchRowKickoffTime,
   CompactMatchRowScoreSeparator,
   CompactMatchRowReadOnlyScores,
   CompactMatchRowPredictedBadge,
@@ -380,7 +381,12 @@ export function PredictionMatchCard({
             >
               {getPredictionOutcomeLabel(outcome.kind)} · +{outcome.points} pts
             </span>
-          ) : null}
+          ) : (
+            <CompactMatchRowKickoffTime
+              kickoffAt={prediction.kickoffAt}
+              isLocked={isReadOnly}
+            />
+          )}
         </div>
 
         <div className={getCompactMatchRowTeamsRowClassName()}>

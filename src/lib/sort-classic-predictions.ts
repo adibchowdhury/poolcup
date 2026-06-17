@@ -23,6 +23,26 @@ function compareKickoffThenMatchId(
   return a.matchId.localeCompare(b.matchId)
 }
 
+/** Upcoming (kickoff > now) ascending, then past/in-progress descending by kickoff. */
+function compareUpcomingFirst(
+  a: UserPoolPrediction,
+  b: UserPoolPrediction,
+  nowMs: number,
+): number {
+  const aMs = kickoffMs(a.kickoffAt)
+  const bMs = kickoffMs(b.kickoffAt)
+  const aUpcoming = aMs > nowMs
+  const bUpcoming = bMs > nowMs
+
+  if (aUpcoming !== bUpcoming) {
+    return aUpcoming ? -1 : 1
+  }
+
+  const byKickoff = aUpcoming ? aMs - bMs : bMs - aMs
+  if (byKickoff !== 0) return byKickoff
+  return a.matchId.localeCompare(b.matchId)
+}
+
 function groupStageSortIndex(groupName: string | null): number {
   if (!groupName) return 999
   const idx = WORLD_CUP_GROUP_LETTERS.indexOf(
@@ -74,6 +94,7 @@ function compareByStatusThenKickoff(
 export function sortClassicPredictions(
   predictions: UserPoolPrediction[],
   mode: ClassicPredictionSortMode,
+  nowMs: number = Date.now(),
 ): UserPoolPrediction[] {
   const sorted = [...predictions]
 
@@ -89,7 +110,7 @@ export function sortClassicPredictions(
       break
     case 'kickoff-newest':
     default:
-      sorted.sort((a, b) => -compareKickoffThenMatchId(a, b))
+      sorted.sort((a, b) => compareUpcomingFirst(a, b, nowMs))
       break
   }
 

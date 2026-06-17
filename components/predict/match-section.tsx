@@ -15,6 +15,7 @@ export interface SectionMatch {
   awayTeam: CompactTeam
   homeScore: string
   awayScore: string
+  kickoffAt: string
   winnerPick?: WinnerPick
   isLocked?: boolean
   isPredicted?: boolean
@@ -108,6 +109,7 @@ export function MatchSection({
                   awayTeam={match.awayTeam}
                   homeScore={match.homeScore}
                   awayScore={match.awayScore}
+                  kickoffAt={match.kickoffAt}
                   isLocked={match.isLocked}
                   isPredicted={match.isPredicted}
                   onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}

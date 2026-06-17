@@ -2,6 +2,7 @@
 
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
 
 export type PredictScoreInputProps = {
   value: string
@@ -52,7 +53,7 @@ export function getCompactMatchRowContainerClassName({
   const prominent = variant === 'prominent'
 
   return cn(
-    'group relative flex w-full min-w-0 items-center gap-2 rounded-lg border border-border/90 bg-card/90 shadow-sm backdrop-blur-sm transition-all duration-200 sm:gap-3',
+    'group relative flex w-full min-w-0 flex-col items-stretch gap-2 rounded-lg border border-border/90 bg-card/90 shadow-sm backdrop-blur-sm transition-all duration-200 sm:gap-3',
     'hover:border-primary/25 hover:bg-card hover:shadow-[0_4px_20px_rgba(0,0,0,0.25)]',
     prominent ? 'min-h-[72px] px-4 py-4' : 'min-h-[52px] px-4 py-3',
     isLocked &&
@@ -106,6 +107,30 @@ export function CompactMatchRowPredictedBadge({
 export function CompactMatchRowScoreSeparator() {
   return (
     <span className="px-0.5 font-mono text-sm text-muted-on-section">–</span>
+  )
+}
+
+export function CompactMatchRowKickoffTime({
+  kickoffAt,
+  isLocked = false,
+  className,
+}: {
+  kickoffAt: string
+  isLocked?: boolean
+  className?: string
+}) {
+  return (
+    <time
+      dateTime={kickoffAt}
+      suppressHydrationWarning
+      className={cn(
+        'shrink-0 text-[10px] tabular-nums sm:text-xs',
+        isLocked ? 'text-muted-on-section' : 'text-muted-foreground',
+        className,
+      )}
+    >
+      {formatFeaturedKickoffLocal(kickoffAt)}
+    </time>
   )
 }
 

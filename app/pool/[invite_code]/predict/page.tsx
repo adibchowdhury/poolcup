@@ -164,6 +164,7 @@ function toSectionMatch(
     },
     homeScore: entry.score1,
     awayScore: entry.score2,
+    kickoffAt: match.kickoff_at,
     isLocked: isMatchLocked(match.locked_at),
     isPredicted: savedMatchIds.has(match.id) && both,
   }
@@ -597,6 +598,7 @@ export default function PredictPage() {
                     awayTeam={card.awayTeam}
                     homeScore={card.homeScore}
                     awayScore={card.awayScore}
+                    kickoffAt={card.kickoffAt}
                     isLocked={card.isLocked}
                     isPredicted={card.isPredicted}
                     onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
@@ -648,6 +650,7 @@ export default function PredictPage() {
                     awayTeam={card.awayTeam}
                     homeScore={card.homeScore}
                     awayScore={card.awayScore}
+                    kickoffAt={card.kickoffAt}
                     isLocked={card.isLocked}
                     isPredicted={card.isPredicted}
                     onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
