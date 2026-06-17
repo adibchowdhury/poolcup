@@ -26,6 +26,10 @@ export function getPoolChatHref(inviteCode: string): string {
   return `/pool/${inviteCode}?tab=chat`
 }
 
+export function getPoolLeaderboardHref(inviteCode: string): string {
+  return `/pool/${inviteCode}?tab=leaderboard`
+}
+
 export async function fetchPoolUnreadCounts(
   supabase: SupabaseClient,
 ): Promise<Map<string, number>> {

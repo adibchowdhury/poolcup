@@ -155,6 +155,20 @@
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
+@keyframes countdown-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-countdown-dot-pulse {
+  animation: countdown-dot-pulse 1.6s ease-in-out infinite;
+}
+
 @keyframes stage-live-pulse {
   0%,
   100% {

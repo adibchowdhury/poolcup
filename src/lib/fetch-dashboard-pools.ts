@@ -2,6 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 import {
+  buildPoolLeaderboardMembers,
+  getMemberConsecutivePlace,
+  poolHasLeaderboardResults,
+  type LeaderboardCacheRow,
+  type PoolLeaderboardMember,
+} from '@/src/lib/pool-leaderboard'
+import {
   computeWinnerOnlyDashboardProgress,
   parseStandingsJson,
   parseThirdPlaceRankingsJson,
@@ -58,7 +65,6 @@ export async function fetchDashboardPools(
 
   const memberRows = (memberships ?? []) as unknown as MembershipRow[]
   const validMemberships = memberRows.filter((row) => row.pools != null)
-  const memberIds = validMemberships.map((row) => row.id)
   const poolIds = validMemberships.map((row) => row.pool_id)
 
   const { count: totalMatchCount } = await supabase
@@ -85,6 +91,13 @@ export async function fetchDashboardPools(
     .gt('kickoff_at', nowIso)
 
   const predictionsLocked = (upcomingMatchCount ?? 0) === 0
+
+  const { count: matchesPlayed } = await supabase
+    .from('matches')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_final', true)
+
+  const matchesPlayedCount = matchesPlayed ?? 0
 
   const memberCountByPool = new Map<string, number>()
   const memberAvatarsByPool = new Map<
@@ -176,15 +189,75 @@ export async function fetchDashboardPools(
     }
   }
 
-  const rankByMember = new Map<string, number>()
-  if (memberIds.length > 0) {
-    const { data: cacheRows } = await supabase
-      .from('leaderboard_cache')
-      .select('member_id, rank')
-      .in('member_id', memberIds)
+  const poolMembersByPool = new Map<string, PoolLeaderboardMember[]>()
+  const cacheRowsByPool = new Map<string, LeaderboardCacheRow[]>()
 
-    for (const row of cacheRows ?? []) {
-      rankByMember.set(row.member_id, row.rank)
+  if (poolIds.length > 0) {
+    const { data: allPoolMemberRows } = await supabase
+      .from('pool_members')
+      .select('id, pool_id, user_id, display_name, joined_at')
+      .in('pool_id', poolIds)
+
+    for (const row of allPoolMemberRows ?? []) {
+      const members = poolMembersByPool.get(row.pool_id) ?? []
+      members.push({
+        id: row.id,
+        user_id: row.user_id,
+        display_name: row.display_name?.trim() || 'Member',
+        joined_at: row.joined_at,
+      })
+      poolMembersByPool.set(row.pool_id, members)
+    }
+
+    const { data: cacheRowsAll } = await supabase
+      .from('leaderboard_cache')
+      .select(
+        'pool_id, rank, prev_rank, member_id, total_points, correct_winners',
+      )
+      .in('pool_id', poolIds)
+
+    for (const row of cacheRowsAll ?? []) {
+      const cacheRows = cacheRowsByPool.get(row.pool_id) ?? []
+      cacheRows.push({
+        rank: row.rank,
+        prev_rank: row.prev_rank,
+        member_id: row.member_id,
+        total_points: row.total_points,
+        correct_winners: row.correct_winners,
+      })
+      cacheRowsByPool.set(row.pool_id, cacheRows)
+    }
+  }
+
+  const placeByMember = new Map<string, number>()
+  for (const row of validMemberships) {
+    const pool = row.pools!
+    const isWinnerPool = pool.scoring_style === 'winner'
+    const poolMembers = poolMembersByPool.get(pool.id) ?? []
+    const leaderboardMembers = buildPoolLeaderboardMembers({
+      poolMembers,
+      creatorUserId: pool.creator_id,
+      cacheRows: cacheRowsByPool.get(pool.id) ?? null,
+      matchesPlayedCount,
+      currentUserId: userId,
+      predictionsByMember: new Map(),
+      isWinnerPool,
+      avatarsByMemberId: new Map(),
+    })
+
+    if (
+      !poolHasLeaderboardResults(
+        leaderboardMembers,
+        matchesPlayedCount,
+        isWinnerPool,
+      )
+    ) {
+      continue
+    }
+
+    const place = getMemberConsecutivePlace(leaderboardMembers, row.id)
+    if (place != null) {
+      placeByMember.set(row.id, place)
     }
   }
 
@@ -205,7 +278,7 @@ export async function fetchDashboardPools(
       inviteCode: pool.invite_code,
       members: memberCountByPool.get(pool.id) ?? 1,
       memberAvatars: memberAvatarsByPool.get(pool.id) ?? [],
-      yourRank: rankByMember.get(row.id) ?? null,
+      yourRank: placeByMember.get(row.id) ?? null,
       totalPredictions: poolTotalPredictions,
       yourPredictions,
       nextMatchKickoffAt,

@@ -70,6 +70,93 @@ const TEAM_FLAG_EMOJI: Record<string, string> = {
   Ireland: '🇮🇪',
 }
 
+/** FIFA-style 3-letter codes for compact match labels. */
+const TEAM_FIFA_CODE: Record<string, string> = {
+  Algeria: 'ALG',
+  Argentina: 'ARG',
+  Australia: 'AUS',
+  Austria: 'AUT',
+  Belgium: 'BEL',
+  Bolivia: 'BOL',
+  'Bosnia and Herzegovina': 'BIH',
+  Bosnia: 'BIH',
+  Brazil: 'BRA',
+  Cameroon: 'CMR',
+  Canada: 'CAN',
+  Chile: 'CHI',
+  China: 'CHN',
+  Colombia: 'COL',
+  'Costa Rica': 'CRC',
+  Croatia: 'CRO',
+  'Czech Republic': 'CZE',
+  'Czech Rep': 'CZE',
+  Denmark: 'DEN',
+  Ecuador: 'ECU',
+  Egypt: 'EGY',
+  England: 'ENG',
+  France: 'FRA',
+  Germany: 'GER',
+  Ghana: 'GHA',
+  Greece: 'GRE',
+  Honduras: 'HON',
+  Hungary: 'HUN',
+  India: 'IND',
+  Iran: 'IRN',
+  Ireland: 'IRL',
+  'Republic of Ireland': 'IRL',
+  Italy: 'ITA',
+  Jamaica: 'JAM',
+  Japan: 'JPN',
+  Mexico: 'MEX',
+  Morocco: 'MAR',
+  Netherlands: 'NED',
+  'New Zealand': 'NZL',
+  Nigeria: 'NGA',
+  Norway: 'NOR',
+  Panama: 'PAN',
+  Paraguay: 'PAR',
+  Peru: 'PER',
+  Poland: 'POL',
+  Portugal: 'POR',
+  Qatar: 'QAT',
+  Romania: 'ROU',
+  Russia: 'RUS',
+  'Saudi Arabia': 'KSA',
+  Scotland: 'SCO',
+  Senegal: 'SEN',
+  Serbia: 'SRB',
+  Slovakia: 'SVK',
+  Slovenia: 'SVN',
+  'South Africa': 'RSA',
+  'S.Africa': 'RSA',
+  'South Korea': 'KOR',
+  Korea: 'KOR',
+  Spain: 'ESP',
+  Sweden: 'SWE',
+  Switzerland: 'SUI',
+  Tunisia: 'TUN',
+  Turkey: 'TUR',
+  Turkiye: 'TUR',
+  Ukraine: 'UKR',
+  USA: 'USA',
+  'United States': 'USA',
+  Uruguay: 'URU',
+  Venezuela: 'VEN',
+  Wales: 'WAL',
+  'Ivory Coast': 'CIV',
+  "Cote d'Ivoire": 'CIV',
+  'Cape Verde': 'CPV',
+  'Cabo Verde': 'CPV',
+  Curacao: 'CUW',
+  Curaçao: 'CUW',
+  Haiti: 'HAI',
+  Iraq: 'IRQ',
+  Jordan: 'JOR',
+  Uzbekistan: 'UZB',
+  Congo: 'COD',
+  'DR Congo': 'COD',
+}
+
 const NAME_ALIASES: Record<string, string> = {
   'korea republic': 'South Korea',
   'republic of korea': 'South Korea',
@@ -313,4 +400,35 @@ export function resolveTeamFlagDisplay(
 ): string {
   const resolved = resolveTeamFlag(teamName, dbFlag)
   return resolved.kind === 'emoji' ? resolved.value : resolved.value
+}
+
+function lookupFifaCode(teamName: string): string | undefined {
+  const trimmed = teamName.trim()
+  if (TEAM_FIFA_CODE[trimmed]) return TEAM_FIFA_CODE[trimmed]
+
+  const aliasKey = trimmed.toLowerCase()
+  const canonical = NAME_ALIASES[aliasKey]
+  if (canonical && TEAM_FIFA_CODE[canonical]) return TEAM_FIFA_CODE[canonical]
+
+  const lower = trimmed.toLowerCase()
+  for (const [key, code] of Object.entries(TEAM_FIFA_CODE)) {
+    if (key.toLowerCase() === lower) return code
+  }
+
+  return undefined
+}
+
+/** Three-letter label for compact fixtures (FIFA code when known). */
+export function countryNameToThreeLetterCode(countryName: string): string {
+  const mapped = lookupFifaCode(countryName)
+  if (mapped) return mapped
+
+  const words = countryName.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return '???'
+  if (words.length === 1) return words[0]!.slice(0, 3).toUpperCase()
+  return words
+    .map((word) => word[0] ?? '')
+    .join('')
+    .slice(0, 3)
+    .toUpperCase()
 }
