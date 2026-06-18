@@ -32,8 +32,11 @@ type PoolMemberRow = {
   display_name: string
 }
 
-type PoolAvatarRow = {
+type PoolAvatarBatchRow = {
+  pool_id: string
   member_id: string
+  user_id: string
+  display_name: string
   avatar: string | null
 }
 
@@ -172,26 +175,21 @@ async function fetchMemberPreviewsByPoolId(
   }
 
   const avatarByMemberId = new Map<string, string | null>()
-  await Promise.all(
-    poolIds.map(async (poolId) => {
-      const { data: avatarRows, error: avatarError } = await supabase.rpc(
-        'get_pool_member_avatars',
-        { p_pool_id: poolId },
-      )
-
-      if (avatarError) {
-        console.error(
-          `Failed to load member avatars for pool ${poolId}:`,
-          avatarError.message,
-        )
-        return
-      }
-
-      for (const row of (avatarRows ?? []) as PoolAvatarRow[]) {
-        avatarByMemberId.set(String(row.member_id), row.avatar ?? null)
-      }
-    }),
+  const { data: avatarRows, error: avatarError } = await supabase.rpc(
+    'get_pool_member_avatars_batch',
+    { p_pool_ids: poolIds },
   )
+
+  if (avatarError) {
+    console.error(
+      'Failed to load member avatars for chat inbox:',
+      avatarError.message,
+    )
+  } else {
+    for (const row of (avatarRows ?? []) as PoolAvatarBatchRow[]) {
+      avatarByMemberId.set(String(row.member_id), row.avatar ?? null)
+    }
+  }
 
   for (const row of (memberRows ?? []) as PoolMemberRow[]) {
     const displayName = row.display_name?.trim() || 'Member'

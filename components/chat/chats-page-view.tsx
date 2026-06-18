@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { LeaderboardMemberAvatar } from '@/components/pool/leaderboard-grouped-list'
+import { ChatInboxSkeleton } from '@/components/chat/chat-inbox-skeleton'
 import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
@@ -255,9 +256,7 @@ export function ChatsPageView({
           </h1>
 
           {loading ? (
-            <p className="mt-8 text-center text-sm text-muted-foreground">
-              Loading chats…
-            </p>
+            <ChatInboxSkeleton />
           ) : error ? (
             <p className="mt-8 text-center text-sm text-destructive">{error}</p>
           ) : items.length === 0 ? (
