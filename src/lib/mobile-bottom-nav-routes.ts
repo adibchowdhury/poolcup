@@ -5,6 +5,31 @@ export type MobileBottomNavId =
   | 'how-it-works'
   | 'chat'
 
+/** Dashboard footer tabs only (excludes Chat). */
+export type DashboardBottomNavId = Exclude<MobileBottomNavId, 'chat'>
+
+export const DASHBOARD_NAV_ID_TO_TAB_VALUE: Record<DashboardBottomNavId, string> =
+  {
+    pools: 'pools',
+    upcoming: 'games',
+    profile: 'profile',
+    'how-it-works': 'how-it-works',
+  }
+
+export const DASHBOARD_TAB_VALUE_TO_NAV_ID: Record<string, DashboardBottomNavId> =
+  {
+    pools: 'pools',
+    games: 'upcoming',
+    profile: 'profile',
+    'how-it-works': 'how-it-works',
+  }
+
+export function isDashboardBottomNavId(
+  id: MobileBottomNavId,
+): id is DashboardBottomNavId {
+  return id !== 'chat'
+}
+
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
   'max-sm:pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))]'
 

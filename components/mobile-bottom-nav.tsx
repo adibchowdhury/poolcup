@@ -18,10 +18,12 @@ import {
   isAuthenticatedAppPath,
 } from '@/src/lib/authenticated-paths'
 import { useMobileInputFocused } from '@/hooks/use-mobile-input-focused'
+import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import {
   CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
+  isDashboardBottomNavId,
   type MobileBottomNavId,
   resolveMobileBottomNavActive,
 } from '@/src/lib/mobile-bottom-nav-routes'
@@ -49,15 +51,55 @@ const NAV_ITEMS: {
   },
 ]
 
+const navItemClassName = (isActive: boolean) =>
+  cn(
+    'flex min-w-0 flex-col items-center justify-center gap-0.5 overflow-visible px-0.5 py-1 text-[10px] font-medium transition-colors',
+    isActive
+      ? 'text-primary'
+      : 'text-muted-foreground hover:text-foreground',
+  )
+
+function NavItemContent({
+  item,
+}: {
+  item: (typeof NAV_ITEMS)[number]
+}) {
+  const Icon = item.icon
+  const unreadChatCount = useUnreadChatCount()
+
+  if (item.id === 'chat') {
+    return (
+      <>
+        <ChatNavIconWithBadge
+          icon={MessageCircle}
+          count={unreadChatCount}
+          variant="footer"
+        />
+        <span className="max-w-full truncate">{item.label}</span>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      <span className="max-w-full truncate">{item.label}</span>
+    </>
+  )
+}
+
 function MobileBottomNavContent() {
   const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
   const { mobileChatActive } = useMobileChatChrome()
   const inputFocused = useMobileInputFocused()
+  const { activeNavId, switchDashboardTab } = useDashboardTab()
 
   const tabParam = searchParams.get('tab')
-  const activeId = resolveMobileBottomNavActive(pathname, tabParam)
-  const unreadChatCount = useUnreadChatCount()
+  const isOnDashboard = pathname === '/dashboard'
+  const routeActiveId = resolveMobileBottomNavActive(pathname, tabParam)
+  const activeId =
+    isOnDashboard && activeNavId != null ? activeNavId : routeActiveId
   const onPredictPage = hasAuthenticatedBottomBar(pathname)
   const visible =
     isAuthenticatedAppPath(pathname) &&
@@ -76,31 +118,31 @@ function MobileBottomNavContent() {
     >
       <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-5 items-stretch overflow-visible px-1">
         {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
           const isActive = activeId === item.id
+
+          if (isOnDashboard && isDashboardBottomNavId(item.id)) {
+            const dashboardTabId = item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => switchDashboardTab(dashboardTabId)}
+                className={navItemClassName(isActive)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <NavItemContent item={item} />
+              </button>
+            )
+          }
 
           return (
             <Link
               key={item.id}
               href={item.href}
-              className={cn(
-                'flex min-w-0 flex-col items-center justify-center gap-0.5 overflow-visible px-0.5 py-1 text-[10px] font-medium transition-colors',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
+              className={navItemClassName(isActive)}
               aria-current={isActive ? 'page' : undefined}
             >
-              {item.id === 'chat' ? (
-                <ChatNavIconWithBadge
-                  icon={MessageCircle}
-                  count={unreadChatCount}
-                  variant="footer"
-                />
-              ) : (
-                <Icon className="h-5 w-5 shrink-0" aria-hidden />
-              )}
-              <span className="max-w-full truncate">{item.label}</span>
+              <NavItemContent item={item} />
             </Link>
           )
         })}

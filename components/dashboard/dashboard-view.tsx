@@ -33,6 +33,11 @@ import {
   getPlayerLevelFromPoints,
 } from '@/src/lib/player-level'
 import { supabase } from '@/src/lib/supabase'
+import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
+import {
+  DASHBOARD_NAV_ID_TO_TAB_VALUE,
+  DASHBOARD_TAB_VALUE_TO_NAV_ID,
+} from '@/src/lib/mobile-bottom-nav-routes'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -113,6 +118,7 @@ function DashboardViewContent({
   const [pointsAnimKey, setPointsAnimKey] = useState(0)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { registerDashboardNavHandler, setActiveNavId } = useDashboardTab()
   const [activeTab, setActiveTab] = useState(() =>
     dashboardTabFromParam(searchParams.get('tab')),
   )
@@ -120,6 +126,13 @@ function DashboardViewContent({
   useEffect(() => {
     setActiveTab(dashboardTabFromParam(searchParams.get('tab')))
   }, [searchParams])
+
+  useEffect(() => {
+    const navId = DASHBOARD_TAB_VALUE_TO_NAV_ID[activeTab]
+    if (navId) {
+      setActiveNavId(navId)
+    }
+  }, [activeTab, setActiveNavId])
 
   const refreshUserPoints = useCallback(async () => {
     const { data, error } = await supabase
@@ -153,6 +166,16 @@ function DashboardViewContent({
     },
     [router, searchParams, refreshUserPoints],
   )
+
+  useEffect(() => {
+    registerDashboardNavHandler((navId) => {
+      handleTabChange(DASHBOARD_NAV_ID_TO_TAB_VALUE[navId])
+    })
+    return () => {
+      registerDashboardNavHandler(null)
+      setActiveNavId(null)
+    }
+  }, [handleTabChange, registerDashboardNavHandler, setActiveNavId])
 
   useEffect(() => {
     async function loadAvatars() {

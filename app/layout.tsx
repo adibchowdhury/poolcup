@@ -14,6 +14,7 @@ import { AuthenticatedChrome } from '@/components/authenticated-chrome'
 import { ReportIssueProvider } from '@/components/report-issue-dialog'
 import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
 import { AuthProvider } from '@/src/lib/auth-context'
+import { DashboardTabProvider } from '@/src/lib/dashboard-tab-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
 
@@ -86,10 +87,12 @@ export default function RootLayout({
           <MobileChatChromeProvider>
             <ReportIssueProvider>
               <Suspense fallback={null}>
-                <UnreadChatCountProvider>
-                  {children}
-                  <AuthenticatedChrome />
-                </UnreadChatCountProvider>
+                <DashboardTabProvider>
+                  <UnreadChatCountProvider>
+                    {children}
+                    <AuthenticatedChrome />
+                  </UnreadChatCountProvider>
+                </DashboardTabProvider>
               </Suspense>
             </ReportIssueProvider>
           </MobileChatChromeProvider>
