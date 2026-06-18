@@ -13,8 +13,17 @@ export function isPresetAvatarFilename(filename: string | null | undefined): boo
 }
 
 export function resolveAvatarFilename(avatar: string | null | undefined): string {
-  if (avatar && isSafeAvatarFilename(avatar)) {
-    return avatar
+  if (!avatar) {
+    return DEFAULT_AVATAR
+  }
+
+  const normalized = avatar
+    .trim()
+    .replace(/^\/+/, '')
+    .replace(/^avatars\//i, '')
+
+  if (isSafeAvatarFilename(normalized)) {
+    return normalized
   }
 
   return DEFAULT_AVATAR

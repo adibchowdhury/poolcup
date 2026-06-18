@@ -80,7 +80,10 @@ function ChatInboxRow({
                 {visibleMembers.map((member, index) => (
                   <div
                     key={member.memberId}
-                    className={cn('ring-2 ring-background', index > 0 && '-ml-2')}
+                    className={cn(
+                      'shrink-0 rounded-full ring-2 ring-card',
+                      index > 0 && '-ml-2',
+                    )}
                   >
                     <LeaderboardMemberAvatar
                       member={{
@@ -89,7 +92,6 @@ function ChatInboxRow({
                         isYou: member.isYou,
                       }}
                       className="h-7 w-7 text-[10px] sm:h-7 sm:w-7"
-                      imageClassName="size-7"
                     />
                   </div>
                 ))}

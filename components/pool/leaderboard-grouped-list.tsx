@@ -8,7 +8,7 @@ import type {
   LeaderboardMember,
   LeaderboardPointBreakdownItem,
 } from '@/components/pool/leaderboard-row'
-import { getAvatarSrc } from '@/src/lib/avatars'
+import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
@@ -126,6 +126,9 @@ function MemberAvatar({
   className?: string
   imageClassName?: string
 }) {
+  const avatarFilename = resolveAvatarFilename(member.avatar)
+  const showAvatarImage = Boolean(member.avatar?.trim())
+
   return (
     <div
       className={cn(
@@ -136,13 +139,16 @@ function MemberAvatar({
         className,
       )}
     >
-      {member.avatar ? (
+      {showAvatarImage ? (
         <Image
-          src={getAvatarSrc(member.avatar)}
+          src={getAvatarSrc(avatarFilename)}
           alt=""
           width={40}
           height={40}
-          className={cn('size-10 shrink-0 object-cover object-top', imageClassName)}
+          className={cn(
+            'size-full shrink-0 object-contain object-center',
+            imageClassName,
+          )}
         />
       ) : (
         member.name.charAt(0).toUpperCase()
