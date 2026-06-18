@@ -19,6 +19,8 @@ import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
+import { RulesUpdateBanner } from '@/components/dashboard/rules-update-banner'
+import { ThirdPlaceDeadlineBanner } from '@/components/dashboard/third-place-deadline-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
   prefetchUpcomingMatches,
@@ -346,6 +348,10 @@ function DashboardViewContent({
       avatar={selectedAvatar}
     >
       <ScoringUpdateNoticeBanner />
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4">
+        <ThirdPlaceDeadlineBanner userId={userId} />
+        <RulesUpdateBanner userId={userId} />
+      </div>
 
           {passwordResetSuccess && (
             <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">

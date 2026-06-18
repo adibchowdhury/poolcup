@@ -1,8 +1,46 @@
 'use client'
 
 import { Check, Lock, Star, Target, Trophy, Zap } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { PLAYER_LEVEL_TIERS } from '@/src/lib/player-level'
+
+const CLASSIC_GROUP_RULES = [
+  'Exact score — 5 points',
+  'Correct draw, wrong score — 3 points',
+  'Correct winner, wrong score — 2 points',
+  'Wrong outcome — 0 points',
+] as const
+
+const CLASSIC_KNOCKOUT_ROWS = [
+  { round: 'Round of 32', exact: 7, winner: 3 },
+  { round: 'Round of 16', exact: 10, winner: 4 },
+  { round: 'Quarterfinals', exact: 12, winner: 5 },
+  { round: 'Semifinals', exact: 15, winner: 6 },
+  { round: 'Final', exact: 20, winner: 8 },
+] as const
+
+const WINNER_GROUP_RULES = [
+  'Correct group winner — 5 points',
+  'Both qualifiers (top two, any order) — 3 points',
+  'Each team in its exact position — 2 points',
+  'Each correct best third-place team — 2 points',
+] as const
+
+const WINNER_KNOCKOUT_ROWS = [
+  { round: 'Round of 32', points: 3 },
+  { round: 'Round of 16', points: 4 },
+  { round: 'Quarterfinals', points: 5 },
+  { round: 'Semifinals', points: 6 },
+  { round: 'Final', points: 8 },
+] as const
 
 const SCORING_MODES = [
   {
@@ -13,13 +51,17 @@ const SCORING_MODES = [
     iconColor: 'text-[#3b82f6]',
     iconBg: 'bg-[#3b82f6]/15',
     icon: Target,
-    rules: [
-      'Exact score — 5 points',
-      'Correct draw (not the exact score) — 3 points',
-      'Correct winner, wrong score — 2 points',
-      'Wrong outcome — 0 points',
-    ],
-    footer: 'Knockout rounds (Round of 32 → Final) score double.',
+    groupHeading: 'Group stage',
+    groupIntro:
+      'Per match — highest tier that applies. Draws are possible in the group stage.',
+    groupRules: CLASSIC_GROUP_RULES,
+    knockoutHeading: 'Knockouts',
+    knockoutIntro:
+      'Per match — highest tier that applies. Knockout matches cannot end in a draw.',
+    knockoutRows: CLASSIC_KNOCKOUT_ROWS,
+    knockoutKind: 'classic' as const,
+    footer:
+      'Picks lock at kickoff. Points are added to your pool total and your cross-pool level.',
   },
   {
     id: 'winner',
@@ -30,16 +72,94 @@ const SCORING_MODES = [
     iconColor: 'text-[#22c55e]',
     iconBg: 'bg-[#22c55e]/15',
     icon: Zap,
-    rules: [
-      'Correct group winner — +5',
-      'Both qualifiers (top two, any order) — +3',
-      'Each team in its exact position — +2',
-      'Each correct best third-place team — +2',
-    ],
+    groupHeading: 'Group stage',
+    groupIntro: 'Scored when each group finishes.',
+    groupRules: WINNER_GROUP_RULES,
+    knockoutHeading: 'Knockouts',
+    knockoutIntro: 'Pick the winner of each knockout match.',
+    knockoutRows: WINNER_KNOCKOUT_ROWS,
+    knockoutKind: 'winner' as const,
     footer:
-      "Up to 16 points per group. Scored when each group finishes; picks lock at the group's first kickoff. Standings go by points (3 for a win, 1 for a draw), then goal difference, then goals scored.",
+      "Up to 16 points per group. Picks lock at each group's first kickoff. Standings go by points (3 for a win, 1 for a draw), then goal difference, then goals scored.",
   },
 ] as const
+
+function ScoringRulesList({
+  rules,
+  iconBg,
+}: {
+  rules: readonly string[]
+  iconBg: string
+}) {
+  return (
+    <ul className="space-y-2 text-sm text-muted-foreground">
+      {rules.map((rule) => (
+        <li key={rule} className="flex gap-2">
+          <span
+            className={cn('mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full', iconBg)}
+          />
+          <span>{rule}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ClassicKnockoutPointsTable({
+  rows,
+}: {
+  rows: typeof CLASSIC_KNOCKOUT_ROWS
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Round</TableHead>
+          <TableHead>Exact score</TableHead>
+          <TableHead>Correct winner</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.round}>
+            <TableCell className="font-medium text-foreground">
+              {row.round}
+            </TableCell>
+            <TableCell>{row.exact}</TableCell>
+            <TableCell>{row.winner}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function WinnerKnockoutPointsTable({
+  rows,
+}: {
+  rows: typeof WINNER_KNOCKOUT_ROWS
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Round</TableHead>
+          <TableHead>Correct winner</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.round}>
+            <TableCell className="font-medium text-foreground">
+              {row.round}
+            </TableCell>
+            <TableCell>{row.points}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
 
 function formatPoints(value: number): string {
   return value.toLocaleString()
@@ -131,19 +251,34 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
 
                 <p className="mb-4 text-sm text-foreground">{mode.intro}</p>
 
-                <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  {mode.rules.map((rule) => (
-                    <li key={rule} className="flex gap-2">
-                      <span
-                        className={cn(
-                          'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
-                          mode.iconBg,
-                        )}
-                      />
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex-1 space-y-5">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-foreground">
+                      {mode.groupHeading}
+                    </h4>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {mode.groupIntro}
+                    </p>
+                    <ScoringRulesList
+                      rules={mode.groupRules}
+                      iconBg={mode.iconBg}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-foreground">
+                      {mode.knockoutHeading}
+                    </h4>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {mode.knockoutIntro}
+                    </p>
+                    {mode.knockoutKind === 'classic' ? (
+                      <ClassicKnockoutPointsTable rows={mode.knockoutRows} />
+                    ) : (
+                      <WinnerKnockoutPointsTable rows={mode.knockoutRows} />
+                    )}
+                  </div>
+                </div>
 
                 <p
                   className={cn(

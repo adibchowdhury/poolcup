@@ -20,6 +20,7 @@ import { R32BracketScaffold } from '@/components/predict/r32-bracket-scaffold'
 import { WinnerOnlyLockedRoundState } from '@/components/predict/winner-only-locked-round-state'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import { trackEvent } from '@/src/lib/track'
 import { supabase } from '@/src/lib/supabase'
 import {
   WORLD_CUP_GROUP_LETTERS,
@@ -95,6 +96,18 @@ export function WinnerOnlyPredictView({
   >(new Map())
   const [matchesLoading, setMatchesLoading] = useState(true)
   const predictionsCompletedTrackedRef = useRef(false)
+  const thirdPlaceStartedTrackedRef = useRef(false)
+
+  useEffect(() => {
+    if (thirdPlaceStartedTrackedRef.current || !user?.id) return
+
+    thirdPlaceStartedTrackedRef.current = true
+    trackEvent('third_place_started', {
+      poolId: pool.id,
+      userId: user.id,
+      metadata: { pool_id: pool.id },
+    })
+  }, [pool.id, user?.id])
 
   const loadMatches = useCallback(async () => {
     setMatchesLoading(true)
