@@ -11,8 +11,10 @@ import { cn } from '@/lib/utils'
 import {
   fetchPoolChatInbox,
   formatChatMemberNames,
+  formatPoolChatLastMessagePreview,
   getVisibleMemberOverflow,
   getVisibleMembers,
+  poolChatHasMessage,
   type PoolChatInboxItem,
 } from '@/src/lib/pool-chats'
 import { formatChatTimestamp } from '@/src/lib/pool-chat-helpers'
@@ -24,12 +26,6 @@ import {
 } from '@/src/lib/pool-unread-counts'
 import { supabase } from '@/src/lib/supabase'
 import { Tabs } from '@/components/ui/tabs'
-
-function poolChatHasMessage(item: PoolChatInboxItem): boolean {
-  return (
-    item.last_message_content != null && item.last_message_content.trim() !== ''
-  )
-}
 
 type ChatsPageViewProps = {
   userId: string
@@ -50,6 +46,7 @@ function ChatInboxRow({
   const overflowCount = getVisibleMemberOverflow(item.member_count)
   const memberNames = formatChatMemberNames(item.members, item.member_count)
   const hasMessage = poolChatHasMessage(item)
+  const previewText = formatPoolChatLastMessagePreview(item, userId, item.members)
 
   return (
     <li>
@@ -124,7 +121,7 @@ function ChatInboxRow({
                   : 'italic text-muted-foreground',
               )}
             >
-              {hasMessage ? item.last_message_content : 'No messages yet'}
+              {previewText}
             </p>
             {item.last_message_at ? (
               <time

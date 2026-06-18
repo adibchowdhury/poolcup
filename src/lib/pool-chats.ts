@@ -6,11 +6,13 @@ export type UserPoolChatRow = {
   member_count: number
   last_message_content: string | null
   last_message_at: string | null
+  last_message_user_id: string | null
   unread_count: number
 }
 
 export type PoolChatMemberPreview = {
   memberId: string
+  userId: string
   name: string
   isYou: boolean
   avatar: string | null
@@ -58,6 +60,36 @@ export function formatChatMemberNames(
   return names
 }
 
+export function poolChatHasMessage(item: {
+  last_message_content: string | null
+}): boolean {
+  return (
+    item.last_message_content != null && item.last_message_content.trim() !== ''
+  )
+}
+
+export function formatPoolChatLastMessagePreview(
+  item: Pick<
+    UserPoolChatRow,
+    'last_message_content' | 'last_message_user_id'
+  >,
+  currentUserId: string,
+  members: PoolChatMemberPreview[],
+): string {
+  if (!poolChatHasMessage(item)) return 'No messages yet'
+
+  const content = item.last_message_content!.trim()
+  const senderId = item.last_message_user_id
+
+  if (!senderId) return content
+
+  if (senderId === currentUserId) return `You: ${content}`
+
+  const sender = members.find((member) => member.userId === senderId)
+  const senderName = sender?.name?.trim() || 'Member'
+  return `${senderName}: ${content}`
+}
+
 export async function fetchUserPoolChats(
   supabase: SupabaseClient,
 ): Promise<UserPoolChatRow[]> {
@@ -69,6 +101,34 @@ export async function fetchUserPoolChats(
   }
 
   return (data ?? []) as UserPoolChatRow[]
+}
+
+type LastMessageSenderRow = {
+  pool_id: string
+  user_id: string
+}
+
+async function fetchLastMessageUserIdByPoolId(
+  supabase: SupabaseClient,
+  poolIds: string[],
+): Promise<Map<string, string>> {
+  const senderByPoolId = new Map<string, string>()
+  if (poolIds.length === 0) return senderByPoolId
+
+  const { data, error } = await supabase.rpc('get_pool_last_message_senders', {
+    p_pool_ids: poolIds,
+  })
+
+  if (error) {
+    console.error('Failed to load last message senders:', error.message)
+    return senderByPoolId
+  }
+
+  for (const row of (data ?? []) as LastMessageSenderRow[]) {
+    senderByPoolId.set(row.pool_id, row.user_id)
+  }
+
+  return senderByPoolId
 }
 
 async function fetchInviteCodesByPoolId(
@@ -138,6 +198,7 @@ async function fetchMemberPreviewsByPoolId(
     const members = membersByPoolId.get(row.pool_id) ?? []
     members.push({
       memberId: row.id,
+      userId: row.user_id,
       name: displayName,
       isYou: row.user_id === currentUserId,
       avatar: avatarByMemberId.get(row.id) ?? null,
@@ -156,14 +217,17 @@ export async function fetchPoolChatInbox(
   if (rows.length === 0) return []
 
   const poolIds = rows.map((row) => row.pool_id)
-  const [inviteByPoolId, membersByPoolId] = await Promise.all([
-    fetchInviteCodesByPoolId(supabase, poolIds),
-    fetchMemberPreviewsByPoolId(supabase, poolIds, userId),
-  ])
+  const [inviteByPoolId, membersByPoolId, lastMessageSenderByPoolId] =
+    await Promise.all([
+      fetchInviteCodesByPoolId(supabase, poolIds),
+      fetchMemberPreviewsByPoolId(supabase, poolIds, userId),
+      fetchLastMessageUserIdByPoolId(supabase, poolIds),
+    ])
 
   return rows
     .map((row) => ({
       ...row,
+      last_message_user_id: lastMessageSenderByPoolId.get(row.pool_id) ?? null,
       inviteCode: inviteByPoolId.get(row.pool_id) ?? '',
       members: membersByPoolId.get(row.pool_id) ?? [],
     }))
