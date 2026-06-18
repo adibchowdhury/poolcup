@@ -528,8 +528,10 @@ function DashboardViewContent({
               </div>
             </TabsContent>
 
-            <TabsContent value="pools" className="mt-4 space-y-6">
-              <WorldCupUrgencyBanner />
+            <TabsContent value="pools" className="space-y-6">
+              <div className="-mt-4">
+                <WorldCupUrgencyBanner />
+              </div>
               <LiveScoreboard />
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
