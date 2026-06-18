@@ -145,7 +145,7 @@ function FeaturedMatchCountdownDisplay({
         className={cn(
           'font-mono font-bold tabular-nums text-[#ffb300]',
           compact
-            ? 'text-xs'
+            ? 'text-sm'
             : 'text-xl sm:text-2xl lg:text-3xl',
         )}
         aria-hidden
@@ -160,7 +160,7 @@ function FeaturedMatchCountdownDisplay({
       <span
         className={cn(
           'inline-flex items-center gap-1.5 font-display font-bold uppercase tracking-wide text-primary animate-pulse',
-          compact ? 'text-[10px]' : 'text-xl sm:text-2xl lg:text-3xl',
+          compact ? 'text-[11px]' : 'text-xl sm:text-2xl lg:text-3xl',
         )}
         suppressHydrationWarning
       >
@@ -174,7 +174,7 @@ function FeaturedMatchCountdownDisplay({
     <span
       className={cn(
         'font-mono font-bold leading-none tabular-nums text-[#ffb300]',
-        compact ? 'text-xs' : 'text-xl sm:text-2xl lg:text-3xl',
+        compact ? 'text-sm' : 'text-xl sm:text-2xl lg:text-3xl',
       )}
       suppressHydrationWarning
     >
@@ -187,17 +187,17 @@ export function LiveScoreboardSkeleton({ compact = false }: { compact?: boolean 
   if (compact) {
     return (
       <div
-        className="animate-pulse rounded-xl border border-border/80 bg-card/80 px-3 py-2.5"
+        className="animate-pulse rounded-xl border border-border/80 bg-card/80 px-3 py-3"
         aria-busy="true"
         aria-label="Loading live scoreboard"
       >
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded bg-muted" />
-          <div className="h-3 flex-1 rounded bg-muted" />
-          <div className="h-5 w-10 shrink-0 rounded bg-muted" />
-          <div className="h-3 flex-1 rounded bg-muted" />
-          <div className="h-6 w-6 rounded bg-muted" />
-          <div className="h-8 w-12 shrink-0 rounded bg-muted" />
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded bg-muted" />
+          <div className="h-3.5 flex-1 rounded bg-muted" />
+          <div className="h-6 w-11 shrink-0 rounded bg-muted" />
+          <div className="h-3.5 flex-1 rounded bg-muted" />
+          <div className="h-7 w-7 rounded bg-muted" />
+          <div className="h-9 w-14 shrink-0 rounded bg-muted" />
         </div>
       </div>
     )
@@ -259,17 +259,17 @@ function CompactScoreboardTeam({
   return (
     <div
       className={cn(
-        'flex min-w-0 flex-1 items-center gap-1.5',
+        'flex min-w-0 flex-1 items-center gap-2',
         align === 'right' && 'flex-row-reverse',
       )}
     >
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
-        imgClassName="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7"
-        emojiClassName="text-base sm:text-lg"
+        imgClassName="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8"
+        emojiClassName="text-lg sm:text-xl"
       />
-      <span className="truncate text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
+      <span className="truncate text-xs font-semibold leading-tight text-foreground sm:text-sm">
         {name}
       </span>
     </div>
@@ -305,7 +305,7 @@ function CompactLiveScoreboardCard({
   return (
     <article
       className={cn(
-        'relative overflow-hidden rounded-xl border border-white/15 backdrop-blur-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.1)] px-2.5 py-2 sm:px-3 sm:py-2.5',
+        'relative overflow-hidden rounded-xl border border-white/15 backdrop-blur-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.1)] px-3 py-2.5 sm:px-4 sm:py-3',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/40 before:to-transparent',
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
@@ -318,7 +318,7 @@ function CompactLiveScoreboardCard({
             'radial-gradient(80% 80% at 50% 0%, hsl(var(--primary) / 0.28), transparent 70%), #0D1F14',
         }}
       />
-      <div className="relative flex items-center gap-1.5 sm:gap-2">
+      <div className="relative flex items-center gap-2 sm:gap-2.5">
         <CompactScoreboardTeam
           name={match.team1_name}
           dbFlag={match.team1_flag}
@@ -327,14 +327,14 @@ function CompactLiveScoreboardCard({
 
         <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-1">
           {isLive || mode === 'final' ? (
-            <p className="font-display text-base leading-none tracking-wide text-foreground tabular-nums sm:text-lg">
+            <p className="font-display text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
               <span className="text-primary">{score1}</span>
               <span className="mx-0.5 text-muted-foreground/80">–</span>
               <span className="text-primary">{score2}</span>
             </p>
           ) : (
             <>
-              <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+              <span className="font-display text-sm uppercase tracking-wider text-muted-foreground">
                 vs
               </span>
               {isUpcoming ? (
@@ -350,10 +350,10 @@ function CompactLiveScoreboardCard({
           align="right"
         />
 
-        <div className="ml-0.5 shrink-0 border-l border-white/10 pl-2 sm:pl-2.5">
+        <div className="ml-0.5 shrink-0 border-l border-white/10 pl-2.5 sm:pl-3">
           {isLive ? (
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-red-400">
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-400">
                 <span
                   className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
                   aria-hidden
@@ -361,18 +361,18 @@ function CompactLiveScoreboardCard({
                 Live
               </span>
               <span
-                className="text-[10px] font-medium tabular-nums leading-none text-primary sm:text-xs"
+                className="text-[11px] font-medium tabular-nums leading-none text-primary sm:text-xs"
                 suppressHydrationWarning
               >
                 {liveTopRightLabel}
               </span>
             </div>
           ) : isUpcoming ? (
-            <span className="text-[9px] font-bold uppercase tracking-wide text-primary sm:text-[10px]">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-primary sm:text-xs">
               Up next
             </span>
           ) : (
-            <span className="max-w-[4.5rem] text-right text-[9px] font-medium uppercase leading-tight tracking-wide text-muted-foreground sm:max-w-none sm:text-[10px]">
+            <span className="max-w-[4.5rem] text-right text-[10px] font-medium uppercase leading-tight tracking-wide text-muted-foreground sm:max-w-none sm:text-xs">
               {statusLabel}
             </span>
           )}

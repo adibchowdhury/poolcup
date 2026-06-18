@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Flag, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react'
+import { Flag, MessageCircle, MoreHorizontal, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -179,7 +179,7 @@ function ChatMessageBubble({
           isYou ? 'items-end' : 'items-start',
         )}
       >
-        <div className="flex items-start gap-1">
+        <div className={cn('flex items-start gap-1', isYou && 'flex-row-reverse')}>
           <div
             className={cn(
               'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
@@ -246,7 +246,6 @@ function ChatMessageBubble({
                       setMenuOpen(false)
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 ) : null}
@@ -308,17 +307,10 @@ function ChatMessageGroup({
   const firstMessage = messages[0]!
 
   return (
-    <div
-      className={cn(
-        'flex w-full min-w-0 gap-2',
-        isYou ? 'flex-row-reverse' : 'flex-row',
-      )}
-    >
-      {isYou ? (
-        <div className="w-8 shrink-0" aria-hidden />
-      ) : (
+    <div className={cn('flex w-full min-w-0', !isYou && 'gap-2')}>
+      {!isYou ? (
         <ChatMonogramAvatar userId={userId} displayName={author.displayName} />
-      )}
+      ) : null}
 
       <div
         className={cn(
@@ -811,7 +803,7 @@ export function PoolChatTab({
             className={cn(
               'min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4',
               fullBleedMobile &&
-                'max-sm:overflow-x-hidden max-sm:scrollbar-none max-sm:overscroll-contain',
+                'max-sm:overflow-x-hidden max-sm:scrollbar-none max-sm:overscroll-contain max-sm:pt-2',
             )}
           >
             {loading ? (

@@ -223,7 +223,7 @@ export function PoolHomeView({
                   </div>
                 </div>
               </div>
-              {canDelete && poolId && (
+              {canDelete && poolId && !isChatView && (
                 <DeletePoolDialog
                   poolId={poolId}
                   poolName={pool.name}
@@ -270,13 +270,15 @@ export function PoolHomeView({
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
               isMobileChatShell &&
-                'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:gap-2 max-sm:overflow-x-hidden max-sm:overflow-hidden',
+                'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
+              isMobileChatShell && isChatView && 'max-sm:gap-0',
             )}
           >
             <div
               className={cn(
                 'max-sm:mt-3',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
+                isChatView && 'max-sm:mt-0',
               )}
             >
               {!isChatView ? (
@@ -439,7 +441,7 @@ export function PoolHomeView({
                   'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-hidden',
                 )}
               >
-                <div className="mb-4 py-3 max-sm:shrink-0 max-sm:px-4">
+                <div className="mb-1.5 pt-2 pb-1 max-sm:shrink-0 max-sm:px-4 sm:mb-3 sm:pt-3 sm:pb-2">
                   <LiveScoreboard compact />
                 </div>
                 {isChatView ? (
