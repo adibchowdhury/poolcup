@@ -156,7 +156,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
 
   return (
     <div className="dashboard-pool-card rounded-2xl">
-      <div className="dashboard-pool-card-surface overflow-hidden rounded-2xl border border-border">
+      <div className="overflow-hidden rounded-2xl border border-border/90 bg-card/90">
       <div className="border-b border-border px-[15px] py-[13px]">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-col gap-1">
@@ -304,7 +304,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
         <button
           type="button"
           onClick={copyCode}
-          className="mt-3 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-[11px] py-[9px] text-left transition-colors hover:bg-muted"
+          className="mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted"
         >
           <UserPlus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
           <span className="flex-1 text-sm font-medium text-primary">
@@ -312,7 +312,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
           </span>
           <code className="font-mono text-sm text-foreground">{pool.inviteCode}</code>
           <span
-            className="inline-flex min-h-10 min-w-10 items-center justify-center text-muted-foreground"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground"
             aria-hidden
           >
             {copied ? (
