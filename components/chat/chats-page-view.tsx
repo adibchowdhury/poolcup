@@ -25,6 +25,12 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { Tabs } from '@/components/ui/tabs'
 
+function poolChatHasMessage(item: PoolChatInboxItem): boolean {
+  return (
+    item.last_message_content != null && item.last_message_content.trim() !== ''
+  )
+}
+
 type ChatsPageViewProps = {
   userId: string
   email: string
@@ -43,8 +49,7 @@ function ChatInboxRow({
   const visibleMembers = getVisibleMembers(item.members)
   const overflowCount = getVisibleMemberOverflow(item.member_count)
   const memberNames = formatChatMemberNames(item.members, item.member_count)
-  const hasMessage =
-    item.last_message_content != null && item.last_message_content.trim() !== ''
+  const hasMessage = poolChatHasMessage(item)
 
   return (
     <li>
@@ -55,33 +60,22 @@ function ChatInboxRow({
           emitPoolMarkedRead(item.pool_id)
         }}
         className={cn(
-          'flex gap-3 border-b border-border/70 px-4 py-3 transition-colors active:bg-muted/60 hover:bg-muted/40',
-          hasUnread && 'bg-primary/[0.04]',
+          'flex cursor-pointer gap-3 rounded-xl border border-border/90 bg-card/90 px-4 py-3.5',
+          'transition-all duration-200 ease-out',
+          'hover:border-primary/40 hover:bg-card hover:shadow-lg hover:shadow-black/25 hover:-translate-y-0.5',
+          'active:scale-[0.98] active:border-border active:bg-muted/60 active:shadow-md active:shadow-black/15',
+          hasUnread && 'bg-primary/[0.06]',
         )}
       >
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h2
-              className={cn(
-                'min-w-0 flex-1 text-[15px] leading-snug break-words',
-                hasUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground',
-              )}
-            >
-              {item.pool_name}
-            </h2>
-            {item.last_message_at ? (
-              <time
-                dateTime={item.last_message_at}
-                className={cn(
-                  'shrink-0 text-[11px] tabular-nums',
-                  hasUnread ? 'font-medium text-primary' : 'text-muted-foreground',
-                )}
-                suppressHydrationWarning
-              >
-                {formatChatTimestamp(item.last_message_at)}
-              </time>
-            ) : null}
-          </div>
+          <h2
+            className={cn(
+              'text-[15px] leading-snug break-words',
+              hasUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground',
+            )}
+          >
+            {item.pool_name}
+          </h2>
 
           {visibleMembers.length > 0 ? (
             <div className="mt-1.5 flex items-center gap-2">
@@ -119,18 +113,32 @@ function ChatInboxRow({
             </div>
           ) : null}
 
-          <p
-            className={cn(
-              'mt-1.5 truncate text-sm leading-snug',
-              hasMessage
-                ? hasUnread
-                  ? 'font-medium text-foreground/90'
-                  : 'text-muted-foreground'
-                : 'italic text-muted-foreground',
-            )}
-          >
-            {hasMessage ? item.last_message_content : 'No messages yet'}
-          </p>
+          <div className="mt-1.5 flex min-w-0 items-baseline gap-2">
+            <p
+              className={cn(
+                'min-w-0 flex-1 truncate text-sm leading-snug',
+                hasMessage
+                  ? hasUnread
+                    ? 'font-medium text-foreground/90'
+                    : 'text-muted-foreground'
+                  : 'italic text-muted-foreground',
+              )}
+            >
+              {hasMessage ? item.last_message_content : 'No messages yet'}
+            </p>
+            {item.last_message_at ? (
+              <time
+                dateTime={item.last_message_at}
+                className={cn(
+                  'shrink-0 text-[11px] tabular-nums',
+                  hasUnread ? 'font-medium text-primary' : 'text-muted-foreground',
+                )}
+                suppressHydrationWarning
+              >
+                {formatChatTimestamp(item.last_message_at)}
+              </time>
+            ) : null}
+          </div>
         </div>
 
         {hasUnread ? (
@@ -270,7 +278,7 @@ export function ChatsPageView({
               </Link>
             </div>
           ) : (
-            <ul className="mt-6 overflow-hidden rounded-xl border border-border/70">
+            <ul className="mt-6 flex flex-col gap-2 sm:gap-2.5">
               {items.map((item) => (
                 <ChatInboxRow key={item.pool_id} item={item} userId={userId} />
               ))}
