@@ -15,9 +15,8 @@ import { supabase } from '@/src/lib/supabase'
 import { trackEvent } from '@/src/lib/track'
 
 const SUPPORT_MESSAGE_PARAGRAPHS = [
-  'PoolCup has grown far beyond what I expected, with over a thousand fans making tens of thousands of predictions throughout the World Cup.',
-  "To keep PoolCup free for everyone, I'm personally covering the costs of hosting, live match data, databases, emails, and ongoing development. As the community grows, so do those costs.",
-  'If PoolCup has made this World Cup more fun for you, please consider supporting the project. Every contribution helps keep PoolCup running and lets me keep improving it.',
+  'Keeping PoolCup free and running costs real money, and right now I cover it all myself.',
+  'If PoolCup has made your World Cup more fun, please consider a small donation to help keep it alive.',
   'Thank you for being part of the community.',
 ] as const
 
@@ -52,10 +51,10 @@ export function SupportPromptDialog({
     })
 
     void supabase
-      .rpc('update_support_prompt_state', { action: 'shown' })
+      .rpc('update_support_prompt_state', { p_action: 'shown' })
       .then(({ error }) => {
         if (error) {
-          console.error('update_support_prompt_state failed:', error.message)
+          console.error('update_support_prompt_state failed:', error)
         }
       })
   }, [eligible, userId])
@@ -86,7 +85,7 @@ export function SupportPromptDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+          <div className="space-y-4 text-sm leading-relaxed text-foreground">
             {SUPPORT_MESSAGE_PARAGRAPHS.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
