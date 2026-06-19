@@ -4,9 +4,14 @@ import { Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import { useAuth } from '@/src/lib/auth-context'
+import {
+  buildStripeDonateUrl,
+  STRIPE_DONATE_BASE_URL,
+} from '@/src/lib/stripe-donate-url'
 
-export const STRIPE_DONATE_URL =
-  'https://donate.stripe.com/aFa9ASayG42Q9P5g1K4ZG00'
+/** @deprecated Use STRIPE_DONATE_BASE_URL or buildStripeDonateUrl() */
+export const STRIPE_DONATE_URL = STRIPE_DONATE_BASE_URL
 
 type SupportUsButtonProps = {
   className?: string
@@ -19,6 +24,9 @@ export function SupportUsButton({
   fullWidth,
   onNavigate,
 }: SupportUsButtonProps) {
+  const { user } = useAuth()
+  const donateHref = buildStripeDonateUrl(user?.id)
+
   return (
     <Button
       asChild
@@ -30,7 +38,7 @@ export function SupportUsButton({
       )}
     >
       <a
-        href={STRIPE_DONATE_URL}
+        href={donateHref}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {

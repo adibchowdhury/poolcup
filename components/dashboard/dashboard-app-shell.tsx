@@ -18,7 +18,7 @@ import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { ReportIssueButton } from '@/components/report-issue-dialog'
-import { STRIPE_DONATE_URL } from '@/components/support-us-button'
+import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
 import {
   Dialog,
   DialogContent,
@@ -195,7 +195,7 @@ export function DashboardAppShell({
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <a
-                            href={STRIPE_DONATE_URL}
+                            href={buildStripeDonateUrl(userId)}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

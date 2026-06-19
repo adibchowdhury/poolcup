@@ -20,6 +20,7 @@ import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { RulesUpdateBanner } from '@/components/dashboard/rules-update-banner'
+import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
 import { ThirdPlaceDeadlineBanner } from '@/components/dashboard/third-place-deadline-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
@@ -65,6 +66,7 @@ interface DashboardViewProps {
   email: string
   displayName?: string | null
   avatar?: string | null
+  supportPromptLastShownAt?: string | null
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
   errorMessage?: string | null
@@ -101,6 +103,7 @@ function DashboardViewContent({
   email,
   displayName,
   avatar,
+  supportPromptLastShownAt = null,
   quickStats,
   passwordResetSuccess,
   errorMessage,
@@ -568,6 +571,12 @@ function DashboardViewContent({
               <HowItWorksTab currentPoints={liveTotalPoints} />
             </TabsContent>
           </Tabs>
+
+      <SupportPromptDialog
+        userId={userId}
+        supportPromptLastShownAt={supportPromptLastShownAt}
+        predictionsMade={quickStats.predictionsMade}
+      />
     </DashboardAppShell>
   )
 }

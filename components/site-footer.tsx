@@ -15,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import { STRIPE_DONATE_BASE_URL } from '@/src/lib/stripe-donate-url'
 
 type FooterLink =
   | { label: string; href: string; external?: boolean }
@@ -34,9 +35,6 @@ const legal: { label: string; href: string }[] = [
   { label: 'Cookie Policy', href: '/cookies' },
   { label: 'How We Protect Your Data', href: '/security' },
 ]
-
-const STRIPE_DONATE_URL =
-  'https://donate.stripe.com/aFa9ASayG42Q9P5g1K4ZG00'
 
 const socialLinks = [
   { label: 'Twitter', href: 'https://twitter.com', icon: Twitter },
@@ -112,7 +110,7 @@ export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps
             </p>
 
             <a
-              href={STRIPE_DONATE_URL}
+              href={STRIPE_DONATE_BASE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 inline-flex items-center justify-center rounded-lg border border-[#4800AE] bg-[#4800AE] px-4 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:border-[#5A10C4] hover:bg-[#5A10C4]"
