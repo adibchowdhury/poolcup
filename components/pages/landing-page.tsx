@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { X } from "lucide-react"
 import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
+import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
@@ -123,11 +124,8 @@ export default function LandingPage() {
       )}
       {/* ===== SECTION 1: HERO ===== */}
       <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
-        <div
-          className="absolute inset-0 bg-[url('/background.png')] bg-cover bg-center bg-no-repeat"
-          aria-hidden
-        />
-        <div className="absolute inset-0 bg-[#080b0f]/70" aria-hidden />
+        <HeroBackgroundCarousel />
+        <div className="pointer-events-none absolute inset-0 bg-[#080b0f]/70" aria-hidden />
         {/* Layered background */}
         <div className="hero-glow-layer hero-glow-primary" aria-hidden />
         <div className="hero-glow-layer hero-glow-secondary" aria-hidden />
@@ -199,8 +197,8 @@ export default function LandingPage() {
                 textShadow: "0 1px 12px rgba(0,0,0,0.9)",
               }}
             >
-              World Cup 2026 kicks off June 11. Create a private prediction pool and lock
-              your friends, family, or coworkers in before the first whistle.
+              Create prediction pools for the biggest sporting events of the year.
+              Track scores, climb leaderboards, and settle bragging rights.
             </p>
 
             <div
