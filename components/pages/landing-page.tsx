@@ -67,6 +67,14 @@ const ACCOUNT_DELETED_QUERY_PARAM = 'accountDeleted'
 const ACCOUNT_DELETED_SESSION_KEY = 'poolcup_account_deleted'
 const ACCOUNT_DELETED_BANNER_MS = 5000
 
+const HERO_SPORT_IMAGES = [
+  '/sports/soccer.png',
+  '/sports/basketball.png',
+  '/sports/baseball.png',
+  '/sports/football.png',
+  '/sports/hockey.png',
+] as const
+
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [accountDeletedMessage, setAccountDeletedMessage] = useState(false)
@@ -186,6 +194,30 @@ export default function LandingPage() {
                 YOUR GLORY.
               </span>
             </h1>
+
+            <div
+              className={cn(
+                "mt-6 flex items-center justify-center md:mt-8",
+                heroReveal(isVisible),
+              )}
+              style={{ transitionDelay: "250ms" }}
+            >
+              {HERO_SPORT_IMAGES.map((src, index) => (
+                <Image
+                  key={src}
+                  src={src}
+                  alt=""
+                  width={128}
+                  height={128}
+                  className={cn(
+                    "h-20 w-20 object-contain md:h-28 md:w-28 lg:h-32 lg:w-32",
+                    index > 0 && "-ml-10 md:-ml-14 lg:-ml-16",
+                  )}
+                  style={{ zIndex: index }}
+                  aria-hidden
+                />
+              ))}
+            </div>
 
             <p
               className={cn(

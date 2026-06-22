@@ -90,7 +90,7 @@ export function HeroBackgroundCarousel() {
   }, [imageCount])
 
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden" aria-hidden>
+    <div className="absolute inset-x-0 top-0 z-0 h-screen overflow-hidden" aria-hidden>
       <div
         className="absolute inset-0"
         style={{
