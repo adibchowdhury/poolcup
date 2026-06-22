@@ -34,6 +34,9 @@ const ROUND_LABELS: Record<string, string> = {
 
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000
 
+/** Tournament has 72 fixtures; fetch all upcoming rows in one query. */
+const UPCOMING_MATCHES_QUERY_LIMIT = 100
+
 let cachedMatches: UpcomingMatch[] | null = null
 let loadPromise: Promise<{
   matches: UpcomingMatch[] | null
@@ -52,7 +55,7 @@ async function fetchUpcomingMatchesFromDb(): Promise<{
     .gt('kickoff_at', new Date().toISOString())
     .eq('is_final', false)
     .order('kickoff_at', { ascending: true })
-    .limit(15)
+    .limit(UPCOMING_MATCHES_QUERY_LIMIT)
 
   if (fetchError) {
     return { matches: null, error: fetchError.message }
