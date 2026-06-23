@@ -46,6 +46,12 @@
   --chart-3: #ff4444;
   --chart-4: #5a7080;
   --chart-5: #f0f4f8;
+
+  /* Match detail page — semantic accents (live / data / consensus) */
+  --match-live: #00e676;
+  --match-data: #3b82f6;
+  --match-consensus: #fbbf24;
+  --match-surface: #0d1520;
   
   --radius: 0.75rem;
 }
@@ -79,6 +85,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-match-live: var(--match-live);
+  --color-match-data: var(--match-data);
+  --color-match-consensus: var(--match-consensus);
+  --color-match-surface: var(--match-surface);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -200,19 +210,21 @@
 
 .match-hero-score-emphasis {
   text-shadow:
-    0 0 28px rgba(0, 230, 118, 0.22),
-    0 0 56px rgba(0, 230, 118, 0.08);
+    0 0 22px color-mix(in srgb, var(--match-live) 32%, transparent),
+    0 0 44px color-mix(in srgb, var(--match-live) 16%, transparent),
+    0 0 64px color-mix(in srgb, var(--match-live) 8%, transparent);
 }
 
 .match-hero-score-live {
   text-shadow:
-    0 0 32px rgba(0, 230, 118, 0.4),
-    0 0 64px rgba(0, 230, 118, 0.15);
+    0 0 28px color-mix(in srgb, var(--match-live) 42%, transparent),
+    0 0 56px color-mix(in srgb, var(--match-live) 20%, transparent),
+    0 0 80px color-mix(in srgb, var(--match-live) 10%, transparent);
   animation: match-hero-glow-pulse 2.5s ease-in-out infinite;
 }
 
 .match-hero-live-pill {
-  box-shadow: 0 0 20px rgba(0, 230, 118, 0.12);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--match-live) 6%, transparent);
   animation: match-hero-glow-pulse 2.5s ease-in-out infinite;
 }
 
@@ -221,7 +233,11 @@
 }
 
 .match-crowd-favorite-chip {
-  box-shadow: 0 0 18px rgba(0, 230, 118, 0.14);
+  box-shadow: none;
+}
+
+.match-confidence-bar {
+  background-color: color-mix(in srgb, var(--match-data) 70%, transparent);
 }
 
 .scrollbar-none {
@@ -476,7 +492,7 @@
 
   .match-hero-score-live,
   .match-hero-score-emphasis {
-    text-shadow: 0 0 20px rgba(0, 230, 118, 0.15);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--match-live) 18%, transparent);
   }
 
   .consensus-bar-fill {

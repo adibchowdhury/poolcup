@@ -29,6 +29,7 @@ import {
   getConsensusConfidenceLabel,
   getConsensusConfidenceLevel,
   getDominantOutcome,
+  getPlayersAgreeLabel,
   type OutcomeRow,
 } from '@/src/lib/match-prediction-consensus'
 import { getScoringRulesLines } from '@/src/lib/project-match-points'
@@ -38,6 +39,27 @@ import { useAuth } from '@/src/lib/auth-context'
 import { cn } from '@/lib/utils'
 
 const FLOW_SECTION_CLASS = 'border-b border-white/[0.08] py-5 sm:py-6'
+
+const YOUR_PREDICTION_SECTION_CLASS = cn(
+  FLOW_SECTION_CLASS,
+  'border-l-2 border-match-live/18 pl-4',
+)
+
+function getFavoriteTeamDisplay(
+  favoriteKey: OutcomeRow['key'],
+  team1Name: string,
+  team2Name: string,
+  team1Flag: string | null,
+  team2Flag: string | null,
+): { name: string; flag: string | null } | null {
+  if (favoriteKey === 'team1_win') {
+    return { name: team1Name, flag: team1Flag }
+  }
+  if (favoriteKey === 'team2_win') {
+    return { name: team2Name, flag: team2Flag }
+  }
+  return null
+}
 
 function navigateFromMatchDetailBack(
   router: ReturnType<typeof useRouter>,
@@ -98,7 +120,7 @@ function MatchStatusPill({
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-primary',
+          'inline-flex items-center gap-2 rounded-full border border-match-live/40 bg-match-live/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-match-live',
           'match-hero-live-pill motion-reduce:shadow-none motion-reduce:animate-none',
         )}
       >
@@ -117,7 +139,7 @@ function MatchStatusPill({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-semibold text-muted-foreground">
       <Clock className="h-3.5 w-3.5" aria-hidden />
       <FeaturedMatchCountdownDisplay compact {...kickoffCountdown} />
     </div>
@@ -158,7 +180,7 @@ function YourPredictionSection({
 }) {
   if (authLoading || (isLoggedIn && myPredictionsLoading)) {
     return (
-      <section className={FLOW_SECTION_CLASS} aria-busy="true" aria-label="Loading your prediction">
+      <section className={YOUR_PREDICTION_SECTION_CLASS} aria-busy="true" aria-label="Loading your prediction">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Your prediction
         </p>
@@ -177,7 +199,7 @@ function YourPredictionSection({
       : false
 
     return (
-      <section className={FLOW_SECTION_CLASS}>
+      <section className={YOUR_PREDICTION_SECTION_CLASS}>
         <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {singlePick ? 'Your prediction' : 'Your predictions'}
         </h2>
@@ -186,7 +208,7 @@ function YourPredictionSection({
           <div className="mt-2.5">
             <p className="font-mono text-base font-bold tabular-nums text-foreground">
               {team1Name}{' '}
-              <span className="text-primary">
+              <span>
                 {topPick.team1}–{topPick.team2}
               </span>{' '}
               {team2Name}
@@ -197,7 +219,7 @@ function YourPredictionSection({
               </p>
             ) : null}
             {topMatchesCrowd ? (
-              <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-match-consensus">
                 <Check className="h-3.5 w-3.5" aria-hidden />
                 Matches the crowd
               </p>
@@ -216,12 +238,11 @@ function YourPredictionSection({
                   key={`${pick.team1}-${pick.team2}-${pick.pool_count}`}
                   className={cn(
                     'flex flex-wrap items-center justify-between gap-x-3 gap-y-1',
-                    matchesCrowd && 'text-primary',
                   )}
                 >
                   <span className="font-mono text-sm font-bold tabular-nums text-foreground">
                     {team1Name}{' '}
-                    <span className={matchesCrowd ? 'text-primary' : undefined}>
+                    <span>
                       {pick.team1}–{pick.team2}
                     </span>{' '}
                     {team2Name}
@@ -229,7 +250,7 @@ function YourPredictionSection({
                   <span className="shrink-0 text-xs text-muted-foreground">
                     in {pick.pool_count} pool{pick.pool_count === 1 ? '' : 's'}
                     {matchesCrowd ? (
-                      <span className="ml-2 font-semibold text-primary">
+                      <span className="ml-2 font-semibold text-match-consensus">
                         · matches crowd
                       </span>
                     ) : null}
@@ -241,21 +262,11 @@ function YourPredictionSection({
         )}
 
         {crowdFavoriteScoreline ? (
-          <div
-            className={cn(
-              'mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-white/[0.06] pt-3',
-              !singlePick && topMatchesCrowd && 'text-primary',
-            )}
-          >
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-white/[0.06] pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Crowd favorite
             </span>
-            <span
-              className={cn(
-                'font-mono text-sm font-semibold tabular-nums',
-                singlePick && topMatchesCrowd ? 'text-primary' : 'text-foreground',
-              )}
-            >
+            <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
               {team1Name} {crowdFavoriteScoreline.team1}–
               {crowdFavoriteScoreline.team2} {team2Name}
             </span>
@@ -277,7 +288,7 @@ function YourPredictionSection({
     : 'Sign in to make your prediction'
 
   return (
-    <section className={FLOW_SECTION_CLASS}>
+    <section className={YOUR_PREDICTION_SECTION_CLASS}>
       <p className="text-sm text-muted-foreground">
         {isLoggedIn
           ? 'You have not predicted this match yet.'
@@ -285,7 +296,7 @@ function YourPredictionSection({
       </p>
       <Link
         href={ctaHref}
-        className="mt-2 inline-flex text-sm font-semibold text-primary hover:underline"
+        className="mt-2 inline-flex text-sm font-semibold text-foreground hover:text-match-live hover:underline"
       >
         {ctaLabel} →
       </Link>
@@ -320,7 +331,7 @@ function ConsensusOutcomeBar({
         <span
           className={cn(
             'shrink-0 tabular-nums',
-            isFavorite ? 'text-sm font-semibold text-primary' : 'text-xs text-muted-foreground',
+            isFavorite ? 'text-sm font-semibold text-match-consensus' : 'text-xs text-muted-foreground',
           )}
         >
           {pct}% ({row.count.toLocaleString()})
@@ -335,7 +346,7 @@ function ConsensusOutcomeBar({
         <div
           className={cn(
             'consensus-bar-fill motion-reduce:transition-none h-full rounded-full',
-            isFavorite ? 'bg-primary' : 'bg-muted-foreground/35',
+            isFavorite ? 'bg-match-consensus' : 'bg-muted-foreground/35',
           )}
           style={{ width: animate ? `${pct}%` : '0%' }}
         />
@@ -369,13 +380,13 @@ function ScorelineChips({
                 className={cn(
                   'inline-flex items-center gap-2 rounded-full border',
                   isTop
-                    ? 'match-crowd-favorite-chip border-primary/50 bg-primary/15 px-4 py-2 motion-reduce:shadow-none'
+                    ? 'match-crowd-favorite-chip border border-match-live/30 bg-match-surface px-3.5 py-1.5 motion-reduce:shadow-none'
                     : 'border-border/50 bg-muted/20 px-3 py-1.5 opacity-75',
                 )}
               >
                 {isTop ? (
                   <Crown
-                    className="h-4 w-4 shrink-0 text-primary"
+                    className="h-3.5 w-3.5 shrink-0 text-match-live"
                     aria-hidden
                   />
                 ) : (
@@ -394,7 +405,7 @@ function ScorelineChips({
                 <span
                   className={cn(
                     'text-xs tabular-nums',
-                    isTop ? 'font-semibold text-primary' : 'text-muted-foreground',
+                    isTop ? 'font-semibold text-foreground' : 'text-muted-foreground',
                   )}
                 >
                   {pct}%
@@ -412,10 +423,14 @@ function PoolCupConsensusSection({
   distribution,
   team1Name,
   team2Name,
+  team1Flag,
+  team2Flag,
 }: {
   distribution: MatchPredictionDistribution | null
   team1Name: string
   team2Name: string
+  team1Flag: string | null
+  team2Flag: string | null
 }) {
   const [barsReady, setBarsReady] = useState(false)
   const total = distribution?.total ?? 0
@@ -430,6 +445,15 @@ function PoolCupConsensusSection({
   const maxShare = favorite && total > 0 ? favorite.count / total : 0
   const confidenceLabel = getConsensusConfidenceLabel(maxShare)
   const confidenceLevel = getConsensusConfidenceLevel(maxShare)
+  const favoriteTeam = favorite
+    ? getFavoriteTeamDisplay(
+        favorite.key,
+        team1Name,
+        team2Name,
+        team1Flag,
+        team2Flag,
+      )
+    : null
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setBarsReady(true))
@@ -453,7 +477,7 @@ function PoolCupConsensusSection({
           ) : null}
         </div>
         {total > 0 && favorite ? (
-          <div className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+          <div className="rounded-full border border-match-consensus/35 bg-match-consensus/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-match-consensus">
             Crowd favorite
           </div>
         ) : null}
@@ -465,31 +489,55 @@ function PoolCupConsensusSection({
         </p>
       ) : favorite ? (
         <div className="mt-4 space-y-4">
-          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+          <div className="rounded-xl bg-match-surface px-3.5 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-match-consensus">
               Crowd favorite
             </p>
-            <p className="mt-0.5 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-              {favorite.label}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold tabular-nums text-primary">
-              {favorite.pct}% of predictions
-            </p>
+            <div className="mt-2 flex items-center gap-2.5">
+              {favoriteTeam ? (
+                <TeamFlagImage
+                  countryName={favoriteTeam.name}
+                  dbFlag={favoriteTeam.flag}
+                  imgClassName="h-6 w-auto shrink-0"
+                  emojiClassName="text-2xl leading-none"
+                />
+              ) : null}
+              <p className="font-display text-3xl leading-none tracking-wide text-foreground sm:text-4xl">
+                {favorite.label}
+              </p>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
+              <span>
+                {favorite.count.toLocaleString()} of {total.toLocaleString()} predictions
+              </span>
+              <span className="text-border/80" aria-hidden>
+                ·
+              </span>
+              <span className="inline-flex items-center gap-1 tabular-nums">
+                <Trophy className="h-3.5 w-3.5 shrink-0 text-match-consensus" aria-hidden />
+                {favorite.pct}% share
+              </span>
+            </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2.5 rounded-lg bg-match-surface/50 px-3 py-2.5">
             <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="font-medium uppercase tracking-wider text-match-data">
                 Community confidence
               </span>
-              <span className="font-semibold text-foreground">{confidenceLabel}</span>
+              <span className="font-semibold tabular-nums text-match-data">
+                {confidenceLabel}
+              </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted/80">
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted/80">
               <div
-                className="consensus-bar-fill motion-reduce:transition-none h-full rounded-full bg-primary/70"
+                className="consensus-bar-fill match-confidence-bar motion-reduce:transition-none h-full rounded-full"
                 style={{ width: barsReady ? `${confidenceLevel}%` : '0%' }}
               />
             </div>
+            <p className="text-[11px] tabular-nums text-match-data">
+              {getPlayersAgreeLabel(confidenceLevel)}
+            </p>
           </div>
 
           <div className="space-y-2.5">
@@ -530,7 +578,7 @@ function CompactScoringSection({ round }: { round: string }) {
               key={line}
               className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"
             >
-              <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-primary/70" />
+              <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
               <span>{line}</span>
             </li>
           ))}
@@ -614,7 +662,7 @@ export function GlobalMatchDetailView({
   return (
     <div className={cn('min-h-screen bg-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-match-surface/40 blur-3xl" />
         <div className="absolute right-20 top-40 h-96 w-96 rounded-full bg-[#ffb300]/5 blur-3xl" />
       </div>
 
@@ -672,14 +720,14 @@ export function GlobalMatchDetailView({
                 {showLiveScore ? (
                   <p
                     className={cn(
-                      'font-display text-7xl leading-none tracking-wider tabular-nums sm:text-9xl',
+                      'font-display text-8xl leading-none tracking-wider tabular-nums sm:text-[10rem]',
                       'match-hero-score-emphasis motion-reduce:animate-none',
-                      phase === 'live' && 'match-hero-score-live',
+                      (phase === 'live' || phase === 'final') && 'match-hero-score-live',
                     )}
                   >
-                    <span className="text-primary">{score1}</span>
+                    <span className="text-match-live">{score1}</span>
                     <span className="mx-0.5 text-muted-foreground/60 sm:mx-1.5">–</span>
-                    <span className="text-primary">{score2}</span>
+                    <span className="text-match-live">{score2}</span>
                   </p>
                 ) : (
                   <span className="font-display text-5xl uppercase tracking-[0.18em] text-muted-foreground sm:text-6xl">
@@ -733,6 +781,8 @@ export function GlobalMatchDetailView({
               distribution={distribution}
               team1Name={match.team1Name}
               team2Name={match.team2Name}
+              team1Flag={match.team1Flag}
+              team2Flag={match.team2Flag}
             />
           ) : (
             <section className={FLOW_SECTION_CLASS}>

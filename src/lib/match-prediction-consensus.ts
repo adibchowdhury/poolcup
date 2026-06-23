@@ -47,10 +47,15 @@ export function getDominantOutcome(rows: OutcomeRow[]): DominantOutcome | null {
 }
 
 export function getConsensusConfidenceLabel(maxShare: number): string {
-  if (maxShare >= 0.7) return 'Very high confidence'
-  if (maxShare >= 0.55) return 'Strong consensus'
-  if (maxShare >= 0.42) return 'Slight edge'
-  return 'Toss-up'
+  if (maxShare >= 0.7) return 'Most players agree'
+  if (maxShare >= 0.55) return 'Strong agreement'
+  if (maxShare >= 0.42) return 'A slight lean'
+  return 'Split opinions'
+}
+
+export function getPlayersAgreeLabel(agreePercent: number): string {
+  if (agreePercent > 0) return `${agreePercent}% of players agree`
+  return 'Strong community consensus'
 }
 
 export function getConsensusConfidenceLevel(maxShare: number): number {
