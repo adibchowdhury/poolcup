@@ -33,7 +33,7 @@ import {
 } from '@/src/lib/match-prediction-consensus'
 import { getScoringRulesLines } from '@/src/lib/project-match-points'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
-import type { UserMatchPrediction } from '@/src/lib/user-match-prediction'
+import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
 import { useAuth } from '@/src/lib/auth-context'
 import { cn } from '@/lib/utils'
 
@@ -124,10 +124,23 @@ function MatchStatusPill({
   )
 }
 
+function pickMatchesCrowdFavorite(
+  pick: { team1: number; team2: number },
+  crowdFavorite: { team1: number; team2: number } | null,
+): boolean {
+  return (
+    crowdFavorite != null &&
+    pick.team1 === crowdFavorite.team1 &&
+    pick.team2 === crowdFavorite.team2
+  )
+}
+
 function YourPredictionSection({
   matchId,
   isLoggedIn,
-  userPrediction,
+  authLoading,
+  myPredictions,
+  myPredictionsLoading,
   team1Name,
   team2Name,
   crowdFavoriteScoreline,
@@ -135,76 +148,123 @@ function YourPredictionSection({
 }: {
   matchId: string
   isLoggedIn: boolean
-  userPrediction: UserMatchPrediction | null
+  authLoading: boolean
+  myPredictions: MyMatchPredictions | null
+  myPredictionsLoading: boolean
   team1Name: string
   team2Name: string
   crowdFavoriteScoreline: { team1: number; team2: number } | null
   predictionsLocked: boolean
 }) {
-  const hasPrediction =
-    userPrediction != null &&
-    userPrediction.predTeam1 != null &&
-    userPrediction.predTeam2 != null
+  if (authLoading || (isLoggedIn && myPredictionsLoading)) {
+    return (
+      <section className={FLOW_SECTION_CLASS} aria-busy="true" aria-label="Loading your prediction">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Your prediction
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Loading your picks…</p>
+      </section>
+    )
+  }
 
-  const matchesCrowdFavorite =
-    hasPrediction &&
-    crowdFavoriteScoreline != null &&
-    userPrediction.predTeam1 === crowdFavoriteScoreline.team1 &&
-    userPrediction.predTeam2 === crowdFavoriteScoreline.team2
+  const hasPrediction = myPredictions?.has_prediction === true && myPredictions.picks.length > 0
 
-  if (hasPrediction) {
+  if (hasPrediction && myPredictions) {
+    const singlePick = myPredictions.distinct_count === 1
+    const topPick = myPredictions.picks[0]
+    const topMatchesCrowd = topPick
+      ? pickMatchesCrowdFavorite(topPick, crowdFavoriteScoreline)
+      : false
+
     return (
       <section className={FLOW_SECTION_CLASS}>
         <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Your prediction
+          {singlePick ? 'Your prediction' : 'Your predictions'}
         </h2>
-        <div className="mt-2.5 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-medium text-muted-foreground">You</span>
-            <span className="font-mono text-base font-bold tabular-nums text-foreground">
+
+        {singlePick && topPick ? (
+          <div className="mt-2.5">
+            <p className="font-mono text-base font-bold tabular-nums text-foreground">
               {team1Name}{' '}
               <span className="text-primary">
-                {userPrediction.predTeam1}–{userPrediction.predTeam2}
+                {topPick.team1}–{topPick.team2}
               </span>{' '}
               {team2Name}
-            </span>
+            </p>
+            {myPredictions.pool_count > 1 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                in all {myPredictions.pool_count} of your pools
+              </p>
+            ) : null}
+            {topMatchesCrowd ? (
+              <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                <Check className="h-3.5 w-3.5" aria-hidden />
+                Matches the crowd
+              </p>
+            ) : null}
           </div>
-          {crowdFavoriteScoreline ? (
-            <div
+        ) : (
+          <ul className="mt-2.5 space-y-2">
+            {myPredictions.picks.map((pick) => {
+              const matchesCrowd = pickMatchesCrowdFavorite(
+                pick,
+                crowdFavoriteScoreline,
+              )
+
+              return (
+                <li
+                  key={`${pick.team1}-${pick.team2}-${pick.pool_count}`}
+                  className={cn(
+                    'flex flex-wrap items-center justify-between gap-x-3 gap-y-1',
+                    matchesCrowd && 'text-primary',
+                  )}
+                >
+                  <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                    {team1Name}{' '}
+                    <span className={matchesCrowd ? 'text-primary' : undefined}>
+                      {pick.team1}–{pick.team2}
+                    </span>{' '}
+                    {team2Name}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    in {pick.pool_count} pool{pick.pool_count === 1 ? '' : 's'}
+                    {matchesCrowd ? (
+                      <span className="ml-2 font-semibold text-primary">
+                        · matches crowd
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        {crowdFavoriteScoreline ? (
+          <div
+            className={cn(
+              'mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-white/[0.06] pt-3',
+              !singlePick && topMatchesCrowd && 'text-primary',
+            )}
+          >
+            <span className="text-xs font-medium text-muted-foreground">
+              Crowd favorite
+            </span>
+            <span
               className={cn(
-                'flex items-center justify-between gap-3 rounded-lg border px-3 py-2',
-                matchesCrowdFavorite
-                  ? 'border-primary/35 bg-primary/10'
-                  : 'border-border/50 bg-muted/20',
+                'font-mono text-sm font-semibold tabular-nums',
+                singlePick && topMatchesCrowd ? 'text-primary' : 'text-foreground',
               )}
             >
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                {matchesCrowdFavorite ? (
-                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-                ) : null}
-                Crowd favorite
-              </span>
-              <span
-                className={cn(
-                  'font-mono text-sm font-semibold tabular-nums',
-                  matchesCrowdFavorite ? 'text-primary' : 'text-foreground',
-                )}
-              >
-                {team1Name} {crowdFavoriteScoreline.team1}–
-                {crowdFavoriteScoreline.team2} {team2Name}
-              </span>
-            </div>
-          ) : !predictionsLocked ? (
-            <p className="text-xs text-muted-foreground">
-              Crowd scorelines revealed at kickoff.
-            </p>
-          ) : null}
-          {matchesCrowdFavorite ? (
-            <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-primary">
-              Matches the crowd favorite
-            </p>
-          ) : null}
-        </div>
+              {team1Name} {crowdFavoriteScoreline.team1}–
+              {crowdFavoriteScoreline.team2} {team2Name}
+            </span>
+          </div>
+        ) : !predictionsLocked ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Crowd scorelines revealed at kickoff.
+          </p>
+        ) : null}
       </section>
     )
   }
@@ -511,7 +571,9 @@ type GlobalMatchDetailViewProps = {
   match: GlobalMatchDisplay
   phase: GlobalMatchPhase
   distribution: MatchPredictionDistribution | null
-  userPrediction: UserMatchPrediction | null
+  myPredictions: MyMatchPredictions | null
+  myPredictionsLoading: boolean
+  authLoading: boolean
   isLoggedIn: boolean
 }
 
@@ -520,7 +582,9 @@ export function GlobalMatchDetailView({
   match,
   phase,
   distribution,
-  userPrediction,
+  myPredictions,
+  myPredictionsLoading,
+  authLoading,
   isLoggedIn,
 }: GlobalMatchDetailViewProps) {
   const router = useRouter()
@@ -655,7 +719,9 @@ export function GlobalMatchDetailView({
           <YourPredictionSection
             matchId={matchId}
             isLoggedIn={isLoggedIn}
-            userPrediction={userPrediction}
+            authLoading={authLoading}
+            myPredictions={myPredictions}
+            myPredictionsLoading={myPredictionsLoading}
             team1Name={match.team1Name}
             team2Name={match.team2Name}
             crowdFavoriteScoreline={crowdFavoriteScoreline}
