@@ -187,6 +187,33 @@
   animation: stage-live-pulse 1.75s ease-in-out infinite;
 }
 
+@keyframes match-hero-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.88;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.match-hero-score-live {
+  text-shadow:
+    0 0 32px rgba(0, 230, 118, 0.4),
+    0 0 64px rgba(0, 230, 118, 0.15);
+  animation: match-hero-glow-pulse 2.5s ease-in-out infinite;
+}
+
+.match-hero-live-pill {
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.12);
+  animation: match-hero-glow-pulse 2.5s ease-in-out infinite;
+}
+
+.consensus-bar-fill {
+  transition: width 700ms ease-out;
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -427,9 +454,19 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-pulse-subtle,
-  .stage-live-dot {
+  .stage-live-dot,
+  .match-hero-score-live,
+  .match-hero-live-pill {
     animation: none;
     opacity: 1;
     box-shadow: none;
+  }
+
+  .match-hero-score-live {
+    text-shadow: 0 0 24px rgba(0, 230, 118, 0.2);
+  }
+
+  .consensus-bar-fill {
+    transition: none;
   }
 }

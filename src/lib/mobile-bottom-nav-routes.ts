@@ -64,5 +64,9 @@ export function resolveMobileBottomNavActive(
     return 'pools'
   }
 
+  if (pathname.startsWith('/match/')) {
+    return 'upcoming'
+  }
+
   return null
 }

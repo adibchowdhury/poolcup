@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Calendar,
-  CircleHelp,
   MessageCircle,
   Trophy,
   User,
@@ -34,21 +33,15 @@ const NAV_ITEMS: {
   href: string
   icon: typeof User
 }[] = [
-  { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Trophy },
   {
     id: 'upcoming',
     label: 'Matches',
     href: DASHBOARD_TAB_HREFS.upcoming,
     icon: Calendar,
   },
+  { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Trophy },
   { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
   { id: 'profile', label: 'Profile', href: DASHBOARD_TAB_HREFS.profile, icon: User },
-  {
-    id: 'how-it-works',
-    label: 'Help',
-    href: DASHBOARD_TAB_HREFS['how-it-works'],
-    icon: CircleHelp,
-  },
 ]
 
 const navItemClassName = (isActive: boolean) =>
@@ -116,7 +109,7 @@ function MobileBottomNavContent() {
       className="fixed inset-x-0 bottom-0 z-50 overflow-visible border-t border-border/80 bg-background/95 backdrop-blur-md sm:hidden safe-area-pb"
       aria-label="Main navigation"
     >
-      <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-5 items-stretch overflow-visible px-1">
+      <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-4 items-stretch overflow-visible px-1">
         {NAV_ITEMS.map((item) => {
           const isActive = activeId === item.id
 
