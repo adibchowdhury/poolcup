@@ -15,6 +15,31 @@ const STALE_CUTOFF_MINUTES = 135
  *  standard group matches (~90+ stoppage). Raise or make round-aware before
  *  syncing knockout extra time / penalties (feed can stay live 120+ min). */
 const FORCE_FINAL_MINUTES = 135
+/** Only force-close when the feed still looks like late live play, not halftime or suspended. */
+const FORCE_CLOSE_MIN_ELAPSED_MINUTE = 85
+
+const FORCE_CLOSE_ELIGIBLE_STATUSES = new Set([
+  '2H',
+  'ET',
+  'BT',
+  'P',
+  'LIVE',
+])
+
+const FORCE_CLOSE_BLOCKED_STATUSES = new Set([
+  '1H',
+  'HT',
+  'NS',
+  'TBD',
+  'SUSP',
+  'INT',
+  'PST',
+  'ABD',
+  'CANC',
+  'AWD',
+  'WO',
+])
+
 const MAX_CANDIDATES = 20
 
 type ReconcileError = {
@@ -41,6 +66,20 @@ type MatchLiveUpdatePayload = {
   updated_at?: string
   result_team1?: number
   result_team2?: number
+}
+
+function canForceCloseStaleMatch(
+  statusShort: string,
+  elapsedMinute: number | null,
+  minutesSinceKickoff: number,
+): boolean {
+  const status = statusShort.trim().toUpperCase()
+  if (FORCE_CLOSE_BLOCKED_STATUSES.has(status)) return false
+  if (!FORCE_CLOSE_ELIGIBLE_STATUSES.has(status)) return false
+  if (elapsedMinute == null || elapsedMinute < FORCE_CLOSE_MIN_ELAPSED_MINUTE) {
+    return false
+  }
+  return minutesSinceKickoff > FORCE_FINAL_MINUTES
 }
 
 function isAuthorized(request: Request): boolean {
@@ -188,7 +227,13 @@ async function runReconcile(): Promise<{
     const minutesSinceKickoff =
       (Date.now() - new Date(match.kickoff_at).getTime()) / 60_000
 
-    if (minutesSinceKickoff > FORCE_FINAL_MINUTES) {
+    if (
+      canForceCloseStaleMatch(
+        update.status_short,
+        update.elapsed_minute,
+        minutesSinceKickoff,
+      )
+    ) {
       const nowIso = new Date().toISOString()
       const { error: updateError } = await supabase
         .from('matches')

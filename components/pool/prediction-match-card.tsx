@@ -17,10 +17,20 @@ import {
   CompactMatchRowTeamAway,
   CompactMatchRowTeamHome,
 } from '@/components/predict/compact-match-row-teams'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
+import { TbdSlot } from '@/components/predict/knockout-bracket-preview'
 import { MatchPicksExpander } from '@/components/pool/match-picks-expander'
 import { useClientNow } from '@/hooks/use-client-now'
 import { cn } from '@/lib/utils'
+import { isKnockoutRound, type KnockoutRoundId } from '@/src/lib/classic-round-tab-logic'
 import { isMatchLocked } from '@/src/lib/match-lock'
+import {
+  formatKnockoutPointValuesFooter,
+  getAdvancePickHintText,
+  isKnockoutPredictionComplete,
+  isPredictedDraw,
+  resolveAdvancePickTeamName,
+} from '@/src/lib/knockout-match-prediction'
 import {
   clampPredictionScoreValue,
   deletePoolMatchPrediction,
@@ -49,6 +59,8 @@ export type UserPoolPrediction = {
   team2Flag: string | null
   predTeam1: number | null
   predTeam2: number | null
+  advancePick: number | null
+  advancingTeam: number | null
   resultTeam1: number | null
   resultTeam2: number | null
   isFinal: boolean
@@ -73,12 +85,66 @@ function formatRoundLabel(round: string, groupName: string | null): string {
   return ROUND_LABELS[round] ?? round
 }
 
+function parseOptionalScore(value: string): number | null {
+  if (value === '') return null
+  const parsed = Number.parseInt(value, 10)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function PreviewTbdTeamSide() {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-1 sm:items-stretch">
+      <TbdSlot />
+    </div>
+  )
+}
+
+function AdvanceTeamChip({
+  teamName,
+  dbFlag,
+  selected,
+  disabled,
+  onClick,
+}: {
+  teamName: string
+  dbFlag: string | null
+  selected: boolean
+  disabled: boolean
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-colors',
+        selected
+          ? 'border-primary bg-primary/15 text-primary'
+          : 'border-border bg-muted/40 text-foreground hover:border-primary/40',
+        disabled && 'pointer-events-none opacity-50',
+      )}
+    >
+      <TeamFlagImage
+        countryName={teamName}
+        dbFlag={dbFlag}
+        imgClassName="h-4 w-auto shrink-0 object-cover"
+        emojiClassName="text-sm leading-none"
+      />
+      <span className="truncate">{teamName}</span>
+    </button>
+  )
+}
+
 export function PredictionMatchCard({
   prediction,
   poolId,
   memberId,
   currentUserId,
   scoringStyle = 'classic',
+  preview = false,
+  previewSlotLabel,
+  previewVenue,
   onPredictionSaved,
   onPredictionRemoved,
 }: {
@@ -87,25 +153,38 @@ export function PredictionMatchCard({
   memberId?: string
   currentUserId?: string
   scoringStyle?: MatchScoringStyle
+  preview?: boolean
+  previewSlotLabel?: string
+  previewVenue?: string
   onPredictionSaved?: (
     matchId: string,
     predTeam1: number,
     predTeam2: number,
+    advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
 }) {
-  const serverLocked = isMatchLocked(prediction.lockedAt)
+  const isKnockout = isKnockoutRound(prediction.round)
+  const serverLocked = preview ? false : isMatchLocked(prediction.lockedAt)
   const { mounted, nowMs } = useClientNow(30_000)
   const hasKickedOff =
-    mounted && new Date(prediction.kickoffAt).getTime() <= nowMs
+    !preview &&
+    mounted &&
+    new Date(prediction.kickoffAt).getTime() <= nowMs
   const [forceReadOnly, setForceReadOnly] = useState(false)
   const [lockedNotice, setLockedNotice] = useState(false)
-  const isReadOnly = serverLocked || forceReadOnly
+  const isReadOnly = preview || serverLocked || forceReadOnly
 
   const [score1, setScore1] = useState(String(prediction.predTeam1 ?? ''))
   const [score2, setScore2] = useState(String(prediction.predTeam2 ?? ''))
   const [savedScore1, setSavedScore1] = useState(String(prediction.predTeam1 ?? ''))
   const [savedScore2, setSavedScore2] = useState(String(prediction.predTeam2 ?? ''))
+  const [advancePick, setAdvancePick] = useState<number | null>(
+    prediction.advancePick ?? null,
+  )
+  const [savedAdvancePick, setSavedAdvancePick] = useState<number | null>(
+    prediction.advancePick ?? null,
+  )
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>(
     'idle',
   )
@@ -118,40 +197,68 @@ export function PredictionMatchCard({
     score2: String(prediction.predTeam2 ?? ''),
     savedScore1: String(prediction.predTeam1 ?? ''),
     savedScore2: String(prediction.predTeam2 ?? ''),
+    advancePick: prediction.advancePick ?? null,
+    savedAdvancePick: prediction.advancePick ?? null,
   })
 
-  scoresRef.current = { score1, score2, savedScore1, savedScore2 }
+  scoresRef.current = {
+    score1,
+    score2,
+    savedScore1,
+    savedScore2,
+    advancePick,
+    savedAdvancePick,
+  }
 
   useEffect(() => {
     const next1 = String(prediction.predTeam1 ?? '')
     const next2 = String(prediction.predTeam2 ?? '')
-    const { score1: current1, score2: current2, savedScore1: prev1, savedScore2: prev2 } =
-      scoresRef.current
+    const nextAdvance = prediction.advancePick ?? null
+    const {
+      score1: current1,
+      score2: current2,
+      savedScore1: prev1,
+      savedScore2: prev2,
+      advancePick: currentAdvance,
+      savedAdvancePick: prevAdvance,
+    } = scoresRef.current
 
-    const serverSavedChanged = next1 !== prev1 || next2 !== prev2
+    const serverSavedChanged =
+      next1 !== prev1 || next2 !== prev2 || nextAdvance !== prevAdvance
 
     setSavedScore1(next1)
     setSavedScore2(next2)
+    setSavedAdvancePick(nextAdvance)
 
     if (!serverSavedChanged) {
       return
     }
 
     const incomplete = (current1 === '') !== (current2 === '')
-    const inputsMatchPrevSaved = current1 === prev1 && current2 === prev2
+    const inputsMatchPrevSaved =
+      current1 === prev1 &&
+      current2 === prev2 &&
+      currentAdvance === prevAdvance
 
     if (!incomplete && inputsMatchPrevSaved) {
       setScore1(next1)
       setScore2(next2)
+      setAdvancePick(nextAdvance)
     }
-  }, [prediction.predTeam1, prediction.predTeam2, prediction.matchId])
+  }, [
+    prediction.predTeam1,
+    prediction.predTeam2,
+    prediction.advancePick,
+    prediction.matchId,
+  ])
 
   useEffect(() => {
     if (serverLocked && !forceReadOnly) {
       setScore1(savedScore1)
       setScore2(savedScore2)
+      setAdvancePick(savedAdvancePick)
     }
-  }, [serverLocked, forceReadOnly, savedScore1, savedScore2])
+  }, [serverLocked, forceReadOnly, savedScore1, savedScore2, savedAdvancePick])
 
   useEffect(() => {
     return () => {
@@ -173,6 +280,11 @@ export function PredictionMatchCard({
       : Number.parseInt(score2, 10) || 0
     : 0
 
+  const inputPredTeam1 = parseOptionalScore(score1)
+  const inputPredTeam2 = parseOptionalScore(score2)
+  const savedPredTeam1 = parseOptionalScore(savedScore1)
+  const savedPredTeam2 = parseOptionalScore(savedScore2)
+
   const hasResult =
     prediction.isFinal &&
     prediction.resultTeam1 != null &&
@@ -189,13 +301,127 @@ export function PredictionMatchCard({
         )
       : null
 
-  const isEditable = Boolean(poolId && memberId) && !isReadOnly
-  const savedScoresFilled = savedScore1 !== '' && savedScore2 !== ''
-  const inputsShowPredicted = hasClassicPredictionScores(score1, score2)
-  const showPicksExpander = Boolean(poolId && currentUserId && hasKickedOff)
-  const showCardFooter = hasResult || showPicksExpander
+  const isEditable = !preview && Boolean(poolId && memberId) && !isReadOnly
+  const isAdvanceEditable = isEditable && hasClassicPredictionScores(score1, score2)
+
+  const savedCardComplete = isKnockout
+    ? isKnockoutPredictionComplete(
+        prediction.round,
+        savedPredTeam1,
+        savedPredTeam2,
+        savedAdvancePick,
+      )
+    : savedScore1 !== '' && savedScore2 !== ''
+
+  const inputsCardComplete = isKnockout
+    ? isKnockoutPredictionComplete(
+        prediction.round,
+        inputPredTeam1,
+        inputPredTeam2,
+        advancePick,
+      )
+    : hasClassicPredictionScores(score1, score2)
+
+  const predictedDrawForHint =
+    inputPredTeam1 != null &&
+    inputPredTeam2 != null &&
+    isPredictedDraw(inputPredTeam1, inputPredTeam2)
+
+  const showPicksExpander =
+    !preview && Boolean(poolId && currentUserId && hasKickedOff)
+  const showResultFooter = hasResult || showPicksExpander
   const pastMetaTextClassName = getPastMatchMetaTextClassName()
   const pastBodyTextClassName = getPastMatchBodyTextClassName()
+
+  const knockoutPointFooter = isKnockout
+    ? formatKnockoutPointValuesFooter(prediction.round as KnockoutRoundId)
+    : null
+
+  const showAdvanceSection =
+    isKnockout &&
+    (preview ||
+      isAdvanceEditable ||
+      (isReadOnly && savedAdvancePick != null))
+
+  const handleLockViolation = useCallback(() => {
+    setForceReadOnly(true)
+    setLockedNotice(true)
+    setScore1(savedScore1)
+    setScore2(savedScore2)
+    setAdvancePick(savedAdvancePick)
+    setSaveStatus('idle')
+  }, [savedScore1, savedScore2, savedAdvancePick])
+
+  const persistPrediction = useCallback(
+    async (
+      parsed: { predTeam1: number; predTeam2: number },
+      nextAdvancePick: number | null | undefined,
+    ) => {
+      if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
+
+      saveInFlightRef.current = true
+      setSaveStatus('saving')
+
+      const result = await upsertPoolMatchPrediction(supabase, {
+        poolId,
+        memberId,
+        matchId: prediction.matchId,
+        predTeam1: parsed.predTeam1,
+        predTeam2: parsed.predTeam2,
+        advancePick: nextAdvancePick,
+      })
+
+      saveInFlightRef.current = false
+
+      if (!result.ok) {
+        if (result.isLockViolation) {
+          handleLockViolation()
+          return
+        }
+
+        setSaveStatus('idle')
+        return
+      }
+
+      const next1 = String(parsed.predTeam1)
+      const next2 = String(parsed.predTeam2)
+      setSavedScore1(next1)
+      setSavedScore2(next2)
+      setScore1(next1)
+      setScore2(next2)
+
+      if (nextAdvancePick !== undefined) {
+        setSavedAdvancePick(nextAdvancePick)
+        setAdvancePick(nextAdvancePick)
+      }
+
+      setSaveStatus('saved')
+      capturePostHog('prediction_submitted', {
+        pool_id: poolId,
+        match_id: prediction.matchId,
+      })
+      onPredictionSaved?.(
+        prediction.matchId,
+        parsed.predTeam1,
+        parsed.predTeam2,
+        nextAdvancePick !== undefined ? nextAdvancePick : savedAdvancePick,
+      )
+
+      if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current)
+      savedIndicatorRef.current = setTimeout(() => {
+        setSaveStatus('idle')
+      }, SAVED_INDICATOR_MS)
+    },
+    [
+      poolId,
+      memberId,
+      isReadOnly,
+      prediction.matchId,
+      handleLockViolation,
+      onPredictionSaved,
+      savedAdvancePick,
+    ],
+  )
 
   const persistScores = useCallback(async () => {
     if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
@@ -228,11 +454,7 @@ export function PredictionMatchCard({
 
       if (!result.ok) {
         if (result.isLockViolation) {
-          setForceReadOnly(true)
-          setLockedNotice(true)
-          setScore1(savedScore1)
-          setScore2(savedScore2)
-          setSaveStatus('idle')
+          handleLockViolation()
           return
         }
 
@@ -244,6 +466,8 @@ export function PredictionMatchCard({
       setSavedScore2('')
       setScore1('')
       setScore2('')
+      setSavedAdvancePick(null)
+      setAdvancePick(null)
       setSaveStatus('idle')
       onPredictionRemoved?.(prediction.matchId)
       return
@@ -252,57 +476,15 @@ export function PredictionMatchCard({
     const parsed = parsePredictionScores(score1, score2)
     if (!parsed) return
 
-    if (
+    const scoresUnchanged =
       parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
       parsed.predTeam2 === Number.parseInt(savedScore2, 10)
-    ) {
+
+    if (scoresUnchanged) {
       return
     }
 
-    saveInFlightRef.current = true
-    setSaveStatus('saving')
-
-    const result = await upsertPoolMatchPrediction(supabase, {
-      poolId,
-      memberId,
-      matchId: prediction.matchId,
-      predTeam1: parsed.predTeam1,
-      predTeam2: parsed.predTeam2,
-    })
-
-    saveInFlightRef.current = false
-
-    if (!result.ok) {
-      if (result.isLockViolation) {
-        setForceReadOnly(true)
-        setLockedNotice(true)
-        setScore1(savedScore1)
-        setScore2(savedScore2)
-        setSaveStatus('idle')
-        return
-      }
-
-      setSaveStatus('idle')
-      return
-    }
-
-    const next1 = String(parsed.predTeam1)
-    const next2 = String(parsed.predTeam2)
-    setSavedScore1(next1)
-    setSavedScore2(next2)
-    setScore1(next1)
-    setScore2(next2)
-    setSaveStatus('saved')
-    capturePostHog('prediction_submitted', {
-      pool_id: poolId,
-      match_id: prediction.matchId,
-    })
-    onPredictionSaved?.(prediction.matchId, parsed.predTeam1, parsed.predTeam2)
-
-    if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current)
-    savedIndicatorRef.current = setTimeout(() => {
-      setSaveStatus('idle')
-    }, SAVED_INDICATOR_MS)
+    await persistPrediction(parsed, savedAdvancePick)
   }, [
     poolId,
     memberId,
@@ -311,10 +493,28 @@ export function PredictionMatchCard({
     score2,
     savedScore1,
     savedScore2,
+    savedAdvancePick,
     prediction.matchId,
-    onPredictionSaved,
+    handleLockViolation,
     onPredictionRemoved,
+    persistPrediction,
   ])
+
+  const persistAdvancePick = useCallback(
+    async (nextPick: number | null) => {
+      if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
+
+      const parsed = parsePredictionScores(savedScore1, savedScore2)
+      if (!parsed) return
+
+      if (nextPick === savedAdvancePick) {
+        return
+      }
+
+      await persistPrediction(parsed, nextPick)
+    },
+    [poolId, memberId, isReadOnly, savedScore1, savedScore2, savedAdvancePick, persistPrediction],
+  )
 
   const scheduleAutosave = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -347,23 +547,46 @@ export function PredictionMatchCard({
     void persistScores()
   }
 
+  const handleAdvancePick = (pick: 1 | 2) => {
+    if (!isAdvanceEditable) return
+    const nextPick = advancePick === pick ? null : pick
+    setAdvancePick(nextPick)
+    setSaveStatus('idle')
+    void persistAdvancePick(nextPick)
+  }
+
+  const lockedAdvanceTeamName = resolveAdvancePickTeamName(
+    savedAdvancePick,
+    prediction.team1Name,
+    prediction.team2Name,
+  )
+
+  const actualAdvancedTeamName = resolveAdvancePickTeamName(
+    prediction.advancingTeam,
+    prediction.team1Name,
+    prediction.team2Name,
+  )
+
   return (
     <article className="flex w-full min-w-0 flex-col gap-2">
       <div
         className={cn(
           getCompactMatchRowContainerClassName({
-            isLocked: isReadOnly,
-            isPredicted: savedScoresFilled,
-            filled: savedScoresFilled,
+            isLocked: isReadOnly && !preview,
+            isPredicted: preview ? false : savedCardComplete,
+            filled: preview ? false : savedCardComplete,
           }),
           'flex-col items-stretch gap-2.5',
+          preview && 'opacity-95',
         )}
       >
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <span
             className={cn(
               'rounded-md bg-muted px-2.5 py-1 text-xs font-medium',
-              isReadOnly ? pastMetaTextClassName : 'text-muted-foreground',
+              isReadOnly && !preview
+                ? pastMetaTextClassName
+                : 'text-muted-foreground',
             )}
           >
             {formatRoundLabel(prediction.round, prediction.groupName)}
@@ -384,19 +607,43 @@ export function PredictionMatchCard({
           ) : (
             <CompactMatchRowKickoffTime
               kickoffAt={prediction.kickoffAt}
-              isLocked={isReadOnly}
+              isLocked={isReadOnly && !preview}
             />
           )}
         </div>
 
         <div className={getCompactMatchRowTeamsRowClassName()}>
-          <CompactMatchRowTeamHome
-            name={prediction.team1Name}
-            dbFlag={prediction.team1Flag}
-          />
+          {preview ? (
+            <PreviewTbdTeamSide />
+          ) : (
+            <CompactMatchRowTeamHome
+              name={prediction.team1Name}
+              dbFlag={prediction.team1Flag}
+            />
+          )}
 
           <div className={getCompactMatchRowScoreColumnClassName()}>
-            {isEditable ? (
+            {preview ? (
+              <div className="flex items-center gap-1">
+                <PredictScoreInput
+                  value=""
+                  onChange={() => undefined}
+                  label="Home score preview"
+                  filled={false}
+                  disabled
+                  readOnly
+                />
+                <CompactMatchRowScoreSeparator />
+                <PredictScoreInput
+                  value=""
+                  onChange={() => undefined}
+                  label="Away score preview"
+                  filled={false}
+                  disabled
+                  readOnly
+                />
+              </div>
+            ) : isEditable ? (
               <div className="flex items-center gap-1">
                 <PredictScoreInput
                   value={score1}
@@ -433,39 +680,125 @@ export function PredictionMatchCard({
                 Locked
               </span>
             ) : null}
-            <div className="flex flex-col items-center gap-0.5">
-              <span
-                className={cn(
-                  'text-[10px]',
-                  isReadOnly ? pastMetaTextClassName : 'text-muted-foreground',
-                )}
-              >
-                Your prediction
-              </span>
-              {saveStatus === 'saving' ? (
-                <span className="text-[10px] text-muted-foreground">Saving…</span>
-              ) : saveStatus === 'saved' ? (
-                <span className="text-[10px] font-medium text-primary">Saved</span>
-              ) : null}
-              {lockedNotice ? (
-                <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
-                  This match has locked
+            {!preview ? (
+              <div className="flex flex-col items-center gap-0.5">
+                <span
+                  className={cn(
+                    'text-[10px]',
+                    isReadOnly ? pastMetaTextClassName : 'text-muted-foreground',
+                  )}
+                >
+                  Your prediction
                 </span>
-              ) : null}
-            </div>
+                {saveStatus === 'saving' ? (
+                  <span className="text-[10px] text-muted-foreground">Saving…</span>
+                ) : saveStatus === 'saved' ? (
+                  <span className="text-[10px] font-medium text-primary">Saved</span>
+                ) : null}
+                {lockedNotice ? (
+                  <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
+                    This match has locked
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
-          <CompactMatchRowTeamAway
-            name={prediction.team2Name}
-            dbFlag={prediction.team2Flag}
-          />
+          {preview ? (
+            <PreviewTbdTeamSide />
+          ) : (
+            <CompactMatchRowTeamAway
+              name={prediction.team2Name}
+              dbFlag={prediction.team2Flag}
+            />
+          )}
         </div>
 
-        {showCardFooter ? (
+        {preview && previewSlotLabel ? (
+          <p className="text-center text-[11px] text-muted-foreground">
+            {previewSlotLabel}
+          </p>
+        ) : null}
+
+        {preview && previewVenue ? (
+          <p className="hidden text-center text-[10px] text-muted-foreground/80 sm:block">
+            {previewVenue}
+          </p>
+        ) : null}
+
+        {isKnockout ? (
+          <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
+            {showAdvanceSection ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-foreground">Who advances?</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {getAdvancePickHintText(predictedDrawForHint && !preview)}
+                </p>
+                {preview ? (
+                  <div className="flex gap-2">
+                    <AdvanceTeamChip
+                      teamName="TBD"
+                      dbFlag={null}
+                      selected={false}
+                      disabled
+                    />
+                    <AdvanceTeamChip
+                      teamName="TBD"
+                      dbFlag={null}
+                      selected={false}
+                      disabled
+                    />
+                  </div>
+                ) : isAdvanceEditable ? (
+                  <div className="flex gap-2">
+                    <AdvanceTeamChip
+                      teamName={prediction.team1Name}
+                      dbFlag={prediction.team1Flag}
+                      selected={advancePick === 1}
+                      disabled={false}
+                      onClick={() => handleAdvancePick(1)}
+                    />
+                    <AdvanceTeamChip
+                      teamName={prediction.team2Name}
+                      dbFlag={prediction.team2Flag}
+                      selected={advancePick === 2}
+                      disabled={false}
+                      onClick={() => handleAdvancePick(2)}
+                    />
+                  </div>
+                ) : lockedAdvanceTeamName ? (
+                  <div className="flex gap-2">
+                    <AdvanceTeamChip
+                      teamName={lockedAdvanceTeamName}
+                      dbFlag={
+                        savedAdvancePick === 1
+                          ? prediction.team1Flag
+                          : prediction.team2Flag
+                      }
+                      selected
+                      disabled
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {knockoutPointFooter ? (
+              <p className="text-center text-[10px] text-muted-foreground">
+                {knockoutPointFooter}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {showResultFooter ? (
           <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
             {hasResult ? (
               <p className={cn('text-center text-xs', pastBodyTextClassName)}>
                 Actual: {prediction.resultTeam1} – {prediction.resultTeam2}
+                {actualAdvancedTeamName
+                  ? ` · Advanced: ${actualAdvancedTeamName}`
+                  : ''}
               </p>
             ) : null}
 
@@ -484,11 +817,13 @@ export function PredictionMatchCard({
           </div>
         ) : null}
 
-        <CompactMatchRowPredictedBadge
-          isPredicted={inputsShowPredicted}
-          filled={inputsShowPredicted}
-          isLocked={isReadOnly}
-        />
+        {!preview ? (
+          <CompactMatchRowPredictedBadge
+            isPredicted={inputsCardComplete}
+            filled={inputsCardComplete}
+            isLocked={isReadOnly}
+          />
+        ) : null}
       </div>
     </article>
   )

@@ -20,11 +20,18 @@ const CLASSIC_GROUP_RULES = [
 ] as const
 
 const CLASSIC_KNOCKOUT_ROWS = [
-  { round: 'Round of 32', exact: 7, winner: 3 },
-  { round: 'Round of 16', exact: 10, winner: 4 },
-  { round: 'Quarterfinals', exact: 12, winner: 5 },
-  { round: 'Semifinals', exact: 15, winner: 6 },
-  { round: 'Final', exact: 20, winner: 8 },
+  { round: 'Round of 32', exact: 7, advance: 3 },
+  { round: 'Round of 16', exact: 10, advance: 4 },
+  { round: 'Quarterfinals', exact: 12, advance: 5 },
+  { round: 'Semifinals', exact: 15, advance: 6 },
+  { round: 'Final', exact: 20, advance: 8 },
+] as const
+
+const CLASSIC_KNOCKOUT_INTRO_LINES = [
+  'You predict the final score, including extra time. Penalties never change the score.',
+  'The two columns stack: you earn the exact-score points if you nail the score, plus the advance bonus if you correctly call which team goes through.',
+  'Knockout matches can\'t end in a draw, so if a match is level and goes to penalties, your separate "who advances" pick decides the bonus.',
+  'Nail both and you score the full amount, e.g. 10 points in the Round of 32.',
 ] as const
 
 const WINNER_GROUP_RULES = [
@@ -56,8 +63,7 @@ const SCORING_MODES = [
       'Per match — highest tier that applies. Draws are possible in the group stage.',
     groupRules: CLASSIC_GROUP_RULES,
     knockoutHeading: 'Knockouts',
-    knockoutIntro:
-      'Per match — highest tier that applies. Knockout matches cannot end in a draw.',
+    knockoutIntroLines: CLASSIC_KNOCKOUT_INTRO_LINES,
     knockoutRows: CLASSIC_KNOCKOUT_ROWS,
     knockoutKind: 'classic' as const,
     footer:
@@ -116,7 +122,7 @@ function ClassicKnockoutPointsTable({
         <TableRow className="hover:bg-transparent">
           <TableHead>Round</TableHead>
           <TableHead>Exact score</TableHead>
-          <TableHead>Correct winner</TableHead>
+          <TableHead>Who advances</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -126,7 +132,7 @@ function ClassicKnockoutPointsTable({
               {row.round}
             </TableCell>
             <TableCell>{row.exact}</TableCell>
-            <TableCell>{row.winner}</TableCell>
+            <TableCell>{row.advance}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -269,9 +275,24 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
                     <h4 className="text-sm font-medium text-foreground">
                       {mode.knockoutHeading}
                     </h4>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {mode.knockoutIntro}
-                    </p>
+                    <div className="space-y-2">
+                      {'knockoutIntroLines' in mode && mode.knockoutIntroLines ? (
+                        <div className="space-y-2">
+                          {mode.knockoutIntroLines.map((line) => (
+                            <p
+                              key={line}
+                              className="text-xs leading-relaxed text-muted-foreground"
+                            >
+                              {line}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {mode.knockoutIntro}
+                        </p>
+                      )}
+                    </div>
                     {mode.knockoutKind === 'classic' ? (
                       <ClassicKnockoutPointsTable rows={mode.knockoutRows} />
                     ) : (

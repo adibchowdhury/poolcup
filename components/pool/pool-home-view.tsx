@@ -63,6 +63,7 @@ interface PoolHomeViewProps {
     matchId: string,
     predTeam1: number,
     predTeam2: number,
+    advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
   avatarsByMemberId: Map<string, string | null>

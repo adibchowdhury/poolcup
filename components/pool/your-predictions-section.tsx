@@ -21,6 +21,7 @@ import {
   PredictionMatchCard,
   type UserPoolPrediction,
 } from '@/components/pool/prediction-match-card'
+import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import {
   Select,
   SelectContent,
@@ -57,6 +58,7 @@ type YourPredictionsSectionProps = {
     matchId: string,
     predTeam1: number,
     predTeam2: number,
+    advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
 }
@@ -243,9 +245,13 @@ export function YourPredictionsSection({
           ) : null}
         </div>
       ) : orderedClassicPredictions.length === 0 ? (
-        <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-          {classicRoundTabEmptyMessage(activeRoundTab)}
-        </p>
+        activeRoundTab === 'r32' ? (
+          <ClassicR32PreviewTab />
+        ) : (
+          <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+            {classicRoundTabEmptyMessage(activeRoundTab)}
+          </p>
+        )
       ) : (
         <ul className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2">
           {orderedClassicPredictions.map((prediction) => (

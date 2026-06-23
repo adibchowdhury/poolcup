@@ -7,7 +7,7 @@ import {
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 import type { WinnerOnlyRoundTabId } from '@/components/predict/winner-only-round-tabs'
 
-const KNOCKOUT_TAB_INTRO: Record<KnockoutBracketTabId, string> = {
+export const KNOCKOUT_TAB_INTRO: Record<KnockoutBracketTabId, string> = {
   r32: `This bracket fills in automatically once the ${TOURNAMENT_ROUND_LABELS.group.toLowerCase()} ends. Preview only — picks are not active yet.`,
   r16: `This bracket fills in automatically once the ${TOURNAMENT_ROUND_LABELS.r32} ends. Preview only — picks are not active yet.`,
   qf: `This bracket fills in automatically once the ${TOURNAMENT_ROUND_LABELS.r16} ends. Preview only — picks are not active yet.`,

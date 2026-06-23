@@ -99,11 +99,21 @@ export default function PoolPage() {
   )
 
   const handlePredictionSaved = useCallback(
-    (matchId: string, predTeam1: number, predTeam2: number) => {
+    (
+      matchId: string,
+      predTeam1: number,
+      predTeam2: number,
+      advancePick?: number | null,
+    ) => {
       setUserPredictions((previous) => {
         const updated = previous.map((prediction) =>
           prediction.matchId === matchId
-            ? { ...prediction, predTeam1, predTeam2 }
+            ? {
+                ...prediction,
+                predTeam1,
+                predTeam2,
+                ...(advancePick !== undefined ? { advancePick } : {}),
+              }
             : prediction,
         )
 
@@ -127,7 +137,12 @@ export default function PoolPage() {
     setUserPredictions((previous) =>
       previous.map((prediction) =>
         prediction.matchId === matchId
-          ? { ...prediction, predTeam1: null, predTeam2: null }
+          ? {
+              ...prediction,
+              predTeam1: null,
+              predTeam2: null,
+              advancePick: null,
+            }
           : prediction,
       ),
     )
@@ -303,12 +318,12 @@ export default function PoolPage() {
           supabase
             .from('matches')
             .select(
-              'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final',
+              'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team',
             )
             .order('kickoff_at', { ascending: true }),
           supabase
             .from('predictions')
-            .select('match_id, pred_team1, pred_team2')
+            .select('match_id, pred_team1, pred_team2, advance_pick')
             .eq('pool_id', pool.id)
             .eq('member_id', currentMember.id),
         ])

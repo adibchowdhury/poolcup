@@ -11,6 +11,7 @@ import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
 import { WinnerOnlyPredictView } from '@/components/predict/winner-only-predict-view'
+import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import {
   ClassicRoundTabs,
   type ClassicRoundTabId,
@@ -636,9 +637,13 @@ export default function PredictPage() {
               ))
             )
           ) : knockoutTabMatches.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {classicRoundTabEmptyMessage(activeTab)}
-            </p>
+            activeTab === 'r32' ? (
+              <ClassicR32PreviewTab />
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {classicRoundTabEmptyMessage(activeTab)}
+              </p>
+            )
           ) : (
             <div className="flex flex-col gap-3">
               {knockoutTabMatches.map((match) => {

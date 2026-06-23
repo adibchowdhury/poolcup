@@ -10,6 +10,8 @@ export type PredictScoreInputProps = {
   onBlur?: () => void
   label: string
   filled: boolean
+  disabled?: boolean
+  readOnly?: boolean
 }
 
 export function PredictScoreInput({
@@ -18,6 +20,8 @@ export function PredictScoreInput({
   onBlur,
   label,
   filled,
+  disabled = false,
+  readOnly = false,
 }: PredictScoreInputProps) {
   return (
     <input
@@ -26,6 +30,8 @@ export function PredictScoreInput({
       max={20}
       inputMode="numeric"
       value={value}
+      disabled={disabled}
+      readOnly={readOnly}
       onChange={(event) => onChange(event.target.value)}
       onBlur={onBlur}
       className={cn(
@@ -33,6 +39,8 @@ export function PredictScoreInput({
         'bg-[#080b0f] border-[rgba(255,255,255,0.15)]',
         'focus:border-[rgba(0,230,118,0.5)] focus:shadow-[0_0_12px_rgba(0,230,118,0.2)]',
         filled && 'border-[#00e676] text-[#00e676]',
+        (disabled || readOnly) &&
+          'cursor-not-allowed opacity-50 focus:border-[rgba(255,255,255,0.15)] focus:shadow-none',
       )}
       aria-label={label}
     />

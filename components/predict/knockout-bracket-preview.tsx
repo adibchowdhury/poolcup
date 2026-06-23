@@ -78,7 +78,7 @@ function labelForMatchup(
   }
 }
 
-function TbdSlot() {
+export function TbdSlot() {
   return (
     <div
       aria-hidden

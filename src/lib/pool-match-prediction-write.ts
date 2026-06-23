@@ -33,6 +33,7 @@ export type UpsertPoolMatchPredictionParams = {
   matchId: string
   predTeam1: number
   predTeam2: number
+  advancePick?: number | null
 }
 
 /** Same upsert path as app/pool/[invite_code]/predict/page.tsx handleSave. */
@@ -49,6 +50,9 @@ export async function upsertPoolMatchPrediction(
       match_id: params.matchId,
       pred_team1: params.predTeam1,
       pred_team2: params.predTeam2,
+      ...(params.advancePick !== undefined
+        ? { advance_pick: params.advancePick }
+        : {}),
     },
     { onConflict: 'pool_id,member_id,match_id' },
   )
