@@ -31,7 +31,6 @@ import {
   hasStoredClassicMatchPrediction,
 } from '@/src/lib/merge-classic-match-predictions'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import { writeLastViewedPoolInviteCode } from '@/src/lib/resolve-match-pool'
 import {
   buildPoolLeaderboardMembers,
   fetchPoolLeaderboardPointBreakdown,
@@ -436,10 +435,6 @@ export default function PoolPage() {
 
     loadPoolData()
   }, [authLoading, userId, router, loadPoolData])
-
-  useEffect(() => {
-    writeLastViewedPoolInviteCode(inviteCode)
-  }, [inviteCode])
 
   if (authLoading || (!user && !notFound)) {
     return <PoolPageSkeleton />

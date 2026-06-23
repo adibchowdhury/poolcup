@@ -29,7 +29,6 @@ import {
 } from '@/components/dashboard/upcoming-games-tab'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
-import type { UserPoolRef } from '@/src/lib/resolve-match-pool'
 import { cn } from '@/lib/utils'
 import {
   getAvatarSrc,
@@ -136,16 +135,6 @@ function DashboardViewContent({
   const [dashboardPoolsLoading, setDashboardPoolsLoading] = useState(true)
   const [dashboardPoolsError, setDashboardPoolsError] = useState<string | null>(
     null,
-  )
-
-  const userPoolRefs = useMemo<UserPoolRef[]>(
-    () =>
-      dashboardPools.map((pool) => ({
-        id: pool.id,
-        inviteCode: pool.inviteCode,
-        name: pool.name,
-      })),
-    [dashboardPools],
   )
 
   useEffect(() => {
@@ -583,7 +572,7 @@ function DashboardViewContent({
               <div className="-mt-4">
                 <WorldCupUrgencyBanner />
               </div>
-              <LiveScoreboard userPools={userPoolRefs} />
+              <LiveScoreboard />
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
@@ -612,7 +601,7 @@ function DashboardViewContent({
             </TabsContent>
 
             <TabsContent value="games" className="mt-2">
-              <UpcomingGamesTab userPools={userPoolRefs} />
+              <UpcomingGamesTab />
             </TabsContent>
 
             <TabsContent value="how-it-works" className="mt-4">

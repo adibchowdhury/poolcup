@@ -443,7 +443,7 @@ export function PoolHomeView({
                 )}
               >
                 <div className="mb-1.5 pt-2 pb-1 max-sm:shrink-0 max-sm:px-4 sm:mb-3 sm:pt-3 sm:pb-2">
-                  <LiveScoreboard compact inviteCode={pool.inviteCode} />
+                  <LiveScoreboard compact />
                 </div>
                 {isChatView ? (
                   <PoolChatTab

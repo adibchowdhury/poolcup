@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { cn } from '@/lib/utils'
@@ -13,10 +13,6 @@ import {
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
-import {
-  resolveMatchHref,
-  type UserPoolRef,
-} from '@/src/lib/resolve-match-pool'
 import { supabase } from '@/src/lib/supabase'
 
 const REFETCH_INTERVAL_MS = 30_000
@@ -713,21 +709,10 @@ export function useFeaturedMatch() {
   return { match, mode, loading, error }
 }
 
-export function LiveScoreboard({
-  compact = false,
-  inviteCode,
-  userPools = [],
-}: {
-  compact?: boolean
-  inviteCode?: string
-  userPools?: UserPoolRef[]
-} = {}) {
+export function LiveScoreboard({ compact = false }: { compact?: boolean } = {}) {
   const { match, mode, loading, error } = useFeaturedMatch()
 
-  const matchHref = useMemo(() => {
-    if (!match?.id) return null
-    return resolveMatchHref(match.id, userPools, inviteCode)
-  }, [match?.id, userPools, inviteCode])
+  const matchHref = match?.id ? `/match/${match.id}` : null
 
   if (loading) {
     return <LiveScoreboardSkeleton compact={compact} />

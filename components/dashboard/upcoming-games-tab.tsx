@@ -7,10 +7,6 @@ import { useClientNow } from '@/hooks/use-client-now'
 import { UpcomingGamesSkeleton } from '@/components/dashboard/upcoming-games-skeleton'
 import { cn } from '@/lib/utils'
 import {
-  resolveMatchHref,
-  type UserPoolRef,
-} from '@/src/lib/resolve-match-pool'
-import {
   countryNameToFlagSrc,
   hasFlagImage,
   resolveTeamFlagDisplay,
@@ -392,11 +388,7 @@ function UpcomingGamesContent({
   )
 }
 
-export function UpcomingGamesTab({
-  userPools = [],
-}: {
-  userPools?: UserPoolRef[]
-}) {
+export function UpcomingGamesTab() {
   const [matches, setMatches] = useState<UpcomingMatch[]>(cachedMatches ?? [])
   const [loading, setLoading] = useState(cachedMatches === null)
   const [error, setError] = useState<string | null>(null)
@@ -471,7 +463,7 @@ export function UpcomingGamesTab({
                 <li key={match.id}>
                   <MatchCard
                     match={match}
-                    matchHref={resolveMatchHref(match.id, userPools)}
+                    matchHref={`/match/${match.id}`}
                     mounted={mounted}
                     nowMs={nowMs}
                   />

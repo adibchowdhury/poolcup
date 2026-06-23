@@ -5,6 +5,7 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/create') return true
   if (pathname.startsWith('/pool/')) return true
   if (pathname.startsWith('/join/')) return true
+  if (pathname.startsWith('/match/')) return true
   return false
 }
 
