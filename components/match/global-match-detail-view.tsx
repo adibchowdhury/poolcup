@@ -1,9 +1,17 @@
 'use client'
 
-import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ChevronDown,
+  Clock,
+  Crown,
+  Trophy,
+} from 'lucide-react'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   FeaturedMatchCountdownDisplay,
@@ -25,8 +33,11 @@ import {
 } from '@/src/lib/match-prediction-consensus'
 import { getScoringRulesLines } from '@/src/lib/project-match-points'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import type { UserMatchPrediction } from '@/src/lib/user-match-prediction'
 import { useAuth } from '@/src/lib/auth-context'
 import { cn } from '@/lib/utils'
+
+const FLOW_SECTION_CLASS = 'border-b border-white/[0.08] py-5 sm:py-6'
 
 function navigateFromMatchDetailBack(
   router: ReturnType<typeof useRouter>,
@@ -74,63 +85,6 @@ export type GlobalMatchDisplay = {
   elapsedMinute: number | null
 }
 
-function PrimaryInsightCard({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <section
-      className={cn(
-        'rounded-2xl border border-primary/25 bg-card p-5 shadow-[0_8px_32px_rgba(0,0,0,0.35)] sm:p-6',
-        className,
-      )}
-    >
-      {children}
-    </section>
-  )
-}
-
-function SecondaryCard({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <section
-      className={cn(
-        'rounded-xl border border-border/60 bg-muted/15 p-4 sm:p-5',
-        className,
-      )}
-    >
-      {children}
-    </section>
-  )
-}
-
-function TertiaryCard({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <section
-      className={cn(
-        'rounded-xl border border-border/40 px-1 py-4 sm:px-2 sm:py-5',
-        className,
-      )}
-    >
-      {children}
-    </section>
-  )
-}
-
 function MatchStatusPill({
   phase,
   liveClockLabel,
@@ -170,6 +124,115 @@ function MatchStatusPill({
   )
 }
 
+function YourPredictionSection({
+  matchId,
+  isLoggedIn,
+  userPrediction,
+  team1Name,
+  team2Name,
+  crowdFavoriteScoreline,
+  predictionsLocked,
+}: {
+  matchId: string
+  isLoggedIn: boolean
+  userPrediction: UserMatchPrediction | null
+  team1Name: string
+  team2Name: string
+  crowdFavoriteScoreline: { team1: number; team2: number } | null
+  predictionsLocked: boolean
+}) {
+  const hasPrediction =
+    userPrediction != null &&
+    userPrediction.predTeam1 != null &&
+    userPrediction.predTeam2 != null
+
+  const matchesCrowdFavorite =
+    hasPrediction &&
+    crowdFavoriteScoreline != null &&
+    userPrediction.predTeam1 === crowdFavoriteScoreline.team1 &&
+    userPrediction.predTeam2 === crowdFavoriteScoreline.team2
+
+  if (hasPrediction) {
+    return (
+      <section className={FLOW_SECTION_CLASS}>
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Your prediction
+        </h2>
+        <div className="mt-2.5 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-muted-foreground">You</span>
+            <span className="font-mono text-base font-bold tabular-nums text-foreground">
+              {team1Name}{' '}
+              <span className="text-primary">
+                {userPrediction.predTeam1}–{userPrediction.predTeam2}
+              </span>{' '}
+              {team2Name}
+            </span>
+          </div>
+          {crowdFavoriteScoreline ? (
+            <div
+              className={cn(
+                'flex items-center justify-between gap-3 rounded-lg border px-3 py-2',
+                matchesCrowdFavorite
+                  ? 'border-primary/35 bg-primary/10'
+                  : 'border-border/50 bg-muted/20',
+              )}
+            >
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                {matchesCrowdFavorite ? (
+                  <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                ) : null}
+                Crowd favorite
+              </span>
+              <span
+                className={cn(
+                  'font-mono text-sm font-semibold tabular-nums',
+                  matchesCrowdFavorite ? 'text-primary' : 'text-foreground',
+                )}
+              >
+                {team1Name} {crowdFavoriteScoreline.team1}–
+                {crowdFavoriteScoreline.team2} {team2Name}
+              </span>
+            </div>
+          ) : !predictionsLocked ? (
+            <p className="text-xs text-muted-foreground">
+              Crowd scorelines revealed at kickoff.
+            </p>
+          ) : null}
+          {matchesCrowdFavorite ? (
+            <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-primary">
+              Matches the crowd favorite
+            </p>
+          ) : null}
+        </div>
+      </section>
+    )
+  }
+
+  const ctaHref = isLoggedIn
+    ? '/dashboard?tab=upcoming'
+    : `/login?next=${encodeURIComponent(`/match/${matchId}`)}`
+  const ctaLabel = isLoggedIn
+    ? 'Make your pick before kickoff'
+    : 'Sign in to make your prediction'
+
+  return (
+    <section className={FLOW_SECTION_CLASS}>
+      <p className="text-sm text-muted-foreground">
+        {isLoggedIn
+          ? 'You have not predicted this match yet.'
+          : 'Join PoolCup and predict the score.'}
+      </p>
+      <Link
+        href={ctaHref}
+        className="mt-2 inline-flex text-sm font-semibold text-primary hover:underline"
+      >
+        {ctaLabel} →
+      </Link>
+    </section>
+  )
+}
+
 function ConsensusOutcomeBar({
   row,
   total,
@@ -184,19 +247,12 @@ function ConsensusOutcomeBar({
   const pct = total > 0 ? Math.round((row.count / total) * 100) : 0
 
   return (
-    <div
-      className={cn(
-        'space-y-2',
-        !isFavorite && 'opacity-70',
-      )}
-    >
+    <div className={cn('space-y-1.5', !isFavorite && 'opacity-65')}>
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
             'min-w-0 truncate font-medium',
-            isFavorite
-              ? 'text-base text-foreground'
-              : 'text-xs text-muted-foreground',
+            isFavorite ? 'text-sm text-foreground' : 'text-xs text-muted-foreground',
           )}
         >
           {row.label}
@@ -213,7 +269,7 @@ function ConsensusOutcomeBar({
       <div
         className={cn(
           'overflow-hidden rounded-full bg-muted/80',
-          isFavorite ? 'h-3' : 'h-2',
+          isFavorite ? 'h-2.5' : 'h-1.5',
         )}
       >
         <div
@@ -238,11 +294,11 @@ function ScorelineChips({
   if (topScores.length === 0) return null
 
   return (
-    <div className="mt-6 border-t border-border/50 pt-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+    <div className="mt-5 border-t border-border/50 pt-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         Most predicted scorelines
       </p>
-      <ul className="mt-3 flex flex-wrap gap-2">
+      <ul className="mt-2.5 flex flex-wrap gap-2">
         {topScores.map((row, index) => {
           const pct = total > 0 ? Math.round((row.count / total) * 100) : 0
           const isTop = index === 0
@@ -251,16 +307,17 @@ function ScorelineChips({
             <li key={`${row.team1}-${row.team2}`}>
               <div
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-3 py-1.5',
+                  'inline-flex items-center gap-2 rounded-full border',
                   isTop
-                    ? 'border-primary/40 bg-primary/10'
-                    : 'border-border/60 bg-muted/25',
+                    ? 'match-crowd-favorite-chip border-primary/50 bg-primary/15 px-4 py-2 motion-reduce:shadow-none'
+                    : 'border-border/50 bg-muted/20 px-3 py-1.5 opacity-75',
                 )}
               >
                 {isTop ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-primary">
-                    #1
-                  </span>
+                  <Crown
+                    className="h-4 w-4 shrink-0 text-primary"
+                    aria-hidden
+                  />
                 ) : (
                   <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
                     #{index + 1}
@@ -268,8 +325,8 @@ function ScorelineChips({
                 )}
                 <span
                   className={cn(
-                    'font-mono text-sm font-bold tabular-nums',
-                    isTop ? 'text-foreground' : 'text-muted-foreground',
+                    'font-mono font-bold tabular-nums',
+                    isTop ? 'text-base text-foreground' : 'text-sm text-muted-foreground',
                   )}
                 >
                   {row.team1}–{row.team2}
@@ -320,47 +377,47 @@ function PoolCupConsensusSection({
   }, [total])
 
   return (
-    <PrimaryInsightCard>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className={FLOW_SECTION_CLASS}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="font-display text-2xl tracking-wide text-foreground">
+          <h2 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
             PoolCup consensus
           </h2>
           {total > 0 ? (
-            <p className="mt-1.5 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">
                 {total.toLocaleString()}
               </span>{' '}
-              prediction{total === 1 ? '' : 's'} submitted
+              predictions submitted
             </p>
           ) : null}
         </div>
         {total > 0 && favorite ? (
-          <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+          <div className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
             Crowd favorite
           </div>
         ) : null}
       </div>
 
       {total === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground">
           No predictions to show yet.
         </p>
       ) : favorite ? (
-        <div className="mt-5 space-y-5">
-          <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-4">
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
               Crowd favorite
             </p>
-            <p className="mt-1 font-display text-3xl tracking-wide text-foreground">
+            <p className="mt-0.5 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
               {favorite.label}
             </p>
-            <p className="mt-1 text-sm font-semibold tabular-nums text-primary">
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-primary">
               {favorite.pct}% of predictions
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium uppercase tracking-wider text-muted-foreground">
                 Community confidence
@@ -375,7 +432,7 @@ function PoolCupConsensusSection({
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {outcomeRows.map((row) => (
               <ConsensusOutcomeBar
                 key={row.key}
@@ -390,20 +447,81 @@ function PoolCupConsensusSection({
           <ScorelineChips topScores={topScores} total={total} />
         </div>
       ) : null}
-    </PrimaryInsightCard>
+    </section>
+  )
+}
+
+function CompactScoringSection({ round }: { round: string }) {
+  const lines = getScoringRulesLines(round)
+
+  return (
+    <section className={FLOW_SECTION_CLASS}>
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+          <span className="font-display tracking-wide text-foreground">Scoring</span>
+          <span className="inline-flex items-center gap-1 text-xs">
+            {lines.length} rules
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+          </span>
+        </summary>
+        <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">
+          {lines.map((line) => (
+            <li
+              key={line}
+              className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"
+            >
+              <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-primary/70" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </section>
+  )
+}
+
+function CompactMatchInfo({
+  kickoffAt,
+  roundLabel,
+}: {
+  kickoffAt: string
+  roundLabel: string
+}) {
+  return (
+    <section className="py-5 sm:py-6">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+          <time dateTime={kickoffAt}>{formatFeaturedKickoffLocal(kickoffAt)}</time>
+        </span>
+        <span className="text-border/80" aria-hidden>
+          ·
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Trophy className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+          <span>{roundLabel}</span>
+        </span>
+      </div>
+    </section>
   )
 }
 
 type GlobalMatchDetailViewProps = {
+  matchId: string
   match: GlobalMatchDisplay
   phase: GlobalMatchPhase
   distribution: MatchPredictionDistribution | null
+  userPrediction: UserMatchPrediction | null
+  isLoggedIn: boolean
 }
 
 export function GlobalMatchDetailView({
+  matchId,
   match,
   phase,
   distribution,
+  userPrediction,
+  isLoggedIn,
 }: GlobalMatchDetailViewProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -427,6 +545,7 @@ export function GlobalMatchDetailView({
         ? match.team2Name
         : null
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.groupName)
+  const crowdFavoriteScoreline = distribution?.top_scores?.[0] ?? null
 
   return (
     <div className={cn('min-h-screen bg-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}>
@@ -437,7 +556,7 @@ export function GlobalMatchDetailView({
 
       <div className="relative z-10" id="main-content">
         <header className="sticky top-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
-          <div className="mx-auto max-w-4xl px-4 py-3 sm:py-4">
+          <div className="mx-auto max-w-4xl px-4 py-2.5 sm:py-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -459,9 +578,9 @@ export function GlobalMatchDetailView({
           </div>
         </header>
 
-        <main className="mx-auto max-w-4xl space-y-8 px-4 py-6 sm:space-y-10 sm:py-10">
-          <section className="border-b border-white/[0.08] pb-8 pt-2 sm:pb-10 sm:pt-4">
-            <div className="flex flex-col items-center gap-3 text-center">
+        <main className="mx-auto max-w-4xl px-4 py-4 sm:py-6">
+          <section className="border-b border-white/[0.08] pb-5 pt-1">
+            <div className="flex flex-col items-center gap-2 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {roundLabel}
               </p>
@@ -472,58 +591,59 @@ export function GlobalMatchDetailView({
               />
             </div>
 
-            <div className="mt-8 flex items-center gap-2 sm:mt-10 sm:gap-6">
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-2 sm:gap-3">
+            <div className="mt-5 flex items-center gap-1.5 sm:mt-6 sm:gap-5">
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 sm:gap-2">
                 <TeamFlagImage
                   countryName={match.team1Name}
                   dbFlag={match.team1Flag}
-                  imgClassName="h-11 w-auto max-w-full sm:h-16"
-                  emojiClassName="text-4xl sm:text-6xl"
+                  imgClassName="h-[3.25rem] w-auto max-w-full sm:h-[4.75rem]"
+                  emojiClassName="text-5xl sm:text-6xl"
                 />
-                <p className="w-full truncate text-center text-base font-bold text-foreground sm:text-xl">
+                <p className="w-full truncate text-center text-lg font-bold text-foreground sm:text-xl">
                   {match.team1Name}
                 </p>
               </div>
 
-              <div className="flex shrink-0 flex-col items-center justify-center px-1 sm:px-3">
+              <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-2">
                 {showLiveScore ? (
                   <p
                     className={cn(
-                      'font-display text-6xl leading-none tracking-wider text-foreground tabular-nums sm:text-8xl',
-                      phase === 'live' && 'match-hero-score-live motion-reduce:animate-none',
+                      'font-display text-7xl leading-none tracking-wider tabular-nums sm:text-9xl',
+                      'match-hero-score-emphasis motion-reduce:animate-none',
+                      phase === 'live' && 'match-hero-score-live',
                     )}
                   >
                     <span className="text-primary">{score1}</span>
-                    <span className="mx-1 text-muted-foreground/70 sm:mx-2">–</span>
+                    <span className="mx-0.5 text-muted-foreground/60 sm:mx-1.5">–</span>
                     <span className="text-primary">{score2}</span>
                   </p>
                 ) : (
-                  <span className="font-display text-4xl uppercase tracking-[0.2em] text-muted-foreground sm:text-5xl">
+                  <span className="font-display text-5xl uppercase tracking-[0.18em] text-muted-foreground sm:text-6xl">
                     vs
                   </span>
                 )}
                 {phase === 'upcoming' ? (
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                  <p className="mt-1 text-center text-[11px] text-muted-foreground">
                     Locks at kickoff
                   </p>
                 ) : null}
               </div>
 
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-2 sm:gap-3">
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 sm:gap-2">
                 <TeamFlagImage
                   countryName={match.team2Name}
                   dbFlag={match.team2Flag}
-                  imgClassName="h-11 w-auto max-w-full sm:h-16"
-                  emojiClassName="text-4xl sm:text-6xl"
+                  imgClassName="h-[3.25rem] w-auto max-w-full sm:h-[4.75rem]"
+                  emojiClassName="text-5xl sm:text-6xl"
                 />
-                <p className="w-full truncate text-center text-base font-bold text-foreground sm:text-xl">
+                <p className="w-full truncate text-center text-lg font-bold text-foreground sm:text-xl">
                   {match.team2Name}
                 </p>
               </div>
             </div>
 
             {phase === 'final' && actualAdvancedTeamName ? (
-              <p className="mt-6 text-center text-sm text-muted-foreground">
+              <p className="mt-4 text-center text-sm text-muted-foreground">
                 Advanced:{' '}
                 <span className="font-medium text-foreground">
                   {actualAdvancedTeamName}
@@ -532,6 +652,16 @@ export function GlobalMatchDetailView({
             ) : null}
           </section>
 
+          <YourPredictionSection
+            matchId={matchId}
+            isLoggedIn={isLoggedIn}
+            userPrediction={userPrediction}
+            team1Name={match.team1Name}
+            team2Name={match.team2Name}
+            crowdFavoriteScoreline={crowdFavoriteScoreline}
+            predictionsLocked={locked}
+          />
+
           {locked ? (
             <PoolCupConsensusSection
               distribution={distribution}
@@ -539,64 +669,19 @@ export function GlobalMatchDetailView({
               team2Name={match.team2Name}
             />
           ) : (
-            <PrimaryInsightCard>
-              <h2 className="font-display text-2xl tracking-wide text-foreground">
+            <section className={FLOW_SECTION_CLASS}>
+              <h2 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
                 PoolCup consensus
               </h2>
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Predictions revealed after kickoff.
               </p>
-            </PrimaryInsightCard>
+            </section>
           )}
 
-          <SecondaryCard>
-            <h2 className="font-display text-lg tracking-wide text-foreground">
-              Scoring
-            </h2>
-            <ul className="mt-3 space-y-2.5">
-              {getScoringRulesLines(match.round).map((line) => (
-                <li
-                  key={line}
-                  className="flex items-start gap-2 text-sm text-muted-foreground"
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </SecondaryCard>
+          <CompactScoringSection round={match.round} />
 
-          <TertiaryCard>
-            <h2 className="font-display text-base tracking-wide text-muted-foreground">
-              Match info
-            </h2>
-            <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Kickoff
-                </dt>
-                <dd className="mt-1 text-foreground">
-                  <time dateTime={match.kickoffAt}>
-                    {formatFeaturedKickoffLocal(match.kickoffAt)}
-                  </time>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Round
-                </dt>
-                <dd className="mt-1 text-foreground">{roundLabel}</dd>
-              </div>
-              {match.groupName ? (
-                <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    Group
-                  </dt>
-                  <dd className="mt-1 text-foreground">Group {match.groupName}</dd>
-                </div>
-              ) : null}
-            </dl>
-          </TertiaryCard>
+          <CompactMatchInfo kickoffAt={match.kickoffAt} roundLabel={roundLabel} />
         </main>
       </div>
     </div>

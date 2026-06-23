@@ -198,6 +198,12 @@
   }
 }
 
+.match-hero-score-emphasis {
+  text-shadow:
+    0 0 28px rgba(0, 230, 118, 0.22),
+    0 0 56px rgba(0, 230, 118, 0.08);
+}
+
 .match-hero-score-live {
   text-shadow:
     0 0 32px rgba(0, 230, 118, 0.4),
@@ -212,6 +218,10 @@
 
 .consensus-bar-fill {
   transition: width 700ms ease-out;
+}
+
+.match-crowd-favorite-chip {
+  box-shadow: 0 0 18px rgba(0, 230, 118, 0.14);
 }
 
 .scrollbar-none {
@@ -456,14 +466,17 @@
   .animate-pulse-subtle,
   .stage-live-dot,
   .match-hero-score-live,
-  .match-hero-live-pill {
+  .match-hero-live-pill,
+  .match-hero-score-emphasis,
+  .match-crowd-favorite-chip {
     animation: none;
     opacity: 1;
     box-shadow: none;
   }
 
-  .match-hero-score-live {
-    text-shadow: 0 0 24px rgba(0, 230, 118, 0.2);
+  .match-hero-score-live,
+  .match-hero-score-emphasis {
+    text-shadow: 0 0 20px rgba(0, 230, 118, 0.15);
   }
 
   .consensus-bar-fill {

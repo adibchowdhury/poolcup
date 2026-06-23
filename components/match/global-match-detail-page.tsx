@@ -8,6 +8,7 @@ import {
   GlobalMatchDetailView,
   type GlobalMatchDisplay,
 } from '@/components/match/global-match-detail-view'
+import { useAuth } from '@/src/lib/auth-context'
 import type { ClassicMatchRow } from '@/src/lib/merge-classic-match-predictions'
 import { deriveGlobalMatchPhase } from '@/src/lib/global-match-phase'
 import { isMatchLocked } from '@/src/lib/match-lock'
@@ -17,6 +18,10 @@ import {
 } from '@/src/lib/match-prediction-distribution'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
+import {
+  fetchUserMatchPrediction,
+  type UserMatchPrediction,
+} from '@/src/lib/user-match-prediction'
 
 const MATCH_COLUMNS =
   'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team, status_short, elapsed_minute'
@@ -58,9 +63,13 @@ function toGlobalMatchDisplay(match: ClassicMatchRow): GlobalMatchDisplay {
 }
 
 export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
+  const { user } = useAuth()
   const [match, setMatch] = useState<ClassicMatchRow | null>(null)
   const [distribution, setDistribution] =
     useState<MatchPredictionDistribution | null>(null)
+  const [userPrediction, setUserPrediction] = useState<UserMatchPrediction | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -81,6 +90,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       setNotFound(true)
       setMatch(null)
       setDistribution(null)
+      setUserPrediction(null)
       setLoading(false)
       return
     }
@@ -111,9 +121,23 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
     setLoading(false)
   }, [matchId])
 
+  const loadUserPrediction = useCallback(async () => {
+    if (!user) {
+      setUserPrediction(null)
+      return
+    }
+
+    const prediction = await fetchUserMatchPrediction(supabase, matchId)
+    setUserPrediction(prediction)
+  }, [matchId, user])
+
   useEffect(() => {
     void loadMatch(true)
   }, [loadMatch])
+
+  useEffect(() => {
+    void loadUserPrediction()
+  }, [loadUserPrediction])
 
   const phase = useMemo(
     () => (match ? deriveGlobalMatchPhase(match) : null),
@@ -160,9 +184,12 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
 
   return (
     <GlobalMatchDetailView
+      matchId={matchId}
       match={toGlobalMatchDisplay(match)}
       phase={phase}
       distribution={distribution}
+      userPrediction={userPrediction}
+      isLoggedIn={Boolean(user)}
     />
   )
 }
