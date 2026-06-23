@@ -15,6 +15,7 @@ import {
   type MatchScoringStyle,
   type PredictionOutcomeKind,
 } from '@/src/lib/prediction-scoring'
+import { projectMatchPoints } from '@/src/lib/project-match-points'
 import { supabase } from '@/src/lib/supabase'
 
 type MatchRoomPicksPanelProps = {
@@ -26,6 +27,11 @@ type MatchRoomPicksPanelProps = {
   isFinal: boolean
   resultTeam1: number | null
   resultTeam2: number | null
+  matchRound?: string
+  advancingTeam?: number | null
+  externalPicks?: MatchPoolPick[] | null
+  externalPicksLoading?: boolean
+  externalPicksError?: string | null
 }
 
 type EnrichedPick = MatchPoolPick & {
@@ -53,6 +59,8 @@ function enrichPick(
   resultTeam1: number | null,
   resultTeam2: number | null,
   scoringStyle: MatchScoringStyle,
+  matchRound?: string,
+  advancingTeam?: number | null,
 ): EnrichedPick {
   if (resultTeam1 == null || resultTeam2 == null) {
     return {
@@ -60,6 +68,29 @@ function enrichPick(
       statusLabel: '—',
       outcomeKind: 'pending',
       projectedPoints: 0,
+    }
+  }
+
+  if (scoringStyle === 'classic' && matchRound) {
+    const projection = projectMatchPoints(
+      matchRound,
+      pick.predTeam1,
+      pick.predTeam2,
+      pick.advancePick,
+      resultTeam1,
+      resultTeam2,
+      advancingTeam ?? null,
+    )
+
+    return {
+      ...pick,
+      statusLabel: isFinal
+        ? getPredictionOutcomeLabel(projection.kind)
+        : getLiveStatusLabel(projection.kind),
+      outcomeKind: projection.kind,
+      projectedPoints: isFinal
+        ? (pick.points ?? projection.points)
+        : projection.points,
     }
   }
 
@@ -271,12 +302,20 @@ export function MatchRoomPicksPanel({
   isFinal,
   resultTeam1,
   resultTeam2,
+  matchRound,
+  advancingTeam,
+  externalPicks,
+  externalPicksLoading = false,
+  externalPicksError = null,
 }: MatchRoomPicksPanelProps) {
+  const useExternalPicks = externalPicks !== undefined
   const [picks, setPicks] = useState<MatchPoolPick[] | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!useExternalPicks)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   const loadPicks = useCallback(async () => {
+    if (useExternalPicks) return
+
     setLoading(true)
     setFetchError(null)
 
@@ -295,26 +334,49 @@ export function MatchRoomPicksPanel({
     }
 
     setLoading(false)
-  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2, scoringStyle])
+  }, [
+    useExternalPicks,
+    poolId,
+    matchId,
+    isFinal,
+    resultTeam1,
+    resultTeam2,
+    scoringStyle,
+  ])
 
   useEffect(() => {
+    if (useExternalPicks) return
     void loadPicks()
-  }, [loadPicks])
+  }, [loadPicks, useExternalPicks])
 
   useEffect(() => {
+    if (useExternalPicks) return
+
     const interval = window.setInterval(() => {
       void loadPicks()
     }, 30_000)
 
     return () => window.clearInterval(interval)
-  }, [loadPicks])
+  }, [loadPicks, useExternalPicks])
+
+  const resolvedPicks = useExternalPicks ? externalPicks : picks
+  const resolvedLoading = useExternalPicks ? externalPicksLoading : loading
+  const resolvedError = useExternalPicks ? externalPicksError : fetchError
 
   const enrichedPicks = useMemo(() => {
-    if (!picks) return []
+    if (!resolvedPicks) return []
 
-    return picks
+    return resolvedPicks
       .map((pick) =>
-        enrichPick(pick, isFinal, resultTeam1, resultTeam2, scoringStyle),
+        enrichPick(
+          pick,
+          isFinal,
+          resultTeam1,
+          resultTeam2,
+          scoringStyle,
+          matchRound,
+          advancingTeam,
+        ),
       )
       .sort((a, b) => {
         if (b.projectedPoints !== a.projectedPoints) {
@@ -324,7 +386,15 @@ export function MatchRoomPicksPanel({
           sensitivity: 'base',
         })
       })
-  }, [picks, isFinal, resultTeam1, resultTeam2, scoringStyle])
+  }, [
+    resolvedPicks,
+    isFinal,
+    resultTeam1,
+    resultTeam2,
+    scoringStyle,
+    matchRound,
+    advancingTeam,
+  ])
 
   const yourPick = enrichedPicks.find((pick) => pick.userId === currentUserId)
   const otherPicks = enrichedPicks.filter((pick) => pick.userId !== currentUserId)
@@ -351,11 +421,11 @@ export function MatchRoomPicksPanel({
       </div>
 
       <div className="flex min-h-0 flex-col p-2">
-        {loading ? (
+        {resolvedLoading ? (
           <p className="px-3 py-8 text-center text-sm text-muted-foreground">
             Loading picks…
           </p>
-        ) : fetchError ? (
+        ) : resolvedError ? (
           <p className="px-3 py-8 text-center text-sm text-destructive">
             Could not load picks.
           </p>

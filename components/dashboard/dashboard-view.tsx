@@ -27,6 +27,9 @@ import {
   prefetchUpcomingMatches,
   UpcomingGamesTab,
 } from '@/components/dashboard/upcoming-games-tab'
+import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
+import type { UserPoolRef } from '@/src/lib/resolve-match-pool'
 import { cn } from '@/lib/utils'
 import {
   getAvatarSrc,
@@ -126,6 +129,23 @@ function DashboardViewContent({
   const { registerDashboardNavHandler, setActiveNavId } = useDashboardTab()
   const [activeTab, setActiveTab] = useState(() =>
     dashboardTabFromParam(searchParams.get('tab')),
+  )
+  const [dashboardPools, setDashboardPools] = useState<DashboardPoolCardData[]>(
+    [],
+  )
+  const [dashboardPoolsLoading, setDashboardPoolsLoading] = useState(true)
+  const [dashboardPoolsError, setDashboardPoolsError] = useState<string | null>(
+    null,
+  )
+
+  const userPoolRefs = useMemo<UserPoolRef[]>(
+    () =>
+      dashboardPools.map((pool) => ({
+        id: pool.id,
+        inviteCode: pool.inviteCode,
+        name: pool.name,
+      })),
+    [dashboardPools],
   )
 
   useEffect(() => {
@@ -265,6 +285,28 @@ function DashboardViewContent({
   useEffect(() => {
     void prefetchUpcomingMatches()
   }, [])
+
+  const loadDashboardPools = useCallback(async () => {
+    setDashboardPoolsLoading(true)
+    setDashboardPoolsError(null)
+
+    const { pools, error: fetchError } = await fetchDashboardPools(
+      supabase,
+      userId,
+    )
+
+    setDashboardPools(pools)
+    setDashboardPoolsError(fetchError)
+    setDashboardPoolsLoading(false)
+  }, [userId])
+
+  useEffect(() => {
+    void loadDashboardPools()
+  }, [loadDashboardPools])
+
+  function handleDashboardPoolDeleted(poolId: string) {
+    setDashboardPools((previous) => previous.filter((pool) => pool.id !== poolId))
+  }
 
   const canSaveDisplayName = useMemo(() => {
     return Boolean(fullName.trim())
@@ -541,7 +583,7 @@ function DashboardViewContent({
               <div className="-mt-4">
                 <WorldCupUrgencyBanner />
               </div>
-              <LiveScoreboard />
+              <LiveScoreboard userPools={userPoolRefs} />
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
@@ -560,11 +602,17 @@ function DashboardViewContent({
                 </Button>
               </div>
 
-              <ActivePoolsTab userId={userId} />
+              <ActivePoolsTab
+                userId={userId}
+                pools={dashboardPools}
+                loading={dashboardPoolsLoading}
+                error={dashboardPoolsError}
+                onPoolDeleted={handleDashboardPoolDeleted}
+              />
             </TabsContent>
 
             <TabsContent value="games" className="mt-2">
-              <UpcomingGamesTab />
+              <UpcomingGamesTab userPools={userPoolRefs} />
             </TabsContent>
 
             <TabsContent value="how-it-works" className="mt-4">

@@ -17,6 +17,8 @@ export type ClassicMatchRow = {
   result_team2: number | null
   is_final: boolean
   advancing_team: number | null
+  status_short: string | null
+  elapsed_minute: number | null
 }
 
 export type ClassicPredictionRow = {

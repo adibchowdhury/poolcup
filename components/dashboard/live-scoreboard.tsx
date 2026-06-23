@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { cn } from '@/lib/utils'
 import {
@@ -12,10 +13,46 @@ import {
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
+import {
+  resolveMatchHref,
+  type UserPoolRef,
+} from '@/src/lib/resolve-match-pool'
 import { supabase } from '@/src/lib/supabase'
 
 const REFETCH_INTERVAL_MS = 30_000
 const COUNTDOWN_TICK_MS = 1000
+
+function ScoreboardCardShell({
+  matchHref,
+  className,
+  ariaLabel,
+  children,
+}: {
+  matchHref?: string | null
+  className?: string
+  ariaLabel: string
+  children: ReactNode
+}) {
+  if (matchHref) {
+    return (
+      <Link
+        href={matchHref}
+        className="block rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label={`${ariaLabel}. View match details`}
+      >
+        <article className={cn(className, 'transition-colors hover:border-primary/35')}>
+          {children}
+        </article>
+      </Link>
+    )
+  }
+
+  return (
+    <article className={className} aria-label={ariaLabel}>
+      {children}
+    </article>
+  )
+}
 
 function padCountdownUnit(value: number): string {
   return value.toString().padStart(2, '0')
@@ -99,7 +136,7 @@ function useLiveMatchClock(
   )
 }
 
-function useKickoffCountdown(kickoffAt: string) {
+export function useKickoffCountdown(kickoffAt: string) {
   const [mounted, setMounted] = useState(false)
   const [nowMs, setNowMs] = useState(0)
 
@@ -128,7 +165,7 @@ function useKickoffCountdown(kickoffAt: string) {
   }
 }
 
-function FeaturedMatchCountdownDisplay({
+export function FeaturedMatchCountdownDisplay({
   mounted,
   isKickingOff,
   label,
@@ -279,9 +316,11 @@ function CompactScoreboardTeam({
 function CompactLiveScoreboardCard({
   match,
   mode,
+  matchHref,
 }: {
   match: FeaturedMatch
   mode: FeaturedMatchMode
+  matchHref?: string | null
 }) {
   const isLive = mode === 'live'
   const isUpcoming = mode === 'upcoming'
@@ -303,12 +342,13 @@ function CompactLiveScoreboardCard({
     )
 
   return (
-    <article
+    <ScoreboardCardShell
+      matchHref={matchHref}
+      ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
       className={cn(
         'relative overflow-hidden rounded-xl border border-white/15 backdrop-blur-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.1)] px-3 py-2.5 sm:px-4 sm:py-3',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/40 before:to-transparent',
       )}
-      aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
       <div
         aria-hidden
@@ -378,7 +418,7 @@ function CompactLiveScoreboardCard({
           )}
         </div>
       </div>
-    </article>
+    </ScoreboardCardShell>
   )
 }
 
@@ -386,13 +426,21 @@ export function LiveScoreboardCard({
   match,
   mode,
   compact = false,
+  matchHref,
 }: {
   match: FeaturedMatch
   mode: FeaturedMatchMode
   compact?: boolean
+  matchHref?: string | null
 }) {
   if (compact) {
-    return <CompactLiveScoreboardCard match={match} mode={mode} />
+    return (
+      <CompactLiveScoreboardCard
+        match={match}
+        mode={mode}
+        matchHref={matchHref}
+      />
+    )
   }
 
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.group_name)
@@ -423,12 +471,13 @@ export function LiveScoreboardCard({
     )
 
   return (
-    <article
+    <ScoreboardCardShell
+      matchHref={matchHref}
+      ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
       className={cn(
         'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.14),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] px-2 py-1 sm:p-4',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/55 before:to-transparent',
       )}
-      aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
       <div
         aria-hidden
@@ -622,7 +671,7 @@ export function LiveScoreboardCard({
           </time>
         </div>
       ) : null}
-    </article>
+    </ScoreboardCardShell>
   )
 }
 
@@ -664,8 +713,21 @@ export function useFeaturedMatch() {
   return { match, mode, loading, error }
 }
 
-export function LiveScoreboard({ compact = false }: { compact?: boolean } = {}) {
+export function LiveScoreboard({
+  compact = false,
+  inviteCode,
+  userPools = [],
+}: {
+  compact?: boolean
+  inviteCode?: string
+  userPools?: UserPoolRef[]
+} = {}) {
   const { match, mode, loading, error } = useFeaturedMatch()
+
+  const matchHref = useMemo(() => {
+    if (!match?.id) return null
+    return resolveMatchHref(match.id, userPools, inviteCode)
+  }, [match?.id, userPools, inviteCode])
 
   if (loading) {
     return <LiveScoreboardSkeleton compact={compact} />
@@ -675,5 +737,12 @@ export function LiveScoreboard({ compact = false }: { compact?: boolean } = {}) 
     return null
   }
 
-  return <LiveScoreboardCard match={match} mode={mode} compact={compact} />
+  return (
+    <LiveScoreboardCard
+      match={match}
+      mode={mode}
+      compact={compact}
+      matchHref={matchHref}
+    />
+  )
 }

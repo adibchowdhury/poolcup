@@ -10,12 +10,14 @@ export type MatchPoolPick = {
   userId: string
   predTeam1: number
   predTeam2: number
+  advancePick: number | null
   points: number | null
 }
 
 type PredictionRow = {
   pred_team1: number
   pred_team2: number
+  advance_pick: number | null
   member_id: string
   pool_members:
     | { display_name: string; user_id: string }
@@ -83,6 +85,7 @@ export async function fetchMatchPoolPicks(
       `
       pred_team1,
       pred_team2,
+      advance_pick,
       member_id,
       pool_members!inner (
         display_name,
@@ -110,6 +113,7 @@ export async function fetchMatchPoolPicks(
       userId: member.user_id,
       predTeam1: row.pred_team1,
       predTeam2: row.pred_team2,
+      advancePick: row.advance_pick,
       points: resolvePoints(
         isFinal,
         resultTeam1,

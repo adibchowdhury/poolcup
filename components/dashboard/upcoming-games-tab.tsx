@@ -1,10 +1,15 @@
 'use client'
 
+import Link from 'next/link'
 import { Calendar, Clock } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
 import { UpcomingGamesSkeleton } from '@/components/dashboard/upcoming-games-skeleton'
 import { cn } from '@/lib/utils'
+import {
+  resolveMatchHref,
+  type UserPoolRef,
+} from '@/src/lib/resolve-match-pool'
 import {
   countryNameToFlagSrc,
   hasFlagImage,
@@ -251,10 +256,12 @@ function DateSectionHeader({
 
 function MatchCard({
   match,
+  matchHref,
   mounted,
   nowMs,
 }: {
   match: UpcomingMatch
+  matchHref: string
   mounted: boolean
   nowMs: number
 }) {
@@ -262,14 +269,20 @@ function MatchCard({
   const groupAccentLabel = formatGroupAccentLabel(match.round, match.group_name)
 
   return (
-    <article
-      className={cn(
-        'overflow-hidden rounded-2xl border border-primary/20',
-        'bg-gradient-to-br from-card via-card to-primary/[0.06]',
-        'px-3 py-3.5 sm:rounded-[1.25rem] sm:px-5 sm:py-4',
-        'shadow-[0_2px_14px_rgba(0,0,0,0.32)]',
-      )}
+    <Link
+      href={matchHref}
+      className="block rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-label={`${match.team1_name} vs ${match.team2_name}. View match details`}
     >
+      <article
+        className={cn(
+          'overflow-hidden rounded-2xl border border-primary/20',
+          'bg-gradient-to-br from-card via-card to-primary/[0.06]',
+          'px-3 py-3.5 sm:rounded-[1.25rem] sm:px-5 sm:py-4',
+          'shadow-[0_2px_14px_rgba(0,0,0,0.32)]',
+          'transition-colors hover:border-primary/40',
+        )}
+      >
       <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary sm:text-[11px]">
           {groupAccentLabel}
@@ -359,7 +372,8 @@ function MatchCard({
           {formatKickoffCompact(match.kickoff_at)}
         </time>
       </p>
-    </article>
+      </article>
+    </Link>
   )
 }
 
@@ -378,7 +392,11 @@ function UpcomingGamesContent({
   )
 }
 
-export function UpcomingGamesTab() {
+export function UpcomingGamesTab({
+  userPools = [],
+}: {
+  userPools?: UserPoolRef[]
+}) {
   const [matches, setMatches] = useState<UpcomingMatch[]>(cachedMatches ?? [])
   const [loading, setLoading] = useState(cachedMatches === null)
   const [error, setError] = useState<string | null>(null)
@@ -451,7 +469,12 @@ export function UpcomingGamesTab() {
             <ul className="space-y-2.5">
               {dayMatches.map((match) => (
                 <li key={match.id}>
-                  <MatchCard match={match} mounted={mounted} nowMs={nowMs} />
+                  <MatchCard
+                    match={match}
+                    matchHref={resolveMatchHref(match.id, userPools)}
+                    mounted={mounted}
+                    nowMs={nowMs}
+                  />
                 </li>
               ))}
             </ul>
