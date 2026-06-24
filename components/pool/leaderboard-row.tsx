@@ -22,6 +22,7 @@ export type LeaderboardPointBreakdownItem = {
 
 export type LeaderboardMember = {
   id: string
+  userId: string
   name: string
   isYou: boolean
   avatar: string | null

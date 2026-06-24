@@ -113,7 +113,8 @@ CREATE TABLE IF NOT EXISTS public.pools (
     payment_status text NOT NULL DEFAULT 'pending'::text,
     stripe_session_id text,
     created_at timestamp with time zone DEFAULT now(),
-    event_name text NOT NULL DEFAULT 'FIFA World Cup 2026'::text
+    event_name text NOT NULL DEFAULT 'FIFA World Cup 2026'::text,
+    avatar text
 );
 
 CREATE TABLE IF NOT EXISTS public.predictions (

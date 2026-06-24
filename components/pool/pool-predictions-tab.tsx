@@ -26,6 +26,7 @@ type PoolPredictionsTabProps = {
   winnerGroups: WinnerGroupPrediction[]
   thirdPlaceTeams: string[]
   predictHref: string
+  acceptingMembers?: boolean
   shareOpen: boolean
   onToggleShare: () => void
   inviteCopySlot: React.ReactNode
@@ -48,6 +49,7 @@ export function PoolPredictionsTab({
   winnerGroups,
   thirdPlaceTeams,
   predictHref,
+  acceptingMembers = true,
   shareOpen,
   onToggleShare,
   inviteCopySlot,
@@ -109,14 +111,17 @@ export function PoolPredictionsTab({
           size="lg"
           variant="outline"
           onClick={onToggleShare}
-          className={
+          disabled={!acceptingMembers}
+          className={cn(
             hasAnyPredictions
               ? 'group h-14 w-full gap-3 border-2 border-border bg-card font-display text-lg tracking-wide hover:border-primary/50 hover-lift'
-              : 'group h-16 w-full gap-3 border-2 border-border bg-card font-display text-xl tracking-wide hover:border-primary/50 hover-lift'
-          }
+              : 'group h-16 w-full gap-3 border-2 border-border bg-card font-display text-xl tracking-wide hover:border-primary/50 hover-lift',
+            !acceptingMembers &&
+              'cursor-not-allowed border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/30',
+          )}
         >
           <Share2 className="h-5 w-5 transition-transform group-hover:scale-110 sm:h-6 sm:w-6" />
-          Share Pool
+          {acceptingMembers ? 'Share Pool' : 'Invites closed'}
         </Button>
       </div>
 

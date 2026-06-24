@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { JoinPoolClosedView } from '@/components/join/join-pool-closed-view'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { useAuth } from '@/src/lib/auth-context'
+import { getJoinPoolErrorMessage } from '@/src/lib/join-pool-errors'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -19,6 +21,7 @@ type Pool = {
   invite_code: string
   creator_id: string
   created_at: string | null
+  accepting_members: boolean | null
 }
 
 type PoolMember = {
@@ -60,7 +63,7 @@ export default function JoinPoolPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code, creator_id, created_at')
+      .select('id, name, invite_code, creator_id, created_at, accepting_members')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -187,7 +190,7 @@ export default function JoinPoolPage() {
     setJoining(false)
 
     if (joinError) {
-      setError(joinError.message)
+      setError(getJoinPoolErrorMessage(joinError))
       return
     }
 
@@ -212,6 +215,15 @@ export default function JoinPoolPage() {
   }
 
   const joinNext = `/join/${inviteCode}`
+  const isAlreadyMember = Boolean(
+    user && members.some((member) => member.user_id === user.id),
+  )
+  const poolClosedToNewMembers = pool?.accepting_members === false
+
+  useEffect(() => {
+    if (!user || !pool || !poolClosedToNewMembers || !isAlreadyMember) return
+    router.replace(`/pool/${inviteCode}`)
+  }, [user, pool, poolClosedToNewMembers, isAlreadyMember, inviteCode, router])
 
   if (authLoading || pageLoading) {
     return (
@@ -244,6 +256,10 @@ export default function JoinPoolPage() {
         </div>
       </main>
     )
+  }
+
+  if (poolClosedToNewMembers && !isAlreadyMember) {
+    return <JoinPoolClosedView poolName={pool.name} isLoggedIn={Boolean(user)} />
   }
 
   if (!user) {
@@ -329,6 +345,19 @@ export default function JoinPoolPage() {
         year: 'numeric',
       })
     : null
+
+  if (isAlreadyMember) {
+    return (
+      <main
+        className={cn(
+          'flex min-h-screen items-center justify-center bg-[#080b0f]',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
+        <p className="text-[#5a7080]">Opening pool…</p>
+      </main>
+    )
+  }
 
   return (
     <main

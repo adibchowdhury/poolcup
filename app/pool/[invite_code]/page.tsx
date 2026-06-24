@@ -44,6 +44,8 @@ type Pool = {
   invite_code: string
   creator_id: string
   scoring_style: string
+  accepting_members: boolean | null
+  avatar: string | null
 }
 
 type PoolMember = {
@@ -148,6 +150,20 @@ export default function PoolPage() {
     )
   }, [])
 
+  const handlePoolNameChange = useCallback((name: string) => {
+    setPoolMeta((previous) => (previous ? { ...previous, name } : previous))
+  }, [])
+
+  const handleAcceptingMembersChange = useCallback((acceptingMembers: boolean) => {
+    setPoolMeta((previous) =>
+      previous ? { ...previous, acceptingMembers } : previous,
+    )
+  }, [])
+
+  const handlePoolAvatarChange = useCallback((avatar: string) => {
+    setPoolMeta((previous) => (previous ? { ...previous, avatar } : previous))
+  }, [])
+
   const loadPoolData = useCallback(async () => {
     if (!userId) return
 
@@ -157,7 +173,7 @@ export default function PoolPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code, creator_id, scoring_style')
+      .select('id, name, invite_code, creator_id, scoring_style, accepting_members, avatar')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -358,6 +374,8 @@ export default function PoolPage() {
       totalMatches: totalMatches ?? 0,
       nextMatchIn,
       nextMatchKickoffAt,
+      acceptingMembers: pool.accepting_members ?? true,
+      avatar: pool.avatar ?? null,
     })
     setUserPredictions(loadedUserPredictions)
     setWinnerGroups(loadedWinnerGroups)
@@ -482,6 +500,9 @@ export default function PoolPage() {
       avatarsByMemberId={avatarByMemberId}
       poolCreatorUserId={poolCreatorUserId ?? undefined}
       memberProfilesByUserId={memberProfilesByUserId}
+      onPoolNameChange={handlePoolNameChange}
+      onAcceptingMembersChange={handleAcceptingMembersChange}
+      onPoolAvatarChange={handlePoolAvatarChange}
     />
   )
 }

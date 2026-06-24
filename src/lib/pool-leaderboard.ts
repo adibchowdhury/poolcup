@@ -341,6 +341,7 @@ export function buildPoolLeaderboardMembers({
 
   return entries.map((entry) => ({
     id: entry.member_id,
+    userId: entry.user_id,
     name: entry.display_name,
     isYou: currentUserId === entry.user_id,
     avatar: avatarsByMemberId.get(entry.member_id) ?? null,
