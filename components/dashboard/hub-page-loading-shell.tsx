@@ -22,10 +22,10 @@ function HubPageHeaderSkeleton() {
 function HubDesktopTabBarSkeleton() {
   return (
     <div
-      className="mx-auto hidden h-auto w-full max-w-4xl grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:grid sm:grid-cols-5"
+      className="mx-auto hidden h-auto w-full max-w-4xl grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:grid sm:grid-cols-4"
       aria-hidden
     >
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: 4 }).map((_, index) => (
         <ShimmerBlock key={index} className="h-10 rounded-md" />
       ))}
     </div>

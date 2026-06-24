@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Calendar,
-  CircleHelp,
   MessageCircle,
   Trophy,
   User,
@@ -43,12 +42,6 @@ const NAV_ITEMS: {
   { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Trophy },
   { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
   { id: 'profile', label: 'Profile', href: DASHBOARD_TAB_HREFS.profile, icon: User },
-  {
-    id: 'how-it-works',
-    label: 'Help',
-    href: DASHBOARD_TAB_HREFS['how-it-works'],
-    icon: CircleHelp,
-  },
 ]
 
 const navItemClassName = (isActive: boolean) =>

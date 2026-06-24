@@ -5,7 +5,23 @@ import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool
 import { ActivePoolsSkeleton } from '@/components/dashboard/pool-card-skeleton'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
 import { supabase } from '@/src/lib/supabase'
+import { cn } from '@/lib/utils'
 import { useCallback, useEffect, useState } from 'react'
+
+/** ~1.15 cards visible on mobile; fixed widths on larger breakpoints for multi-card peek. */
+const POOL_CAROUSEL_ITEM_CLASS =
+  'w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]'
+
+const POOL_CAROUSEL_SCROLL_CLASS = cn(
+  '-mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+  '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
+  '[scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]',
+  '[&::-webkit-scrollbar]:h-1',
+  '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',
+  '[&::-webkit-scrollbar-track]:bg-transparent',
+)
+
+const POOL_CAROUSEL_TRACK_CLASS = 'flex w-max min-w-full gap-4 px-4 pb-1'
 
 interface ActivePoolsTabProps {
   userId: string
@@ -76,16 +92,18 @@ export function ActivePoolsTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {resolvedPools.map((pool) => (
-          <PoolCard
-            key={pool.id}
-            pool={pool}
-            onPoolDeleted={handlePoolDeleted}
-          />
-        ))}
+      <div className={POOL_CAROUSEL_SCROLL_CLASS}>
+        <div className={POOL_CAROUSEL_TRACK_CLASS}>
+          {resolvedPools.map((pool) => (
+            <div key={pool.id} className={POOL_CAROUSEL_ITEM_CLASS}>
+              <PoolCard pool={pool} onPoolDeleted={handlePoolDeleted} />
+            </div>
+          ))}
 
-        <JoinOrCreatePoolCard />
+          <div className={POOL_CAROUSEL_ITEM_CLASS}>
+            <JoinOrCreatePoolCard />
+          </div>
+        </div>
       </div>
 
       {resolvedPools.length === 0 && (

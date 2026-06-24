@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Heart, Mail, Settings } from 'lucide-react'
+import { Heart, Mail, Settings, CircleHelp } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import { MOBILE_BOTTOM_NAV_PAD_CLASS, DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
 import { supabase } from '@/src/lib/supabase'
 
@@ -202,6 +202,12 @@ export function DashboardAppShell({
                             <Heart className="h-4 w-4" />
                             Support Us
                           </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={DASHBOARD_TAB_HREFS['how-it-works']}>
+                            <CircleHelp className="h-4 w-4" />
+                            Help
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href="/contact">

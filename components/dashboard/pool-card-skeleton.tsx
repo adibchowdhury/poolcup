@@ -1,4 +1,5 @@
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { cn } from '@/lib/utils'
 
 export function PoolCardSkeleton() {
   return (
@@ -47,12 +48,24 @@ export function PoolCardSkeleton() {
 export function ActivePoolsSkeleton() {
   return (
     <div
-      className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+      className={cn(
+        '-mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+        '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
+        '[scrollbar-width:thin]',
+        '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',
+        '[&::-webkit-scrollbar-track]:bg-transparent',
+      )}
       aria-busy="true"
       aria-label="Loading your pools"
     >
-      <PoolCardSkeleton />
-      <PoolCardSkeleton />
+      <div className="flex w-max min-w-full gap-4 px-4 pb-1">
+        <div className="w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
+          <PoolCardSkeleton />
+        </div>
+        <div className="w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
+          <PoolCardSkeleton />
+        </div>
+      </div>
     </div>
   )
 }
