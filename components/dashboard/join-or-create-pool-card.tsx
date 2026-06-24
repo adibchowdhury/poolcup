@@ -13,6 +13,11 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
+import {
+  DashboardGlassBackdrops,
+  dashboardGlassSurfaceClass,
+} from '@/components/dashboard/dashboard-glass-surface'
 
 function normalizeInviteCode(input: string): string {
   const trimmed = input.trim()
@@ -70,9 +75,13 @@ export function JoinOrCreatePoolCard() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative w-full cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-border text-left transition-colors hover:border-primary/50"
+        className={cn(
+          dashboardGlassSurfaceClass('2xl'),
+          'group w-full cursor-pointer border-2 border-dashed border-white/25 text-left transition-colors hover:border-primary/50',
+        )}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-[#ffb300]/5 opacity-0 transition-opacity group-hover:opacity-100" />
+        <DashboardGlassBackdrops variant="full" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 to-[#ffb300]/5 opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="relative flex min-h-[280px] flex-col items-center justify-center p-6 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted transition-transform group-hover:scale-110">
             <Plus className="h-8 w-8 text-muted-foreground transition-colors group-hover:text-primary" />

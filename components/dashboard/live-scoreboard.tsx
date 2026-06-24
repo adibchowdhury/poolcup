@@ -14,6 +14,10 @@ import {
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
 import { supabase } from '@/src/lib/supabase'
+import {
+  DashboardGlassBackdrops,
+  dashboardGlassSurfaceClass,
+} from '@/components/dashboard/dashboard-glass-surface'
 
 const REFETCH_INTERVAL_MS = 30_000
 const COUNTDOWN_TICK_MS = 1000
@@ -220,10 +224,14 @@ export function LiveScoreboardSkeleton({ compact = false }: { compact?: boolean 
   if (compact) {
     return (
       <div
-        className="animate-pulse rounded-xl border border-border/80 bg-card/80 px-3 py-3"
+        className={cn(
+          dashboardGlassSurfaceClass('xl', 'compact'),
+          'animate-pulse px-3 py-3',
+        )}
         aria-busy="true"
         aria-label="Loading live scoreboard"
       >
+        <DashboardGlassBackdrops variant="compact" />
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded bg-muted" />
           <div className="h-3.5 flex-1 rounded bg-muted" />
@@ -238,10 +246,14 @@ export function LiveScoreboardSkeleton({ compact = false }: { compact?: boolean 
 
   return (
     <div
-      className="animate-pulse rounded-2xl border border-border/80 bg-card/80 p-3 sm:p-4"
+      className={cn(
+        dashboardGlassSurfaceClass('3xl'),
+        'animate-pulse p-3 sm:p-4',
+      )}
       aria-busy="true"
       aria-label="Loading live scoreboard"
     >
+      <DashboardGlassBackdrops variant="full" />
       <div className="mb-2 h-5 w-24 rounded bg-muted" />
       <div className="flex items-center justify-between gap-1">
         <div className="flex flex-1 flex-col items-center gap-1">
@@ -342,18 +354,11 @@ function CompactLiveScoreboardCard({
       matchHref={matchHref}
       ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
       className={cn(
-        'relative overflow-hidden rounded-xl border border-white/15 backdrop-blur-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.1)] px-3 py-2.5 sm:px-4 sm:py-3',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/40 before:to-transparent',
+        dashboardGlassSurfaceClass('xl', 'compact'),
+        'px-3 py-2.5 sm:px-4 sm:py-3',
       )}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            'radial-gradient(80% 80% at 50% 0%, hsl(var(--primary) / 0.28), transparent 70%), #0D1F14',
-        }}
-      />
+      <DashboardGlassBackdrops variant="compact" />
       <div className="relative flex items-center gap-2 sm:gap-2.5">
         <CompactScoreboardTeam
           name={match.team1_name}
@@ -470,34 +475,9 @@ export function LiveScoreboardCard({
     <ScoreboardCardShell
       matchHref={matchHref}
       ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
-      className={cn(
-        'relative overflow-hidden rounded-3xl border border-white/15 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.14),inset_0_-2px_4px_0_rgba(0,0,0,0.55),inset_0_2px_6px_0_rgba(255,255,255,0.06)] px-2 py-1 sm:p-4',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#a3b5ab]/55 before:to-transparent',
-      )}
+      className={cn(dashboardGlassSurfaceClass('3xl'), 'px-2 py-1 sm:p-4')}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-30"
-        style={{
-          background:
-            'radial-gradient(80% 60% at 20% 15%, hsl(var(--primary) / 0.40), transparent 55%), radial-gradient(70% 60% at 85% 25%, rgba(255,179,0,0.16), transparent 55%), #0D1F14',
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20"
-        style={{
-          background: 'rgba(176, 224, 196, 0.05)',
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.022) 8%, transparent 16%)',
-        }}
-      />
+      <DashboardGlassBackdrops variant="full" />
       <p className="mb-0 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:mb-1 sm:text-left sm:text-[10px] sm:font-medium sm:text-muted-foreground/80">
         {FEATURED_COMPETITION_LABEL}
       </p>

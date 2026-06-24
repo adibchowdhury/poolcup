@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
+import { DashboardInsightCards } from '@/components/dashboard/dashboard-insight-cards'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
@@ -568,7 +569,10 @@ function DashboardViewContent({
               </div>
             </TabsContent>
 
-            <TabsContent value="pools" className="space-y-6">
+            <TabsContent
+              value="pools"
+              className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+            >
               <div className="-mt-4">
                 <WorldCupUrgencyBanner />
               </div>
@@ -598,6 +602,7 @@ function DashboardViewContent({
                 error={dashboardPoolsError}
                 onPoolDeleted={handleDashboardPoolDeleted}
               />
+              <DashboardInsightCards pools={dashboardPools} />
             </TabsContent>
 
             <TabsContent value="games" className="mt-2">

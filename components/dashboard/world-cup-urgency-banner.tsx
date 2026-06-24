@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
 import { supabase } from '@/src/lib/supabase'
+import { DashboardNoticeBanner } from '@/components/dashboard/dashboard-notice-banner'
 
 /** Mexico vs South Africa — opening match (API-Football). */
 const FALLBACK_OPENING_KICKOFF_MS = Date.parse('2026-06-11T19:00:00.000Z')
@@ -58,11 +59,7 @@ export function WorldCupUrgencyBanner() {
   const remainingMs = kickoffReady ? openingKickoffMs! - nowMs : 0
 
   return (
-    <div
-      className="rounded-lg border-l-4 px-4 py-3 text-sm leading-relaxed sm:px-5 sm:py-3.5 sm:text-base"
-      style={{ backgroundColor: '#0d1f14', borderLeftColor: '#22c55e' }}
-      role="status"
-    >
+    <DashboardNoticeBanner>
       {!mounted || !kickoffReady ? (
         <p className="text-white">
           <span aria-hidden>⚽ </span>
@@ -85,6 +82,6 @@ export function WorldCupUrgencyBanner() {
           — make your predictions before kickoff!
         </p>
       )}
-    </div>
+    </DashboardNoticeBanner>
   )
 }

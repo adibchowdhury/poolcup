@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DashboardGlassSurface } from '@/components/dashboard/dashboard-glass-surface'
 
 /** Set to ~24h after deploy; banner auto-hides after this instant. */
 export const SCORING_NOTICE_EXPIRES_AT = new Date('2026-06-17T21:00:00-05:00')
@@ -34,8 +35,9 @@ export function ScoringUpdateNoticeBanner() {
   }
 
   return (
-    <div
-      className="relative mb-6 rounded-lg border border-primary/30 border-l-4 border-l-primary bg-[#0d1f14] px-4 py-3 pr-12 text-sm leading-relaxed sm:px-5 sm:py-3.5 sm:text-base"
+    <DashboardGlassSurface
+      rounded="lg"
+      className="relative mb-6 border-l-4 border-l-primary px-4 py-3 pr-12 text-sm leading-relaxed sm:px-5 sm:py-3.5 sm:text-base"
       role="alert"
     >
       <p className="font-semibold text-foreground">Scoring update</p>
@@ -54,6 +56,6 @@ export function ScoringUpdateNoticeBanner() {
       >
         <X className="h-4 w-4" />
       </Button>
-    </div>
+    </DashboardGlassSurface>
   )
 }
