@@ -31,7 +31,7 @@ export function isDashboardBottomNavId(
 }
 
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
-  'max-sm:pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))]'
+  'max-sm:pb-[calc(3.875rem+env(safe-area-inset-bottom,0px))]'
 
 export const DASHBOARD_TAB_HREFS = {
   profile: '/dashboard?tab=profile',

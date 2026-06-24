@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Calendar,
+  CircleHelp,
   MessageCircle,
   Trophy,
   User,
@@ -42,11 +43,17 @@ const NAV_ITEMS: {
   { id: 'pools', label: 'Pools', href: DASHBOARD_TAB_HREFS.pools, icon: Trophy },
   { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
   { id: 'profile', label: 'Profile', href: DASHBOARD_TAB_HREFS.profile, icon: User },
+  {
+    id: 'how-it-works',
+    label: 'Help',
+    href: DASHBOARD_TAB_HREFS['how-it-works'],
+    icon: CircleHelp,
+  },
 ]
 
 const navItemClassName = (isActive: boolean) =>
   cn(
-    'flex min-w-0 flex-col items-center justify-center gap-0.5 overflow-visible px-0.5 py-1 text-[10px] font-medium transition-colors',
+    'flex min-w-0 flex-1 flex-col items-center justify-center gap-px overflow-visible px-0.5 py-0.5 text-[10px] font-medium transition-colors',
     isActive
       ? 'text-primary'
       : 'text-muted-foreground hover:text-foreground',
@@ -67,6 +74,7 @@ function NavItemContent({
           icon={MessageCircle}
           count={unreadChatCount}
           variant="footer"
+          iconClassName="h-6 w-6"
         />
         <span className="max-w-full truncate">{item.label}</span>
       </>
@@ -75,7 +83,7 @@ function NavItemContent({
 
   return (
     <>
-      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      <Icon className="h-6 w-6 shrink-0" aria-hidden />
       <span className="max-w-full truncate">{item.label}</span>
     </>
   )
@@ -106,10 +114,10 @@ function MobileBottomNavContent() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 overflow-visible border-t border-border/80 bg-background/95 backdrop-blur-md sm:hidden safe-area-pb"
+      className="fixed inset-x-0 bottom-0 z-50 overflow-visible border-t border-border/80 bg-background/95 backdrop-blur-md pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] sm:hidden"
       aria-label="Main navigation"
     >
-      <div className="mx-auto grid h-[3.75rem] max-w-lg grid-cols-4 items-stretch overflow-visible px-1">
+      <div className="flex h-12 w-full items-stretch overflow-visible px-2">
         {NAV_ITEMS.map((item) => {
           const isActive = activeId === item.id
 
