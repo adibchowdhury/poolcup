@@ -11,7 +11,6 @@ import '@fontsource/space-mono/700.css'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
-import { PwaInstall } from '@/components/pwa-install'
 import { ReportIssueProvider } from '@/components/report-issue-dialog'
 import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
 import { AuthProvider } from '@/src/lib/auth-context'
@@ -45,12 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
       apple: '/apple-touch-icon.png',
     },
-    appleWebApp: {
-      capable: true,
-      title: 'PoolCup',
-      statusBarStyle: 'black',
-    },
-    manifest: '/site.webmanifest',
   }
 }
 
@@ -101,7 +94,6 @@ export default function RootLayout({
                   <UnreadChatCountProvider>
                     {children}
                     <AuthenticatedChrome />
-                    <PwaInstall />
                   </UnreadChatCountProvider>
                 </DashboardTabProvider>
               </Suspense>
