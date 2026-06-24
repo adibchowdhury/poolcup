@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import {
   deriveMatchUpdateFromFixture,
   fetchFixtureById,
+  resolveFixtureScoresForForceClose,
+  type ApiFootballFixture,
 } from '@/src/lib/api-football'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
@@ -17,6 +19,8 @@ const STALE_CUTOFF_MINUTES = 135
 const FORCE_FINAL_MINUTES = 135
 /** Only force-close when the feed still looks like late live play, not halftime or suspended. */
 const FORCE_CLOSE_MIN_ELAPSED_MINUTE = 85
+/** Hard catch-all: wall-clock threshold past which any stuck live status (incl. HT) may close. */
+const FORCE_CLOSE_HARD_MINUTES = 155
 
 const FORCE_CLOSE_ELIGIBLE_STATUSES = new Set([
   '2H',
@@ -40,7 +44,26 @@ const FORCE_CLOSE_BLOCKED_STATUSES = new Set([
   'WO',
 ])
 
-const MAX_CANDIDATES = 20
+/** Never hard force-close postponed/cancelled fixtures. */
+const HARD_FORCE_CLOSE_BLOCKED_STATUSES = new Set([
+  'NS',
+  'TBD',
+  'PST',
+  'ABD',
+  'CANC',
+  'AWD',
+  'WO',
+])
+
+const DEFAULT_MAX_CANDIDATES = 50
+
+function getMaxCandidates(): number {
+  const raw = process.env.RECONCILE_MAX_CANDIDATES
+  if (!raw) return DEFAULT_MAX_CANDIDATES
+  const parsed = parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_MAX_CANDIDATES
+  return Math.min(parsed, 200)
+}
 
 type ReconcileError = {
   fixtureId: string
@@ -82,6 +105,15 @@ function canForceCloseStaleMatch(
   return minutesSinceKickoff > FORCE_FINAL_MINUTES
 }
 
+function canHardForceCloseStaleMatch(
+  statusShort: string,
+  minutesSinceKickoff: number,
+): boolean {
+  const status = statusShort.trim().toUpperCase()
+  if (HARD_FORCE_CLOSE_BLOCKED_STATUSES.has(status)) return false
+  return minutesSinceKickoff > FORCE_CLOSE_HARD_MINUTES
+}
+
 function isAuthorized(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return false
@@ -96,6 +128,102 @@ function isAuthorized(request: Request): boolean {
   if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
 
   return false
+}
+
+async function finalizeForceClosedMatch(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  match: CandidateRow,
+  label: string,
+  fixtureId: string,
+  resultTeam1: number,
+  resultTeam2: number,
+  ntfyMessage: string,
+): Promise<'finalized' | 'update_error' | 'rpc_error'> {
+  const nowIso = new Date().toISOString()
+  const { error: updateError } = await supabase
+    .from('matches')
+    .update({
+      result_team1: resultTeam1,
+      result_team2: resultTeam2,
+      is_final: true,
+      status_short: 'FT',
+      updated_at: nowIso,
+    })
+    .eq('id', match.id)
+
+  if (updateError) {
+    return 'update_error'
+  }
+
+  const { error: rpcError } = await supabase.rpc('calculate_match_points', {
+    p_match_id: match.id,
+  })
+
+  if (rpcError) {
+    try {
+      await sendOpsNtfy(
+        `Error: auto-closed ${label} (fixture ${fixtureId}) in DB but calculate_match_points failed: ${rpcError.message}`,
+      )
+    } catch (notifyError) {
+      console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+    }
+    return 'rpc_error'
+  }
+
+  try {
+    await sendOpsNtfy(ntfyMessage)
+  } catch (notifyError) {
+    console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+  }
+
+  return 'finalized'
+}
+
+type ForceCloseKind = 'gentle' | 'hard'
+
+async function attemptForceCloseWithResolvedScore(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  match: CandidateRow,
+  label: string,
+  fixtureId: string,
+  fixture: ApiFootballFixture,
+  update: { status_short: string; elapsed_minute: number | null },
+  minutesSinceKickoff: number,
+  kind: ForceCloseKind,
+): Promise<'finalized' | 'no_score' | 'update_error' | 'rpc_error'> {
+  const scores = resolveFixtureScoresForForceClose(
+    fixture,
+    match.result_team1,
+    match.result_team2,
+  )
+
+  if (!scores) {
+    const thresholdMinutes =
+      kind === 'hard' ? FORCE_CLOSE_HARD_MINUTES : FORCE_FINAL_MINUTES
+    try {
+      await sendOpsNtfy(
+        `Warning: stale match ${label} (fixture ${fixtureId}) past ${thresholdMinutes}m kickoff but no reliable score from API or DB — cannot ${kind} force-close.`,
+      )
+    } catch (notifyError) {
+      console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+    }
+    return 'no_score'
+  }
+
+  const ntfyMessage =
+    kind === 'gentle'
+      ? `Auto-closed ${label} (fixture ${fixtureId}) on score ${scores.resultTeam1}-${scores.resultTeam2} FT — feed still ${update.status_short} ${update.elapsed_minute ?? '?'}' ${Math.floor(minutesSinceKickoff)}m after kickoff. Sanity-check this result.`
+      : `Hard auto-closed ${label} (fixture ${fixtureId}) on score ${scores.resultTeam1}-${scores.resultTeam2} FT — API still ${update.status_short} ${Math.floor(minutesSinceKickoff)}m after kickoff. Sanity-check this result.`
+
+  return finalizeForceClosedMatch(
+    supabase,
+    match,
+    label,
+    fixtureId,
+    scores.resultTeam1,
+    scores.resultTeam2,
+    ntfyMessage,
+  )
 }
 
 async function runReconcile(): Promise<{
@@ -114,6 +242,7 @@ async function runReconcile(): Promise<{
   const kickoffCutoff = new Date(
     Date.now() - STALE_CUTOFF_MINUTES * 60_000,
   ).toISOString()
+  const maxCandidates = getMaxCandidates()
 
   const { data: candidateRows, error: loadError } = await supabase
     .from('matches')
@@ -123,7 +252,7 @@ async function runReconcile(): Promise<{
     .eq('is_final', false)
     .lt('kickoff_at', kickoffCutoff)
     .order('kickoff_at', { ascending: true })
-    .limit(MAX_CANDIDATES)
+    .limit(maxCandidates)
 
   if (loadError) {
     throw new Error(`Failed to load stale matches: ${loadError.message}`)
@@ -234,51 +363,70 @@ async function runReconcile(): Promise<{
         minutesSinceKickoff,
       )
     ) {
-      const nowIso = new Date().toISOString()
-      const { error: updateError } = await supabase
-        .from('matches')
-        .update({
-          result_team1: update.result_team1,
-          result_team2: update.result_team2,
-          is_final: true,
-          status_short: 'FT',
-          updated_at: nowIso,
-        })
-        .eq('id', match.id)
+      const closeResult = await attemptForceCloseWithResolvedScore(
+        supabase,
+        match,
+        label,
+        fixtureId,
+        fixture,
+        update,
+        minutesSinceKickoff,
+        'gentle',
+      )
 
-      if (updateError) {
-        errors.push({ fixtureId, message: updateError.message })
+      if (closeResult === 'no_score') {
+        alerted += 1
+        stillLive += 1
         continue
       }
-
-      const { error: rpcError } = await supabase.rpc('calculate_match_points', {
-        p_match_id: match.id,
-      })
-
-      if (rpcError) {
+      if (closeResult === 'update_error') {
+        errors.push({ fixtureId, message: 'Force-close update failed' })
+        continue
+      }
+      if (closeResult === 'rpc_error') {
         errors.push({
           fixtureId,
-          message: `calculate_match_points: ${rpcError.message}`,
+          message: 'calculate_match_points failed after force-close',
         })
-        try {
-          await sendOpsNtfy(
-            `Error: auto-closed ${label} (fixture ${fixtureId}) in DB but calculate_match_points failed: ${rpcError.message}`,
-          )
-        } catch (notifyError) {
-          console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
-        }
         continue
       }
 
       finalized += 1
-      const score = `${update.result_team1}-${update.result_team2}`
-      try {
-        await sendOpsNtfy(
-          `Auto-closed ${label} (fixture ${fixtureId}) on last known score ${score} FT — API feed was still live ${Math.floor(minutesSinceKickoff)}m after kickoff. Sanity-check this result.`,
-        )
-      } catch (notifyError) {
-        console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+      continue
+    }
+
+    if (
+      canHardForceCloseStaleMatch(update.status_short, minutesSinceKickoff)
+    ) {
+      const closeResult = await attemptForceCloseWithResolvedScore(
+        supabase,
+        match,
+        label,
+        fixtureId,
+        fixture,
+        update,
+        minutesSinceKickoff,
+        'hard',
+      )
+
+      if (closeResult === 'no_score') {
+        alerted += 1
+        stillLive += 1
+        continue
       }
+      if (closeResult === 'update_error') {
+        errors.push({ fixtureId, message: 'Hard force-close update failed' })
+        continue
+      }
+      if (closeResult === 'rpc_error') {
+        errors.push({
+          fixtureId,
+          message: 'calculate_match_points failed after hard force-close',
+        })
+        continue
+      }
+
+      finalized += 1
       continue
     }
 
@@ -297,6 +445,14 @@ async function runReconcile(): Promise<{
     const statusChanged = apiStatusShort !== match.status_short
 
     if (!scoreOrFinalChanged && !elapsedChanged && !statusChanged) {
+      alerted += 1
+      try {
+        await sendOpsNtfy(
+          `Stale non-final match unchanged: ${label} (fixture ${fixtureId}) — API ${apiStatusShort} ${apiElapsed ?? '?'}' — ${Math.floor(minutesSinceKickoff)}m after kickoff. Reconcile could not advance; manual check may be needed.`,
+        )
+      } catch (notifyError) {
+        console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+      }
       continue
     }
 

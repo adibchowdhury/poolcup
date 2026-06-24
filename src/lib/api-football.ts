@@ -74,7 +74,25 @@ export async function fetchFixtureById(
   apiKey: string,
   fixtureId: string,
 ): Promise<ApiFootballFixture | null> {
-  const url = buildFixtureByIdUrl(fixtureId)
+  const fixtures = await fetchFixturesByIds(apiKey, [fixtureId])
+  return fixtures[0] ?? null
+}
+
+/** API-Football allows up to 20 fixture IDs per `ids` request (dash-separated). */
+export const FIXTURE_IDS_BATCH_SIZE = 20
+
+export function buildFixturesByIdsUrl(fixtureIds: string[]): string {
+  const params = new URLSearchParams({ ids: fixtureIds.join('-') })
+  return `${API_FOOTBALL_BASE}/fixtures?${params.toString()}`
+}
+
+async function fetchFixturesByIdsBatch(
+  apiKey: string,
+  fixtureIds: string[],
+): Promise<ApiFootballFixture[]> {
+  if (fixtureIds.length === 0) return []
+
+  const url = buildFixturesByIdsUrl(fixtureIds)
 
   const res = await fetch(url, {
     headers: { 'x-apisports-key': apiKey },
@@ -93,8 +111,41 @@ export async function fetchFixtureById(
     throw new Error(`API-Football error: ${JSON.stringify(raw.errors)}`)
   }
 
-  const fixtures = raw.response ?? []
-  return fixtures[0] ?? null
+  return raw.response ?? []
+}
+
+export async function fetchFixturesByIds(
+  apiKey: string,
+  fixtureIds: string[],
+): Promise<ApiFootballFixture[]> {
+  if (fixtureIds.length === 0) return []
+
+  const uniqueIds = [...new Set(fixtureIds)]
+  const fixtures: ApiFootballFixture[] = []
+
+  for (let i = 0; i < uniqueIds.length; i += FIXTURE_IDS_BATCH_SIZE) {
+    const batch = uniqueIds.slice(i, i + FIXTURE_IDS_BATCH_SIZE)
+    const batchFixtures = await fetchFixturesByIdsBatch(apiKey, batch)
+    fixtures.push(...batchFixtures)
+  }
+
+  return fixtures
+}
+
+/** Prefer API goals; fall back to stored DB scores. Never invent a score. */
+export function resolveFixtureScoresForForceClose(
+  fixture: ApiFootballFixture,
+  storedTeam1: number | null,
+  storedTeam2: number | null,
+): { resultTeam1: number; resultTeam2: number } | null {
+  const apiGoals = parseFixtureGoals(fixture)
+  if (apiGoals) return apiGoals
+
+  if (storedTeam1 != null && storedTeam2 != null) {
+    return { resultTeam1: storedTeam1, resultTeam2: storedTeam2 }
+  }
+
+  return null
 }
 
 export type MatchUpdateFromFixture = {

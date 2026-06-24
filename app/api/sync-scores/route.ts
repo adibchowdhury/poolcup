@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import {
-  fetchTodayFixtures,
+  fetchFixturesByIds,
   isFinalStatus,
   isSyncableStatus,
   LIVE_MATCH_STATUSES,
   parseFixtureGoals,
   todayUtcDateString,
 } from '@/src/lib/api-football'
+import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -21,6 +22,7 @@ type SyncError = {
 type MatchRow = {
   id: string
   fixture_id: string
+  kickoff_at: string
   result_team1: number | null
   result_team2: number | null
   is_final: boolean
@@ -53,8 +55,15 @@ function isAuthorized(request: Request): boolean {
   return false
 }
 
+/** Cheap no-op guard: skip the cron when nothing could be in play. */
 const LIVE_WINDOW_MAX_AGE_MINUTES = 210
 const LIVE_WINDOW_PRE_KICKOFF_MINUTES = 5
+
+/** Upper bound for DB live-match discovery (avoids scanning ancient unfinalized rows). */
+const LIVE_MATCH_MAX_AGE_MINUTES = 360
+
+/** Only page ops when a started match is missing from the API for this long. */
+const API_MISSING_NTFY_KICKOFF_MINUTES = 60
 
 async function runSync(): Promise<{
   date: string
@@ -62,16 +71,21 @@ async function runSync(): Promise<{
   matchesUpdated: number
   matchesSkipped: number
   pointsRecalculated: number
+  apiMissing: number
   errors: SyncError[]
   skipped?: string
 }> {
   const supabase = createAdminSupabaseClient()
   const nowMs = Date.now()
+  const nowIso = new Date(nowMs).toISOString()
   const windowStart = new Date(
     nowMs - LIVE_WINDOW_MAX_AGE_MINUTES * 60_000,
   ).toISOString()
   const windowEnd = new Date(
     nowMs + LIVE_WINDOW_PRE_KICKOFF_MINUTES * 60_000,
+  ).toISOString()
+  const liveDiscoveryStart = new Date(
+    nowMs - LIVE_MATCH_MAX_AGE_MINUTES * 60_000,
   ).toISOString()
 
   const { data: liveWindowMatches, error: liveWindowError } = await supabase
@@ -93,6 +107,7 @@ async function runSync(): Promise<{
       matchesUpdated: 0,
       matchesSkipped: 0,
       pointsRecalculated: 0,
+      apiMissing: 0,
       errors: [],
       skipped: 'no_live_window',
     }
@@ -103,52 +118,72 @@ async function runSync(): Promise<{
     throw new Error('API_FOOTBALL_KEY is not configured')
   }
 
-  const date = todayUtcDateString()
-  const fixtures = await fetchTodayFixtures(apiKey, date)
+  const { data: liveMatchRows, error: loadError } = await supabase
+    .from('matches')
+    .select(
+      'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, elapsed_minute',
+    )
+    .eq('is_final', false)
+    .lte('kickoff_at', nowIso)
+    .gt('kickoff_at', liveDiscoveryStart)
 
-  const syncableFixtures = fixtures.filter((fixture) =>
-    isSyncableStatus(fixture.fixture.status.short),
-  )
+  if (loadError) {
+    throw new Error(`Failed to load live matches: ${loadError.message}`)
+  }
 
-  if (syncableFixtures.length === 0) {
+  const matches = (liveMatchRows ?? []) as MatchRow[]
+
+  if (matches.length === 0) {
     return {
-      date,
+      date: todayUtcDateString(),
       matchesChecked: 0,
       matchesUpdated: 0,
       matchesSkipped: 0,
       pointsRecalculated: 0,
+      apiMissing: 0,
       errors: [],
     }
   }
 
-  const fixtureIds = syncableFixtures.map((f) => String(f.fixture.id))
+  const fixtureIds = matches.map((m) => m.fixture_id)
+  const fixtures = await fetchFixturesByIds(apiKey, fixtureIds)
 
-  const { data: matchRows, error: loadError } = await supabase
-    .from('matches')
-    .select(
-      'id, fixture_id, result_team1, result_team2, is_final, status_short, elapsed_minute',
-    )
-    .in('fixture_id', fixtureIds)
-
-  if (loadError) {
-    throw new Error(`Failed to load matches: ${loadError.message}`)
-  }
-
-  const matchByFixtureId = new Map<string, MatchRow>()
-  for (const row of (matchRows ?? []) as MatchRow[]) {
-    matchByFixtureId.set(row.fixture_id, row)
+  const fixtureById = new Map<string, (typeof fixtures)[number]>()
+  for (const fixture of fixtures) {
+    fixtureById.set(String(fixture.fixture.id), fixture)
   }
 
   let matchesUpdated = 0
   let matchesSkipped = 0
   let pointsRecalculated = 0
   const errors: SyncError[] = []
+  const apiMissingAlerts: string[] = []
 
-  for (const fixture of syncableFixtures) {
-    const fixtureId = String(fixture.fixture.id)
-    const match = matchByFixtureId.get(fixtureId)
+  for (const match of matches) {
+    const fixtureId = match.fixture_id
+    const fixture = fixtureById.get(fixtureId)
 
-    if (!match) {
+    if (!fixture) {
+      console.error('sync-scores: API missing fixture for DB live match', {
+        matchId: match.id,
+        fixtureId,
+        kickoffAt: match.kickoff_at,
+        statusShort: match.status_short,
+      })
+
+      const minutesSinceKickoff =
+        (nowMs - new Date(match.kickoff_at).getTime()) / 60_000
+      if (minutesSinceKickoff >= API_MISSING_NTFY_KICKOFF_MINUTES) {
+        apiMissingAlerts.push(
+          `${fixtureId} (match ${match.id}, kickoff ${Math.floor(minutesSinceKickoff)}m ago, DB status ${match.status_short ?? '?'})`,
+        )
+      }
+
+      matchesSkipped += 1
+      continue
+    }
+
+    if (!isSyncableStatus(fixture.fixture.status.short)) {
       matchesSkipped += 1
       continue
     }
@@ -232,14 +267,23 @@ async function runSync(): Promise<{
     }
   }
 
-  const matchesChecked = syncableFixtures.length
+  if (apiMissingAlerts.length > 0) {
+    try {
+      await sendOpsNtfy(
+        `sync-scores: API returned no fixture for ${apiMissingAlerts.length} DB live match(es): ${apiMissingAlerts.join('; ')}`,
+      )
+    } catch (notifyError) {
+      console.error('sync-scores: ops ntfy failed', notifyError)
+    }
+  }
 
   return {
-    date,
-    matchesChecked,
+    date: todayUtcDateString(),
+    matchesChecked: matches.length,
     matchesUpdated,
     matchesSkipped,
     pointsRecalculated,
+    apiMissing: apiMissingAlerts.length,
     errors,
   }
 }
