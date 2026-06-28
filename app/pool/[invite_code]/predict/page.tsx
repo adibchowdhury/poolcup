@@ -32,7 +32,6 @@ import {
   hasClassicPredictionScores,
 } from '@/src/lib/classic-prediction-progress'
 import {
-  isKnockoutPredictionComplete,
   isPredictedDraw,
   resolveAdvancePickFromScores,
 } from '@/src/lib/knockout-match-prediction'
@@ -101,21 +100,12 @@ function parseScoreValue(value: string): number | null {
 function isClassicMatchComplete(
   match: Match,
   entry: ScoreInput | undefined,
-  advancePick: number | null | undefined,
+  _advancePick?: number | null,
 ): boolean {
   if (!entry || !hasClassicPredictionScores(entry.score1, entry.score2)) {
     return false
   }
-  if (!isKnockoutRound(match.round)) return true
-  const predTeam1 = parseScoreValue(entry.score1)
-  const predTeam2 = parseScoreValue(entry.score2)
-  if (predTeam1 == null || predTeam2 == null) return false
-  return isKnockoutPredictionComplete(
-    match.round,
-    predTeam1,
-    predTeam2,
-    advancePick ?? null,
-  )
+  return true
 }
 
 function formatShortDate(iso: string): string {
@@ -241,20 +231,9 @@ function ClassicKnockoutPredictCard({
 }) {
   const predTeam1 = parseScoreValue(card.homeScore)
   const predTeam2 = parseScoreValue(card.awayScore)
-  const needsAdvance =
-    !card.isLocked &&
-    predTeam1 != null &&
-    predTeam2 != null &&
-    isPredictedDraw(predTeam1, predTeam2) &&
-    resolveAdvancePickFromScores(predTeam1, predTeam2, advancePick) == null
 
   return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-xl border border-border/90 bg-card/40',
-        needsAdvance && 'border-amber-500/40',
-      )}
-    >
+    <div className="overflow-hidden rounded-xl border border-border/90 bg-card/40">
       <CompactMatchRow
         variant={variant}
         homeTeam={card.homeTeam}
@@ -581,29 +560,6 @@ export default function PredictPage() {
 
   async function handleSave() {
     if (!pool || !memberId || unsavedCount === 0) return
-
-    const incompleteKnockout = matches.filter((match) => {
-      if (!isKnockoutRound(match.round) || isMatchLocked(match.locked_at)) {
-        return false
-      }
-      const entry = scores[match.id]
-      if (!entry || entry.score1 === '' || entry.score2 === '') return false
-      const predTeam1 = parseScoreValue(entry.score1)
-      const predTeam2 = parseScoreValue(entry.score2)
-      if (predTeam1 == null || predTeam2 == null) return false
-      return (
-        resolveAdvancePickFromScores(
-          predTeam1,
-          predTeam2,
-          advancePicks[match.id],
-        ) == null
-      )
-    })
-
-    if (incompleteKnockout.length > 0) {
-      setError('Pick who advances for level knockout scores before saving')
-      return
-    }
 
     setSaving(true)
     setError(null)

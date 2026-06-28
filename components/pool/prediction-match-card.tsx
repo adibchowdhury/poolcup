@@ -167,22 +167,14 @@ export function KnockoutAdvancePicker({
   const effectivePick = hasScores
     ? resolveAdvancePickFromScores(predTeam1!, predTeam2!, userAdvancePick)
     : null
-  const needsPick = isDraw && effectivePick == null && !isLocked && !preview
   const pickEditable = isDraw && !isLocked && !preview && Boolean(onAdvancePick)
 
   return (
     <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
       <div className="space-y-2">
         <p className="text-xs font-semibold text-foreground">Who advances?</p>
-        <p
-          className={cn(
-            'text-[10px]',
-            needsPick ? 'font-medium text-amber-400' : 'text-muted-foreground',
-          )}
-        >
-          {needsPick
-            ? 'Pick who advances — required for a level score'
-            : getAdvancePickHintText(isDraw)}
+        <p className="text-[10px] text-muted-foreground">
+          {getAdvancePickHintText(isDraw)}
         </p>
         {preview ? (
           <div className="flex gap-2">
@@ -290,6 +282,7 @@ export function PredictionMatchCard({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>(
     'idle',
   )
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const saveInFlightRef = useRef(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -414,15 +407,6 @@ export function PredictionMatchCard({
       )
     : savedScore1 !== '' && savedScore2 !== ''
 
-  const inputsCardComplete = isKnockout
-    ? isKnockoutPredictionComplete(
-        prediction.round,
-        inputPredTeam1,
-        inputPredTeam2,
-        advancePick,
-      )
-    : hasClassicPredictionScores(score1, score2)
-
   const showPicksExpander =
     !preview && Boolean(poolId && currentUserId && hasKickedOff)
   const showResultFooter = hasResult || showPicksExpander
@@ -457,6 +441,7 @@ export function PredictionMatchCard({
 
       saveInFlightRef.current = true
       setSaveStatus('saving')
+      setSaveError(null)
 
       const result = await upsertPoolMatchPrediction(supabase, {
         poolId,
@@ -475,6 +460,7 @@ export function PredictionMatchCard({
           return
         }
 
+        setSaveError('Could not save prediction. Try again.')
         setSaveStatus('idle')
         return
       }
@@ -554,6 +540,7 @@ export function PredictionMatchCard({
           return
         }
 
+        setSaveError('Could not remove prediction. Try again.')
         setSaveStatus('idle')
         return
       }
@@ -572,38 +559,27 @@ export function PredictionMatchCard({
     const parsed = parsePredictionScores(score1, score2)
     if (!parsed) return
 
-    const effectiveAdvance = isKnockout
-      ? resolveAdvancePickFromScores(
-          parsed.predTeam1,
-          parsed.predTeam2,
-          advancePick,
-        )
-      : null
-
-    if (isKnockout && effectiveAdvance == null) {
-      return
-    }
+    const advanceToSave = isKnockout
+      ? isPredictedDraw(parsed.predTeam1, parsed.predTeam2)
+        ? advancePick === 1 || advancePick === 2
+          ? advancePick
+          : null
+        : parsed.predTeam1 > parsed.predTeam2
+          ? 1
+          : 2
+      : undefined
 
     const scoresUnchanged =
       parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
       parsed.predTeam2 === Number.parseInt(savedScore2, 10)
     const advanceUnchanged =
-      !isKnockout ||
-      effectiveAdvance ===
-        resolveAdvancePickFromScores(
-          parsed.predTeam1,
-          parsed.predTeam2,
-          savedAdvancePick,
-        )
+      !isKnockout || advanceToSave === savedAdvancePick
 
     if (scoresUnchanged && advanceUnchanged) {
       return
     }
 
-    await persistPrediction(
-      parsed,
-      isKnockout ? effectiveAdvance : undefined,
-    )
+    await persistPrediction(parsed, advanceToSave)
   }, [
     poolId,
     memberId,
@@ -673,6 +649,7 @@ export function PredictionMatchCard({
       }
     }
 
+    setSaveError(null)
     setSaveStatus('idle')
     scheduleAutosave()
   }
@@ -835,6 +812,11 @@ export function PredictionMatchCard({
                 ) : saveStatus === 'saved' ? (
                   <span className="text-[10px] font-medium text-primary">Saved</span>
                 ) : null}
+                {saveError ? (
+                  <span className="text-center text-[10px] text-destructive">
+                    {saveError}
+                  </span>
+                ) : null}
                 {lockedNotice ? (
                   <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
                     This match has locked
@@ -916,8 +898,8 @@ export function PredictionMatchCard({
 
         {!preview ? (
           <CompactMatchRowPredictedBadge
-            isPredicted={inputsCardComplete}
-            filled={inputsCardComplete}
+            isPredicted={savedCardComplete}
+            filled={savedCardComplete}
             isLocked={isReadOnly}
           />
         ) : null}

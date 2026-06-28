@@ -28,7 +28,7 @@ export function isPredictedDraw(
 
 export function getAdvancePickHintText(isDraw: boolean): string {
   return isDraw
-    ? 'You predicted a draw, so this decides it'
+    ? 'Pick a winner for the penalty bonus (optional)'
     : "If it's level and goes to penalties"
 }
 
@@ -47,11 +47,11 @@ export function isKnockoutPredictionComplete(
   round: string,
   predTeam1: number | null,
   predTeam2: number | null,
-  advancePick: number | null,
+  _advancePick?: number | null,
 ): boolean {
   if (predTeam1 == null || predTeam2 == null) return false
   if (!isKnockoutRound(round)) return true
-  return resolveAdvancePickFromScores(predTeam1, predTeam2, advancePick) != null
+  return true
 }
 
 export function resolveAdvancePickTeamName(
