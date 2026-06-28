@@ -977,12 +977,7 @@ export function KnockoutBracketForTab({
   }
 
   const mobile = (
-    <div
-      className={cn(
-        'w-full min-w-0 max-w-full space-y-3 px-4 md:hidden',
-        tab === 'r32' && 'pb-20',
-      )}
-    >
+    <div className="w-full min-w-0 max-w-full space-y-3 px-4 md:hidden">
       <KnockoutBracketMobileList tab={tab} r32Bracket={r32Bracket} />
     </div>
   )

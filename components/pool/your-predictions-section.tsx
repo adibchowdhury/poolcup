@@ -7,6 +7,9 @@ import {
 } from '@/components/predict/group-knockout-tabs'
 import { SaveBar } from '@/components/predict/save-bar'
 import {
+  MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS,
+} from '@/src/lib/mobile-bottom-nav-routes'
+import {
   classicRoundTabEmptyMessage,
   matchInClassicRoundTab,
   resolveDefaultClassicRoundTabForPredictions,
@@ -25,6 +28,7 @@ import {
   PredictionSaveProvider,
   usePredictionSaveCoordinator,
 } from '@/components/pool/prediction-save-context'
+import { cn } from '@/lib/utils'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import {
   Select,
@@ -167,7 +171,14 @@ export function YourPredictionsSection({
 
   return (
     <PredictionSaveProvider>
-      <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8 pb-20">
+      <section
+        className={cn(
+          'mt-8 w-full min-w-0 border-t border-border/80 pt-8',
+          hasClassicContent && activeMatchIds.length > 0
+            ? MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS
+            : undefined,
+        )}
+      >
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
         <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
           Your predictions

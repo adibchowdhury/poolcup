@@ -2,6 +2,7 @@
 
 import { ArrowRight, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
 interface SaveBarProps {
   unsavedCount: number
@@ -12,6 +13,11 @@ interface SaveBarProps {
   /** When true and there are no unsaved changes, show a persistent "done" state. */
   complete?: boolean
   error?: string | null
+  /**
+   * On mobile, offset above the fixed bottom nav (pool predictions tab).
+   * Set false on /predict where the nav is hidden.
+   */
+  stackAboveMobileNav?: boolean
 }
 
 export function SaveBar({
@@ -22,12 +28,24 @@ export function SaveBar({
   onSave,
   complete = false,
   error = null,
+  stackAboveMobileNav = true,
 }: SaveBarProps) {
   const hasChanges = unsavedCount > 0
   const showComplete = complete && !hasChanges && !saving && !success && !error
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-md safe-area-pb">
+    <div
+      className={cn(
+        'fixed left-0 right-0 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-md',
+        stackAboveMobileNav
+          ? cn(
+              SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS,
+              'max-sm:z-[60] max-sm:pb-3',
+              'sm:bottom-0 sm:z-30 sm:safe-area-pb',
+            )
+          : 'bottom-0 z-30 safe-area-pb',
+      )}
+    >
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
         <span
           className={cn(

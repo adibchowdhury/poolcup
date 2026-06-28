@@ -10,6 +10,7 @@ import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { GroupStandingCard } from '@/components/predict/group-standing-card'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
+import { MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS, SAVE_BAR_SOLO_SCROLL_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
 import {
   WinnerOnlyRoundTabs,
@@ -750,7 +751,12 @@ export function WinnerOnlyPredictView({
     <div
       className={cn(
         'w-full max-w-full bg-background',
-        embedded ? 'overflow-x-visible pb-20' : 'min-h-screen overflow-x-hidden pb-20',
+        embedded
+          ? cn(
+              'overflow-x-visible',
+              showSaveBar && MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS,
+            )
+          : cn('min-h-screen overflow-x-hidden', SAVE_BAR_SOLO_SCROLL_PAD_CLASS),
       )}
     >
       <header

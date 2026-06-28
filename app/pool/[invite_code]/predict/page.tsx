@@ -25,6 +25,10 @@ import {
 } from '@/src/lib/classic-round-tab-logic'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
+import {
+  MOBILE_SAVE_BAR_WITH_NAV_SCROLL_PAD_CLASS,
+  SAVE_BAR_SOLO_SCROLL_PAD_CLASS,
+} from '@/src/lib/mobile-bottom-nav-routes'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
 import {
   classicMatchTotalCount,
@@ -806,7 +810,7 @@ export default function PredictPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className={cn('min-h-screen bg-background', SAVE_BAR_SOLO_SCROLL_PAD_CLASS)}>
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
         <div className="mx-auto max-w-3xl space-y-3 px-4 py-3 sm:py-4">
           <Link
@@ -971,6 +975,7 @@ export default function PredictPage() {
         success={saveSuccess}
         error={saveBarError}
         disabled={unsavedCount === 0}
+        stackAboveMobileNav={false}
         onSave={handleSave}
       />
 
