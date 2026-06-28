@@ -20,6 +20,8 @@ export type LeaderboardPointBreakdownItem = {
   kickoffAt: string
   /** Winner-only group / third-place lines use a fixed label instead of a matchup. */
   displayLabel?: string
+  /** Distinct key when one match is split into multiple breakdown lines. */
+  lineId?: string
 }
 
 export type LeaderboardMember = {

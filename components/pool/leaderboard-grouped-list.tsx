@@ -235,7 +235,9 @@ function GroupedMemberRowStatic({ member }: { member: LeaderboardMember }) {
 function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
-  const breakdown = member.pointBreakdown ?? []
+  const breakdown = (member.pointBreakdown ?? []).filter(
+    (item) => item.pointsAwarded > 0,
+  )
   const breakdownTotal = breakdown.reduce(
     (sum, item) => sum + item.pointsAwarded,
     0,
@@ -280,14 +282,22 @@ function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
         className="border-t border-border/40 bg-muted/10"
       >
         {breakdown.length === 0 ? (
-          <p className="px-3 py-3 text-sm text-muted-foreground sm:px-4">
-            No points earned yet
-          </p>
+          member.points > 0 ? (
+            <div className="flex justify-end border-t border-border/40 px-3 py-2.5 sm:px-4">
+              <span className="text-sm font-semibold tabular-nums text-foreground">
+                Total: {member.points} pts
+              </span>
+            </div>
+          ) : (
+            <p className="px-3 py-3 text-sm text-muted-foreground sm:px-4">
+              No points earned yet
+            </p>
+          )
         ) : (
           <>
             <ul className="divide-y divide-border/30">
               {breakdown.map((item) => (
-                <BreakdownLine key={item.matchId} item={item} />
+                <BreakdownLine key={item.lineId ?? item.matchId} item={item} />
               ))}
             </ul>
             <div className="flex justify-end border-t border-border/40 px-3 py-2.5 sm:px-4">

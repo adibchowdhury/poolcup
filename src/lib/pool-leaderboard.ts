@@ -13,6 +13,8 @@ import {
   deserializeWinnerLeaderboardBreakdown,
   type SerializedWinnerLeaderboardBreakdown,
 } from '@/src/lib/winner-leaderboard-breakdown'
+import { expandClassicKnockoutBreakdownLines } from '@/src/lib/classic-knockout-breakdown-lines'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 
 export type PoolLeaderboardMember = {
   id: string
@@ -46,6 +48,7 @@ type PredictionBreakdownQueryRow = {
   match_id: string
   pred_team1: number
   pred_team2: number
+  advance_pick: number | null
   points_awarded: number
   matches:
     | {
@@ -53,6 +56,7 @@ type PredictionBreakdownQueryRow = {
         team2_name: string
         result_team1: number
         result_team2: number
+        advancing_team: number | null
         round: string
         group_name: string | null
         kickoff_at: string
@@ -64,6 +68,7 @@ type PredictionBreakdownQueryRow = {
         team2_name: string
         result_team1: number
         result_team2: number
+        advancing_team: number | null
         round: string
         group_name: string | null
         kickoff_at: string
@@ -123,12 +128,14 @@ export async function fetchPoolLeaderboardPointBreakdown(
       match_id,
       pred_team1,
       pred_team2,
+      advance_pick,
       points_awarded,
       matches!inner (
         team1_name,
         team2_name,
         result_team1,
         result_team2,
+        advancing_team,
         round,
         group_name,
         kickoff_at,
@@ -138,7 +145,6 @@ export async function fetchPoolLeaderboardPointBreakdown(
     `,
     )
     .eq('pool_id', poolId)
-    .gt('points_awarded', 0)
     .eq('matches.is_final', true)
 
   if (error) {
@@ -150,6 +156,35 @@ export async function fetchPoolLeaderboardPointBreakdown(
     const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
     if (!match) continue
     if (match.result_team1 == null || match.result_team2 == null) continue
+
+    const isKnockout = isKnockoutRound(match.round)
+    if (row.points_awarded <= 0) {
+      continue
+    }
+
+    const list = breakdownByMember.get(row.member_id) ?? []
+
+    if (isKnockout) {
+      list.push(
+        ...expandClassicKnockoutBreakdownLines({
+          matchId: row.match_id,
+          predTeam1: row.pred_team1,
+          predTeam2: row.pred_team2,
+          advancePick: row.advance_pick,
+          pointsAwarded: row.points_awarded,
+          team1Name: match.team1_name,
+          team2Name: match.team2_name,
+          resultTeam1: match.result_team1,
+          resultTeam2: match.result_team2,
+          round: match.round,
+          groupName: match.group_name,
+          kickoffAt: match.kickoff_at,
+          advancingTeam: match.advancing_team,
+        }),
+      )
+      breakdownByMember.set(row.member_id, list)
+      continue
+    }
 
     const outcome = getPredictionOutcome(
       row.pred_team1,
@@ -174,17 +209,17 @@ export async function fetchPoolLeaderboardPointBreakdown(
       kickoffAt: match.kickoff_at,
     }
 
-    const list = breakdownByMember.get(row.member_id) ?? []
     list.push(item)
     breakdownByMember.set(row.member_id, list)
   }
 
   for (const [memberId, items] of breakdownByMember) {
-    items.sort(
+    const positiveItems = items.filter((item) => item.pointsAwarded > 0)
+    positiveItems.sort(
       (a, b) =>
         new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime(),
     )
-    breakdownByMember.set(memberId, items)
+    breakdownByMember.set(memberId, positiveItems)
   }
 
   return { breakdownByMember, error: null }
@@ -299,6 +334,8 @@ export function verifyLeaderboardBreakdownPointDerivation(
     if (!member.pointBreakdown) continue
 
     for (const item of member.pointBreakdown) {
+      if (item.lineId || isKnockoutRound(item.round)) continue
+
       const outcome = getPredictionOutcome(
         item.predTeam1,
         item.predTeam2,
