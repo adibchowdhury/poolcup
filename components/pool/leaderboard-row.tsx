@@ -18,6 +18,8 @@ export type LeaderboardPointBreakdownItem = {
   round: string
   groupName: string | null
   kickoffAt: string
+  /** Winner-only group / third-place lines use a fixed label instead of a matchup. */
+  displayLabel?: string
 }
 
 export type LeaderboardMember = {
@@ -31,7 +33,7 @@ export type LeaderboardMember = {
   totalPredictions: number
   movement: 'up' | 'down' | 'none'
   streak: number
-  /** Classic pools only: scored matches with points_awarded > 0, kickoff desc. */
+  /** Classic + winner pools: per-line points when expandable breakdown is enabled. */
   pointBreakdown?: LeaderboardPointBreakdownItem[]
 }
 

@@ -29,6 +29,7 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import {
   buildPoolLeaderboardMembers,
   fetchPoolLeaderboardPointBreakdown,
+  fetchWinnerPoolLeaderboardPointBreakdown,
   verifyLeaderboardBreakdownPointDerivation,
   verifyLeaderboardBreakdownTotals,
 } from '@/src/lib/pool-leaderboard'
@@ -334,7 +335,19 @@ export default function PoolPage() {
 
     let breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]> | undefined
 
-    if (!isWinnerPool) {
+    if (isWinnerPool) {
+      const { breakdownByMember: loadedBreakdown, error: breakdownError } =
+        await fetchWinnerPoolLeaderboardPointBreakdown(pool.id)
+
+      if (breakdownError) {
+        console.error(
+          'Failed to load winner leaderboard breakdown:',
+          breakdownError,
+        )
+      }
+
+      breakdownByMember = loadedBreakdown
+    } else {
       const { breakdownByMember: loadedBreakdown, error: breakdownError } =
         await fetchPoolLeaderboardPointBreakdown(supabase, pool.id, 'classic')
 
@@ -357,15 +370,15 @@ export default function PoolPage() {
       breakdownByMember,
     })
 
-    if (!isWinnerPool) {
-      const verification = verifyLeaderboardBreakdownTotals(leaderboardMembers)
-      if (!verification.ok) {
-        console.error(
-          'Leaderboard breakdown totals do not match header points:',
-          verification.mismatches,
-        )
-      }
+    const verification = verifyLeaderboardBreakdownTotals(leaderboardMembers)
+    if (!verification.ok) {
+      console.error(
+        'Leaderboard breakdown totals do not match header points:',
+        verification.mismatches,
+      )
+    }
 
+    if (!isWinnerPool) {
       const derivation = verifyLeaderboardBreakdownPointDerivation(
         leaderboardMembers,
         'classic',

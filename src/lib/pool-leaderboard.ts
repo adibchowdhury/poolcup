@@ -9,6 +9,10 @@ import {
   getPredictionOutcomeLabel,
   type MatchScoringStyle,
 } from '@/src/lib/prediction-scoring'
+import {
+  deserializeWinnerLeaderboardBreakdown,
+  type SerializedWinnerLeaderboardBreakdown,
+} from '@/src/lib/winner-leaderboard-breakdown'
 
 export type PoolLeaderboardMember = {
   id: string
@@ -186,6 +190,51 @@ export async function fetchPoolLeaderboardPointBreakdown(
   return { breakdownByMember, error: null }
 }
 
+export async function fetchWinnerPoolLeaderboardPointBreakdown(
+  poolId: string,
+): Promise<{
+  breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]>
+  error: string | null
+}> {
+  const breakdownByMember = new Map<string, LeaderboardPointBreakdownItem[]>()
+
+  try {
+    const response = await fetch(
+      `/api/pools/${encodeURIComponent(poolId)}/winner-leaderboard-breakdown`,
+      { credentials: 'include' },
+    )
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as {
+        error?: string
+      } | null
+      return {
+        breakdownByMember,
+        error: body?.error ?? `Failed to load breakdown (${response.status})`,
+      }
+    }
+
+    const body = (await response.json()) as {
+      breakdownByMember: SerializedWinnerLeaderboardBreakdown
+    }
+
+    return {
+      breakdownByMember: deserializeWinnerLeaderboardBreakdown(
+        body.breakdownByMember ?? {},
+      ),
+      error: null,
+    }
+  } catch (error) {
+    return {
+      breakdownByMember,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to load winner leaderboard breakdown',
+    }
+  }
+}
+
 export function verifyLeaderboardBreakdownTotals(members: LeaderboardMember[]): {
   ok: boolean
   mismatches: Array<{
@@ -350,9 +399,7 @@ export function buildPoolLeaderboardMembers({
     totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
     movement: getMovement(entry.rank, entry.prev_rank),
     streak: 0,
-    pointBreakdown: isWinnerPool
-      ? undefined
-      : (breakdownByMember?.get(entry.member_id) ?? []),
+    pointBreakdown: breakdownByMember?.get(entry.member_id) ?? [],
   }))
 }
 

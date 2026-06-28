@@ -69,6 +69,14 @@ export function buildLeaderboardPlaceGroups(
   return groups
 }
 
+function formatBreakdownLineLabel(item: LeaderboardPointBreakdownItem): string {
+  if (item.displayLabel) {
+    return item.displayLabel
+  }
+
+  return formatBreakdownMatchLabel(item)
+}
+
 function formatBreakdownMatchLabel(item: LeaderboardPointBreakdownItem): string {
   const matchup = `${item.team1Name} vs ${item.team2Name}`
   if (item.round === 'group' && item.groupName) {
@@ -186,13 +194,21 @@ function BreakdownLine({ item }: { item: LeaderboardPointBreakdownItem }) {
     <li className="border-b border-border/40 px-3 py-2.5 last:border-b-0 sm:px-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
-          {formatBreakdownMatchLabel(item)}
+          {formatBreakdownLineLabel(item)}
         </p>
         <p className="text-xs font-semibold text-muted-foreground sm:shrink-0 sm:text-sm">
-          {item.reasonLabel} ·{' '}
-          <span className="font-mono tabular-nums text-primary">
-            +{item.pointsAwarded} pts
-          </span>
+          {item.reasonLabel ? (
+            <>
+              {item.reasonLabel} ·{' '}
+              <span className="font-mono tabular-nums text-primary">
+                +{item.pointsAwarded} pts
+              </span>
+            </>
+          ) : (
+            <span className="font-mono tabular-nums text-primary">
+              +{item.pointsAwarded} pts
+            </span>
+          )}
         </p>
       </div>
     </li>
@@ -288,12 +304,12 @@ function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
 
 function GroupedMemberRow({
   member,
-  isClassicPool,
+  expandableBreakdown,
 }: {
   member: LeaderboardMember
-  isClassicPool: boolean
+  expandableBreakdown: boolean
 }) {
-  if (!isClassicPool) {
+  if (!expandableBreakdown) {
     return <GroupedMemberRowStatic member={member} />
   }
 
@@ -302,10 +318,10 @@ function GroupedMemberRow({
 
 export function LeaderboardGroupedList({
   members,
-  isClassicPool = false,
+  expandableBreakdown = false,
 }: {
   members: LeaderboardMember[]
-  isClassicPool?: boolean
+  expandableBreakdown?: boolean
 }) {
   const groups = buildLeaderboardPlaceGroups(members)
 
@@ -331,7 +347,7 @@ export function LeaderboardGroupedList({
               <GroupedMemberRow
                 key={member.id}
                 member={member}
-                isClassicPool={isClassicPool}
+                expandableBreakdown={expandableBreakdown}
               />
             ))}
           </div>

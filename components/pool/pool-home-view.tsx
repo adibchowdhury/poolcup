@@ -450,7 +450,7 @@ export function PoolHomeView({
                         <>
                           <LeaderboardGroupedList
                             members={members}
-                            isClassicPool={!isWinnerPool}
+                            expandableBreakdown
                           />
 
                           {showPreMatchLeaderboardNote && (
