@@ -20,10 +20,9 @@ import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-na
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
+import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
-import { RulesUpdateBanner } from '@/components/dashboard/rules-update-banner'
 import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
-import { ThirdPlaceDeadlineBanner } from '@/components/dashboard/third-place-deadline-banner'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
 import {
   prefetchUpcomingMatches,
@@ -383,11 +382,10 @@ function DashboardViewContent({
       displayName={headerName}
       avatar={selectedAvatar}
     >
-      <ScoringUpdateNoticeBanner />
       <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4">
-        <ThirdPlaceDeadlineBanner userId={userId} />
-        <RulesUpdateBanner userId={userId} />
+        <KnockoutBracketSetBanner userId={userId} />
       </div>
+      <ScoringUpdateNoticeBanner />
 
           {passwordResetSuccess && (
             <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
