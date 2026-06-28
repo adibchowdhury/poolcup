@@ -7,6 +7,8 @@ import {
   parseFixtureGoals,
   todayUtcDateString,
 } from '@/src/lib/api-football'
+import { knockoutFinalizeFieldsFromFixture } from '@/src/lib/match-finalize'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
@@ -22,6 +24,7 @@ type SyncError = {
 type MatchRow = {
   id: string
   fixture_id: string
+  round: string
   kickoff_at: string
   result_team1: number | null
   result_team2: number | null
@@ -37,6 +40,7 @@ type MatchLiveUpdatePayload = {
   result_team1?: number
   result_team2?: number
   is_final?: boolean
+  advancing_team?: number
 }
 
 function isAuthorized(request: Request): boolean {
@@ -121,7 +125,7 @@ async function runSync(): Promise<{
   const { data: liveMatchRows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, elapsed_minute',
+      'id, fixture_id, round, kickoff_at, result_team1, result_team2, is_final, status_short, elapsed_minute',
     )
     .eq('is_final', false)
     .lte('kickoff_at', nowIso)
@@ -206,10 +210,27 @@ async function runSync(): Promise<{
     const apiElapsed = fixture.fixture.status.elapsed
     const apiStatusShort = fixture.fixture.status.short
 
+    let effectiveIsFinal = isFinal
+    let knockoutAdvancingTeam: number | undefined
+
+    if (isFinal && isKnockoutRound(match.round)) {
+      const knockoutFields = knockoutFinalizeFieldsFromFixture(match.round, fixture)
+      if (!knockoutFields) {
+        effectiveIsFinal = false
+        errors.push({
+          fixtureId,
+          message:
+            'Knockout finalize blocked: level score without advancing team',
+        })
+      } else {
+        knockoutAdvancingTeam = knockoutFields.advancing_team
+      }
+    }
+
     const scoreOrFinalChanged =
       match.result_team1 !== goals.resultTeam1 ||
       match.result_team2 !== goals.resultTeam2 ||
-      match.is_final !== isFinal
+      match.is_final !== effectiveIsFinal
 
     const elapsedChanged =
       apiElapsed != null && apiElapsed !== match.elapsed_minute
@@ -236,7 +257,10 @@ async function runSync(): Promise<{
     if (scoreOrFinalChanged) {
       updatePayload.result_team1 = goals.resultTeam1
       updatePayload.result_team2 = goals.resultTeam2
-      updatePayload.is_final = isFinal
+      updatePayload.is_final = effectiveIsFinal
+      if (knockoutAdvancingTeam != null && effectiveIsFinal) {
+        updatePayload.advancing_team = knockoutAdvancingTeam
+      }
     }
 
     const { error: updateError } = await supabase
@@ -251,7 +275,7 @@ async function runSync(): Promise<{
 
     matchesUpdated += 1
 
-    if (scoreOrFinalChanged) {
+    if (scoreOrFinalChanged && effectiveIsFinal) {
       const { error: rpcError } = await supabase.rpc('calculate_match_points', {
         p_match_id: match.id,
       })

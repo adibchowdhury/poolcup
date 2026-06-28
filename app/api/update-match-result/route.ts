@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
+import { knockoutFinalizeFieldsFromScores } from '@/src/lib/match-finalize'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -22,10 +24,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { fixtureId, resultTeam1, resultTeam2 } = body as {
+    const { fixtureId, resultTeam1, resultTeam2, advancingTeam } = body as {
       fixtureId?: string
       resultTeam1?: number
       resultTeam2?: number
+      advancingTeam?: number | null
     }
 
     if (!fixtureId || typeof fixtureId !== 'string') {
@@ -52,11 +55,23 @@ export async function POST(request: Request) {
       )
     }
 
+    if (
+      advancingTeam !== undefined &&
+      advancingTeam !== null &&
+      advancingTeam !== 1 &&
+      advancingTeam !== 2
+    ) {
+      return NextResponse.json(
+        { error: 'advancingTeam must be 1, 2, or omitted' },
+        { status: 400 }
+      )
+    }
+
     const supabase = createAdminSupabaseClient()
 
     const { data: match, error: findError } = await supabase
       .from('matches')
-      .select('id')
+      .select('id, round')
       .eq('fixture_id', fixtureId)
       .maybeSingle()
 
@@ -72,13 +87,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
+    const updatePayload: {
+      result_team1: number
+      result_team2: number
+      is_final: true
+      advancing_team?: number
+    } = {
+      result_team1: resultTeam1,
+      result_team2: resultTeam2,
+      is_final: true,
+    }
+
+    if (isKnockoutRound(match.round)) {
+      const knockoutFields = knockoutFinalizeFieldsFromScores(
+        match.round,
+        resultTeam1,
+        resultTeam2,
+        advancingTeam,
+      )
+      if (!knockoutFields) {
+        return NextResponse.json(
+          {
+            error:
+              'Knockout matches with a level score require advancingTeam (1 or 2)',
+          },
+          { status: 400 }
+        )
+      }
+      updatePayload.advancing_team = knockoutFields.advancing_team
+    }
+
     const { error: updateError } = await supabase
       .from('matches')
-      .update({
-        result_team1: resultTeam1,
-        result_team2: resultTeam2,
-        is_final: true,
-      })
+      .update(updatePayload)
       .eq('id', match.id)
 
     if (updateError) {

@@ -220,8 +220,10 @@ declare
   v_points int;
   v_old_points int;
   v_delta int;
-  v_multiplier int;
   v_reason text;
+  v_is_knockout boolean;
+  v_exact_points int;
+  v_advance_points int;
 begin
   select * into v_match from public.matches where id = p_match_id;
 
@@ -234,14 +236,7 @@ begin
     return;
   end if;
 
-  v_multiplier := case v_match.round
-    when 'r32'   then 1
-    when 'r16'   then 2
-    when 'qf'    then 3
-    when 'sf'    then 4
-    when 'final' then 5
-    else 1
-  end;
+  v_is_knockout := v_match.round in ('r32', 'r16', 'qf', 'sf', 'final');
 
   for v_prediction in
     select p.*, pl.scoring_style, pm.user_id as predictor_user_id
@@ -252,8 +247,56 @@ begin
   loop
     v_points := 0;
     v_old_points := coalesce(v_prediction.points_awarded, 0);
+    v_exact_points := 0;
+    v_advance_points := 0;
 
-    if v_prediction.scoring_style = 'winner' then
+    if v_is_knockout then
+      if v_prediction.scoring_style = 'winner' then
+        v_advance_points := case v_match.round
+          when 'r32'   then 3
+          when 'r16'   then 4
+          when 'qf'    then 5
+          when 'sf'    then 6
+          when 'final' then 8
+          else 0
+        end;
+        if v_prediction.advance_pick is null
+           or v_match.advancing_team is null
+           or v_prediction.advance_pick <> v_match.advancing_team then
+          v_advance_points := 0;
+        end if;
+        v_points := v_advance_points;
+      else
+        v_exact_points := case v_match.round
+          when 'r32'   then 7
+          when 'r16'   then 10
+          when 'qf'    then 12
+          when 'sf'    then 15
+          when 'final' then 20
+          else 0
+        end;
+        if v_prediction.pred_team1 <> v_match.result_team1
+           or v_prediction.pred_team2 <> v_match.result_team2 then
+          v_exact_points := 0;
+        end if;
+
+        v_advance_points := case v_match.round
+          when 'r32'   then 3
+          when 'r16'   then 4
+          when 'qf'    then 5
+          when 'sf'    then 6
+          when 'final' then 8
+          else 0
+        end;
+        if v_prediction.advance_pick is null
+           or v_match.advancing_team is null
+           or v_prediction.advance_pick <> v_match.advancing_team then
+          v_advance_points := 0;
+        end if;
+
+        v_points := v_exact_points + v_advance_points;
+      end if;
+    elsif v_prediction.scoring_style = 'winner' then
       if (v_prediction.pred_team1 > v_prediction.pred_team2
           and v_match.result_team1 > v_match.result_team2)
       or (v_prediction.pred_team1 < v_prediction.pred_team2
@@ -266,17 +309,17 @@ begin
       if v_prediction.pred_team1 = v_match.result_team1
          and v_prediction.pred_team2 = v_match.result_team2 then
         v_points := 5;
+      elsif v_prediction.pred_team1 = v_prediction.pred_team2
+         and v_match.result_team1 = v_match.result_team2 then
+        v_points := 3;
       elsif (v_prediction.pred_team1 > v_prediction.pred_team2
              and v_match.result_team1 > v_match.result_team2)
          or (v_prediction.pred_team1 < v_prediction.pred_team2
-             and v_match.result_team1 < v_match.result_team2)
-         or (v_prediction.pred_team1 = v_prediction.pred_team2
-             and v_match.result_team1 = v_match.result_team2) then
+             and v_match.result_team1 < v_match.result_team2) then
         v_points := 2;
       end if;
     end if;
 
-    v_points := v_points * v_multiplier;
     v_delta := v_points - v_old_points;
 
     update public.predictions
@@ -289,8 +332,16 @@ begin
       where id = v_prediction.predictor_user_id;
 
       v_reason := case
+        when v_is_knockout
+             and v_prediction.scoring_style = 'classic'
+             and v_exact_points > 0
+             and v_advance_points > 0 then 'exact_score_and_advance'
+        when v_is_knockout and v_exact_points > 0 then 'exact_score'
+        when v_is_knockout and v_advance_points > 0 then 'correct_advance'
         when v_prediction.pred_team1 = v_match.result_team1
          and v_prediction.pred_team2 = v_match.result_team2 then 'exact_score'
+        when v_prediction.pred_team1 = v_prediction.pred_team2
+         and v_match.result_team1 = v_match.result_team2 then 'correct_draw'
         else 'correct_winner'
       end;
 
@@ -305,8 +356,10 @@ begin
     p.pool_id,
     p.member_id,
     coalesce(sum(p.points_awarded), 0) as total_points,
-    count(*) filter (where p.points_awarded >= 2) as correct_winners,
-    count(*) filter (where p.points_awarded = 5) as exact_scores,
+    count(*) filter (where p.points_awarded > 0) as correct_winners,
+    count(*) filter (
+      where p.pred_team1 = m.result_team1 and p.pred_team2 = m.result_team2
+    ) as exact_scores,
     rank() over (
       partition by p.pool_id
       order by coalesce(sum(p.points_awarded), 0) desc
@@ -318,6 +371,7 @@ begin
     ) as prev_rank,
     now()
   from public.predictions p
+  join public.matches m on m.id = p.match_id
   where p.pool_id in (
     select distinct pool_id from public.predictions where match_id = p_match_id
   )

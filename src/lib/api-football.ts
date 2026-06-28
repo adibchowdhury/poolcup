@@ -19,6 +19,16 @@ export type ApiFootballFixture = {
     home: number | null
     away: number | null
   }
+  teams: {
+    home: { winner: boolean | null }
+    away: { winner: boolean | null }
+  }
+  score: {
+    penalty: {
+      home: number | null
+      away: number | null
+    }
+  }
 }
 
 type ApiFootballResponse = {
@@ -204,4 +214,36 @@ export function parseFixtureGoals(
     return null
   }
   return { resultTeam1: home, resultTeam2: away }
+}
+
+/**
+ * Who advances in a knockout match. Team 1 = home (goals.home), team 2 = away.
+ * resultTeam1/resultTeam2 follow parseFixtureGoals: home → 1, away → 2.
+ */
+export function parseAdvancingTeam(fixture: ApiFootballFixture): 1 | 2 | null {
+  const goals = parseFixtureGoals(fixture)
+  if (!goals) return null
+
+  const { resultTeam1, resultTeam2 } = goals
+  if (resultTeam1 > resultTeam2) return 1
+  if (resultTeam2 > resultTeam1) return 2
+
+  if (fixture.teams.home.winner === true) return 1
+  if (fixture.teams.away.winner === true) return 2
+
+  const penHome = fixture.score.penalty.home
+  const penAway = fixture.score.penalty.away
+  if (
+    penHome != null &&
+    penAway != null &&
+    Number.isInteger(penHome) &&
+    Number.isInteger(penAway) &&
+    penHome >= 0 &&
+    penAway >= 0
+  ) {
+    if (penHome > penAway) return 1
+    if (penAway > penHome) return 2
+  }
+
+  return null
 }

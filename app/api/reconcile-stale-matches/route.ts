@@ -5,6 +5,8 @@ import {
   resolveFixtureScoresForForceClose,
   type ApiFootballFixture,
 } from '@/src/lib/api-football'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
+import { knockoutFinalizeFieldsFromFixture } from '@/src/lib/match-finalize'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
@@ -13,9 +15,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const STALE_CUTOFF_MINUTES = 135
-/** Force-close when API feed is still "live" this long after kickoff. Safe for
- *  standard group matches (~90+ stoppage). Raise or make round-aware before
- *  syncing knockout extra time / penalties (feed can stay live 120+ min). */
+/** Force-close when API feed is still "live" this long after kickoff. Group matches only. */
 const FORCE_FINAL_MINUTES = 135
 /** Only force-close when the feed still looks like late live play, not halftime or suspended. */
 const FORCE_CLOSE_MIN_ELAPSED_MINUTE = 85
@@ -42,6 +42,8 @@ const FORCE_CLOSE_BLOCKED_STATUSES = new Set([
   'CANC',
   'AWD',
   'WO',
+  'ET',
+  'P',
 ])
 
 /** Never hard force-close postponed/cancelled fixtures. */
@@ -73,6 +75,7 @@ type ReconcileError = {
 type CandidateRow = {
   id: string
   fixture_id: string
+  round: string
   team1_name: string
   team2_name: string
   result_team1: number | null
@@ -89,13 +92,16 @@ type MatchLiveUpdatePayload = {
   updated_at?: string
   result_team1?: number
   result_team2?: number
+  advancing_team?: number
 }
 
 function canForceCloseStaleMatch(
+  round: string,
   statusShort: string,
   elapsedMinute: number | null,
   minutesSinceKickoff: number,
 ): boolean {
+  if (isKnockoutRound(round)) return false
   const status = statusShort.trim().toUpperCase()
   if (FORCE_CLOSE_BLOCKED_STATUSES.has(status)) return false
   if (!FORCE_CLOSE_ELIGIBLE_STATUSES.has(status)) return false
@@ -106,11 +112,14 @@ function canForceCloseStaleMatch(
 }
 
 function canHardForceCloseStaleMatch(
+  round: string,
   statusShort: string,
   minutesSinceKickoff: number,
 ): boolean {
+  if (isKnockoutRound(round)) return false
   const status = statusShort.trim().toUpperCase()
   if (HARD_FORCE_CLOSE_BLOCKED_STATUSES.has(status)) return false
+  if (status === 'ET' || status === 'P') return false
   return minutesSinceKickoff > FORCE_CLOSE_HARD_MINUTES
 }
 
@@ -247,7 +256,7 @@ async function runReconcile(): Promise<{
   const { data: candidateRows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute',
+      'id, fixture_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute',
     )
     .eq('is_final', false)
     .lt('kickoff_at', kickoffCutoff)
@@ -306,15 +315,41 @@ async function runReconcile(): Promise<{
     }
 
     if (update.is_final) {
+      const finalizePayload: {
+        result_team1: number
+        result_team2: number
+        is_final: true
+        status_short: string
+        elapsed_minute: number | null
+        advancing_team?: number
+      } = {
+        result_team1: update.result_team1,
+        result_team2: update.result_team2,
+        is_final: true,
+        status_short: update.status_short,
+        elapsed_minute: update.elapsed_minute,
+      }
+
+      if (isKnockoutRound(match.round)) {
+        const knockoutFields = knockoutFinalizeFieldsFromFixture(
+          match.round,
+          fixture,
+        )
+        if (!knockoutFields) {
+          stillLive += 1
+          errors.push({
+            fixtureId,
+            message:
+              'Knockout finalize blocked: level score without advancing team',
+          })
+          continue
+        }
+        finalizePayload.advancing_team = knockoutFields.advancing_team
+      }
+
       const { error: updateError } = await supabase
         .from('matches')
-        .update({
-          result_team1: update.result_team1,
-          result_team2: update.result_team2,
-          is_final: true,
-          status_short: update.status_short,
-          elapsed_minute: update.elapsed_minute,
-        })
+        .update(finalizePayload)
         .eq('id', match.id)
 
       if (updateError) {
@@ -358,6 +393,7 @@ async function runReconcile(): Promise<{
 
     if (
       canForceCloseStaleMatch(
+        match.round,
         update.status_short,
         update.elapsed_minute,
         minutesSinceKickoff,
@@ -396,7 +432,11 @@ async function runReconcile(): Promise<{
     }
 
     if (
-      canHardForceCloseStaleMatch(update.status_short, minutesSinceKickoff)
+      canHardForceCloseStaleMatch(
+        match.round,
+        update.status_short,
+        minutesSinceKickoff,
+      )
     ) {
       const closeResult = await attemptForceCloseWithResolvedScore(
         supabase,
