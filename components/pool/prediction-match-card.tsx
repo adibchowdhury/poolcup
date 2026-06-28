@@ -29,6 +29,7 @@ import {
   getAdvancePickHintText,
   isKnockoutPredictionComplete,
   isPredictedDraw,
+  resolveAdvancePickFromScores,
   resolveAdvancePickTeamName,
 } from '@/src/lib/knockout-match-prediction'
 import {
@@ -133,6 +134,107 @@ function AdvanceTeamChip({
       />
       <span className="truncate">{teamName}</span>
     </button>
+  )
+}
+
+export function KnockoutAdvancePicker({
+  team1Name,
+  team2Name,
+  team1Flag,
+  team2Flag,
+  predTeam1,
+  predTeam2,
+  userAdvancePick,
+  preview = false,
+  isLocked = false,
+  onAdvancePick,
+}: {
+  team1Name: string
+  team2Name: string
+  team1Flag: string | null
+  team2Flag: string | null
+  predTeam1: number | null
+  predTeam2: number | null
+  userAdvancePick: number | null
+  preview?: boolean
+  isLocked?: boolean
+  onAdvancePick?: (pick: 1 | 2) => void
+}) {
+  const hasScores = predTeam1 != null && predTeam2 != null
+  if (!hasScores && !preview) return null
+
+  const isDraw = hasScores && isPredictedDraw(predTeam1!, predTeam2!)
+  const effectivePick = hasScores
+    ? resolveAdvancePickFromScores(predTeam1!, predTeam2!, userAdvancePick)
+    : null
+  const needsPick = isDraw && effectivePick == null && !isLocked && !preview
+  const pickEditable = isDraw && !isLocked && !preview && Boolean(onAdvancePick)
+
+  return (
+    <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-foreground">Who advances?</p>
+        <p
+          className={cn(
+            'text-[10px]',
+            needsPick ? 'font-medium text-amber-400' : 'text-muted-foreground',
+          )}
+        >
+          {needsPick
+            ? 'Pick who advances — required for a level score'
+            : getAdvancePickHintText(isDraw)}
+        </p>
+        {preview ? (
+          <div className="flex gap-2">
+            <AdvanceTeamChip
+              teamName="TBD"
+              dbFlag={null}
+              selected={false}
+              disabled
+            />
+            <AdvanceTeamChip
+              teamName="TBD"
+              dbFlag={null}
+              selected={false}
+              disabled
+            />
+          </div>
+        ) : pickEditable ? (
+          <div className="flex gap-2">
+            <AdvanceTeamChip
+              teamName={team1Name}
+              dbFlag={team1Flag}
+              selected={userAdvancePick === 1}
+              disabled={false}
+              onClick={() => onAdvancePick?.(1)}
+            />
+            <AdvanceTeamChip
+              teamName={team2Name}
+              dbFlag={team2Flag}
+              selected={userAdvancePick === 2}
+              disabled={false}
+              onClick={() => onAdvancePick?.(2)}
+            />
+          </div>
+        ) : effectivePick != null ? (
+          <div className="flex gap-2">
+            <AdvanceTeamChip
+              teamName={
+                effectivePick === 1 ? team1Name : team2Name
+              }
+              dbFlag={effectivePick === 1 ? team1Flag : team2Flag}
+              selected
+              disabled
+            />
+            {!isDraw ? (
+              <span className="flex min-w-0 flex-1 items-center justify-center text-[10px] text-muted-foreground">
+                Implied by score
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -302,7 +404,6 @@ export function PredictionMatchCard({
       : null
 
   const isEditable = !preview && Boolean(poolId && memberId) && !isReadOnly
-  const isAdvanceEditable = isEditable && hasClassicPredictionScores(score1, score2)
 
   const savedCardComplete = isKnockout
     ? isKnockoutPredictionComplete(
@@ -322,11 +423,6 @@ export function PredictionMatchCard({
       )
     : hasClassicPredictionScores(score1, score2)
 
-  const predictedDrawForHint =
-    inputPredTeam1 != null &&
-    inputPredTeam2 != null &&
-    isPredictedDraw(inputPredTeam1, inputPredTeam2)
-
   const showPicksExpander =
     !preview && Boolean(poolId && currentUserId && hasKickedOff)
   const showResultFooter = hasResult || showPicksExpander
@@ -337,10 +433,10 @@ export function PredictionMatchCard({
     ? formatKnockoutPointValuesFooter(prediction.round as KnockoutRoundId)
     : null
 
-  const showAdvanceSection =
+  const showKnockoutAdvance =
     isKnockout &&
     (preview ||
-      isAdvanceEditable ||
+      hasClassicPredictionScores(score1, score2) ||
       (isReadOnly && savedAdvancePick != null))
 
   const handleLockViolation = useCallback(() => {
@@ -476,23 +572,48 @@ export function PredictionMatchCard({
     const parsed = parsePredictionScores(score1, score2)
     if (!parsed) return
 
-    const scoresUnchanged =
-      parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
-      parsed.predTeam2 === Number.parseInt(savedScore2, 10)
+    const effectiveAdvance = isKnockout
+      ? resolveAdvancePickFromScores(
+          parsed.predTeam1,
+          parsed.predTeam2,
+          advancePick,
+        )
+      : null
 
-    if (scoresUnchanged) {
+    if (isKnockout && effectiveAdvance == null) {
       return
     }
 
-    await persistPrediction(parsed, savedAdvancePick)
+    const scoresUnchanged =
+      parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
+      parsed.predTeam2 === Number.parseInt(savedScore2, 10)
+    const advanceUnchanged =
+      !isKnockout ||
+      effectiveAdvance ===
+        resolveAdvancePickFromScores(
+          parsed.predTeam1,
+          parsed.predTeam2,
+          savedAdvancePick,
+        )
+
+    if (scoresUnchanged && advanceUnchanged) {
+      return
+    }
+
+    await persistPrediction(
+      parsed,
+      isKnockout ? effectiveAdvance : undefined,
+    )
   }, [
     poolId,
     memberId,
     isReadOnly,
+    isKnockout,
     score1,
     score2,
     savedScore1,
     savedScore2,
+    advancePick,
     savedAdvancePick,
     prediction.matchId,
     handleLockViolation,
@@ -501,11 +622,11 @@ export function PredictionMatchCard({
   ])
 
   const persistAdvancePick = useCallback(
-    async (nextPick: number | null) => {
+    async (nextPick: 1 | 2) => {
       if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
 
       const parsed = parsePredictionScores(savedScore1, savedScore2)
-      if (!parsed) return
+      if (!parsed || !isPredictedDraw(parsed.predTeam1, parsed.predTeam2)) return
 
       if (nextPick === savedAdvancePick) {
         return
@@ -513,7 +634,15 @@ export function PredictionMatchCard({
 
       await persistPrediction(parsed, nextPick)
     },
-    [poolId, memberId, isReadOnly, savedScore1, savedScore2, savedAdvancePick, persistPrediction],
+    [
+      poolId,
+      memberId,
+      isReadOnly,
+      savedScore1,
+      savedScore2,
+      savedAdvancePick,
+      persistPrediction,
+    ],
   )
 
   const scheduleAutosave = useCallback(() => {
@@ -525,11 +654,25 @@ export function PredictionMatchCard({
 
   const handleScoreChange = (field: 'score1' | 'score2', raw: string) => {
     const clamped = clampPredictionScoreValue(raw)
+    const nextScore1 = field === 'score1' ? clamped : score1
+    const nextScore2 = field === 'score2' ? clamped : score2
+    const nextPred1 = parseOptionalScore(nextScore1)
+    const nextPred2 = parseOptionalScore(nextScore2)
+
     if (field === 'score1') {
       setScore1(clamped)
     } else {
       setScore2(clamped)
     }
+
+    if (isKnockout && nextPred1 != null && nextPred2 != null) {
+      if (!isPredictedDraw(nextPred1, nextPred2)) {
+        setAdvancePick(nextPred1 > nextPred2 ? 1 : 2)
+      } else {
+        setAdvancePick(null)
+      }
+    }
+
     setSaveStatus('idle')
     scheduleAutosave()
   }
@@ -548,18 +691,15 @@ export function PredictionMatchCard({
   }
 
   const handleAdvancePick = (pick: 1 | 2) => {
-    if (!isAdvanceEditable) return
-    const nextPick = advancePick === pick ? null : pick
-    setAdvancePick(nextPick)
-    setSaveStatus('idle')
-    void persistAdvancePick(nextPick)
-  }
+    if (!isEditable || !hasClassicPredictionScores(score1, score2)) return
+    const p1 = parseOptionalScore(score1)
+    const p2 = parseOptionalScore(score2)
+    if (p1 == null || p2 == null || !isPredictedDraw(p1, p2)) return
 
-  const lockedAdvanceTeamName = resolveAdvancePickTeamName(
-    savedAdvancePick,
-    prediction.team1Name,
-    prediction.team2Name,
-  )
+    setAdvancePick(pick)
+    setSaveStatus('idle')
+    void persistAdvancePick(pick)
+  }
 
   const actualAdvancedTeamName = resolveAdvancePickTeamName(
     prediction.advancingTeam,
@@ -726,63 +866,20 @@ export function PredictionMatchCard({
           </p>
         ) : null}
 
-        {isKnockout ? (
-          <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
-            {showAdvanceSection ? (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-foreground">Who advances?</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {getAdvancePickHintText(predictedDrawForHint && !preview)}
-                </p>
-                {preview ? (
-                  <div className="flex gap-2">
-                    <AdvanceTeamChip
-                      teamName="TBD"
-                      dbFlag={null}
-                      selected={false}
-                      disabled
-                    />
-                    <AdvanceTeamChip
-                      teamName="TBD"
-                      dbFlag={null}
-                      selected={false}
-                      disabled
-                    />
-                  </div>
-                ) : isAdvanceEditable ? (
-                  <div className="flex gap-2">
-                    <AdvanceTeamChip
-                      teamName={prediction.team1Name}
-                      dbFlag={prediction.team1Flag}
-                      selected={advancePick === 1}
-                      disabled={false}
-                      onClick={() => handleAdvancePick(1)}
-                    />
-                    <AdvanceTeamChip
-                      teamName={prediction.team2Name}
-                      dbFlag={prediction.team2Flag}
-                      selected={advancePick === 2}
-                      disabled={false}
-                      onClick={() => handleAdvancePick(2)}
-                    />
-                  </div>
-                ) : lockedAdvanceTeamName ? (
-                  <div className="flex gap-2">
-                    <AdvanceTeamChip
-                      teamName={lockedAdvanceTeamName}
-                      dbFlag={
-                        savedAdvancePick === 1
-                          ? prediction.team1Flag
-                          : prediction.team2Flag
-                      }
-                      selected
-                      disabled
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
+        {showKnockoutAdvance ? (
+          <div className="flex w-full flex-col gap-2">
+            <KnockoutAdvancePicker
+              team1Name={prediction.team1Name}
+              team2Name={prediction.team2Name}
+              team1Flag={prediction.team1Flag}
+              team2Flag={prediction.team2Flag}
+              predTeam1={inputPredTeam1}
+              predTeam2={inputPredTeam2}
+              userAdvancePick={advancePick}
+              preview={preview}
+              isLocked={isReadOnly}
+              onAdvancePick={isEditable ? handleAdvancePick : undefined}
+            />
             {knockoutPointFooter ? (
               <p className="text-center text-[10px] text-muted-foreground">
                 {knockoutPointFooter}

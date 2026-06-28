@@ -32,6 +32,17 @@ export function getAdvancePickHintText(isDraw: boolean): string {
     : "If it's level and goes to penalties"
 }
 
+/** Decisive score → leading team; level score → user's pick (penalties). */
+export function resolveAdvancePickFromScores(
+  predTeam1: number,
+  predTeam2: number,
+  userAdvancePick: number | null | undefined,
+): number | null {
+  if (predTeam1 > predTeam2) return 1
+  if (predTeam2 > predTeam1) return 2
+  return userAdvancePick === 1 || userAdvancePick === 2 ? userAdvancePick : null
+}
+
 export function isKnockoutPredictionComplete(
   round: string,
   predTeam1: number | null,
@@ -40,8 +51,7 @@ export function isKnockoutPredictionComplete(
 ): boolean {
   if (predTeam1 == null || predTeam2 == null) return false
   if (!isKnockoutRound(round)) return true
-  if (!isPredictedDraw(predTeam1, predTeam2)) return true
-  return advancePick === 1 || advancePick === 2
+  return resolveAdvancePickFromScores(predTeam1, predTeam2, advancePick) != null
 }
 
 export function resolveAdvancePickTeamName(
