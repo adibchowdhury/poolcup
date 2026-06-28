@@ -328,13 +328,13 @@ export function PredictionMatchCard({
     const serverSavedChanged =
       next1 !== prev1 || next2 !== prev2 || nextAdvance !== prevAdvance
 
-    setSavedScore1(next1)
-    setSavedScore2(next2)
-    setSavedAdvancePick(nextAdvance)
-
     if (!serverSavedChanged) {
       return
     }
+
+    setSavedScore1(next1)
+    setSavedScore2(next2)
+    setSavedAdvancePick(nextAdvance)
 
     const incomplete = (current1 === '') !== (current2 === '')
     const inputsMatchPrevSaved =
@@ -443,8 +443,20 @@ export function PredictionMatchCard({
     const scoresChanged =
       score1 !== savedScore1 ||
       score2 !== savedScore2
-    const advanceChanged =
-      isKnockout && advanceToSave !== savedAdvancePick
+
+    let advanceChanged = false
+    if (isKnockout) {
+      const savedParsed = parsePredictionScores(savedScore1, savedScore2)
+      const savedEffectiveAdvance =
+        savedParsed != null
+          ? resolveAdvancePickFromScores(
+              savedParsed.predTeam1,
+              savedParsed.predTeam2,
+              savedAdvancePick,
+            )
+          : null
+      advanceChanged = advanceToSave !== savedEffectiveAdvance
+    }
 
     return scoresChanged || advanceChanged
   }, [
@@ -651,8 +663,17 @@ export function PredictionMatchCard({
     const scoresUnchanged =
       parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
       parsed.predTeam2 === Number.parseInt(savedScore2, 10)
+    const savedParsed = parsePredictionScores(savedScore1, savedScore2)
+    const savedEffectiveAdvance =
+      isKnockout && savedParsed != null
+        ? resolveAdvancePickFromScores(
+            savedParsed.predTeam1,
+            savedParsed.predTeam2,
+            savedAdvancePick,
+          )
+        : null
     const advanceUnchanged =
-      !isKnockout || advanceToSave === savedAdvancePick
+      !isKnockout || advanceToSave === savedEffectiveAdvance
 
     if (scoresUnchanged && advanceUnchanged) {
       return 'noop'
@@ -731,6 +752,22 @@ export function PredictionMatchCard({
     computeIsDirty,
     isReadOnly,
     persistScores,
+  ])
+
+  useEffect(() => {
+    if (!saveContext || preview || !poolId || !memberId) return
+    saveContext.bumpDirty()
+  }, [
+    saveContext,
+    preview,
+    poolId,
+    memberId,
+    score1,
+    score2,
+    advancePick,
+    savedScore1,
+    savedScore2,
+    savedAdvancePick,
   ])
 
   const notifyDirty = useCallback(() => {

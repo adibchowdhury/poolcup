@@ -23,6 +23,8 @@ type PredictionSaveContextValue = {
   register: (handle: PredictionSaveHandle) => () => void
   bumpDirty: () => void
   getHandles: () => Map<string, PredictionSaveHandle>
+  /** Bumped when any card edits or finishes a save — drives unsavedCount recomputation. */
+  dirtyVersion: number
 }
 
 const PredictionSaveContext = createContext<PredictionSaveContextValue | null>(
@@ -31,7 +33,7 @@ const PredictionSaveContext = createContext<PredictionSaveContextValue | null>(
 
 export function PredictionSaveProvider({ children }: { children: ReactNode }) {
   const handlesRef = useRef(new Map<string, PredictionSaveHandle>())
-  const [, setDirtyVersion] = useState(0)
+  const [dirtyVersion, setDirtyVersion] = useState(0)
 
   const bumpDirty = useCallback(() => {
     setDirtyVersion((version) => version + 1)
@@ -47,8 +49,8 @@ export function PredictionSaveProvider({ children }: { children: ReactNode }) {
   const getHandles = useCallback(() => handlesRef.current, [])
 
   const value = useMemo(
-    () => ({ register, bumpDirty, getHandles }),
-    [register, bumpDirty, getHandles],
+    () => ({ register, bumpDirty, getHandles, dirtyVersion }),
+    [register, bumpDirty, getHandles, dirtyVersion],
   )
 
   return (
@@ -64,16 +66,10 @@ export function usePredictionSaveContext(): PredictionSaveContextValue | null {
 
 export function usePredictionSaveCoordinator(activeMatchIds: string[]) {
   const context = useContext(PredictionSaveContext)
-  const [dirtyVersion, setDirtyVersion] = useState(0)
-
-  const bumpDirty = useCallback(() => {
-    context?.bumpDirty()
-    setDirtyVersion((version) => version + 1)
-  }, [context])
 
   const unsavedCount = useMemo(() => {
-    void dirtyVersion
     if (!context) return 0
+    void context.dirtyVersion
 
     let count = 0
     for (const matchId of activeMatchIds) {
@@ -83,7 +79,7 @@ export function usePredictionSaveCoordinator(activeMatchIds: string[]) {
       }
     }
     return count
-  }, [activeMatchIds, context, dirtyVersion])
+  }, [activeMatchIds, context, context?.dirtyVersion])
 
   const saveAll = useCallback(async () => {
     if (!context) {
@@ -104,9 +100,9 @@ export function usePredictionSaveCoordinator(activeMatchIds: string[]) {
       else if (result === 'error') error += 1
     }
 
-    bumpDirty()
+    context.bumpDirty()
     return { ok, locked, error }
-  }, [activeMatchIds, bumpDirty, context])
+  }, [activeMatchIds, context])
 
-  return { bumpDirty, unsavedCount, saveAll }
+  return { unsavedCount, saveAll }
 }
