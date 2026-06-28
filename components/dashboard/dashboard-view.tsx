@@ -21,6 +21,7 @@ import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
 import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
+import { M73RemediationBanner } from '@/components/dashboard/m73-remediation-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
 import { HowItWorksTab } from '@/components/dashboard/how-it-works-tab'
@@ -383,6 +384,7 @@ function DashboardViewContent({
       avatar={selectedAvatar}
     >
       <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4">
+        <M73RemediationBanner userId={userId} />
         <KnockoutBracketSetBanner userId={userId} />
       </div>
       <ScoringUpdateNoticeBanner />
