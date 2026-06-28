@@ -54,6 +54,9 @@ const BRACKET_WRAPPER_STYLE: CSSProperties = {
   overflowX: 'auto',
 }
 
+/** Full-bleed horizontal scroll shell for wide bracket trees inside centered page columns. */
+export const BRACKET_FULL_BLEED_WRAPPER_STYLE = BRACKET_WRAPPER_STYLE
+
 type ConnectorPath = {
   id: string
   d: string

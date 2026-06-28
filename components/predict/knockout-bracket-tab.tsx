@@ -4,6 +4,7 @@ import {
   KnockoutBracketForTab,
   type R32BracketInteractiveProps,
 } from '@/components/predict/knockout-bracket-preview'
+import { BRACKET_FULL_BLEED_WRAPPER_STYLE } from '@/components/pool/bracket-visual-tree'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 import type { WinnerOnlyRoundTabId } from '@/components/predict/winner-only-round-tabs'
 import type { KnockoutBracketTabId } from '@/components/predict/knockout-bracket-preview'
@@ -34,11 +35,21 @@ export function KnockoutBracketTab({
   tab,
   r32Bracket,
   pickError,
+  embedded = false,
 }: {
   tab: Exclude<WinnerOnlyRoundTabId, 'bracket'>
   r32Bracket?: R32BracketInteractiveProps
   pickError?: string | null
+  embedded?: boolean
 }) {
+  const desktopBracket = (
+    <KnockoutBracketForTab
+      tab={tab}
+      r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+      desktopOnly
+    />
+  )
+
   return (
     <div className="w-full min-w-0 max-w-full space-y-4">
       <p className="mx-auto max-w-2xl px-4 text-center text-sm text-muted-foreground">
@@ -51,10 +62,24 @@ export function KnockoutBracketTab({
         </p>
       ) : null}
 
-      <KnockoutBracketForTab
-        tab={tab}
-        r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
-      />
+      {embedded ? (
+        <div className="hidden md:block" style={BRACKET_FULL_BLEED_WRAPPER_STYLE}>
+          {desktopBracket}
+        </div>
+      ) : (
+        <KnockoutBracketForTab
+          tab={tab}
+          r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+        />
+      )}
+
+      {embedded ? (
+        <KnockoutBracketForTab
+          tab={tab}
+          r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+          mobileOnly
+        />
+      ) : null}
     </div>
   )
 }

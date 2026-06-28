@@ -30,7 +30,6 @@ import {
   PoolChatTab,
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
-import type { WinnerGroupPrediction } from '@/components/pool/your-predictions-section'
 import { cn } from '@/lib/utils'
 import { CHAT_INBOX_HREF, MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
@@ -54,10 +53,6 @@ interface PoolHomeViewProps {
   pool: PoolHomeMeta
   members: LeaderboardMember[]
   userPredictions: UserPoolPrediction[]
-  winnerGroups: WinnerGroupPrediction[]
-  thirdPlaceTeams: string[]
-  predictHref: string
-  hasPredictions: boolean
   currentUserId: string
   leaderboardLoading?: boolean
   canDelete?: boolean
@@ -82,10 +77,6 @@ export function PoolHomeView({
   pool,
   members,
   userPredictions,
-  winnerGroups,
-  thirdPlaceTeams,
-  predictHref,
-  hasPredictions,
   currentUserId,
   leaderboardLoading = false,
   canDelete,
@@ -172,6 +163,8 @@ export function PoolHomeView({
       setMobileChatActive(false)
     }
   }, [isMobileChatShell, setMobileChatActive])
+
+  const isWinnerPredictionsTab = isWinnerPool && activeTab === 'predictions'
 
   return (
     <div
@@ -269,32 +262,13 @@ export function PoolHomeView({
 
         <main
           className={cn(
-            'mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden px-4 py-8',
+            'mx-auto w-full min-w-0 max-w-4xl px-4 py-8',
+            !isWinnerPredictionsTab && 'overflow-x-hidden',
             'max-sm:pt-0 max-sm:pb-8',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
         >
-          {!hasPredictions && isWinnerPool && (
-            <div
-              className={cn(
-                'mb-8 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between',
-                isMobileChatShell && 'max-sm:hidden',
-              )}
-            >
-              <p className="text-sm font-medium text-foreground">
-                You haven&apos;t made your predictions yet
-              </p>
-              <Button
-                asChild
-                size="sm"
-                className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Link href={predictHref}>Predict Now</Link>
-              </Button>
-            </div>
-          )}
-
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -367,18 +341,32 @@ export function PoolHomeView({
               </div>
             ) : null}
 
-            <TabsContent value="predictions" className="mt-0 w-full min-w-0">
+            <TabsContent
+              value="predictions"
+              className={cn(
+                'mt-0 w-full min-w-0',
+                isWinnerPredictionsTab && 'overflow-x-visible',
+              )}
+            >
               <PoolPredictionsTab
                 scoringStyle={pool.scoringStyle}
                 predictions={userPredictions}
                 totalMatchCount={pool.totalMatches}
-                winnerGroups={winnerGroups}
-                thirdPlaceTeams={thirdPlaceTeams}
-                predictHref={predictHref}
                 acceptingMembers={pool.acceptingMembers}
                 poolId={poolId}
                 memberId={memberId}
                 currentUserId={currentUserId}
+                inviteCode={pool.inviteCode}
+                winnerPool={
+                  isWinnerPool && poolId
+                    ? {
+                        id: poolId,
+                        name: pool.name,
+                        invite_code: pool.inviteCode,
+                        scoring_style: pool.scoringStyle,
+                      }
+                    : undefined
+                }
                 onPredictionSaved={onPredictionSaved}
                 onPredictionRemoved={onPredictionRemoved}
                 shareOpen={shareOpen}

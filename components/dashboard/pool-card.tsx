@@ -133,7 +133,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
     nextKickoffMs > nowMs
   const predictButtonHref =
     pool.scoringStyle === 'winner'
-      ? `/pool/${pool.inviteCode}/predict`
+      ? `/pool/${pool.inviteCode}?tab=predictions`
       : `/pool/${pool.inviteCode}`
   const visibleAvatars = pool.memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
   const overflowCount = Math.max(0, pool.members - MAX_VISIBLE_MEMBER_AVATARS)

@@ -99,5 +99,5 @@ export function resolveThirdPlaceDeadlineHref(
   pools: WinnerPoolNeedingThirdPlace[],
 ): string | null {
   if (pools.length === 0) return null
-  return `/pool/${pools[0]!.inviteCode}/predict`
+  return `/pool/${pools[0]!.inviteCode}?tab=predictions`
 }

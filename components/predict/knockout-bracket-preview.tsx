@@ -951,9 +951,13 @@ export type KnockoutBracketTabId = keyof typeof KNOCKOUT_TAB_PREVIEW | 'sf' | 'f
 export function KnockoutBracketForTab({
   tab,
   r32Bracket,
+  desktopOnly = false,
+  mobileOnly = false,
 }: {
   tab: KnockoutBracketTabId
   r32Bracket?: R32BracketInteractiveProps
+  desktopOnly?: boolean
+  mobileOnly?: boolean
 }) {
   let desktop: ReactNode
 
@@ -972,17 +976,29 @@ export function KnockoutBracketForTab({
     )
   }
 
+  const mobile = (
+    <div
+      className={cn(
+        'w-full min-w-0 max-w-full space-y-3 px-4 md:hidden',
+        tab === 'r32' && 'pb-20',
+      )}
+    >
+      <KnockoutBracketMobileList tab={tab} r32Bracket={r32Bracket} />
+    </div>
+  )
+
+  if (desktopOnly) {
+    return <>{desktop}</>
+  }
+
+  if (mobileOnly) {
+    return mobile
+  }
+
   return (
     <>
       <div className="hidden md:block">{desktop}</div>
-      <div
-        className={cn(
-          'w-full min-w-0 max-w-full space-y-3 px-4 md:hidden',
-          tab === 'r32' && 'pb-20',
-        )}
-      >
-        <KnockoutBracketMobileList tab={tab} r32Bracket={r32Bracket} />
-      </div>
+      {mobile}
     </>
   )
 }

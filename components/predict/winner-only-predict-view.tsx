@@ -72,12 +72,15 @@ interface WinnerOnlyPredictViewProps {
   pool: Pool
   memberId: string
   inviteCode: string
+  /** When true, omits full-page chrome (back link, title) for use inside the pool tab. */
+  embedded?: boolean
 }
 
 export function WinnerOnlyPredictView({
   pool,
   memberId,
   inviteCode,
+  embedded = false,
 }: WinnerOnlyPredictViewProps) {
   const { user } = useAuth()
   const { mounted, nowMs } = useClientNow(1000)
@@ -624,23 +627,46 @@ export function WinnerOnlyPredictView({
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background pb-20">
-      <header className="sticky top-0 z-20 overflow-x-hidden border-b border-border/80 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto min-w-0 max-w-3xl space-y-3 px-4 py-3 sm:py-4">
-          <Link
-            href={`/pool/${inviteCode}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="truncate">{pool.name}</span>
-          </Link>
+    <div
+      className={cn(
+        'w-full max-w-full bg-background',
+        embedded ? 'overflow-x-visible pb-20' : 'min-h-screen overflow-x-hidden pb-20',
+      )}
+    >
+      <header
+        className={cn(
+          'z-20 bg-background/95',
+          embedded
+            ? 'sticky top-0 overflow-x-visible border-b border-border/80 backdrop-blur-md'
+            : 'sticky top-0 overflow-x-hidden border-b border-border/80 bg-background/95 backdrop-blur-md',
+        )}
+      >
+        <div
+          className={cn(
+            'min-w-0 space-y-3',
+            embedded
+              ? 'w-full py-3'
+              : 'mx-auto max-w-3xl px-4 py-3 sm:py-4',
+          )}
+        >
+          {!embedded ? (
+            <>
+              <Link
+                href={`/pool/${inviteCode}`}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="truncate">{pool.name}</span>
+              </Link>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">
-              Predictions
-            </h1>
-            <ScoringModeBadge scoringStyle={pool.scoring_style} />
-          </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">
+                  Predictions
+                </h1>
+                <ScoringModeBadge scoringStyle={pool.scoring_style} />
+              </div>
+            </>
+          ) : null}
 
           {activeTab === 'bracket' && (
             <div className="min-w-0 space-y-3">
@@ -711,8 +737,13 @@ export function WinnerOnlyPredictView({
 
       <main
         className={cn(
-          'w-full min-w-0 max-w-full overflow-x-hidden py-4',
-          activeTab === 'bracket' && 'md:overflow-x-visible',
+          'w-full min-w-0 max-w-full py-4',
+          embedded
+            ? 'overflow-x-visible'
+            : cn(
+                'overflow-x-hidden',
+                activeTab === 'bracket' && 'md:overflow-x-visible',
+              ),
         )}
       >
         {error && (
@@ -727,7 +758,7 @@ export function WinnerOnlyPredictView({
               Loading bracket…
             </p>
           ) : (
-            <div className="w-full min-w-0 max-w-full space-y-4 overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-full space-y-4">
               <p className="mx-auto max-w-2xl px-4 text-center text-sm text-muted-foreground">
                 Rank all 4 teams in every group — 1st, 2nd, 3rd, and who gets
                 eliminated — then pick your best 3rd-place teams. Your knockout
@@ -777,6 +808,7 @@ export function WinnerOnlyPredictView({
             tab={activeTab}
             r32Bracket={r32Bracket}
             pickError={r32PickError}
+            embedded={embedded}
           />
         )}
       </main>

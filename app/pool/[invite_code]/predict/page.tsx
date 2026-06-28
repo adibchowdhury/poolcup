@@ -10,7 +10,6 @@ import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
-import { WinnerOnlyPredictView } from '@/components/predict/winner-only-predict-view'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import { KnockoutAdvancePicker } from '@/components/pool/prediction-match-card'
 import {
@@ -691,6 +690,12 @@ export default function PredictPage() {
     window.setTimeout(() => setSaveSuccess(false), 2000)
   }
 
+  useEffect(() => {
+    if (!pageLoading && pool?.scoring_style === 'winner') {
+      router.replace(`/pool/${inviteCode}?tab=predictions`)
+    }
+  }, [pageLoading, pool, inviteCode, router])
+
   if (authLoading || (!user && !notFound)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -736,13 +741,11 @@ export default function PredictPage() {
     )
   }
 
-  if (pool.scoring_style === 'winner' && memberId) {
+  if (pool.scoring_style === 'winner') {
     return (
-      <WinnerOnlyPredictView
-        pool={pool}
-        memberId={memberId}
-        inviteCode={inviteCode}
-      />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Redirecting…</p>
+      </div>
     )
   }
 

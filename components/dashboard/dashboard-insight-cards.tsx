@@ -113,7 +113,7 @@ function getCompletePredictionsHref(pools: DashboardPoolCardData[]): string {
   if (scorePools.length === 1) {
     const pool = scorePools[0]!
     return pool.scoringStyle === 'winner'
-      ? `/pool/${pool.inviteCode}/predict`
+      ? `/pool/${pool.inviteCode}?tab=predictions`
       : `/pool/${pool.inviteCode}`
   }
   return DASHBOARD_TAB_HREFS.upcoming
