@@ -14,6 +14,7 @@ import {
   countR32AdvancePicks,
   getR16ProjectedSides,
   getR32R16AdvanceHint,
+  isR32PickPersisted,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
   type R32BracketMatchView,
 } from '@/src/lib/winner-only-r32-bracket'
@@ -153,6 +154,8 @@ function R32MobileGameCard({
     new Date(match.lockedAt).getTime() <= nowMs
   const myPick = match?.myPick ?? null
   const hasPick = myPick === 1 || myPick === 2
+  const hasPersistedPick =
+    isR32PickPersisted(match) && match?.myPick === match?.savedPick
   const team1 = (match?.team1Name ?? '').trim()
   const team2 = (match?.team2Name ?? '').trim()
   const team1Resolved = isResolvedR32Team(team1)
@@ -192,7 +195,9 @@ function R32MobileGameCard({
         aria-label={`${slot.visualLabel} pick: ${winnerName} over ${loserName}`}
       >
         <div className="flex min-w-0 items-center gap-1.5">
-          <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+          {hasPersistedPick ? (
+            <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+          ) : null}
           <TeamFlagImage
             countryName={winnerName}
             imgClassName="h-3.5 w-auto max-w-[1rem] shrink-0 object-contain"
@@ -238,7 +243,9 @@ function R32MobileGameCard({
       {hasPick && winnerName && loserName ? (
         <div className="space-y-1">
           <div className="flex min-w-0 items-center gap-2 rounded border border-primary bg-primary/15 px-2 py-1.5">
-            <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            {hasPersistedPick ? (
+              <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            ) : null}
             <TeamFlagImage
               countryName={winnerName}
               imgClassName="h-3.5 w-auto max-w-[1rem] shrink-0 object-contain"

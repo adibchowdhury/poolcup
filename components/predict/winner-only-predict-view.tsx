@@ -13,7 +13,6 @@ import { SaveBar } from '@/components/predict/save-bar'
 import { SaveSuccessToast } from '@/components/predict/save-success-toast'
 import {
   WinnerOnlyRoundTabs,
-  isWinnerOnlyLockedRoundTab,
   type WinnerOnlyRoundTabId,
 } from '@/components/predict/winner-only-round-tabs'
 import { KnockoutBracketTab, isKnockoutBracketTab, KNOCKOUT_PICK_LABELS } from '@/components/predict/knockout-bracket-tab'
@@ -21,6 +20,8 @@ import type { R32BracketInteractiveProps } from '@/components/predict/knockout-b
 import {
   advancePickScores,
   countR32AdvancePicks,
+  countR32UnsavedPicks,
+  isR32MatchLocked,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
   type R32BracketMatchesByNumber,
 } from '@/src/lib/winner-only-r32-bracket'
@@ -99,6 +100,7 @@ export function WinnerOnlyPredictView({
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saveBarError, setSaveBarError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [matches, setMatches] = useState<GroupStageMatch[]>([])
   const [teamToGroup, setTeamToGroup] = useState<
@@ -107,8 +109,6 @@ export function WinnerOnlyPredictView({
   const [matchesLoading, setMatchesLoading] = useState(true)
   const [r32MatchesByNumber, setR32MatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
-  const [r32PickError, setR32PickError] = useState<string | null>(null)
-  const r32SaveInFlightRef = useRef(false)
   const predictionsCompletedTrackedRef = useRef(false)
   const thirdPlaceStartedTrackedRef = useRef(false)
 
@@ -221,13 +221,15 @@ export function WinnerOnlyPredictView({
 
       const map: R32BracketMatchesByNumber = new Map()
       for (const row of rows) {
+        const pick = pickByMatchId.get(row.id) ?? null
         map.set(row.match_number, {
           matchId: row.id,
           matchNumber: row.match_number,
           team1Name: row.team1_name,
           team2Name: row.team2_name,
           lockedAt: row.locked_at,
-          myPick: pickByMatchId.get(row.id) ?? null,
+          myPick: pick,
+          savedPick: pick,
         })
       }
       setR32MatchesByNumber(map)
@@ -241,16 +243,20 @@ export function WinnerOnlyPredictView({
   }, [memberId, pool.id])
 
   const handleR32AdvancePick = useCallback(
-    async (matchId: string, pick: 1 | 2) => {
+    (matchId: string, pick: 1 | 2) => {
       const currentMatch = [...r32MatchesByNumber.values()].find(
         (match) => match.matchId === matchId,
       )
-      if (!currentMatch || currentMatch.myPick === pick || r32SaveInFlightRef.current) {
+      if (!currentMatch || currentMatch.myPick === pick) {
         return
       }
 
-      const previousPick = currentMatch.myPick
-      setR32PickError(null)
+      if (isR32MatchLocked(currentMatch, mounted ? nowMs : Date.now())) {
+        return
+      }
+
+      setSaveSuccess(false)
+      setSaveBarError(null)
       setR32MatchesByNumber((prev) => {
         const next = new Map(prev)
         const existing = [...next.values()].find((match) => match.matchId === matchId)
@@ -258,31 +264,8 @@ export function WinnerOnlyPredictView({
         next.set(existing.matchNumber, { ...existing, myPick: pick })
         return next
       })
-
-      r32SaveInFlightRef.current = true
-      const scores = advancePickScores(pick)
-      const result = await upsertPoolMatchPrediction(supabase, {
-        poolId: pool.id,
-        memberId,
-        matchId,
-        predTeam1: scores.predTeam1,
-        predTeam2: scores.predTeam2,
-        advancePick: pick,
-      })
-      r32SaveInFlightRef.current = false
-
-      if (!result.ok) {
-        setR32MatchesByNumber((prev) => {
-          const next = new Map(prev)
-          const existing = [...next.values()].find((match) => match.matchId === matchId)
-          if (!existing) return prev
-          next.set(existing.matchNumber, { ...existing, myPick: previousPick })
-          return next
-        })
-        setR32PickError(result.error)
-      }
     },
-    [memberId, pool.id, r32MatchesByNumber],
+    [mounted, nowMs, r32MatchesByNumber],
   )
 
   const r32PickCount = useMemo(
@@ -295,7 +278,7 @@ export function WinnerOnlyPredictView({
       matchesByNumber: r32MatchesByNumber,
       nowMs: mounted ? nowMs : Date.now(),
       onAdvancePick: (matchId, pick) => {
-        void handleR32AdvancePick(matchId, pick)
+        handleR32AdvancePick(matchId, pick)
       },
     }),
     [handleR32AdvancePick, mounted, nowMs, r32MatchesByNumber],
@@ -308,7 +291,19 @@ export function WinnerOnlyPredictView({
     )
   }, [matches, teamToGroup])
 
-  const lockedRoundTab = isWinnerOnlyLockedRoundTab(activeTab)
+  const unsavedR32Count = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        r32MatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [mounted, nowMs, r32MatchesByNumber],
+  )
+
+  const r32FullyComplete = useMemo(
+    () => r32PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32,
+    [r32PickCount],
+  )
 
   const loadGroupPredictions = useCallback(async () => {
     if (!user?.id) return
@@ -455,6 +450,16 @@ export function WinnerOnlyPredictView({
     thirdPlaceRankings,
   ])
 
+  const showSaveBar = activeTab === 'bracket' || activeTab === 'r32'
+  const saveBarUnsavedCount =
+    activeTab === 'r32' ? unsavedR32Count : unsavedGroupCount
+  const saveBarComplete =
+    activeTab === 'r32' ? r32FullyComplete : predictionsFullyComplete
+  const saveBarDisabled =
+    activeTab === 'r32'
+      ? unsavedR32Count === 0
+      : unsavedGroupCount === 0 || !canSaveChanges
+
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null)
   }, [])
@@ -466,6 +471,7 @@ export function WinnerOnlyPredictView({
     if (!group) return
 
     setSaveSuccess(false)
+    setSaveBarError(null)
     setSuccessMessage(null)
     setGroupRankings((prev) => {
       const next = {
@@ -488,13 +494,127 @@ export function WinnerOnlyPredictView({
     if (!available.includes(teamName)) return
 
     setSaveSuccess(false)
+    setSaveBarError(null)
     setSuccessMessage(null)
     setThirdPlaceRankings((prev) =>
       tapThirdPlaceTeamWithAutoEliminated(prev, teamName, available),
     )
   }
 
+  async function handleR32Save() {
+    if (unsavedR32Count === 0) return
+
+    setSaving(true)
+    setSaveBarError(null)
+    setSaveSuccess(false)
+    setSuccessMessage(null)
+
+    const now = mounted ? nowMs : Date.now()
+    let savedCount = 0
+    let lockedCount = 0
+    let errorCount = 0
+
+    for (const match of r32MatchesByNumber.values()) {
+      if (match.myPick === match.savedPick) continue
+
+      if (isR32MatchLocked(match, now)) {
+        lockedCount += 1
+        setR32MatchesByNumber((prev) => {
+          const next = new Map(prev)
+          const existing = next.get(match.matchNumber)
+          if (!existing) return prev
+          next.set(match.matchNumber, {
+            ...existing,
+            myPick: existing.savedPick,
+          })
+          return next
+        })
+        continue
+      }
+
+      if (match.myPick !== 1 && match.myPick !== 2) {
+        continue
+      }
+
+      const scores = advancePickScores(match.myPick)
+      const result = await upsertPoolMatchPrediction(supabase, {
+        poolId: pool.id,
+        memberId,
+        matchId: match.matchId,
+        predTeam1: scores.predTeam1,
+        predTeam2: scores.predTeam2,
+        advancePick: match.myPick,
+      })
+
+      if (!result.ok) {
+        if (result.isLockViolation) {
+          lockedCount += 1
+          setR32MatchesByNumber((prev) => {
+            const next = new Map(prev)
+            const existing = next.get(match.matchNumber)
+            if (!existing) return prev
+            next.set(match.matchNumber, {
+              ...existing,
+              myPick: existing.savedPick,
+            })
+            return next
+          })
+        } else {
+          errorCount += 1
+        }
+        continue
+      }
+
+      setR32MatchesByNumber((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(match.matchNumber)
+        if (!existing) return prev
+        next.set(match.matchNumber, {
+          ...existing,
+          savedPick: match.myPick,
+        })
+        return next
+      })
+      savedCount += 1
+      capturePostHog('prediction_submitted', {
+        pool_id: pool.id,
+        match_id: match.matchId,
+      })
+    }
+
+    setSaving(false)
+
+    if (errorCount > 0) {
+      setSaveBarError("Couldn't save predictions")
+      return
+    }
+
+    if (lockedCount > 0 && savedCount === 0) {
+      setSaveBarError('This match has locked')
+      return
+    }
+
+    if (lockedCount > 0) {
+      setSaveBarError('Some matches have locked')
+    }
+
+    if (savedCount === 0) {
+      return
+    }
+
+    setSaveSuccess(true)
+    setSuccessMessage(
+      `Saved ${savedCount} prediction${savedCount === 1 ? '' : 's'}`,
+    )
+    window.setTimeout(() => setSaveSuccess(false), 2000)
+  }
+
   async function handleSave() {
+    if (activeTab === 'r32') {
+      await handleR32Save()
+      return
+    }
+
     if (unsavedGroupCount === 0 || !canSaveChanges) {
       if (unsavedGroupCount > 0 && !canSaveChanges) {
         const thirdPlaceChanged = !rankingsEqual(
@@ -502,17 +622,17 @@ export function WinnerOnlyPredictView({
           baselineThirdPlaceRankings,
         )
         if (thirdPlaceChanged && isThirdPlaceLocked) {
-          setError(THIRD_PLACE_LOCKED_LABEL)
+          setSaveBarError(THIRD_PLACE_LOCKED_LABEL)
         } else {
-          setError('Predictions are locked for those groups')
+          setSaveBarError('Predictions are locked for those groups')
         }
-        window.setTimeout(() => setError(null), 3000)
+        window.setTimeout(() => setSaveBarError(null), 3000)
       }
       return
     }
 
     setSaving(true)
-    setError(null)
+    setSaveBarError(null)
     setSuccessMessage(null)
     setSaveSuccess(false)
 
@@ -541,8 +661,8 @@ export function WinnerOnlyPredictView({
         !rankingsEqual(thirdPlaceRankings, baselineThirdPlaceRankings) &&
         isThirdPlaceLocked
       ) {
-        setError(THIRD_PLACE_LOCKED_LABEL)
-        window.setTimeout(() => setError(null), 3000)
+        setSaveBarError(THIRD_PLACE_LOCKED_LABEL)
+        window.setTimeout(() => setSaveBarError(null), 3000)
       }
       return
     }
@@ -554,7 +674,7 @@ export function WinnerOnlyPredictView({
 
       if (upsertError) {
         setSaving(false)
-        setError(upsertError.message)
+        setSaveBarError(upsertError.message)
         return
       }
 
@@ -595,9 +715,9 @@ export function WinnerOnlyPredictView({
             teamToGroup.size > 0 ? teamToGroup : undefined,
           )
         ) {
-          setError(THIRD_PLACE_LOCKED_LABEL)
+          setSaveBarError(THIRD_PLACE_LOCKED_LABEL)
         } else {
-          setError(thirdPlaceError.message)
+          setSaveBarError(thirdPlaceError.message)
         }
         return
       }
@@ -807,22 +927,23 @@ export function WinnerOnlyPredictView({
           <KnockoutBracketTab
             tab={activeTab}
             r32Bracket={r32Bracket}
-            pickError={r32PickError}
+            pickError={saveBarError}
             embedded={embedded}
           />
         )}
       </main>
 
-      {!lockedRoundTab && (
+      {showSaveBar ? (
         <SaveBar
-          unsavedCount={unsavedGroupCount}
+          unsavedCount={saveBarUnsavedCount}
           saving={saving}
           success={saveSuccess}
-          complete={predictionsFullyComplete}
-          disabled={unsavedGroupCount === 0 || !canSaveChanges}
-          onSave={handleSave}
+          error={saveBarError}
+          complete={saveBarComplete}
+          disabled={saveBarDisabled}
+          onSave={() => void handleSave()}
         />
-      )}
+      ) : null}
 
       <SaveSuccessToast
         message={successMessage}

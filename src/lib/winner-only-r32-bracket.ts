@@ -8,6 +8,7 @@ export type R32BracketMatchView = {
   team2Name: string
   lockedAt: string | null
   myPick: 1 | 2 | null
+  savedPick: 1 | 2 | null
 }
 
 export type R32BracketMatchesByNumber = Map<number, R32BracketMatchView>
@@ -28,6 +29,32 @@ export function countR32AdvancePicks(
     if (match.myPick === 1 || match.myPick === 2) {
       count += 1
     }
+  }
+  return count
+}
+
+export function isR32MatchLocked(
+  match: R32BracketMatchView | undefined,
+  nowMs: number,
+): boolean {
+  return (
+    match?.lockedAt != null && new Date(match.lockedAt).getTime() <= nowMs
+  )
+}
+
+export function isR32PickPersisted(match: R32BracketMatchView | undefined): boolean {
+  const savedPick = match?.savedPick
+  return savedPick === 1 || savedPick === 2
+}
+
+export function countR32UnsavedPicks(
+  matchesByNumber: R32BracketMatchesByNumber,
+  nowMs: number,
+): number {
+  let count = 0
+  for (const match of matchesByNumber.values()) {
+    if (isR32MatchLocked(match, nowMs)) continue
+    if (match.myPick !== match.savedPick) count += 1
   }
   return count
 }

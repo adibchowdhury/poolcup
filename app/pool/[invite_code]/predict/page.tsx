@@ -34,6 +34,11 @@ import {
   isPredictedDraw,
   resolveAdvancePickFromScores,
 } from '@/src/lib/knockout-match-prediction'
+import { isMatchLocked } from '@/src/lib/match-lock'
+import {
+  deletePoolMatchPrediction,
+  upsertPoolMatchPrediction,
+} from '@/src/lib/pool-match-prediction-write'
 import { cn } from '@/lib/utils'
 
 type ScoringStyle = 'classic' | 'winner' | 'exact'
@@ -78,9 +83,48 @@ type MatchGroup = {
   matches: Match[]
 }
 
-function isMatchLocked(lockedAt: string | null): boolean {
-  if (!lockedAt) return false
-  return new Date(lockedAt).getTime() <= Date.now()
+function isClassicMatchDirty(
+  match: Match,
+  scores: Record<string, ScoreInput>,
+  baselineScores: Record<string, ScoreInput>,
+  advancePicks: Record<string, number | null>,
+  baselineAdvancePicks: Record<string, number | null>,
+): boolean {
+  if (isMatchLocked(match.locked_at)) return false
+
+  const entry = scores[match.id]
+  const baseline = baselineScores[match.id]
+  const score1Empty = !entry || entry.score1 === ''
+  const score2Empty = !entry || entry.score2 === ''
+
+  if (score1Empty && score2Empty) {
+    return Boolean(baseline?.score1 && baseline?.score2)
+  }
+
+  if (score1Empty !== score2Empty) return false
+
+  const scoreChanged =
+    entry!.score1 !== (baseline?.score1 ?? '') ||
+    entry!.score2 !== (baseline?.score2 ?? '')
+
+  if (isKnockoutRound(match.round)) {
+    const predTeam1 = parseScoreValue(entry!.score1)
+    const predTeam2 = parseScoreValue(entry!.score2)
+    if (predTeam1 == null || predTeam2 == null) return false
+    const effectiveAdvance = resolveAdvancePickFromScores(
+      predTeam1,
+      predTeam2,
+      advancePicks[match.id],
+    )
+    const baselineAdvance = resolveAdvancePickFromScores(
+      predTeam1,
+      predTeam2,
+      baselineAdvancePicks[match.id],
+    )
+    return scoreChanged || effectiveAdvance !== baselineAdvance
+  }
+
+  return scoreChanged
 }
 
 function clampScoreValue(value: string): string {
@@ -161,11 +205,20 @@ function buildGroupStageSections(matches: Match[]): MatchGroup[] {
 function toSectionMatch(
   match: Match,
   scores: Record<string, ScoreInput>,
+  baselineScores: Record<string, ScoreInput>,
   savedMatchIds: Set<string>,
   advancePicks: Record<string, number | null>,
+  baselineAdvancePicks: Record<string, number | null>,
 ): SectionMatch {
   const entry = scores[match.id] ?? { score1: '', score2: '' }
   const complete = isClassicMatchComplete(match, entry, advancePicks[match.id])
+  const dirty = isClassicMatchDirty(
+    match,
+    scores,
+    baselineScores,
+    advancePicks,
+    baselineAdvancePicks,
+  )
   return {
     id: match.id,
     homeTeam: {
@@ -182,7 +235,7 @@ function toSectionMatch(
     awayScore: entry.score2,
     kickoffAt: match.kickoff_at,
     isLocked: isMatchLocked(match.locked_at),
-    isPredicted: savedMatchIds.has(match.id) && complete,
+    isPredicted: savedMatchIds.has(match.id) && complete && !dirty,
   }
 }
 
@@ -286,6 +339,7 @@ export default function PredictPage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saveBarError, setSaveBarError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const predictionsCompletedTrackedRef = useRef(false)
 
@@ -464,37 +518,16 @@ export default function PredictPage() {
   }, [matches, scores, advancePicks])
 
   const unsavedCount = useMemo(() => {
-    return matches.filter((match) => {
-      if (isMatchLocked(match.locked_at)) return false
-      const entry = scores[match.id]
-      const baseline = baselineScores[match.id]
-      if (!entry || entry.score1 === '' || entry.score2 === '') return false
-
-      const scoreChanged =
-        entry.score1 !== (baseline?.score1 ?? '') ||
-        entry.score2 !== (baseline?.score2 ?? '')
-
-      if (isKnockoutRound(match.round)) {
-        const predTeam1 = parseScoreValue(entry.score1)
-        const predTeam2 = parseScoreValue(entry.score2)
-        if (predTeam1 == null || predTeam2 == null) return false
-        const effectiveAdvance = resolveAdvancePickFromScores(
-          predTeam1,
-          predTeam2,
-          advancePicks[match.id],
-        )
-        const baselineAdvance = resolveAdvancePickFromScores(
-          predTeam1,
-          predTeam2,
-          baselineAdvancePicks[match.id],
-        )
-        const advanceChanged = effectiveAdvance !== baselineAdvance
-        return scoreChanged || advanceChanged
-      }
-
-      return scoreChanged
-    }).length
-  }, [matches, scores, baselineScores, advancePicks, baselineAdvancePicks])
+    return tabMatches.filter((match) =>
+      isClassicMatchDirty(
+        match,
+        scores,
+        baselineScores,
+        advancePicks,
+        baselineAdvancePicks,
+      ),
+    ).length
+  }, [tabMatches, scores, baselineScores, advancePicks, baselineAdvancePicks])
 
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null)
@@ -509,6 +542,7 @@ export default function PredictPage() {
     const nextScore2 = field === 'score2' ? clamped : current.score2
 
     setSaveSuccess(false)
+    setSaveBarError(null)
     setScores((prev) => ({
       ...prev,
       [matchId]: {
@@ -553,6 +587,7 @@ export default function PredictPage() {
     }
 
     setSaveSuccess(false)
+    setSaveBarError(null)
     setAdvancePicks((prev) => ({ ...prev, [matchId]: pick }))
     setSuccessMessage(null)
   }
@@ -561,120 +596,139 @@ export default function PredictPage() {
     if (!pool || !memberId || unsavedCount === 0) return
 
     setSaving(true)
-    setError(null)
     setSuccessMessage(null)
     setSaveSuccess(false)
+    setSaveBarError(null)
 
-    const changedMatches = matches.filter((match) => {
-      if (isMatchLocked(match.locked_at)) return false
-      const entry = scores[match.id]
-      const baseline = baselineScores[match.id]
-      if (!entry || entry.score1 === '' || entry.score2 === '') return false
+    const changedMatches = tabMatches.filter((match) =>
+      isClassicMatchDirty(
+        match,
+        scores,
+        baselineScores,
+        advancePicks,
+        baselineAdvancePicks,
+      ),
+    )
 
-      const scoreChanged =
-        entry.score1 !== (baseline?.score1 ?? '') ||
-        entry.score2 !== (baseline?.score2 ?? '')
+    if (changedMatches.length === 0) {
+      setSaving(false)
+      return
+    }
 
-      if (isKnockoutRound(match.round)) {
-        const predTeam1 = parseScoreValue(entry.score1)
-        const predTeam2 = parseScoreValue(entry.score2)
-        if (predTeam1 == null || predTeam2 == null) return false
-        const effectiveAdvance = resolveAdvancePickFromScores(
-          predTeam1,
-          predTeam2,
-          advancePicks[match.id],
-        )
-        const baselineAdvance = resolveAdvancePickFromScores(
-          predTeam1,
-          predTeam2,
-          baselineAdvancePicks[match.id],
-        )
-        return scoreChanged || effectiveAdvance !== baselineAdvance
+    let savedCount = 0
+    let lockedCount = 0
+    let errorCount = 0
+
+    for (const match of changedMatches) {
+      if (isMatchLocked(match.locked_at)) {
+        lockedCount += 1
+        continue
       }
 
-      return scoreChanged
-    })
+      const entry = scores[match.id]
+      const bothEmpty = !entry || (entry.score1 === '' && entry.score2 === '')
 
-    const rows = matches
-      .filter((match) => {
-        if (isMatchLocked(match.locked_at)) return false
-        const entry = scores[match.id]
-        return entry?.score1 !== '' && entry?.score2 !== ''
-      })
-      .map((match) => {
-        const entry = scores[match.id]!
-        const predTeam1 = Number.parseInt(entry.score1, 10)
-        const predTeam2 = Number.parseInt(entry.score2, 10)
-        const row: {
-          pool_id: string
-          member_id: string
-          match_id: string
-          pred_team1: number
-          pred_team2: number
-          advance_pick?: number | null
-        } = {
-          pool_id: pool.id,
-          member_id: memberId,
-          match_id: match.id,
-          pred_team1: predTeam1,
-          pred_team2: predTeam2,
+      if (bothEmpty) {
+        const result = await deletePoolMatchPrediction(supabase, {
+          poolId: pool.id,
+          memberId,
+          matchId: match.id,
+        })
+
+        if (!result.ok) {
+          if (result.isLockViolation) lockedCount += 1
+          else errorCount += 1
+          continue
         }
 
-        if (isKnockoutRound(match.round)) {
-          row.advance_pick = resolveAdvancePickFromScores(
+        setSavedMatchIds((prev) => {
+          const next = new Set(prev)
+          next.delete(match.id)
+          return next
+        })
+        setBaselineScores((prev) => {
+          const next = { ...prev }
+          delete next[match.id]
+          return next
+        })
+        setBaselineAdvancePicks((prev) => {
+          const next = { ...prev }
+          delete next[match.id]
+          return next
+        })
+        savedCount += 1
+        capturePostHog('prediction_submitted', {
+          pool_id: pool.id,
+          match_id: match.id,
+        })
+        continue
+      }
+
+      if (!entry || entry.score1 === '' || entry.score2 === '') {
+        continue
+      }
+
+      const predTeam1 = Number.parseInt(entry.score1, 10)
+      const predTeam2 = Number.parseInt(entry.score2, 10)
+      const advancePick = isKnockoutRound(match.round)
+        ? resolveAdvancePickFromScores(
             predTeam1,
             predTeam2,
             advancePicks[match.id],
           )
-        }
+        : undefined
 
-        return row
+      const result = await upsertPoolMatchPrediction(supabase, {
+        poolId: pool.id,
+        memberId,
+        matchId: match.id,
+        predTeam1,
+        predTeam2,
+        advancePick,
       })
 
-    if (rows.length === 0) {
-      setSaving(false)
-      setError('Fill in both scores for at least one unlocked match')
-      return
-    }
+      if (!result.ok) {
+        if (result.isLockViolation) lockedCount += 1
+        else errorCount += 1
+        continue
+      }
 
-    const { error: upsertError } = await supabase
-      .from('predictions')
-      .upsert(rows, { onConflict: 'pool_id,member_id,match_id' })
-
-    setSaving(false)
-
-    if (upsertError) {
-      setError(upsertError.message)
-      return
-    }
-
-    setSavedMatchIds((prev) => {
-      const next = new Set(prev)
-      rows.forEach((row) => next.add(row.match_id))
-      return next
-    })
-    setBaselineScores((prev) => {
-      const next = { ...prev }
-      rows.forEach((row) => {
-        next[row.match_id] = { ...scores[row.match_id]! }
-      })
-      return next
-    })
-    setBaselineAdvancePicks((prev) => {
-      const next = { ...prev }
-      rows.forEach((row) => {
-        if (isKnockoutRound(matches.find((m) => m.id === row.match_id)?.round ?? '')) {
-          next[row.match_id] = row.advance_pick ?? null
-        }
-      })
-      return next
-    })
-
-    for (const match of changedMatches) {
+      setSavedMatchIds((prev) => new Set(prev).add(match.id))
+      setBaselineScores((prev) => ({
+        ...prev,
+        [match.id]: { ...entry },
+      }))
+      if (isKnockoutRound(match.round)) {
+        setBaselineAdvancePicks((prev) => ({
+          ...prev,
+          [match.id]: advancePick ?? null,
+        }))
+      }
+      savedCount += 1
       capturePostHog('prediction_submitted', {
         pool_id: pool.id,
         match_id: match.id,
       })
+    }
+
+    setSaving(false)
+
+    if (errorCount > 0) {
+      setSaveBarError("Couldn't save predictions")
+      return
+    }
+
+    if (lockedCount > 0 && savedCount === 0) {
+      setSaveBarError('This match has locked')
+      return
+    }
+
+    if (lockedCount > 0) {
+      setSaveBarError('Some matches have locked')
+    }
+
+    if (savedCount === 0) {
+      return
     }
 
     if (
@@ -686,7 +740,9 @@ export default function PredictPage() {
     }
 
     setSaveSuccess(true)
-    setSuccessMessage(`Saved ${rows.length} prediction${rows.length === 1 ? '' : 's'}`)
+    setSuccessMessage(
+      `Saved ${savedCount} prediction${savedCount === 1 ? '' : 's'}`,
+    )
     window.setTimeout(() => setSaveSuccess(false), 2000)
   }
 
@@ -796,8 +852,10 @@ export default function PredictPage() {
                 const card = toSectionMatch(
                   match,
                   scores,
+                  baselineScores,
                   savedMatchIds,
                   advancePicks,
+                  baselineAdvancePicks,
                 )
                 if (isKnockoutRound(match.round)) {
                   return (
@@ -847,7 +905,14 @@ export default function PredictPage() {
                   title={group.title}
                   subtitle={group.subtitle}
                   matches={group.matches.map((m) =>
-                    toSectionMatch(m, scores, savedMatchIds, advancePicks),
+                    toSectionMatch(
+                      m,
+                      scores,
+                      baselineScores,
+                      savedMatchIds,
+                      advancePicks,
+                      baselineAdvancePicks,
+                    ),
                   )}
                   predictedInSection={
                     group.matches.filter((m) =>
@@ -878,8 +943,10 @@ export default function PredictPage() {
                 const card = toSectionMatch(
                   match,
                   scores,
+                  baselineScores,
                   savedMatchIds,
                   advancePicks,
+                  baselineAdvancePicks,
                 )
                 return (
                   <ClassicKnockoutPredictCard
@@ -902,6 +969,7 @@ export default function PredictPage() {
         unsavedCount={unsavedCount}
         saving={saving}
         success={saveSuccess}
+        error={saveBarError}
         disabled={unsavedCount === 0}
         onSave={handleSave}
       />

@@ -27,7 +27,6 @@ import { isMatchLocked } from '@/src/lib/match-lock'
 import {
   formatKnockoutPointValuesFooter,
   getAdvancePickHintText,
-  isKnockoutPredictionComplete,
   isPredictedDraw,
   resolveAdvancePickFromScores,
   resolveAdvancePickTeamName,
@@ -47,6 +46,11 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
 import { hasClassicPredictionScores } from '@/src/lib/classic-prediction-progress'
+import {
+  usePredictionSaveContext,
+  type PredictionSaveHandle,
+  type PredictionSaveResult,
+} from '@/components/pool/prediction-save-context'
 
 export type UserPoolPrediction = {
   matchId: string
@@ -241,6 +245,7 @@ export function PredictionMatchCard({
   previewVenue,
   onPredictionSaved,
   onPredictionRemoved,
+  autosave = false,
 }: {
   prediction: UserPoolPrediction
   poolId?: string
@@ -257,6 +262,8 @@ export function PredictionMatchCard({
     advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
+  /** When true, debounced auto-save runs on edit. Default false — use the save bar. */
+  autosave?: boolean
 }) {
   const isKnockout = isKnockoutRound(prediction.round)
   const serverLocked = preview ? false : isMatchLocked(prediction.lockedAt)
@@ -398,14 +405,68 @@ export function PredictionMatchCard({
 
   const isEditable = !preview && Boolean(poolId && memberId) && !isReadOnly
 
-  const savedCardComplete = isKnockout
-    ? isKnockoutPredictionComplete(
-        prediction.round,
-        savedPredTeam1,
-        savedPredTeam2,
-        savedAdvancePick,
-      )
-    : savedScore1 !== '' && savedScore2 !== ''
+  const saveContext = usePredictionSaveContext()
+
+  const resolveAdvanceToSave = useCallback(
+    (
+      predTeam1: number,
+      predTeam2: number,
+      pick: number | null,
+    ): number | null | undefined => {
+      if (!isKnockout) return undefined
+      if (isPredictedDraw(predTeam1, predTeam2)) {
+        return pick === 1 || pick === 2 ? pick : null
+      }
+      return predTeam1 > predTeam2 ? 1 : 2
+    },
+    [isKnockout],
+  )
+
+  const computeIsDirty = useCallback((): boolean => {
+    const score1Empty = score1 === ''
+    const score2Empty = score2 === ''
+    if (score1Empty !== score2Empty) return false
+
+    if (score1Empty && score2Empty) {
+      return savedScore1 !== '' && savedScore2 !== ''
+    }
+
+    const parsed = parsePredictionScores(score1, score2)
+    if (!parsed) return false
+
+    const advanceToSave = resolveAdvanceToSave(
+      parsed.predTeam1,
+      parsed.predTeam2,
+      advancePick,
+    )
+
+    const scoresChanged =
+      score1 !== savedScore1 ||
+      score2 !== savedScore2
+    const advanceChanged =
+      isKnockout && advanceToSave !== savedAdvancePick
+
+    return scoresChanged || advanceChanged
+  }, [
+    advancePick,
+    isKnockout,
+    resolveAdvanceToSave,
+    savedAdvancePick,
+    savedScore1,
+    savedScore2,
+    score1,
+    score2,
+  ])
+
+  const showPersistedCheck =
+    !preview &&
+    !isReadOnly &&
+    !computeIsDirty() &&
+    savedScore1 !== '' &&
+    savedScore2 !== '' &&
+    !saveError
+
+  const savedCardComplete = showPersistedCheck
 
   const showPicksExpander =
     !preview && Boolean(poolId && currentUserId && hasKickedOff)
@@ -429,6 +490,7 @@ export function PredictionMatchCard({
     setScore1(savedScore1)
     setScore2(savedScore2)
     setAdvancePick(savedAdvancePick)
+    setSaveError('This match has locked')
     setSaveStatus('idle')
   }, [savedScore1, savedScore2, savedAdvancePick])
 
@@ -436,8 +498,15 @@ export function PredictionMatchCard({
     async (
       parsed: { predTeam1: number; predTeam2: number },
       nextAdvancePick: number | null | undefined,
-    ) => {
-      if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
+    ): Promise<PredictionSaveResult> => {
+      if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) {
+        return 'noop'
+      }
+
+      if (isMatchLocked(prediction.lockedAt)) {
+        handleLockViolation()
+        return 'locked'
+      }
 
       saveInFlightRef.current = true
       setSaveStatus('saving')
@@ -457,12 +526,12 @@ export function PredictionMatchCard({
       if (!result.ok) {
         if (result.isLockViolation) {
           handleLockViolation()
-          return
+          return 'locked'
         }
 
         setSaveError('Could not save prediction. Try again.')
         setSaveStatus('idle')
-        return
+        return 'error'
       }
 
       const next1 = String(parsed.predTeam1)
@@ -493,20 +562,32 @@ export function PredictionMatchCard({
       savedIndicatorRef.current = setTimeout(() => {
         setSaveStatus('idle')
       }, SAVED_INDICATOR_MS)
+
+      saveContext?.bumpDirty()
+      return 'ok'
     },
     [
       poolId,
       memberId,
       isReadOnly,
       prediction.matchId,
+      prediction.lockedAt,
       handleLockViolation,
       onPredictionSaved,
       savedAdvancePick,
+      saveContext,
     ],
   )
 
-  const persistScores = useCallback(async () => {
-    if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) return
+  const persistScores = useCallback(async (): Promise<PredictionSaveResult> => {
+    if (!poolId || !memberId || isReadOnly || saveInFlightRef.current) {
+      return 'noop'
+    }
+
+    if (isMatchLocked(prediction.lockedAt)) {
+      handleLockViolation()
+      return 'locked'
+    }
 
     const score1Empty = score1 === ''
     const score2Empty = score2 === ''
@@ -514,17 +595,18 @@ export function PredictionMatchCard({
     const incomplete = score1Empty !== score2Empty
 
     if (incomplete) {
-      return
+      return 'noop'
     }
 
     if (bothEmpty) {
       const hadSavedPrediction = savedScore1 !== '' && savedScore2 !== ''
       if (!hadSavedPrediction) {
-        return
+        return 'noop'
       }
 
       saveInFlightRef.current = true
       setSaveStatus('saving')
+      setSaveError(null)
 
       const result = await deletePoolMatchPrediction(supabase, {
         poolId,
@@ -537,12 +619,12 @@ export function PredictionMatchCard({
       if (!result.ok) {
         if (result.isLockViolation) {
           handleLockViolation()
-          return
+          return 'locked'
         }
 
         setSaveError('Could not remove prediction. Try again.')
         setSaveStatus('idle')
-        return
+        return 'error'
       }
 
       setSavedScore1('')
@@ -553,21 +635,18 @@ export function PredictionMatchCard({
       setAdvancePick(null)
       setSaveStatus('idle')
       onPredictionRemoved?.(prediction.matchId)
-      return
+      saveContext?.bumpDirty()
+      return 'ok'
     }
 
     const parsed = parsePredictionScores(score1, score2)
-    if (!parsed) return
+    if (!parsed) return 'noop'
 
-    const advanceToSave = isKnockout
-      ? isPredictedDraw(parsed.predTeam1, parsed.predTeam2)
-        ? advancePick === 1 || advancePick === 2
-          ? advancePick
-          : null
-        : parsed.predTeam1 > parsed.predTeam2
-          ? 1
-          : 2
-      : undefined
+    const advanceToSave = resolveAdvanceToSave(
+      parsed.predTeam1,
+      parsed.predTeam2,
+      advancePick,
+    )
 
     const scoresUnchanged =
       parsed.predTeam1 === Number.parseInt(savedScore1, 10) &&
@@ -576,10 +655,10 @@ export function PredictionMatchCard({
       !isKnockout || advanceToSave === savedAdvancePick
 
     if (scoresUnchanged && advanceUnchanged) {
-      return
+      return 'noop'
     }
 
-    await persistPrediction(parsed, advanceToSave)
+    return persistPrediction(parsed, advanceToSave)
   }, [
     poolId,
     memberId,
@@ -592,9 +671,12 @@ export function PredictionMatchCard({
     advancePick,
     savedAdvancePick,
     prediction.matchId,
+    prediction.lockedAt,
     handleLockViolation,
     onPredictionRemoved,
     persistPrediction,
+    resolveAdvanceToSave,
+    saveContext,
   ])
 
   const persistAdvancePick = useCallback(
@@ -622,11 +704,38 @@ export function PredictionMatchCard({
   )
 
   const scheduleAutosave = useCallback(() => {
+    if (!autosave) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       void persistScores()
     }, AUTOSAVE_DEBOUNCE_MS)
-  }, [persistScores])
+  }, [autosave, persistScores])
+
+  useEffect(() => {
+    if (!saveContext || preview || !poolId || !memberId) return
+
+    const handle: PredictionSaveHandle = {
+      matchId: prediction.matchId,
+      isDirty: computeIsDirty,
+      isLocked: () => isReadOnly,
+      save: persistScores,
+    }
+
+    return saveContext.register(handle)
+  }, [
+    saveContext,
+    preview,
+    poolId,
+    memberId,
+    prediction.matchId,
+    computeIsDirty,
+    isReadOnly,
+    persistScores,
+  ])
+
+  const notifyDirty = useCallback(() => {
+    saveContext?.bumpDirty()
+  }, [saveContext])
 
   const handleScoreChange = (field: 'score1' | 'score2', raw: string) => {
     const clamped = clampPredictionScoreValue(raw)
@@ -651,10 +760,12 @@ export function PredictionMatchCard({
 
     setSaveError(null)
     setSaveStatus('idle')
+    notifyDirty()
     scheduleAutosave()
   }
 
   const handleBlur = () => {
+    if (!autosave) return
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
@@ -675,7 +786,11 @@ export function PredictionMatchCard({
 
     setAdvancePick(pick)
     setSaveStatus('idle')
-    void persistAdvancePick(pick)
+    setSaveError(null)
+    notifyDirty()
+    if (autosave) {
+      void persistAdvancePick(pick)
+    }
   }
 
   const actualAdvancedTeamName = resolveAdvancePickTeamName(

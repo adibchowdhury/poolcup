@@ -11,6 +11,7 @@ interface SaveBarProps {
   onSave: () => void
   /** When true and there are no unsaved changes, show a persistent "done" state. */
   complete?: boolean
+  error?: string | null
 }
 
 export function SaveBar({
@@ -20,9 +21,10 @@ export function SaveBar({
   disabled,
   onSave,
   complete = false,
+  error = null,
 }: SaveBarProps) {
   const hasChanges = unsavedCount > 0
-  const showComplete = complete && !hasChanges && !saving && !success
+  const showComplete = complete && !hasChanges && !saving && !success && !error
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-md safe-area-pb">
@@ -30,10 +32,18 @@ export function SaveBar({
         <span
           className={cn(
             'font-mono text-xs transition-opacity duration-200 sm:text-sm',
-            hasChanges ? 'text-secondary opacity-100' : 'opacity-0',
+            error
+              ? 'text-destructive opacity-100'
+              : hasChanges
+                ? 'text-secondary opacity-100'
+                : 'opacity-0',
           )}
         >
-          {unsavedCount} unsaved {unsavedCount === 1 ? 'change' : 'changes'}
+          {error
+            ? error
+            : hasChanges
+              ? `${unsavedCount} unsaved ${unsavedCount === 1 ? 'change' : 'changes'}`
+              : ''}
         </span>
         <button
           type="button"
@@ -56,6 +66,8 @@ export function SaveBar({
         >
           {saving ? (
             <span>Saving…</span>
+          ) : error ? (
+            <span>Couldn&apos;t save</span>
           ) : success ? (
             <>
               <Check className="h-4 w-4" />

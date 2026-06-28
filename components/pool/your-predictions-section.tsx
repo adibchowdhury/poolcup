@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ClassicRoundTabs,
   type ClassicRoundTabId,
 } from '@/components/predict/group-knockout-tabs'
+import { SaveBar } from '@/components/predict/save-bar'
 import {
   classicRoundTabEmptyMessage,
   matchInClassicRoundTab,
@@ -20,6 +21,10 @@ import {
   PredictionMatchCard,
   type UserPoolPrediction,
 } from '@/components/pool/prediction-match-card'
+import {
+  PredictionSaveProvider,
+  usePredictionSaveCoordinator,
+} from '@/components/pool/prediction-save-context'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import {
   Select,
@@ -38,6 +43,60 @@ const CLASSIC_SORT_OPTIONS: {
   { value: 'group', label: 'Group' },
   { value: 'status', label: 'Status' },
 ]
+
+function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
+  const { unsavedCount, saveAll } = usePredictionSaveCoordinator(activeMatchIds)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (unsavedCount > 0) {
+      setSaveError(null)
+    }
+  }, [unsavedCount])
+
+  const handleSave = useCallback(async () => {
+    if (unsavedCount === 0) return
+
+    setSaving(true)
+    setSaveError(null)
+    setSaveSuccess(false)
+
+    const result = await saveAll()
+    setSaving(false)
+
+    if (result.error > 0) {
+      setSaveError(
+        result.locked > 0
+          ? 'Some matches have locked'
+          : "Couldn't save predictions",
+      )
+      return
+    }
+
+    if (result.locked > 0 && result.ok === 0) {
+      setSaveError('This match has locked')
+      return
+    }
+
+    if (result.ok > 0) {
+      setSaveSuccess(true)
+      window.setTimeout(() => setSaveSuccess(false), 2000)
+    }
+  }, [saveAll, unsavedCount])
+
+  return (
+    <SaveBar
+      unsavedCount={unsavedCount}
+      saving={saving}
+      success={saveSuccess}
+      error={saveError}
+      disabled={unsavedCount === 0}
+      onSave={() => void handleSave()}
+    />
+  )
+}
 
 /** Used by pool page data loading for winner pool progress checks. */
 export type WinnerGroupPrediction = {
@@ -101,8 +160,14 @@ export function YourPredictionsSection({
     [stageFilteredPredictions, classicSortMode],
   )
 
+  const activeMatchIds = useMemo(
+    () => stageFilteredPredictions.map((prediction) => prediction.matchId),
+    [stageFilteredPredictions],
+  )
+
   return (
-    <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8">
+    <PredictionSaveProvider>
+      <section className="mt-8 w-full min-w-0 border-t border-border/80 pt-8 pb-20">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
         <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
           Your predictions
@@ -174,6 +239,11 @@ export function YourPredictionsSection({
           ))}
         </ul>
       )}
+
+      {hasClassicContent && activeMatchIds.length > 0 ? (
+        <ClassicStageSaveBar activeMatchIds={activeMatchIds} />
+      ) : null}
     </section>
+    </PredictionSaveProvider>
   )
 }
