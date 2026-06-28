@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardInsightCards } from '@/components/dashboard/dashboard-insight-cards'
-import { SquadLeaderboard } from '@/components/dashboard/squad-leaderboard'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
@@ -601,10 +600,7 @@ function DashboardViewContent({
                 error={dashboardPoolsError}
                 onPoolDeleted={handleDashboardPoolDeleted}
               />
-              <div className="space-y-4">
-                <SquadLeaderboard pools={dashboardPools} />
-                <DashboardInsightCards pools={dashboardPools} />
-              </div>
+              <DashboardInsightCards pools={dashboardPools} />
             </TabsContent>
 
             <TabsContent value="games" className="mt-2">
