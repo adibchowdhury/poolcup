@@ -50,6 +50,7 @@ export async function upsertPoolMatchPrediction(
       match_id: params.matchId,
       pred_team1: params.predTeam1,
       pred_team2: params.predTeam2,
+      submitted_at: new Date().toISOString(),
       ...(params.advancePick !== undefined
         ? { advance_pick: params.advancePick }
         : {}),
