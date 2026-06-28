@@ -8,6 +8,8 @@ interface ProgressHeaderProps {
   label?: string
   /** When true, renders "{label}: X/Y" instead of "X / Y {label}". */
   labelFirst?: boolean
+  /** When set, replaces the default numeric headline (bar still uses current/total). */
+  headline?: string
   className?: string
 }
 
@@ -16,6 +18,7 @@ export function ProgressHeader({
   total,
   label = 'Matches Predicted',
   labelFirst = false,
+  headline,
   className,
 }: ProgressHeaderProps) {
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0
@@ -23,20 +26,22 @@ export function ProgressHeader({
   return (
     <div className={cn('space-y-2', className)}>
       <p className="text-sm font-medium text-foreground">
-        {labelFirst ? (
-          <>
-            <span className="text-muted-foreground">{label}: </span>
-            <span className="font-mono text-primary">{current}</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="font-mono text-foreground">{total}</span>
-          </>
-        ) : (
-          <>
-            <span className="font-mono text-primary">{current}</span>
-            <span className="text-muted-foreground"> / </span>
-            <span className="font-mono text-foreground">{total}</span>
-            <span className="text-muted-foreground"> {label}</span>
-          </>
+        {headline ?? (
+          labelFirst ? (
+            <>
+              <span className="text-muted-foreground">{label}: </span>
+              <span className="font-mono text-primary">{current}</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="font-mono text-foreground">{total}</span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-primary">{current}</span>
+              <span className="text-muted-foreground"> / </span>
+              <span className="font-mono text-foreground">{total}</span>
+              <span className="text-muted-foreground"> {label}</span>
+            </>
+          )
         )}
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-primary/15">

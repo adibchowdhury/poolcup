@@ -6,11 +6,29 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
   type RefCallback,
   type RefObject,
 } from 'react'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
+import { cn } from '@/lib/utils'
 import { BRACKET_LAYOUT } from '@/src/lib/world-cup-2026-bracket'
+import {
+  isResolvedR32Team,
+  r32MatchNumberForPreviewSlot,
+} from '@/src/lib/r32-bracket-preview'
+import {
+  getR16ProjectedSides,
+  type R32BracketMatchView,
+} from '@/src/lib/winner-only-r32-bracket'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
+import { KnockoutBracketMobileList } from '@/components/predict/knockout-bracket-mobile'
+
+export type R32BracketInteractiveProps = {
+  matchesByNumber: Map<number, R32BracketMatchView>
+  nowMs: number
+  onAdvancePick: (matchId: string, pick: 1 | 2) => void
+}
 
 const CONNECTOR_COLOR = BRACKET_LAYOUT.connectorColor
 
@@ -32,9 +50,13 @@ const BRACKET_INNER_MIN_WIDTH = 720
 
 export type KnockoutPreviewRound = 'r32' | 'r16' | 'qf' | 'sf'
 
-export type KnockoutBracketPreviewProps = {
+export type KnockoutTabRoundPair = {
   sourceRound: KnockoutPreviewRound
   targetRound: Exclude<KnockoutPreviewRound, 'r32'>
+}
+
+export type KnockoutBracketPreviewProps = KnockoutTabRoundPair & {
+  r32Bracket?: R32BracketInteractiveProps
 }
 
 type BracketHalf = 'left' | 'right'
@@ -90,7 +112,125 @@ export function TbdSlot() {
   )
 }
 
-function KnockoutMatchupBlock({
+function BracketPreviewTeamSlot({
+  name,
+  selected = false,
+  dimmed = false,
+  onClick,
+}: {
+  name: string
+  selected?: boolean
+  dimmed?: boolean
+  onClick?: () => void
+}) {
+  const className = cn(
+    'flex h-9 w-full min-w-0 items-center gap-2 rounded border px-3 transition-colors',
+    selected
+      ? 'border-primary bg-primary/15'
+      : 'border-[#1e293b] bg-[#111827]',
+    dimmed && 'opacity-50',
+    onClick && 'cursor-pointer hover:border-primary/40',
+  )
+
+  const content = (
+    <>
+      <TeamFlagImage
+        countryName={name}
+        imgClassName="h-4 w-auto max-w-[1.25rem] shrink-0 object-contain"
+        emojiClassName="text-base leading-none"
+      />
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight',
+          selected ? 'text-primary' : 'text-[#e2e8f0]',
+        )}
+      >
+        {name}
+      </span>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        aria-pressed={selected}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return <div className={className}>{content}</div>
+}
+
+function BracketPreviewSideSlot({
+  name,
+  selected = false,
+  dimmed = false,
+  onSelect,
+}: {
+  name: string | null | undefined
+  selected?: boolean
+  dimmed?: boolean
+  onSelect?: () => void
+}) {
+  const normalizedName = (name ?? '').trim()
+  if (!isResolvedR32Team(normalizedName)) {
+    return <TbdSlot />
+  }
+
+  return (
+    <BracketPreviewTeamSlot
+      name={normalizedName}
+      selected={selected}
+      dimmed={dimmed}
+      onClick={onSelect}
+    />
+  )
+}
+
+function ProjectedR16MatchupBlock({
+  label,
+  registerRef,
+  homeName,
+  awayName,
+}: {
+  label: string
+  registerRef?: RefCallback<HTMLElement>
+  homeName: string | null
+  awayName: string | null
+}) {
+  return (
+    <article
+      className="flex w-full min-w-0 flex-col opacity-95"
+      aria-label={`${label} projected preview`}
+    >
+      <div className="mb-1 flex min-w-0 items-center justify-center gap-1 px-0.5">
+        <p className="truncate text-center text-[8px] font-semibold uppercase tracking-wide text-[#64748b] sm:text-[9px] min-[1100px]:text-[10px]">
+          {label}
+        </p>
+        <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wide text-[#64748b]">
+          Locked
+        </span>
+      </div>
+      <div
+        ref={registerRef}
+        className="w-full min-w-0 rounded-md border border-[#1e293b]/90 bg-[#0a1018]/60 px-2 py-1.5 shadow-sm"
+      >
+        <BracketPreviewSideSlot name={homeName} />
+        <p className="py-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-[#334155]">
+          vs
+        </p>
+        <BracketPreviewSideSlot name={awayName} />
+      </div>
+    </article>
+  )
+}
+
+function StaticKnockoutMatchupBlock({
   label,
   registerRef,
 }: {
@@ -111,6 +251,71 @@ function KnockoutMatchupBlock({
           vs
         </p>
         <TbdSlot />
+      </div>
+    </article>
+  )
+}
+
+function R32KnockoutMatchupBlock({
+  label,
+  registerRef,
+  match,
+  r32Bracket,
+}: {
+  label: string
+  registerRef?: RefCallback<HTMLElement>
+  match: R32BracketMatchView | undefined
+  r32Bracket: R32BracketInteractiveProps
+}) {
+  const { nowMs, onAdvancePick } = r32Bracket
+  const locked =
+    match?.lockedAt != null &&
+    new Date(match.lockedAt).getTime() <= nowMs
+  const myPick = match?.myPick ?? null
+  const hasPick = myPick === 1 || myPick === 2
+  const homeSelected = myPick === 1
+  const awaySelected = myPick === 2
+  const canPick = Boolean(match) && !locked
+
+  return (
+    <article className="flex w-full min-w-0 flex-col" aria-label={`${label} preview`}>
+      <div className="mb-1 flex min-w-0 items-center justify-center gap-1 px-0.5">
+        <p className="truncate text-center text-[8px] font-semibold uppercase tracking-wide text-[#64748b] sm:text-[9px] min-[1100px]:text-[10px]">
+          {label}
+        </p>
+        {locked ? (
+          <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wide text-[#64748b]">
+            Locked
+          </span>
+        ) : null}
+      </div>
+      <div
+        ref={registerRef}
+        className="w-full min-w-0 rounded-md border border-[#1e293b]/90 bg-[#0a1018]/60 px-2 py-1.5 shadow-sm"
+      >
+        <BracketPreviewSideSlot
+          name={match?.team1Name}
+          selected={homeSelected}
+          dimmed={hasPick && !homeSelected}
+          onSelect={
+            canPick && match && isResolvedR32Team(match.team1Name)
+              ? () => onAdvancePick(match.matchId, 1)
+              : undefined
+          }
+        />
+        <p className="py-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-[#334155]">
+          vs
+        </p>
+        <BracketPreviewSideSlot
+          name={match?.team2Name}
+          selected={awaySelected}
+          dimmed={hasPick && !awaySelected}
+          onSelect={
+            canPick && match && isResolvedR32Team(match.team2Name)
+              ? () => onAdvancePick(match.matchId, 2)
+              : undefined
+          }
+        />
       </div>
     </article>
   )
@@ -167,6 +372,7 @@ function SourceRoundColumn({
   pairCount,
   width,
   registerMatchupRef,
+  r32Bracket,
 }: {
   half: BracketHalf
   round: KnockoutPreviewRound
@@ -177,6 +383,7 @@ function SourceRoundColumn({
     round: string,
     index: number,
   ) => RefCallback<HTMLElement>
+  r32Bracket?: R32BracketInteractiveProps
 }) {
   return (
     <div
@@ -190,8 +397,45 @@ function SourceRoundColumn({
         >
           {Array.from({ length: 2 }, (_, slotInPair) => {
             const index = pairIndex * 2 + slotInPair
+
+            if (round === 'r32' && r32Bracket) {
+              const matchNumber = r32MatchNumberForPreviewSlot(half, index)
+              const match =
+                matchNumber != null
+                  ? r32Bracket.matchesByNumber.get(matchNumber)
+                  : undefined
+
+              return (
+                <R32KnockoutMatchupBlock
+                  key={index}
+                  label={labelForMatchup(round, half, index)}
+                  registerRef={registerMatchupRef(half, round, index)}
+                  match={match}
+                  r32Bracket={r32Bracket}
+                />
+              )
+            }
+
+            if (round === 'r16' && r32Bracket) {
+              const { home, away } = getR16ProjectedSides(
+                half,
+                index,
+                r32Bracket.matchesByNumber,
+              )
+
+              return (
+                <ProjectedR16MatchupBlock
+                  key={index}
+                  label={labelForMatchup(round, half, index)}
+                  registerRef={registerMatchupRef(half, round, index)}
+                  homeName={home}
+                  awayName={away}
+                />
+              )
+            }
+
             return (
-              <KnockoutMatchupBlock
+              <StaticKnockoutMatchupBlock
                 key={index}
                 label={labelForMatchup(round, half, index)}
                 registerRef={registerMatchupRef(half, round, index)}
@@ -210,6 +454,7 @@ function TargetRoundColumn({
   pairCount,
   width,
   registerMatchupRef,
+  r32Bracket,
 }: {
   half: BracketHalf
   round: KnockoutPreviewRound
@@ -220,23 +465,40 @@ function TargetRoundColumn({
     round: string,
     index: number,
   ) => RefCallback<HTMLElement>
+  r32Bracket?: R32BracketInteractiveProps
 }) {
   return (
     <div
       className="flex w-full shrink-0 flex-col self-stretch py-0.5"
       style={{ width }}
     >
-      {Array.from({ length: pairCount }, (_, index) => (
-        <div
-          key={index}
-          className="flex min-h-0 flex-1 items-center py-1"
-        >
-          <KnockoutMatchupBlock
-            label={labelForMatchup(round, half, index)}
-            registerRef={registerMatchupRef(half, round, index)}
-          />
-        </div>
-      ))}
+      {Array.from({ length: pairCount }, (_, index) => {
+        const projected =
+          round === 'r16' && r32Bracket
+            ? getR16ProjectedSides(half, index, r32Bracket.matchesByNumber)
+            : null
+
+        return (
+          <div
+            key={index}
+            className="flex min-h-0 flex-1 items-center py-1"
+          >
+            {projected ? (
+              <ProjectedR16MatchupBlock
+                label={labelForMatchup(round, half, index)}
+                registerRef={registerMatchupRef(half, round, index)}
+                homeName={projected.home}
+                awayName={projected.away}
+              />
+            ) : (
+              <StaticKnockoutMatchupBlock
+                label={labelForMatchup(round, half, index)}
+                registerRef={registerMatchupRef(half, round, index)}
+              />
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -357,6 +619,7 @@ function CenterGap({
 function DesktopTwoSidedKnockoutBracket({
   sourceRound,
   targetRound,
+  r32Bracket,
 }: KnockoutBracketPreviewProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -464,6 +727,7 @@ function DesktopTwoSidedKnockoutBracket({
           pairCount={pairCount}
           width={columnWidth}
           registerMatchupRef={registerMatchupRef}
+          r32Bracket={r32Bracket}
         />
 
         <TargetRoundColumn
@@ -472,6 +736,7 @@ function DesktopTwoSidedKnockoutBracket({
           pairCount={pairCount}
           width={columnWidth}
           registerMatchupRef={registerMatchupRef}
+          r32Bracket={r32Bracket}
         />
 
         <CenterGap
@@ -485,6 +750,7 @@ function DesktopTwoSidedKnockoutBracket({
           pairCount={pairCount}
           width={columnWidth}
           registerMatchupRef={registerMatchupRef}
+          r32Bracket={r32Bracket}
         />
 
         <SourceRoundColumn
@@ -493,6 +759,7 @@ function DesktopTwoSidedKnockoutBracket({
           pairCount={pairCount}
           width={BRACKET_LAYOUT.rightR32ColumnWidth}
           registerMatchupRef={registerMatchupRef}
+          r32Bracket={r32Bracket}
         />
     </BracketScrollCenter>
   )
@@ -581,7 +848,7 @@ function KnockoutSemifinalsToFinalPreview() {
         className="flex min-w-0 flex-1 items-center justify-end self-stretch"
         style={{ width: columnWidth }}
       >
-        <KnockoutMatchupBlock
+        <StaticKnockoutMatchupBlock
           label="SF M1"
           registerRef={registerMatchupRef('left-sf')}
         />
@@ -597,7 +864,7 @@ function KnockoutSemifinalsToFinalPreview() {
             {TOURNAMENT_ROUND_LABELS.final}
           </p>
           <div className="w-full min-w-0">
-            <KnockoutMatchupBlock
+            <StaticKnockoutMatchupBlock
               label="Final"
               registerRef={registerMatchupRef('final')}
             />
@@ -614,7 +881,7 @@ function KnockoutSemifinalsToFinalPreview() {
         className="flex min-w-0 flex-1 items-center justify-start self-stretch"
         style={{ width: columnWidth }}
       >
-        <KnockoutMatchupBlock
+        <StaticKnockoutMatchupBlock
           label="SF M2"
           registerRef={registerMatchupRef('right-sf')}
         />
@@ -635,7 +902,7 @@ function KnockoutFinalOnlyPreview() {
           style={{ minWidth: FINAL_ONLY_MIN_WIDTH }}
         >
           <div className="w-full min-w-0" style={{ width: BRACKET_LAYOUT.leftR32ColumnWidth }}>
-            <KnockoutMatchupBlock label="Final" />
+            <StaticKnockoutMatchupBlock label="Final" />
           </div>
           <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
             World Cup Champion
@@ -650,6 +917,7 @@ function KnockoutFinalOnlyPreview() {
 export function KnockoutBracketPreview({
   sourceRound,
   targetRound,
+  r32Bracket,
 }: KnockoutBracketPreviewProps) {
   const sourceCount = matchupsPerSide(sourceRound)
   const targetCount = matchupsPerSide(targetRound)
@@ -664,6 +932,7 @@ export function KnockoutBracketPreview({
     <DesktopTwoSidedKnockoutBracket
       sourceRound={sourceRound}
       targetRound={targetRound}
+      r32Bracket={r32Bracket}
     />
   )
 }
@@ -674,23 +943,46 @@ export const KNOCKOUT_TAB_PREVIEW = {
   r16: { sourceRound: 'r16', targetRound: 'qf' },
   qf: { sourceRound: 'qf', targetRound: 'sf' },
 } as const satisfies Partial<
-  Record<KnockoutPreviewRound, KnockoutBracketPreviewProps>
+  Record<KnockoutPreviewRound, KnockoutTabRoundPair>
 >
 
 export type KnockoutBracketTabId = keyof typeof KNOCKOUT_TAB_PREVIEW | 'sf' | 'final'
 
-export function KnockoutBracketForTab({ tab }: { tab: KnockoutBracketTabId }) {
+export function KnockoutBracketForTab({
+  tab,
+  r32Bracket,
+}: {
+  tab: KnockoutBracketTabId
+  r32Bracket?: R32BracketInteractiveProps
+}) {
+  let desktop: ReactNode
+
   if (tab === 'sf') {
-    return <KnockoutSemifinalsToFinalPreview />
+    desktop = <KnockoutSemifinalsToFinalPreview />
+  } else if (tab === 'final') {
+    desktop = <KnockoutFinalOnlyPreview />
+  } else {
+    const preview = KNOCKOUT_TAB_PREVIEW[tab]
+    desktop = (
+      <KnockoutBracketPreview
+        sourceRound={preview.sourceRound}
+        targetRound={preview.targetRound}
+        r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+      />
+    )
   }
-  if (tab === 'final') {
-    return <KnockoutFinalOnlyPreview />
-  }
-  const preview = KNOCKOUT_TAB_PREVIEW[tab]
+
   return (
-    <KnockoutBracketPreview
-      sourceRound={preview.sourceRound}
-      targetRound={preview.targetRound}
-    />
+    <>
+      <div className="hidden md:block">{desktop}</div>
+      <div
+        className={cn(
+          'w-full min-w-0 max-w-full space-y-3 px-4 md:hidden',
+          tab === 'r32' && 'pb-20',
+        )}
+      >
+        <KnockoutBracketMobileList tab={tab} r32Bracket={r32Bracket} />
+      </div>
+    </>
   )
 }

@@ -16,7 +16,15 @@ import {
   isWinnerOnlyLockedRoundTab,
   type WinnerOnlyRoundTabId,
 } from '@/components/predict/winner-only-round-tabs'
-import { KnockoutBracketTab } from '@/components/predict/knockout-bracket-tab'
+import { KnockoutBracketTab, isKnockoutBracketTab, KNOCKOUT_PICK_LABELS } from '@/components/predict/knockout-bracket-tab'
+import type { R32BracketInteractiveProps } from '@/components/predict/knockout-bracket-preview'
+import {
+  advancePickScores,
+  countR32AdvancePicks,
+  WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
+  type R32BracketMatchesByNumber,
+} from '@/src/lib/winner-only-r32-bracket'
+import { upsertPoolMatchPrediction } from '@/src/lib/pool-match-prediction-write'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
@@ -94,6 +102,10 @@ export function WinnerOnlyPredictView({
     Map<string, WorldCupGroupLetter>
   >(new Map())
   const [matchesLoading, setMatchesLoading] = useState(true)
+  const [r32MatchesByNumber, setR32MatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [r32PickError, setR32PickError] = useState<string | null>(null)
+  const r32SaveInFlightRef = useRef(false)
   const predictionsCompletedTrackedRef = useRef(false)
   const thirdPlaceStartedTrackedRef = useRef(false)
 
@@ -154,6 +166,137 @@ export function WinnerOnlyPredictView({
   useEffect(() => {
     loadMatches()
   }, [loadMatches])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadR32Bracket() {
+      const { data: matchRows, error: matchesError } = await supabase
+        .from('matches')
+        .select('id, match_number, team1_name, team2_name, locked_at')
+        .eq('round', 'r32')
+
+      if (cancelled) return
+
+      if (matchesError) {
+        console.error(
+          '[WinnerOnly] Failed to load r32 matches:',
+          matchesError.message,
+        )
+        setR32MatchesByNumber(new Map())
+        return
+      }
+
+      const rows = matchRows ?? []
+      const matchIds = rows.map((row) => row.id)
+
+      let pickByMatchId = new Map<string, 1 | 2>()
+      if (matchIds.length > 0) {
+        const { data: predictionRows, error: predictionsError } =
+          await supabase
+            .from('predictions')
+            .select('match_id, advance_pick')
+            .eq('pool_id', pool.id)
+            .eq('member_id', memberId)
+            .in('match_id', matchIds)
+
+        if (cancelled) return
+
+        if (predictionsError) {
+          console.error(
+            '[WinnerOnly] Failed to load r32 predictions:',
+            predictionsError.message,
+          )
+        } else {
+          for (const row of predictionRows ?? []) {
+            if (row.advance_pick === 1 || row.advance_pick === 2) {
+              pickByMatchId.set(row.match_id, row.advance_pick)
+            }
+          }
+        }
+      }
+
+      const map: R32BracketMatchesByNumber = new Map()
+      for (const row of rows) {
+        map.set(row.match_number, {
+          matchId: row.id,
+          matchNumber: row.match_number,
+          team1Name: row.team1_name,
+          team2Name: row.team2_name,
+          lockedAt: row.locked_at,
+          myPick: pickByMatchId.get(row.id) ?? null,
+        })
+      }
+      setR32MatchesByNumber(map)
+    }
+
+    void loadR32Bracket()
+
+    return () => {
+      cancelled = true
+    }
+  }, [memberId, pool.id])
+
+  const handleR32AdvancePick = useCallback(
+    async (matchId: string, pick: 1 | 2) => {
+      const currentMatch = [...r32MatchesByNumber.values()].find(
+        (match) => match.matchId === matchId,
+      )
+      if (!currentMatch || currentMatch.myPick === pick || r32SaveInFlightRef.current) {
+        return
+      }
+
+      const previousPick = currentMatch.myPick
+      setR32PickError(null)
+      setR32MatchesByNumber((prev) => {
+        const next = new Map(prev)
+        const existing = [...next.values()].find((match) => match.matchId === matchId)
+        if (!existing) return prev
+        next.set(existing.matchNumber, { ...existing, myPick: pick })
+        return next
+      })
+
+      r32SaveInFlightRef.current = true
+      const scores = advancePickScores(pick)
+      const result = await upsertPoolMatchPrediction(supabase, {
+        poolId: pool.id,
+        memberId,
+        matchId,
+        predTeam1: scores.predTeam1,
+        predTeam2: scores.predTeam2,
+        advancePick: pick,
+      })
+      r32SaveInFlightRef.current = false
+
+      if (!result.ok) {
+        setR32MatchesByNumber((prev) => {
+          const next = new Map(prev)
+          const existing = [...next.values()].find((match) => match.matchId === matchId)
+          if (!existing) return prev
+          next.set(existing.matchNumber, { ...existing, myPick: previousPick })
+          return next
+        })
+        setR32PickError(result.error)
+      }
+    },
+    [memberId, pool.id, r32MatchesByNumber],
+  )
+
+  const r32PickCount = useMemo(
+    () => countR32AdvancePicks(r32MatchesByNumber),
+    [r32MatchesByNumber],
+  )
+
+  const r32Bracket = useMemo<R32BracketInteractiveProps>(
+    () => ({
+      matchesByNumber: r32MatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        void handleR32AdvancePick(matchId, pick)
+      },
+    }),
+    [handleR32AdvancePick, mounted, nowMs, r32MatchesByNumber],
+  )
 
   const groups = useMemo(() => {
     return buildWorldCupGroups(
@@ -521,6 +664,47 @@ export function WinnerOnlyPredictView({
             </div>
           )}
 
+          {isKnockoutBracketTab(activeTab) && (
+            <div className="min-w-0 space-y-1">
+              {activeTab === 'r32' ? (
+                <>
+                  <div className="hidden md:block">
+                    <ProgressHeader
+                      current={r32PickCount}
+                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32}
+                      label={KNOCKOUT_PICK_LABELS.r32}
+                      labelFirst
+                    />
+                  </div>
+                  <div className="md:hidden">
+                    <ProgressHeader
+                      current={r32PickCount}
+                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32}
+                      headline={
+                        r32PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32
+                          ? 'All 16 picks complete'
+                          : `${WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32 - r32PickCount} picks remaining`
+                      }
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <ProgressHeader
+                    current={0}
+                    total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS[activeTab]}
+                    label={KNOCKOUT_PICK_LABELS[activeTab]}
+                    labelFirst
+                    className="opacity-60"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Unlocks once the Round of 32 is complete.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <WinnerOnlyRoundTabs activeId={activeTab} onChange={setActiveTab} />
         </div>
       </header>
@@ -589,7 +773,11 @@ export function WinnerOnlyPredictView({
             </div>
           )
         ) : (
-          <KnockoutBracketTab tab={activeTab} />
+          <KnockoutBracketTab
+            tab={activeTab}
+            r32Bracket={r32Bracket}
+            pickError={r32PickError}
+          />
         )}
       </main>
 
