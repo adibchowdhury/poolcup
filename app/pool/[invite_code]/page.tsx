@@ -137,6 +137,7 @@ export default function PoolPage() {
               predTeam1: null,
               predTeam2: null,
               advancePick: null,
+              pointsAwarded: null,
             }
           : prediction,
       ),
@@ -285,7 +286,9 @@ export default function PoolPage() {
           .order('kickoff_at', { ascending: true }),
         supabase
           .from('predictions')
-          .select('match_id, pred_team1, pred_team2, advance_pick')
+          .select(
+            'match_id, pred_team1, pred_team2, advance_pick, points_awarded',
+          )
           .eq('pool_id', pool.id)
           .eq('member_id', currentMember.id),
       ])

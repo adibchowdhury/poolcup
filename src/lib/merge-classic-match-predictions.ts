@@ -26,6 +26,7 @@ export type ClassicPredictionRow = {
   pred_team1: number
   pred_team2: number
   advance_pick: number | null
+  points_awarded: number | null
 }
 
 export function hasStoredClassicMatchPrediction(
@@ -77,6 +78,7 @@ export function mergeMatchesWithPredictions(
       predTeam1: prediction?.pred_team1 ?? null,
       predTeam2: prediction?.pred_team2 ?? null,
       advancePick: prediction?.advance_pick ?? null,
+      pointsAwarded: prediction?.points_awarded ?? null,
       advancingTeam: match.advancing_team ?? null,
       resultTeam1: match.result_team1,
       resultTeam2: match.result_team2,

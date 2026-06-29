@@ -21,6 +21,7 @@ function toPreviewPrediction(entry: (typeof ROUND_OF_32_PREVIEW)[number]): UserP
     predTeam1: null,
     predTeam2: null,
     advancePick: null,
+    pointsAwarded: null,
     advancingTeam: null,
     resultTeam1: null,
     resultTeam2: null,

@@ -66,6 +66,7 @@ export type UserPoolPrediction = {
   predTeam1: number | null
   predTeam2: number | null
   advancePick: number | null
+  pointsAwarded: number | null
   advancingTeam: number | null
   resultTeam1: number | null
   resultTeam2: number | null
@@ -404,15 +405,22 @@ export function PredictionMatchCard({
     | null =
     hasResult && hasStoredPrediction
       ? isKnockout && scoringStyle === 'classic'
-        ? getClassicKnockoutPredictionDisplayOutcome({
-            round: prediction.round,
-            predTeam1: displayPredTeam1,
-            predTeam2: displayPredTeam2,
-            advancePick: displayAdvancePick,
-            resultTeam1: prediction.resultTeam1!,
-            resultTeam2: prediction.resultTeam2!,
-            advancingTeam: prediction.advancingTeam,
-          })
+        ? (() => {
+            const knockoutOutcome = getClassicKnockoutPredictionDisplayOutcome({
+              round: prediction.round,
+              predTeam1: displayPredTeam1,
+              predTeam2: displayPredTeam2,
+              advancePick: displayAdvancePick,
+              resultTeam1: prediction.resultTeam1!,
+              resultTeam2: prediction.resultTeam2!,
+              advancingTeam: prediction.advancingTeam,
+            })
+            return {
+              ...knockoutOutcome,
+              points:
+                prediction.pointsAwarded ?? knockoutOutcome.points,
+            }
+          })()
         : (() => {
             const groupOutcome = getPredictionOutcome(
               displayPredTeam1,

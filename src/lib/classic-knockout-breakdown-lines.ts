@@ -10,6 +10,8 @@ import {
 
 export const CLASSIC_KNOCKOUT_EXACT_REASON = 'Exact score'
 export const CLASSIC_KNOCKOUT_ADVANCE_REASON = 'Correct advance'
+export const CLASSIC_KNOCKOUT_EXACT_AND_ADVANCE_REASON =
+  'Exact score + advance'
 
 export type ClassicKnockoutDisplayOutcomeKind = 'exact' | 'advance' | 'wrong'
 
@@ -54,6 +56,14 @@ export function getClassicKnockoutPredictionDisplayOutcome(
     effectiveAdvance != null &&
     input.advancingTeam != null &&
     effectiveAdvance === input.advancingTeam
+
+  if (exactHit && advanceHit) {
+    return {
+      points: values.exact + values.advance,
+      label: CLASSIC_KNOCKOUT_EXACT_AND_ADVANCE_REASON,
+      kind: 'exact',
+    }
+  }
 
   if (exactHit) {
     return {
