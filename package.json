@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "seed:matches": "ts-node --project tsconfig.json scripts/seed-matches.ts"
+    "seed:matches": "ts-node --project tsconfig.json scripts/seed-matches.ts",
+    "sync:knockout-fixture-ids": "ts-node --project tsconfig.json scripts/sync-knockout-fixture-ids.ts"
   },
   "dependencies": {
     "@fontsource/bebas-neue": "^5.2.7",

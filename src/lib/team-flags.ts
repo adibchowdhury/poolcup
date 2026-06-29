@@ -279,6 +279,28 @@ function normalizeTeamNameKey(name: string): string {
     .replace(/\p{M}/gu, '')
 }
 
+function canonicalTeamNameKey(name: string): string {
+  const key = normalizeTeamNameKey(name)
+  return NAME_ALIASES[key] ?? key
+}
+
+/** Compare API-Football and DB team labels (USA / United States, etc.). */
+export function areSameTeamName(a: string, b: string): boolean {
+  return canonicalTeamNameKey(a) === canonicalTeamNameKey(b)
+}
+
+/** DB team1/team2 are home/away; must match API home/away in order. */
+export function teamsMatchOrderedForFixtureSync(
+  dbHome: string,
+  dbAway: string,
+  apiHome: string,
+  apiAway: string,
+): boolean {
+  return (
+    areSameTeamName(dbHome, apiHome) && areSameTeamName(dbAway, apiAway)
+  )
+}
+
 function nameToFlagSlug(name: string): string {
   return normalizeTeamNameKey(name).replace(/\s+/g, '_')
 }

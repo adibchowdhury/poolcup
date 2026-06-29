@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use `npm run sync:knockout-fixture-ids -- --round=r32` instead.
+ * That script resolves fixture_id by teams + kickoff date (not kickoff instant only).
+ */
 import * as dotenv from 'dotenv'
 import path from 'path'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
