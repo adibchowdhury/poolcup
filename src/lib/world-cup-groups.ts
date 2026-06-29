@@ -28,6 +28,7 @@ export type GroupStageMatch = {
   team1_name: string
   team2_name: string
   kickoff_at?: string
+  locked_at?: string | null
 }
 
 /** Parse group letter from DB value (e.g. "A") or label (e.g. "Group A"). Rejects bad values like "S" from "Group Stage". */

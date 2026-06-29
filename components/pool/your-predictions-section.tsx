@@ -14,7 +14,6 @@ import {
   matchInClassicRoundTab,
   resolveDefaultClassicRoundTabForPredictions,
 } from '@/src/lib/classic-round-tab-logic'
-import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
 import {
   type ClassicPredictionSortMode,
   sortClassicPredictions,
@@ -138,15 +137,12 @@ export function YourPredictionsSection({
     useState<ClassicPredictionSortMode>('kickoff-newest')
 
   useEffect(() => {
-    const predictedClassicPredictions = classicPredictions.filter(
-      hasStoredClassicMatchPrediction,
-    )
-    if (defaultRoundTabSetRef.current || predictedClassicPredictions.length === 0) {
+    if (defaultRoundTabSetRef.current || classicPredictions.length === 0) {
       return
     }
 
     setActiveRoundTab(
-      resolveDefaultClassicRoundTabForPredictions(predictedClassicPredictions),
+      resolveDefaultClassicRoundTabForPredictions(classicPredictions),
     )
     defaultRoundTabSetRef.current = true
   }, [classicPredictions])

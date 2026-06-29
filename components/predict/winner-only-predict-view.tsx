@@ -16,6 +16,7 @@ import {
   WinnerOnlyRoundTabs,
   type WinnerOnlyRoundTabId,
 } from '@/components/predict/winner-only-round-tabs'
+import type { ClassicRoundTabId } from '@/components/predict/group-knockout-tabs'
 import { KnockoutBracketTab, isKnockoutBracketTab, KNOCKOUT_PICK_LABELS } from '@/components/predict/knockout-bracket-tab'
 import type { R32BracketInteractiveProps } from '@/components/predict/knockout-bracket-preview'
 import {
@@ -27,6 +28,7 @@ import {
   type R32BracketMatchesByNumber,
 } from '@/src/lib/winner-only-r32-bracket'
 import { upsertPoolMatchPrediction } from '@/src/lib/pool-match-prediction-write'
+import { resolveDefaultClassicRoundTabForPredictions } from '@/src/lib/classic-round-tab-logic'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
@@ -58,6 +60,12 @@ import { cn } from '@/lib/utils'
 const TOTAL_GROUPS = 12
 const REQUIRED_THIRD_PLACE_PICKS = 8
 
+function winnerOnlyTabFromClassicRound(
+  tab: ClassicRoundTabId,
+): WinnerOnlyRoundTabId {
+  return tab === 'group' ? 'bracket' : tab
+}
+
 type Pool = {
   id: string
   name: string
@@ -87,6 +95,7 @@ export function WinnerOnlyPredictView({
   const { user } = useAuth()
   const { mounted, nowMs } = useClientNow(1000)
   const [activeTab, setActiveTab] = useState<WinnerOnlyRoundTabId>('bracket')
+  const defaultRoundTabSetRef = useRef(false)
   const [groupRankings, setGroupRankings] = useState<GroupRankings>(
     emptyGroupRankings(),
   )
@@ -110,6 +119,7 @@ export function WinnerOnlyPredictView({
   const [matchesLoading, setMatchesLoading] = useState(true)
   const [r32MatchesByNumber, setR32MatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
+  const [r32BracketLoaded, setR32BracketLoaded] = useState(false)
   const predictionsCompletedTrackedRef = useRef(false)
   const thirdPlaceStartedTrackedRef = useRef(false)
 
@@ -130,7 +140,7 @@ export function WinnerOnlyPredictView({
     const [matchesResult, teamGroupResult] = await Promise.all([
       supabase
         .from('matches')
-        .select('round, group_name, team1_name, team2_name, kickoff_at')
+        .select('round, group_name, team1_name, team2_name, kickoff_at, locked_at')
         .eq('round', 'group')
         .order('kickoff_at', { ascending: true }),
       fetch('/api/team-group-map'),
@@ -175,65 +185,71 @@ export function WinnerOnlyPredictView({
     let cancelled = false
 
     async function loadR32Bracket() {
-      const { data: matchRows, error: matchesError } = await supabase
-        .from('matches')
-        .select('id, match_number, team1_name, team2_name, locked_at')
-        .eq('round', 'r32')
-
-      if (cancelled) return
-
-      if (matchesError) {
-        console.error(
-          '[WinnerOnly] Failed to load r32 matches:',
-          matchesError.message,
-        )
-        setR32MatchesByNumber(new Map())
-        return
-      }
-
-      const rows = matchRows ?? []
-      const matchIds = rows.map((row) => row.id)
-
-      let pickByMatchId = new Map<string, 1 | 2>()
-      if (matchIds.length > 0) {
-        const { data: predictionRows, error: predictionsError } =
-          await supabase
-            .from('predictions')
-            .select('match_id, advance_pick')
-            .eq('pool_id', pool.id)
-            .eq('member_id', memberId)
-            .in('match_id', matchIds)
+      try {
+        const { data: matchRows, error: matchesError } = await supabase
+          .from('matches')
+          .select('id, match_number, team1_name, team2_name, locked_at')
+          .eq('round', 'r32')
 
         if (cancelled) return
 
-        if (predictionsError) {
+        if (matchesError) {
           console.error(
-            '[WinnerOnly] Failed to load r32 predictions:',
-            predictionsError.message,
+            '[WinnerOnly] Failed to load r32 matches:',
+            matchesError.message,
           )
-        } else {
-          for (const row of predictionRows ?? []) {
-            if (row.advance_pick === 1 || row.advance_pick === 2) {
-              pickByMatchId.set(row.match_id, row.advance_pick)
+          setR32MatchesByNumber(new Map())
+          return
+        }
+
+        const rows = matchRows ?? []
+        const matchIds = rows.map((row) => row.id)
+
+        let pickByMatchId = new Map<string, 1 | 2>()
+        if (matchIds.length > 0) {
+          const { data: predictionRows, error: predictionsError } =
+            await supabase
+              .from('predictions')
+              .select('match_id, advance_pick')
+              .eq('pool_id', pool.id)
+              .eq('member_id', memberId)
+              .in('match_id', matchIds)
+
+          if (cancelled) return
+
+          if (predictionsError) {
+            console.error(
+              '[WinnerOnly] Failed to load r32 predictions:',
+              predictionsError.message,
+            )
+          } else {
+            for (const row of predictionRows ?? []) {
+              if (row.advance_pick === 1 || row.advance_pick === 2) {
+                pickByMatchId.set(row.match_id, row.advance_pick)
+              }
             }
           }
         }
-      }
 
-      const map: R32BracketMatchesByNumber = new Map()
-      for (const row of rows) {
-        const pick = pickByMatchId.get(row.id) ?? null
-        map.set(row.match_number, {
-          matchId: row.id,
-          matchNumber: row.match_number,
-          team1Name: row.team1_name,
-          team2Name: row.team2_name,
-          lockedAt: row.locked_at,
-          myPick: pick,
-          savedPick: pick,
-        })
+        const map: R32BracketMatchesByNumber = new Map()
+        for (const row of rows) {
+          const pick = pickByMatchId.get(row.id) ?? null
+          map.set(row.match_number, {
+            matchId: row.id,
+            matchNumber: row.match_number,
+            team1Name: row.team1_name,
+            team2Name: row.team2_name,
+            lockedAt: row.locked_at,
+            myPick: pick,
+            savedPick: pick,
+          })
+        }
+        setR32MatchesByNumber(map)
+      } finally {
+        if (!cancelled) {
+          setR32BracketLoaded(true)
+        }
       }
-      setR32MatchesByNumber(map)
     }
 
     void loadR32Bracket()
@@ -242,6 +258,34 @@ export function WinnerOnlyPredictView({
       cancelled = true
     }
   }, [memberId, pool.id])
+
+  useEffect(() => {
+    if (defaultRoundTabSetRef.current || matchesLoading || !r32BracketLoaded) {
+      return
+    }
+
+    const roundTabItems: Array<{ round: string; lockedAt: string | null }> = [
+      ...matches.map((match) => ({
+        round: match.round,
+        lockedAt: match.locked_at ?? null,
+      })),
+      ...[...r32MatchesByNumber.values()].map((match) => ({
+        round: 'r32',
+        lockedAt: match.lockedAt,
+      })),
+    ]
+
+    if (roundTabItems.length === 0) {
+      return
+    }
+
+    setActiveTab(
+      winnerOnlyTabFromClassicRound(
+        resolveDefaultClassicRoundTabForPredictions(roundTabItems),
+      ),
+    )
+    defaultRoundTabSetRef.current = true
+  }, [matches, matchesLoading, r32BracketLoaded, r32MatchesByNumber])
 
   const handleR32AdvancePick = useCallback(
     (matchId: string, pick: 1 | 2) => {
