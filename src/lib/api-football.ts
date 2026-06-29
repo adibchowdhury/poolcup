@@ -1,3 +1,5 @@
+import { isValidApiFootballFixtureId } from '@/src/lib/match-updater-guards'
+
 const API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
 
 export const LIVE_MATCH_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'P'])
@@ -84,6 +86,10 @@ export async function fetchFixtureById(
   apiKey: string,
   fixtureId: string,
 ): Promise<ApiFootballFixture | null> {
+  if (!isValidApiFootballFixtureId(fixtureId)) {
+    return null
+  }
+
   const fixtures = await fetchFixturesByIds(apiKey, [fixtureId])
   return fixtures[0] ?? null
 }
@@ -130,7 +136,11 @@ export async function fetchFixturesByIds(
 ): Promise<ApiFootballFixture[]> {
   if (fixtureIds.length === 0) return []
 
-  const uniqueIds = [...new Set(fixtureIds)]
+  const uniqueIds = [
+    ...new Set(fixtureIds.filter((id) => isValidApiFootballFixtureId(id))),
+  ]
+  if (uniqueIds.length === 0) return []
+
   const fixtures: ApiFootballFixture[] = []
 
   for (let i = 0; i < uniqueIds.length; i += FIXTURE_IDS_BATCH_SIZE) {

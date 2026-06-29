@@ -7,6 +7,11 @@ import {
 } from '@/src/lib/api-football'
 import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 import { knockoutFinalizeFieldsFromFixture } from '@/src/lib/match-finalize'
+import {
+  canFinalizeMatchByKickoff,
+  isValidApiFootballFixtureId,
+  logUpdaterGuardWarning,
+} from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
@@ -74,7 +79,7 @@ type ReconcileError = {
 
 type CandidateRow = {
   id: string
-  fixture_id: string
+  fixture_id: string | null
   round: string
   team1_name: string
   team2_name: string
@@ -275,8 +280,23 @@ async function runReconcile(): Promise<{
   const errors: ReconcileError[] = []
 
   for (const match of candidates) {
-    const fixtureId = match.fixture_id
     const label = `${match.team1_name} v ${match.team2_name}`
+
+    if (!isValidApiFootballFixtureId(match.fixture_id)) {
+      logUpdaterGuardWarning(
+        'reconcile-stale-matches',
+        'Skipping match with invalid or placeholder fixture_id — will not poll API',
+        {
+          matchId: match.id,
+          fixtureId: match.fixture_id,
+          kickoffAt: match.kickoff_at,
+        },
+      )
+      stillLive += 1
+      continue
+    }
+
+    const fixtureId = match.fixture_id as string
 
     let fixture
     try {
@@ -315,6 +335,24 @@ async function runReconcile(): Promise<{
     }
 
     if (update.is_final) {
+      if (!canFinalizeMatchByKickoff(match.kickoff_at)) {
+        logUpdaterGuardWarning(
+          'reconcile-stale-matches',
+          'Refusing early finalize — API reported FT before minimum kickoff window elapsed',
+          {
+            matchId: match.id,
+            fixtureId,
+            kickoffAt: match.kickoff_at,
+            apiStatus: update.status_short,
+            minutesSinceKickoff: Math.floor(
+              (Date.now() - new Date(match.kickoff_at).getTime()) / 60_000,
+            ),
+          },
+        )
+        stillLive += 1
+        continue
+      }
+
       const finalizePayload: {
         result_team1: number
         result_team2: number

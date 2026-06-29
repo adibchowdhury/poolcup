@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 import { knockoutFinalizeFieldsFromScores } from '@/src/lib/match-finalize'
+import {
+  canFinalizeMatchByKickoff,
+  isValidApiFootballFixtureId,
+  logUpdaterGuardWarning,
+} from '@/src/lib/match-updater-guards'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -38,6 +43,13 @@ export async function POST(request: Request) {
       )
     }
 
+    if (!isValidApiFootballFixtureId(fixtureId)) {
+      return NextResponse.json(
+        { error: 'fixtureId is not a valid API-Football fixture id' },
+        { status: 400 },
+      )
+    }
+
     if (
       typeof resultTeam1 !== 'number' ||
       typeof resultTeam2 !== 'number' ||
@@ -71,7 +83,7 @@ export async function POST(request: Request) {
 
     const { data: match, error: findError } = await supabase
       .from('matches')
-      .select('id, round')
+      .select('id, round, kickoff_at')
       .eq('fixture_id', fixtureId)
       .maybeSingle()
 
@@ -85,6 +97,22 @@ export async function POST(request: Request) {
 
     if (!match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    }
+
+    if (!canFinalizeMatchByKickoff(match.kickoff_at)) {
+      logUpdaterGuardWarning(
+        'update-match-result',
+        'Refusing early finalize — before minimum kickoff window elapsed',
+        {
+          matchId: match.id,
+          fixtureId,
+          kickoffAt: match.kickoff_at,
+        },
+      )
+      return NextResponse.json(
+        { error: 'Match cannot be finalized yet — too soon after kickoff' },
+        { status: 409 },
+      )
     }
 
     const updatePayload: {

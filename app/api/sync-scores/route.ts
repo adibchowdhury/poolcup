@@ -9,6 +9,11 @@ import {
 } from '@/src/lib/api-football'
 import { knockoutFinalizeFieldsFromFixture } from '@/src/lib/match-finalize'
 import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
+import {
+  canFinalizeMatchByKickoff,
+  isValidApiFootballFixtureId,
+  logUpdaterGuardWarning,
+} from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
@@ -23,7 +28,7 @@ type SyncError = {
 
 type MatchRow = {
   id: string
-  fixture_id: string
+  fixture_id: string | null
   round: string
   kickoff_at: string
   result_team1: number | null
@@ -149,7 +154,24 @@ async function runSync(): Promise<{
     }
   }
 
-  const fixtureIds = matches.map((m) => m.fixture_id)
+  const pollableMatches = matches.filter((match) =>
+    isValidApiFootballFixtureId(match.fixture_id),
+  )
+  const invalidFixtureSkipped = matches.length - pollableMatches.length
+  for (const match of matches) {
+    if (isValidApiFootballFixtureId(match.fixture_id)) continue
+    logUpdaterGuardWarning(
+      'sync-scores',
+      'Skipping match with invalid or placeholder fixture_id — will not poll API',
+      {
+        matchId: match.id,
+        fixtureId: match.fixture_id,
+        kickoffAt: match.kickoff_at,
+      },
+    )
+  }
+
+  const fixtureIds = pollableMatches.map((m) => m.fixture_id as string)
   const fixtures = await fetchFixturesByIds(apiKey, fixtureIds)
 
   const fixtureById = new Map<string, (typeof fixtures)[number]>()
@@ -158,13 +180,13 @@ async function runSync(): Promise<{
   }
 
   let matchesUpdated = 0
-  let matchesSkipped = 0
+  let matchesSkipped = invalidFixtureSkipped
   let pointsRecalculated = 0
   const errors: SyncError[] = []
   const apiMissingAlerts: string[] = []
 
-  for (const match of matches) {
-    const fixtureId = match.fixture_id
+  for (const match of pollableMatches) {
+    const fixtureId = match.fixture_id as string
     const fixture = fixtureById.get(fixtureId)
 
     if (!fixture) {
@@ -203,6 +225,24 @@ async function runSync(): Promise<{
     const isLive = LIVE_MATCH_STATUSES.has(status)
 
     if (!isFinal && !isLive) {
+      matchesSkipped += 1
+      continue
+    }
+
+    if (isFinal && !canFinalizeMatchByKickoff(match.kickoff_at, nowMs)) {
+      logUpdaterGuardWarning(
+        'sync-scores',
+        'Refusing early finalize — API reported FT before minimum kickoff window elapsed',
+        {
+          matchId: match.id,
+          fixtureId,
+          kickoffAt: match.kickoff_at,
+          apiStatus: fixture.fixture.status.short,
+          minutesSinceKickoff: Math.floor(
+            (nowMs - new Date(match.kickoff_at).getTime()) / 60_000,
+          ),
+        },
+      )
       matchesSkipped += 1
       continue
     }
