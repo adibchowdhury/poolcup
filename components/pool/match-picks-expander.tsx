@@ -24,6 +24,8 @@ type MatchPicksExpanderProps = {
   isFinal: boolean
   resultTeam1: number | null
   resultTeam2: number | null
+  round?: string
+  advancingTeam?: number | null
   currentUserId: string
 }
 
@@ -81,6 +83,8 @@ export function MatchPicksExpander({
   isFinal,
   resultTeam1,
   resultTeam2,
+  round,
+  advancingTeam,
   currentUserId,
 }: MatchPicksExpanderProps) {
   const { mounted, nowMs } = useClientNow(30_000)
@@ -101,6 +105,8 @@ export function MatchPicksExpander({
       resultTeam1,
       resultTeam2,
       scoringStyle,
+      round,
+      advancingTeam,
     })
 
     if (result.error) {
@@ -111,7 +117,7 @@ export function MatchPicksExpander({
     }
 
     setLoading(false)
-  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2, scoringStyle])
+  }, [poolId, matchId, isFinal, resultTeam1, resultTeam2, scoringStyle, round, advancingTeam])
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)

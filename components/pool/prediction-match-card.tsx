@@ -45,6 +45,7 @@ import {
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
+import { getClassicKnockoutPredictionDisplayOutcome } from '@/src/lib/classic-knockout-breakdown-lines'
 import { hasClassicPredictionScores } from '@/src/lib/classic-prediction-progress'
 import {
   usePredictionSaveContext,
@@ -392,15 +393,40 @@ export function PredictionMatchCard({
     prediction.resultTeam1 != null &&
     prediction.resultTeam2 != null
 
-  const outcome =
+  const displayAdvancePick = isReadOnly ? prediction.advancePick : advancePick
+
+  const earnedPointsLine:
+    | {
+        points: number
+        label: string
+        kind: 'exact' | 'draw' | 'winner' | 'advance' | 'wrong'
+      }
+    | null =
     hasResult && hasStoredPrediction
-      ? getPredictionOutcome(
-          displayPredTeam1,
-          displayPredTeam2,
-          prediction.resultTeam1!,
-          prediction.resultTeam2!,
-          scoringStyle,
-        )
+      ? isKnockout && scoringStyle === 'classic'
+        ? getClassicKnockoutPredictionDisplayOutcome({
+            round: prediction.round,
+            predTeam1: displayPredTeam1,
+            predTeam2: displayPredTeam2,
+            advancePick: displayAdvancePick,
+            resultTeam1: prediction.resultTeam1!,
+            resultTeam2: prediction.resultTeam2!,
+            advancingTeam: prediction.advancingTeam,
+          })
+        : (() => {
+            const groupOutcome = getPredictionOutcome(
+              displayPredTeam1,
+              displayPredTeam2,
+              prediction.resultTeam1!,
+              prediction.resultTeam2!,
+              scoringStyle,
+            )
+            return {
+              points: groupOutcome.points,
+              label: getPredictionOutcomeLabel(groupOutcome.kind),
+              kind: groupOutcome.kind,
+            }
+          })()
       : null
 
   const isEditable = !preview && Boolean(poolId && memberId) && !isReadOnly
@@ -860,18 +886,20 @@ export function PredictionMatchCard({
           >
             {formatRoundLabel(prediction.round, prediction.groupName)}
           </span>
-          {outcome ? (
+          {earnedPointsLine ? (
             <span
               className={cn(
                 'text-xs font-semibold',
-                outcome.kind === 'exact'
+                earnedPointsLine.kind === 'exact'
                   ? 'text-primary'
-                  : outcome.kind === 'winner'
+                  : earnedPointsLine.kind === 'winner' ||
+                      earnedPointsLine.kind === 'draw' ||
+                      earnedPointsLine.kind === 'advance'
                     ? 'text-[#ffb300]'
                     : pastMetaTextClassName,
               )}
             >
-              {getPredictionOutcomeLabel(outcome.kind)} · +{outcome.points} pts
+              {earnedPointsLine.label} · +{earnedPointsLine.points} pts
             </span>
           ) : (
             <CompactMatchRowKickoffTime
@@ -1042,6 +1070,8 @@ export function PredictionMatchCard({
                 isFinal={prediction.isFinal}
                 resultTeam1={prediction.resultTeam1}
                 resultTeam2={prediction.resultTeam2}
+                round={prediction.round}
+                advancingTeam={prediction.advancingTeam}
                 currentUserId={currentUserId!}
               />
             ) : null}

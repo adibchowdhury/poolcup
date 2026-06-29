@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getClassicKnockoutPredictionDisplayOutcome } from '@/src/lib/classic-knockout-breakdown-lines'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 import {
   getPredictionOutcome,
   type MatchScoringStyle,
@@ -18,6 +20,7 @@ type PredictionRow = {
   pred_team1: number
   pred_team2: number
   advance_pick: number | null
+  points_awarded: number | null
   member_id: string
   pool_members:
     | { display_name: string; user_id: string }
@@ -31,14 +34,30 @@ function resolvePoints(
   resultTeam2: number | null,
   predTeam1: number,
   predTeam2: number,
+  advancePick: number | null,
+  pointsAwarded: number | null,
   scoringStyle: MatchScoringStyle,
+  round?: string,
+  advancingTeam?: number | null,
 ): number | null {
-  if (
-    !isFinal ||
-    resultTeam1 == null ||
-    resultTeam2 == null
-  ) {
+  if (!isFinal || resultTeam1 == null || resultTeam2 == null) {
     return null
+  }
+
+  if (pointsAwarded != null) {
+    return pointsAwarded
+  }
+
+  if (round && isKnockoutRound(round) && scoringStyle === 'classic') {
+    return getClassicKnockoutPredictionDisplayOutcome({
+      round,
+      predTeam1,
+      predTeam2,
+      advancePick,
+      resultTeam1,
+      resultTeam2,
+      advancingTeam: advancingTeam ?? null,
+    }).points
   }
 
   return getPredictionOutcome(
@@ -72,11 +91,15 @@ export async function fetchMatchPoolPicks(
     resultTeam1,
     resultTeam2,
     scoringStyle,
+    round,
+    advancingTeam,
   }: {
     isFinal: boolean
     resultTeam1: number | null
     resultTeam2: number | null
     scoringStyle: MatchScoringStyle
+    round?: string
+    advancingTeam?: number | null
   },
 ): Promise<{ picks: MatchPoolPick[]; error: string | null }> {
   const { data, error } = await supabase
@@ -86,6 +109,7 @@ export async function fetchMatchPoolPicks(
       pred_team1,
       pred_team2,
       advance_pick,
+      points_awarded,
       member_id,
       pool_members!inner (
         display_name,
@@ -120,7 +144,11 @@ export async function fetchMatchPoolPicks(
         resultTeam2,
         row.pred_team1,
         row.pred_team2,
+        row.advance_pick,
+        row.points_awarded,
         scoringStyle,
+        round,
+        advancingTeam,
       ),
     })
   }
