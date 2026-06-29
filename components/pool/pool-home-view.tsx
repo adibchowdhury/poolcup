@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft,
@@ -31,7 +30,11 @@ import {
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
 import { cn } from '@/lib/utils'
-import { CHAT_INBOX_HREF, MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import {
+  CHAT_INBOX_HREF,
+  DASHBOARD_TAB_HREFS,
+  MOBILE_BOTTOM_NAV_PAD_CLASS,
+} from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 
@@ -92,6 +95,7 @@ export function PoolHomeView({
   onPoolAvatarChange,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
+  const router = useRouter()
   const [shareOpen, setShareOpen] = useState(false)
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState(() => {
@@ -165,6 +169,12 @@ export function PoolHomeView({
   }, [isMobileChatShell, setMobileChatActive])
 
   const isWinnerPredictionsTab = isWinnerPool && activeTab === 'predictions'
+  const isClassicPredictionsTab = !isWinnerPool && activeTab === 'predictions'
+
+  const handleBackClick = () => {
+    console.log('back clicked', DASHBOARD_TAB_HREFS.pools)
+    router.push(isChatView ? CHAT_INBOX_HREF : DASHBOARD_TAB_HREFS.pools)
+  }
 
   return (
     <div
@@ -190,19 +200,20 @@ export function PoolHomeView({
       >
         <header
           className={cn(
-            'sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl',
+            'sticky top-0 z-[100] isolate border-b border-border bg-background/80 backdrop-blur-xl',
             isMobileChatShell && 'max-sm:shrink-0',
           )}
         >
           <div className="mx-auto max-w-4xl px-4 py-4 max-sm:py-2.5">
             <div className="flex items-center gap-4 max-sm:items-start max-sm:gap-2">
-              <Link
-                href={isChatView ? CHAT_INBOX_HREF : '/dashboard'}
-                className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted max-sm:p-1.5"
+              <button
+                type="button"
+                onClick={handleBackClick}
+                className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted max-sm:p-1.5"
                 aria-label={isChatView ? 'Back to chats' : 'Back to dashboard'}
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-              </Link>
+              </button>
               <PoolAvatarImage avatar={pool.avatar} size="sm" className="shrink-0 rounded-xl" />
               <div className="min-w-0 flex-1">
                 <div className="hidden sm:block">
@@ -262,8 +273,7 @@ export function PoolHomeView({
 
         <main
           className={cn(
-            'mx-auto w-full min-w-0 max-w-4xl px-4 py-8',
-            !isWinnerPredictionsTab && 'overflow-x-hidden',
+            'relative z-0 mx-auto w-full min-w-0 max-w-4xl px-4 py-8',
             'max-sm:pt-0 max-sm:pb-8',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
@@ -346,6 +356,7 @@ export function PoolHomeView({
               className={cn(
                 'mt-0 w-full min-w-0',
                 isWinnerPredictionsTab && 'overflow-x-visible',
+                isClassicPredictionsTab && 'overflow-x-hidden',
               )}
             >
               <PoolPredictionsTab

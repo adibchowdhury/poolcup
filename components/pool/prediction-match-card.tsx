@@ -432,6 +432,7 @@ export function PredictionMatchCard({
   const isEditable = !preview && Boolean(poolId && memberId) && !isReadOnly
 
   const saveContext = usePredictionSaveContext()
+  const bumpDirty = saveContext?.bumpDirty
 
   const resolveAdvanceToSave = useCallback(
     (
@@ -781,10 +782,10 @@ export function PredictionMatchCard({
   ])
 
   useEffect(() => {
-    if (!saveContext || preview || !poolId || !memberId) return
-    saveContext.bumpDirty()
+    if (!bumpDirty || preview || !poolId || !memberId) return
+    bumpDirty()
   }, [
-    saveContext,
+    bumpDirty,
     preview,
     poolId,
     memberId,
@@ -797,8 +798,8 @@ export function PredictionMatchCard({
   ])
 
   const notifyDirty = useCallback(() => {
-    saveContext?.bumpDirty()
-  }, [saveContext])
+    bumpDirty?.()
+  }, [bumpDirty])
 
   const handleScoreChange = (field: 'score1' | 'score2', raw: string) => {
     const clamped = clampPredictionScoreValue(raw)
