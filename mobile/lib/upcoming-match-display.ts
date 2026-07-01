@@ -79,3 +79,19 @@ export function groupMatchesByDay(
   }
   return byDay
 }
+
+export function groupScheduleItemsByDay<T extends { kickoff_at: string }>(
+  items: T[],
+): Map<string, T[]> {
+  const sorted = [...items].sort(
+    (a, b) =>
+      new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+  )
+  const byDay = new Map<string, T[]>()
+  for (const item of sorted) {
+    const dayKey = new Date(item.kickoff_at).toDateString()
+    if (!byDay.has(dayKey)) byDay.set(dayKey, [])
+    byDay.get(dayKey)!.push(item)
+  }
+  return byDay
+}

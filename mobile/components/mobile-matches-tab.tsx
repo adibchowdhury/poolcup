@@ -10,13 +10,24 @@ import {
   type UpcomingMatch,
 } from '../lib/fetch-upcoming-matches'
 import {
+  getAllMockFixtures,
+  getMockFixturesForSport,
+  groupMockFixturesByDay,
+  MOCK_SPORT_EVENTS,
+  type MockFixture,
+  type MockFixtureWithSport,
+} from '../lib/mock-sports-fixtures'
+import {
   formatDateHeader,
   formatGroupAccentLabel,
   formatKickoffCompact,
   getCountdownLabel,
   groupMatchesByDay,
+  groupScheduleItemsByDay,
 } from '../lib/upcoming-match-display'
 import { supabase } from '../lib/supabase-mobile'
+import { MobileEventSelector } from './mobile-event-selector'
+import { MobileMatchListCard, TeamMonogram } from './mobile-match-list-card'
 
 function DateSectionHeader({
   kickoffIso,
@@ -45,7 +56,36 @@ function DateSectionHeader({
   )
 }
 
-function MobileMatchCard({
+function CountdownPill({ label }: { label: string }) {
+  return (
+    <div
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30',
+        'bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-tight text-primary',
+      )}
+      suppressHydrationWarning
+    >
+      <Clock className="h-3 w-3 shrink-0" aria-hidden />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function LivePill({ label }: { label: string }) {
+  return (
+    <div
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/40',
+        'bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase leading-tight text-red-400',
+      )}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-400" />
+      <span>Live · {label}</span>
+    </div>
+  )
+}
+
+function RealMatchCard({
   match,
   mounted,
   nowMs,
@@ -60,98 +100,143 @@ function MobileMatchCard({
   const groupAccentLabel = formatGroupAccentLabel(match.round, match.group_name)
 
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(match.id)}
-      className={cn(
-        'w-full overflow-hidden rounded-2xl border border-primary/20 text-left',
-        'bg-gradient-to-br from-card via-card to-primary/[0.06]',
-        'px-3 py-3.5 shadow-[0_2px_14px_rgba(0,0,0,0.32)] transition-colors',
-        'hover:border-primary/35 active:bg-card/80',
-      )}
-      aria-label={`${match.team1_name} vs ${match.team2_name}`}
-    >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
-          {groupAccentLabel}
-        </p>
-        {countdown ? (
-          <div
-            className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30',
-              'bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-tight text-primary',
-            )}
-            suppressHydrationWarning
-          >
-            <Clock className="h-3 w-3 shrink-0" aria-hidden />
-            <span>{countdown}</span>
-          </div>
+    <MobileMatchListCard
+      accentLabel={groupAccentLabel}
+      headerRight={
+        countdown ? (
+          <CountdownPill label={countdown} />
         ) : (
           <span className="sr-only">Kickoff scheduled</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-1">
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-          <TeamFlagImage
-            countryName={match.team1_name}
-            dbFlag={match.team1_flag}
-            imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
-            emojiClassName="text-4xl leading-none"
-          />
-          <span className="w-full break-words text-center text-sm font-bold leading-snug text-foreground">
-            {match.team1_name}
-          </span>
-        </div>
-
+        )
+      }
+      team1Name={match.team1_name}
+      team2Name={match.team2_name}
+      team1Visual={
+        <TeamFlagImage
+          countryName={match.team1_name}
+          dbFlag={match.team1_flag}
+          imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
+          emojiClassName="text-4xl leading-none"
+        />
+      }
+      team2Visual={
+        <TeamFlagImage
+          countryName={match.team2_name}
+          dbFlag={match.team2_flag}
+          imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
+          emojiClassName="text-4xl leading-none"
+        />
+      }
+      centerContent={
         <span
-          className="shrink-0 self-center px-0.5 text-[9px] font-normal uppercase tracking-wide text-muted-foreground/40"
+          className="text-[9px] font-normal uppercase tracking-wide text-muted-foreground/40"
           aria-hidden
         >
           vs
         </span>
-
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-          <TeamFlagImage
-            countryName={match.team2_name}
-            dbFlag={match.team2_flag}
-            imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
-            emojiClassName="text-4xl leading-none"
-          />
-          <span className="w-full break-words text-center text-sm font-bold leading-snug text-foreground">
-            {match.team2_name}
-          </span>
-        </div>
-      </div>
-
-      <p className="mt-3 text-center text-xs text-muted-foreground">
-        <time dateTime={match.kickoff_at} suppressHydrationWarning>
-          {formatKickoffCompact(match.kickoff_at)}
-        </time>
-      </p>
-    </button>
+      }
+      footer={
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          <time dateTime={match.kickoff_at} suppressHydrationWarning>
+            {formatKickoffCompact(match.kickoff_at)}
+          </time>
+        </p>
+      }
+      interactive
+      onPress={() => onOpen(match.id)}
+      ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
+    />
   )
 }
 
-function MatchesLoadingState() {
+function MockMatchCard({
+  fixture,
+  mounted,
+  nowMs,
+  sportLabel,
+}: {
+  fixture: MockFixture
+  mounted: boolean
+  nowMs: number
+  sportLabel?: string
+}) {
+  const isLive = fixture.status === 'live'
+  const countdown =
+    !isLive && mounted
+      ? getCountdownLabel(fixture.kickoff_at, nowMs)
+      : null
+  const accentLabel = sportLabel
+    ? `${sportLabel} · ${fixture.round_label}`.toUpperCase()
+    : fixture.round_label.toUpperCase()
+
   return (
-    <div
-      className="flex flex-1 flex-col px-4 py-6"
-      aria-busy="true"
-      aria-label="Loading upcoming matches"
-    >
-      <div className="mx-auto w-full max-w-lg space-y-5">
-        <div className="border-b border-border/50 pb-4">
-          <div className="h-8 w-48 animate-pulse rounded bg-muted/40" />
-          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-muted/30" />
+    <MobileMatchListCard
+      accentLabel={accentLabel}
+      headerRight={
+        isLive ? (
+          <LivePill label={fixture.live_label ?? 'Now'} />
+        ) : countdown ? (
+          <CountdownPill label={countdown} />
+        ) : (
+          <span className="sr-only">Kickoff scheduled</span>
+        )
+      }
+      team1Name={fixture.team1_name}
+      team2Name={fixture.team2_name}
+      team1Visual={<TeamMonogram code={fixture.team1_code} />}
+      team2Visual={<TeamMonogram code={fixture.team2_code} />}
+      centerContent={
+        isLive && fixture.score1 != null && fixture.score2 != null ? (
+          <p className="font-display text-2xl leading-none tracking-wide tabular-nums text-primary">
+            {fixture.score1}
+            <span className="mx-0.5 text-muted-foreground/70">–</span>
+            {fixture.score2}
+          </p>
+        ) : (
+          <span
+            className="text-[9px] font-normal uppercase tracking-wide text-muted-foreground/40"
+            aria-hidden
+          >
+            vs
+          </span>
+        )
+      }
+      footer={
+        isLive ? (
+          <p className="mt-3 text-center text-xs font-medium text-red-400/90">
+            Mock preview — not a real match
+          </p>
+        ) : (
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            <time dateTime={fixture.kickoff_at} suppressHydrationWarning>
+              {formatKickoffCompact(fixture.kickoff_at)}
+            </time>
+          </p>
+        )
+      }
+      interactive={false}
+      ariaLabel={`${fixture.team1_name} vs ${fixture.team2_name} (mock)`}
+    />
+  )
+}
+
+type CombinedScheduleItem =
+  | { kind: 'real'; kickoff_at: string; match: UpcomingMatch }
+  | {
+      kind: 'mock'
+      kickoff_at: string
+      fixture: MockFixtureWithSport
+    }
+
+function MatchesContentSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="Loading matches">
+      {[0, 1].map((section) => (
+        <div key={section} className="space-y-2.5">
+          <div className="h-6 w-40 animate-pulse rounded bg-muted/40" />
+          <div className="h-36 animate-pulse rounded-2xl bg-muted/30" />
         </div>
-        {[0, 1].map((section) => (
-          <div key={section} className="space-y-2.5">
-            <div className="h-6 w-40 animate-pulse rounded bg-muted/40" />
-            <div className="h-36 animate-pulse rounded-2xl bg-muted/30" />
-          </div>
-        ))}
-      </div>
+      ))}
     </div>
   )
 }
@@ -161,10 +246,17 @@ export function MobileMatchesTab({
 }: {
   onOpenMatch: (matchId: string) => void
 }) {
+  const [selectedEventId, setSelectedEventId] = useState('all')
   const [matches, setMatches] = useState<UpcomingMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { mounted, nowMs } = useClientNow(60_000)
+
+  const isAll = selectedEventId === 'all'
+  const isWorldCup = selectedEventId === 'wc'
+  const isMockSport = !isAll && !isWorldCup
+  const selectedEvent = MOCK_SPORT_EVENTS.find((e) => e.id === selectedEventId)
+  const allMockFixtures = useMemo(() => getAllMockFixtures(), [])
 
   const loadMatches = useCallback(async () => {
     setLoading(true)
@@ -190,15 +282,37 @@ export function MobileMatchesTab({
   }, [loadMatches])
 
   const matchesByDay = useMemo(() => groupMatchesByDay(matches), [matches])
+  const mockFixtures = useMemo(
+    () => (isMockSport ? getMockFixturesForSport(selectedEventId) : []),
+    [isMockSport, selectedEventId],
+  )
+  const mockFixturesByDay = useMemo(
+    () => groupMockFixturesByDay(mockFixtures),
+    [mockFixtures],
+  )
+  const combinedByDay = useMemo(() => {
+    if (!isAll) return null
 
-  if (loading) {
-    return <MatchesLoadingState />
-  }
+    const items: CombinedScheduleItem[] = [
+      ...matches.map((match) => ({
+        kind: 'real' as const,
+        kickoff_at: match.kickoff_at,
+        match,
+      })),
+      ...allMockFixtures.map((fixture) => ({
+        kind: 'mock' as const,
+        kickoff_at: fixture.kickoff_at,
+        fixture,
+      })),
+    ]
+
+    return groupScheduleItemsByDay(items)
+  }, [isAll, matches, allMockFixtures])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
       <div className="mx-auto w-full max-w-lg">
-        <header className="mb-5 border-b border-border/50 pb-4">
+        <header className="mb-4 border-b border-border/50 pb-4">
           <div className="flex items-start gap-3">
             <Calendar
               className="mt-0.5 h-6 w-6 shrink-0 text-primary"
@@ -209,53 +323,163 @@ export function MobileMatchesTab({
                 UPCOMING GAMES
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Track every upcoming World Cup fixture and see when predictions
-                lock.
+                {isAll
+                  ? 'Combined schedule across World Cup and mock sports previews.'
+                  : isWorldCup
+                    ? 'Track every upcoming World Cup fixture and see when predictions lock.'
+                    : `Mock ${selectedEvent?.label ?? 'sport'} schedule for design preview only.`}
               </p>
             </div>
           </div>
         </header>
 
-        {error ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
-            <p className="text-sm text-destructive">
-              Could not load upcoming matches.
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">{error}</p>
-          </div>
-        ) : matches.length === 0 ? (
+        <div className="mb-5">
+          <MobileEventSelector
+            events={MOCK_SPORT_EVENTS}
+            selectedId={selectedEventId}
+            onSelect={setSelectedEventId}
+          />
+        </div>
+
+        {isAll ? (
+          loading ? (
+            <MatchesContentSkeleton />
+          ) : combinedByDay && combinedByDay.size > 0 ? (
+            <div className="space-y-5">
+              {error ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  World Cup matches could not be loaded. Showing mock games
+                  only.
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {error}
+                  </span>
+                </div>
+              ) : null}
+              {Array.from(combinedByDay.entries()).map(([dayKey, dayItems]) => (
+                <section key={dayKey}>
+                  <DateSectionHeader
+                    kickoffIso={dayItems[0]!.kickoff_at}
+                    matchCount={dayItems.length}
+                  />
+                  <ul className="space-y-2.5">
+                    {dayItems.map((item) =>
+                      item.kind === 'real' ? (
+                        <li key={item.match.id}>
+                          <RealMatchCard
+                            match={item.match}
+                            mounted={mounted}
+                            nowMs={nowMs}
+                            onOpen={onOpenMatch}
+                          />
+                        </li>
+                      ) : (
+                        <li key={item.fixture.id}>
+                          <MockMatchCard
+                            fixture={item.fixture}
+                            mounted={mounted}
+                            nowMs={nowMs}
+                            sportLabel={item.fixture.sportLabel}
+                          />
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {error ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
+                  <p className="text-sm text-destructive">
+                    Could not load upcoming matches.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">{error}</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <p className="font-display text-xl tracking-wide text-foreground">
+                    No upcoming matches
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        ) : isWorldCup ? (
+          loading ? (
+            <MatchesContentSkeleton />
+          ) : error ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
+              <p className="text-sm text-destructive">
+                Could not load upcoming matches.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">{error}</p>
+            </div>
+          ) : matches.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
+              <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="font-display text-xl tracking-wide text-foreground">
+                No upcoming matches
+              </p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                Check back when new fixtures are scheduled. Final matches are
+                hidden once results are in.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {Array.from(matchesByDay.entries()).map(([dayKey, dayMatches]) => (
+                <section key={dayKey}>
+                  <DateSectionHeader
+                    kickoffIso={dayMatches[0]!.kickoff_at}
+                    matchCount={dayMatches.length}
+                  />
+                  <ul className="space-y-2.5">
+                    {dayMatches.map((match) => (
+                      <li key={match.id}>
+                        <RealMatchCard
+                          match={match}
+                          mounted={mounted}
+                          nowMs={nowMs}
+                          onOpen={onOpenMatch}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )
+        ) : mockFixtures.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
-            <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="font-display text-xl tracking-wide text-foreground">
-              No upcoming matches
-            </p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              Check back when new fixtures are scheduled. Final matches are
-              hidden once results are in.
+            <p className="text-sm text-muted-foreground">
+              No mock fixtures for this sport.
             </p>
           </div>
         ) : (
           <div className="space-y-5">
-            {Array.from(matchesByDay.entries()).map(([dayKey, dayMatches]) => (
-              <section key={dayKey}>
-                <DateSectionHeader
-                  kickoffIso={dayMatches[0]!.kickoff_at}
-                  matchCount={dayMatches.length}
-                />
-                <ul className="space-y-2.5">
-                  {dayMatches.map((match) => (
-                    <li key={match.id}>
-                      <MobileMatchCard
-                        match={match}
-                        mounted={mounted}
-                        nowMs={nowMs}
-                        onOpen={onOpenMatch}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+            {Array.from(mockFixturesByDay.entries()).map(
+              ([dayKey, dayFixtures]) => (
+                <section key={dayKey}>
+                  <DateSectionHeader
+                    kickoffIso={dayFixtures[0]!.kickoff_at}
+                    matchCount={dayFixtures.length}
+                  />
+                  <ul className="space-y-2.5">
+                    {dayFixtures.map((fixture) => (
+                      <li key={fixture.id}>
+                        <MockMatchCard
+                          fixture={fixture}
+                          mounted={mounted}
+                          nowMs={nowMs}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ),
+            )}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
 
 export const COUNTDOWN_TICK_MS = 1000
 
@@ -114,4 +115,57 @@ export function useKickoffCountdown(kickoffAt: string) {
         ? formatFeaturedMatchCountdown(remainingMs)
         : null,
   }
+}
+
+export function FeaturedMatchCountdownDisplay({
+  mounted,
+  isKickingOff,
+  label,
+  compact = false,
+}: {
+  mounted: boolean
+  isKickingOff: boolean
+  label: string | null
+  compact?: boolean
+}) {
+  if (!mounted) {
+    return (
+      <span
+        className={cn(
+          'font-mono font-bold tabular-nums text-[#ffb300]',
+          compact ? 'text-sm' : 'text-xl',
+        )}
+        aria-hidden
+      >
+        {compact ? '—:——' : '—:——:——'}
+      </span>
+    )
+  }
+
+  if (isKickingOff) {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center gap-1.5 font-display font-bold uppercase tracking-wide text-primary animate-pulse',
+          compact ? 'text-[11px]' : 'text-xl',
+        )}
+        suppressHydrationWarning
+      >
+        <span className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full" aria-hidden />
+        Kicking off
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className={cn(
+        'font-mono font-bold leading-none tabular-nums text-[#ffb300]',
+        compact ? 'text-sm' : 'text-xl',
+      )}
+      suppressHydrationWarning
+    >
+      {label}
+    </span>
+  )
 }

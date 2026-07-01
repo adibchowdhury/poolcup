@@ -7,8 +7,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { useClientNow } from '@/hooks/use-client-now'
 import { cn } from '@/lib/utils'
+import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
+import {
+  resolveAdvancePickFromScores,
+  resolveAdvancePickTeamName,
+} from '@/src/lib/knockout-match-prediction'
 import {
   fetchMatchPoolPicks,
   type MatchPoolPick,
@@ -27,17 +33,46 @@ type MatchPicksExpanderProps = {
   round?: string
   advancingTeam?: number | null
   currentUserId: string
+  team1Name: string
+  team2Name: string
+  team1Flag: string | null
+  team2Flag: string | null
 }
 
 function PickRow({
   pick,
   isFinal,
   isYou,
+  round,
+  team1Name,
+  team2Name,
+  team1Flag,
+  team2Flag,
 }: {
   pick: MatchPoolPick
   isFinal: boolean
   isYou: boolean
+  round?: string
+  team1Name: string
+  team2Name: string
+  team1Flag: string | null
+  team2Flag: string | null
 }) {
+  const showAdvancePick = round != null && isKnockoutRound(round)
+  const effectivePick = showAdvancePick
+    ? resolveAdvancePickFromScores(
+        pick.predTeam1,
+        pick.predTeam2,
+        pick.advancePick,
+      )
+    : null
+  const advanceName =
+    effectivePick != null
+      ? resolveAdvancePickTeamName(effectivePick, team1Name, team2Name)
+      : null
+  const advanceFlag =
+    effectivePick === 1 ? team1Flag : effectivePick === 2 ? team2Flag : null
+
   return (
     <li
       className={cn(
@@ -57,9 +92,26 @@ function PickRow({
         ) : null}
       </span>
       <div className="flex shrink-0 items-center gap-3">
-        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-          {pick.predTeam1}–{pick.predTeam2}
-        </span>
+        <div className="flex min-w-0 flex-col items-end gap-0.5">
+          <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+            {pick.predTeam1}–{pick.predTeam2}
+          </span>
+          {showAdvancePick ? (
+            effectivePick != null && advanceName ? (
+              <span className="inline-flex max-w-[8.5rem] items-center gap-1 text-[10px] text-muted-foreground sm:max-w-[10rem]">
+                <TeamFlagImage
+                  countryName={advanceName}
+                  dbFlag={advanceFlag}
+                  imgClassName="h-3 w-auto shrink-0 object-cover"
+                  emojiClassName="text-[10px] leading-none"
+                />
+                <span className="truncate">{advanceName}</span>
+              </span>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">No pick</span>
+            )
+          ) : null}
+        </div>
         {isFinal && pick.points != null ? (
           <span
             className={cn(
@@ -86,6 +138,10 @@ export function MatchPicksExpander({
   round,
   advancingTeam,
   currentUserId,
+  team1Name,
+  team2Name,
+  team1Flag,
+  team2Flag,
 }: MatchPicksExpanderProps) {
   const { mounted, nowMs } = useClientNow(30_000)
   const [open, setOpen] = useState(false)
@@ -170,6 +226,11 @@ export function MatchPicksExpander({
                   pick={pick}
                   isFinal={isFinal}
                   isYou={pick.userId === currentUserId}
+                  round={round}
+                  team1Name={team1Name}
+                  team2Name={team2Name}
+                  team1Flag={team1Flag}
+                  team2Flag={team2Flag}
                 />
               ))}
             </ul>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Pencil, X, Zap } from 'lucide-react'
+import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { ChevronDown, Pencil, Target, TrendingUp, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
 import {
@@ -15,17 +16,25 @@ import {
   fetchPointsTransactions,
   fetchUserProfile,
 } from '../lib/fetch-profile-data'
+import { fetchProfileQuickStats } from '../lib/fetch-profile-quick-stats'
+import { buildProfileSportsEntries } from '../lib/profile-sports-display'
 import { supabase } from '../lib/supabase-mobile'
 import { useLiveTotalPoints } from '../lib/use-live-total-points'
 
 type MobileProfileTabProps = {
-  onSignOut: () => void
-  signOutLoading: boolean
+  pools: DashboardPoolCardData[]
+  poolsLoading: boolean
+}
+
+function StatPlaceholder() {
+  return (
+    <span className="inline-block h-9 w-12 animate-pulse rounded bg-muted/40" />
+  )
 }
 
 export function MobileProfileTab({
-  onSignOut,
-  signOutLoading,
+  pools,
+  poolsLoading,
 }: MobileProfileTabProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
@@ -39,6 +48,12 @@ export function MobileProfileTab({
   const [historyLoading, setHistoryLoading] = useState(true)
   const [historyError, setHistoryError] = useState<string | null>(null)
 
+  const [historyExpanded, setHistoryExpanded] = useState(false)
+  const [quickStatsLoading, setQuickStatsLoading] = useState(true)
+  const [quickStatsError, setQuickStatsError] = useState<string | null>(null)
+  const [predictionsMade, setPredictionsMade] = useState<number | null>(null)
+  const [winRate, setWinRate] = useState<number | null>(null)
+
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
@@ -51,6 +66,29 @@ export function MobileProfileTab({
   )
 
   const canSaveDisplayName = useMemo(() => Boolean(editName.trim()), [editName])
+
+  const sportsEntries = useMemo(
+    () => buildProfileSportsEntries(pools),
+    [pools],
+  )
+
+  const loadQuickStats = useCallback(async (uid: string) => {
+    setQuickStatsLoading(true)
+    setQuickStatsError(null)
+
+    const { stats, error } = await fetchProfileQuickStats(supabase, uid)
+
+    if (error) {
+      setQuickStatsError(error)
+      setPredictionsMade(null)
+      setWinRate(null)
+    } else {
+      setPredictionsMade(stats.predictionsMade)
+      setWinRate(stats.winRate)
+    }
+
+    setQuickStatsLoading(false)
+  }, [])
 
   const loadProfile = useCallback(async () => {
     setProfileLoading(true)
@@ -110,7 +148,8 @@ export function MobileProfileTab({
   useEffect(() => {
     if (!userId) return
     void loadHistory(userId)
-  }, [userId, loadHistory])
+    void loadQuickStats(userId)
+  }, [userId, loadHistory, loadQuickStats])
 
   function openEditProfile() {
     setEditName(displayName)
@@ -219,74 +258,201 @@ export function MobileProfileTab({
           </button>
         </section>
 
-        <section className="flex items-center gap-5 rounded-2xl border border-border bg-card/50 px-5 py-5">
-          <Zap
-            className="h-10 w-10 shrink-0 text-primary"
-            aria-hidden
-          />
-          <div className="min-w-0 text-left">
+        <section className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-border bg-card/50 px-3 py-4 text-center">
+            <Zap
+              className="mx-auto h-5 w-5 text-primary"
+              aria-hidden
+            />
             <p
-              className="font-display text-5xl leading-none text-foreground"
+              className="mt-2 font-display text-2xl leading-none text-foreground"
               aria-busy={pointsLoading}
             >
-              {formattedPoints}
+              {pointsLoading ? <StatPlaceholder /> : formattedPoints}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">Total Points</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Total Points
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card/50 px-3 py-4 text-center">
+            <Target
+              className="mx-auto h-5 w-5 text-[#ffb300]"
+              aria-hidden
+            />
+            <p
+              className="mt-2 font-display text-2xl leading-none text-foreground"
+              aria-busy={quickStatsLoading}
+            >
+              {quickStatsLoading ? (
+                <StatPlaceholder />
+              ) : predictionsMade !== null ? (
+                predictionsMade.toLocaleString()
+              ) : (
+                '—'
+              )}
+            </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Predictions Made
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card/50 px-3 py-4 text-center">
+            <TrendingUp
+              className="mx-auto h-5 w-5 text-primary"
+              aria-hidden
+            />
+            <p
+              className="mt-2 font-display text-2xl leading-none text-foreground"
+              aria-busy={quickStatsLoading}
+            >
+              {quickStatsLoading ? (
+                <StatPlaceholder />
+              ) : winRate != null ? (
+                `${winRate}%`
+              ) : (
+                '—'
+              )}
+            </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">Win Rate</p>
           </div>
         </section>
 
+        {quickStatsError ? (
+          <p className="text-center text-xs text-destructive" role="alert">
+            {quickStatsError}
+          </p>
+        ) : null}
+
         <section>
           <h3 className="font-display text-2xl tracking-wide text-foreground">
-            POINT HISTORY
+            Your Pools
           </h3>
-
-          {historyLoading && transactions.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              Loading…
-            </p>
-          ) : historyError ? (
-            <p className="py-8 text-center text-sm text-destructive" role="alert">
-              {historyError}
-            </p>
-          ) : transactions.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              Your glory story starts here 🏆
+          {poolsLoading ? (
+            <p className="mt-3 text-sm text-muted-foreground">Loading pools…</p>
+          ) : pools.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              You are not in any pools yet.
             </p>
           ) : (
-            <ul className="mt-4 divide-y divide-border/50">
-              {transactions.map((tx) => {
-                const description = getPointsTransactionDescription(tx.reason)
-                return (
-                  <li
-                    key={tx.id}
-                    className="flex items-start gap-3 py-4"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground">{description}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatRelativeTimestamp(tx.created_at)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-sm font-medium text-primary">
-                      {formatPointsDelta(tx.points)}
-                    </span>
-                  </li>
-                )
-              })}
+            <ul className="mt-3 space-y-2">
+              {pools.map((pool) => (
+                <li
+                  key={pool.id}
+                  className="rounded-xl border border-border/90 bg-card/90 px-4 py-3"
+                >
+                  <p className="font-medium text-foreground">{pool.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {pool.eventName} · {pool.members}{' '}
+                    {pool.members === 1 ? 'player' : 'players'}
+                  </p>
+                </li>
+              ))}
             </ul>
           )}
         </section>
 
-        <div className="pb-2 pt-2">
+        <section>
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="font-display text-2xl tracking-wide text-foreground">
+              Sports you follow
+            </h3>
+            <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Preview
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Design mock — only Soccer is derived from your pools today.
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {sportsEntries.map((sport) => (
+              <li
+                key={sport.id}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm',
+                  sport.derivedFromPools
+                    ? 'border-border bg-card/80 text-foreground'
+                    : 'border-dashed border-border/70 bg-muted/20 text-muted-foreground',
+                )}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={sport.iconSrc}
+                  alt=""
+                  className="h-5 w-5 object-contain"
+                />
+                <span>{sport.name}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
           <button
             type="button"
-            onClick={onSignOut}
-            disabled={signOutLoading}
-            className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => setHistoryExpanded((open) => !open)}
+            aria-expanded={historyExpanded}
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 text-left transition-colors hover:bg-muted/30"
           >
-            {signOutLoading ? 'Signing out…' : 'Sign out'}
+            <h3 className="font-display text-2xl tracking-wide text-foreground">
+              Points history
+            </h3>
+            <ChevronDown
+              className={cn(
+                'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                historyExpanded && 'rotate-180',
+              )}
+              aria-hidden
+            />
           </button>
-        </div>
+
+          {historyExpanded ? (
+            <>
+              {historyLoading && transactions.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Loading…
+                </p>
+              ) : historyError ? (
+                <p
+                  className="py-8 text-center text-sm text-destructive"
+                  role="alert"
+                >
+                  {historyError}
+                </p>
+              ) : transactions.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Your glory story starts here 🏆
+                </p>
+              ) : (
+                <ul className="mt-2 divide-y divide-border/50 rounded-xl border border-border/90 bg-card/40 px-4">
+                  {transactions.map((tx) => {
+                    const description = getPointsTransactionDescription(
+                      tx.reason,
+                    )
+                    return (
+                      <li
+                        key={tx.id}
+                        className="flex items-start gap-3 py-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-foreground">
+                            {description}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {formatRelativeTimestamp(tx.created_at)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-medium text-primary">
+                          {formatPointsDelta(tx.points)}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </>
+          ) : null}
+        </section>
       </div>
 
       {editOpen ? (

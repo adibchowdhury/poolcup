@@ -2,17 +2,28 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { resolveAvatarFilename } from '@/src/lib/avatars'
+import { MobileAppDrawer } from '../components/mobile-app-drawer'
 import { MobileMatchDetail } from '../components/mobile-match-detail'
+import { MobileOverlayPlaceholderPage } from '../components/mobile-overlay-placeholder-page'
 import { MobilePoolsTab } from '../components/mobile-pools-tab'
 import { MobilePoolDetail } from '../components/mobile-pool-detail'
 import { MobileMatchesTab } from '../components/mobile-matches-tab'
 import { MobileChatTab, type ChatView } from '../components/mobile-chat-tab'
 import { MobileProfileTab } from '../components/mobile-profile-tab'
+import { MobileProfilePopover } from '../components/mobile-profile-popover'
+import {
+  MOBILE_TOP_BAR_SCROLL_PAD_CLASS,
+  MobileTopBar,
+} from '../components/mobile-top-bar'
 import {
   MOBILE_TAB_BAR_SCROLL_PAD_CLASS,
   MobileTabBar,
   type MobileTabId,
 } from '../components/mobile-tab-bar'
+import { MobileSplashOverlay } from '../components/mobile-splash-overlay'
+import { fetchUserProfile } from '../lib/fetch-profile-data'
+import type { MobileOverlayPageId } from '../lib/mobile-overlay-pages'
 import { supabase } from '../lib/supabase-mobile'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
 import type { PoolChatInboxItem } from '@/src/lib/pool-chats'
@@ -40,6 +51,17 @@ export default function MobileHomePage() {
   const activeTabRef = useRef<MobileTabId>('pools')
   const chatViewRef = useRef<ChatView>('list')
   const matchDetailRef = useRef<MatchDetailState | null>(null)
+  const drawerOpenRef = useRef(false)
+  const profilePopoverOpenRef = useRef(false)
+  const overlayPageRef = useRef<MobileOverlayPageId | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
+  const [overlayPage, setOverlayPage] = useState<MobileOverlayPageId | null>(
+    null,
+  )
+  const [userId, setUserId] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [avatarFilename, setAvatarFilename] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
@@ -48,11 +70,16 @@ export default function MobileHomePage() {
   const [pools, setPools] = useState<DashboardPoolCardData[]>([])
   const [poolsLoading, setPoolsLoading] = useState(false)
   const [poolsError, setPoolsError] = useState<string | null>(null)
+  // Cover WebView from first paint until native splash handoff completes (native only).
+  const [splashOverlayVisible, setSplashOverlayVisible] = useState(true)
 
   viewRef.current = view
   activeTabRef.current = activeTab
   chatViewRef.current = chatView
   matchDetailRef.current = matchDetail
+  drawerOpenRef.current = drawerOpen
+  profilePopoverOpenRef.current = profilePopoverOpen
+  overlayPageRef.current = overlayPage
 
   useEffect(() => {
     async function configureStatusBar() {
@@ -73,30 +100,62 @@ export default function MobileHomePage() {
 
   useEffect(() => {
     let cancelled = false
-    let timeoutId: number | undefined
+    let hideTimeoutId: number | undefined
 
-    async function scheduleHideSplashScreen() {
+    async function runHybridSplash() {
       try {
         const { Capacitor } = await import('@capacitor/core')
-        if (!Capacitor.isNativePlatform() || cancelled) return
+        if (cancelled) return
+
+        if (!Capacitor.isNativePlatform()) {
+          setSplashOverlayVisible(false)
+          return
+        }
 
         const { SplashScreen } = await import('@capacitor/splash-screen')
-        timeoutId = window.setTimeout(() => {
+
+        // Layer plugin image before releasing the Android 12 system splash when possible.
+        await SplashScreen.show({ autoHide: false, fadeInDuration: 0 })
+        if (cancelled) return
+
+        // Release system splash; in-app overlay covers the WebView during any native gap.
+        await SplashScreen.hide({ fadeOutDuration: 0 })
+        if (cancelled) return
+
+        // isVisible is now false — ensure the full-screen plugin ImageView is showing.
+        await SplashScreen.show({ autoHide: false, fadeInDuration: 0 })
+        if (cancelled) return
+
+        hideTimeoutId = window.setTimeout(() => {
           if (!cancelled) {
-            void SplashScreen.hide({ fadeOutDuration: 300 })
+            void (async () => {
+              try {
+                await SplashScreen.hide({ fadeOutDuration: 300 })
+                await new Promise<void>((resolve) => {
+                  window.setTimeout(resolve, 300)
+                })
+              } catch {
+                // ignore
+              }
+              if (!cancelled) {
+                setSplashOverlayVisible(false)
+              }
+            })()
           }
-        }, 1800)
+        }, 2000)
       } catch {
-        // splash plugin unavailable — ignore on web/static export
+        if (!cancelled) {
+          setSplashOverlayVisible(false)
+        }
       }
     }
 
-    void scheduleHideSplashScreen()
+    void runHybridSplash()
 
     return () => {
       cancelled = true
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId)
+      if (hideTimeoutId !== undefined) {
+        window.clearTimeout(hideTimeoutId)
       }
     }
   }, [])
@@ -140,6 +199,12 @@ export default function MobileHomePage() {
         setChatView('list')
         setSelectedChatPool(null)
         setMatchDetail(null)
+        setDrawerOpen(false)
+        setProfilePopoverOpen(false)
+        setOverlayPage(null)
+        setUserId(null)
+        setDisplayName(null)
+        setAvatarFilename(null)
       }
     })
 
@@ -148,6 +213,43 @@ export default function MobileHomePage() {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (status !== 'signedIn') return
+
+    let cancelled = false
+
+    async function loadProfile() {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (cancelled) return
+
+      if (userError || !user) {
+        setUserId(null)
+        setDisplayName(null)
+        setAvatarFilename(null)
+        return
+      }
+
+      setUserId(user.id)
+
+      const { profile } = await fetchUserProfile(supabase, user.id)
+
+      if (cancelled) return
+
+      setDisplayName(profile?.display_name?.trim() ?? null)
+      setAvatarFilename(resolveAvatarFilename(profile?.avatar))
+    }
+
+    void loadProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [status])
 
   useEffect(() => {
     if (status !== 'signedIn') return
@@ -202,6 +304,21 @@ export default function MobileHomePage() {
       if (removed) return
 
       listener = await App.addListener('backButton', () => {
+        if (drawerOpenRef.current) {
+          setDrawerOpen(false)
+          return
+        }
+
+        if (profilePopoverOpenRef.current) {
+          setProfilePopoverOpen(false)
+          return
+        }
+
+        if (overlayPageRef.current) {
+          setOverlayPage(null)
+          return
+        }
+
         if (matchDetailRef.current) {
           setMatchDetail(null)
           return
@@ -246,9 +363,38 @@ export default function MobileHomePage() {
     }
   }, [status])
 
+  function openDrawer() {
+    setProfilePopoverOpen(false)
+    setDrawerOpen(true)
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false)
+  }
+
+  function openProfilePopover() {
+    setDrawerOpen(false)
+    setProfilePopoverOpen(true)
+  }
+
+  function closeProfilePopover() {
+    setProfilePopoverOpen(false)
+  }
+
+  function openOverlayPage(pageId: MobileOverlayPageId) {
+    setOverlayPage(pageId)
+  }
+
+  function closeOverlayPage() {
+    setOverlayPage(null)
+  }
+
   function handleTabChange(tab: MobileTabId) {
     setActiveTab(tab)
     setMatchDetail(null)
+    setOverlayPage(null)
+    setProfilePopoverOpen(false)
+    setDrawerOpen(false)
     if (tab !== 'pools') {
       setView('list')
       setSelectedPool(null)
@@ -311,6 +457,7 @@ export default function MobileHomePage() {
 
   return (
     <div className="app-shell flex min-h-full flex-col bg-background text-foreground">
+      {splashOverlayVisible ? <MobileSplashOverlay /> : null}
       {status === 'checking' && (
         <div className="flex flex-1 items-center justify-center px-6 py-8">
           <p className="text-muted-foreground">Loading...</p>
@@ -387,60 +534,77 @@ export default function MobileHomePage() {
 
       {status === 'signedIn' ? (
         <div className="flex min-h-0 flex-1 flex-col">
+          <MobileTopBar
+            displayName={displayName}
+            email={signedInEmail}
+            avatarFilename={avatarFilename}
+            onOpenDrawer={openDrawer}
+            onOpenProfilePopover={openProfilePopover}
+          />
+
+          <MobileAppDrawer
+            open={drawerOpen}
+            userId={userId}
+            signOutLoading={loading}
+            onClose={closeDrawer}
+            onSignOut={() => void handleSignOut()}
+            onOpenOverlay={openOverlayPage}
+          />
+
+          <MobileProfilePopover
+            open={profilePopoverOpen}
+            displayName={displayName}
+            email={signedInEmail}
+            avatarFilename={avatarFilename}
+            onClose={closeProfilePopover}
+            onOpenProfileTab={() => handleTabChange('profile')}
+          />
+
           <div
-            className={`flex min-h-0 flex-1 flex-col ${MOBILE_TAB_BAR_SCROLL_PAD_CLASS}`}
+            className={`flex min-h-0 flex-1 flex-col ${MOBILE_TOP_BAR_SCROLL_PAD_CLASS} ${MOBILE_TAB_BAR_SCROLL_PAD_CLASS}`}
           >
-            {matchDetail ? (
+            {overlayPage ? (
+              <MobileOverlayPlaceholderPage
+                pageId={overlayPage}
+                onBack={closeOverlayPage}
+              />
+            ) : null}
+
+            {!overlayPage && matchDetail ? (
               <MobileMatchDetail
                 matchId={matchDetail.matchId}
                 onBack={closeMatchDetail}
               />
             ) : null}
 
-            {!matchDetail && activeTab === 'pools' && view === 'detail' && selectedPool ? (
+            {!overlayPage &&
+            !matchDetail &&
+            activeTab === 'pools' &&
+            view === 'detail' &&
+            selectedPool ? (
               <MobilePoolDetail pool={selectedPool} onBack={closePoolDetail} />
             ) : null}
 
-            {!matchDetail && activeTab === 'pools' && view === 'list' ? (
-              <>
-                <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4">
-                  <div>
-                    <h1 className="font-display text-3xl tracking-wide text-foreground">
-                      PoolCup
-                    </h1>
-                    {signedInEmail ? (
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {signedInEmail}
-                      </p>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleSignOut()}
-                    disabled={loading}
-                    className="shrink-0 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loading ? 'Signing out…' : 'Sign out'}
-                  </button>
-                </header>
-
-                <main className="flex-1 overflow-y-auto px-4 py-6">
-                  <MobilePoolsTab
-                    pools={pools}
-                    poolsLoading={poolsLoading}
-                    poolsError={poolsError}
-                    onOpenPool={openPoolDetail}
-                    onOpenMatch={openMatchDetail}
-                  />
-                </main>
-              </>
+            {!overlayPage &&
+            !matchDetail &&
+            activeTab === 'pools' &&
+            view === 'list' ? (
+              <main className="flex-1 overflow-y-auto px-4 py-6">
+                <MobilePoolsTab
+                  pools={pools}
+                  poolsLoading={poolsLoading}
+                  poolsError={poolsError}
+                  onOpenPool={openPoolDetail}
+                  onOpenMatch={openMatchDetail}
+                />
+              </main>
             ) : null}
 
-            {!matchDetail && activeTab === 'matches' ? (
+            {!overlayPage && !matchDetail && activeTab === 'matches' ? (
               <MobileMatchesTab onOpenMatch={openMatchDetail} />
             ) : null}
 
-            {activeTab === 'chat' ? (
+            {!overlayPage && activeTab === 'chat' ? (
               <MobileChatTab
                 view={chatView}
                 selectedPool={selectedChatPool}
@@ -449,10 +613,10 @@ export default function MobileHomePage() {
               />
             ) : null}
 
-            {activeTab === 'profile' ? (
+            {!overlayPage && activeTab === 'profile' ? (
               <MobileProfileTab
-                onSignOut={() => void handleSignOut()}
-                signOutLoading={loading}
+                pools={pools}
+                poolsLoading={poolsLoading}
               />
             ) : null}
           </div>

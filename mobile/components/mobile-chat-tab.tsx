@@ -41,7 +41,7 @@ function ChatInboxRow({
         onClick={onOpen}
         className={cn(
           'flex w-full cursor-pointer gap-3 rounded-xl border border-border/90 bg-card/90 px-4 py-3.5 text-left transition-colors',
-          'hover:border-primary/40 hover:bg-card',
+          'hover:border-border hover:bg-card',
         )}
       >
         <div className="min-w-0 flex-1">

@@ -10,7 +10,7 @@ export const KNOCKOUT_BANNER_DISMISS_STORAGE_KEY =
   'poolcup_banner_knockout_set_dismissed'
 
 const NOTICE_CLASS =
-  'relative rounded-lg border border-primary/30 border-l-4 border-l-primary bg-[#0d1f14] px-4 py-3 pr-12 text-sm leading-relaxed'
+  'relative rounded-lg border border-border/80 border-l-4 border-l-white/20 bg-card/80 px-4 py-3 pr-12 text-sm leading-relaxed'
 
 type MobileKnockoutBannerProps = {
   onStubAction: () => void

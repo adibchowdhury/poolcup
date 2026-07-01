@@ -1082,6 +1082,10 @@ export function PredictionMatchCard({
                 round={prediction.round}
                 advancingTeam={prediction.advancingTeam}
                 currentUserId={currentUserId!}
+                team1Name={prediction.team1Name}
+                team2Name={prediction.team2Name}
+                team1Flag={prediction.team1Flag}
+                team2Flag={prediction.team2Flag}
               />
             ) : null}
           </div>

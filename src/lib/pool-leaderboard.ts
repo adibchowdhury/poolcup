@@ -110,20 +110,9 @@ function hasLeaderboardCacheData(
   return (cacheRows?.length ?? 0) > 0
 }
 
-export async function fetchPoolLeaderboardPointBreakdown(
-  supabase: SupabaseClient,
-  poolId: string,
-  scoringStyle: MatchScoringStyle = 'classic',
-): Promise<{
-  breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]>
-  error: string | null
-}> {
-  const breakdownByMember = new Map<string, LeaderboardPointBreakdownItem[]>()
+const PREDICTIONS_BREAKDOWN_BATCH_SIZE = 1000
 
-  const { data, error } = await supabase
-    .from('predictions')
-    .select(
-      `
+const PREDICTIONS_BREAKDOWN_SELECT = `
       member_id,
       match_id,
       pred_team1,
@@ -142,16 +131,62 @@ export async function fetchPoolLeaderboardPointBreakdown(
         is_final,
         locked_at
       )
-    `,
-    )
-    .eq('pool_id', poolId)
-    .eq('matches.is_final', true)
+    `
 
-  if (error) {
-    return { breakdownByMember, error: error.message }
+async function fetchAllPoolPredictionsForBreakdown(
+  supabase: SupabaseClient,
+  poolId: string,
+): Promise<{ rows: PredictionBreakdownQueryRow[]; error: string | null }> {
+  const rows: PredictionBreakdownQueryRow[] = []
+  let offset = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('predictions')
+      .select(PREDICTIONS_BREAKDOWN_SELECT)
+      .eq('pool_id', poolId)
+      .eq('matches.is_final', true)
+      .order('match_id', { ascending: true })
+      .order('member_id', { ascending: true })
+      .range(offset, offset + PREDICTIONS_BREAKDOWN_BATCH_SIZE - 1)
+
+    if (error) {
+      return { rows, error: error.message }
+    }
+
+    const batch = (data ?? []) as PredictionBreakdownQueryRow[]
+    rows.push(...batch)
+
+    if (batch.length < PREDICTIONS_BREAKDOWN_BATCH_SIZE) {
+      break
+    }
+
+    offset += PREDICTIONS_BREAKDOWN_BATCH_SIZE
   }
 
-  for (const row of (data ?? []) as PredictionBreakdownQueryRow[]) {
+  return { rows, error: null }
+}
+
+export async function fetchPoolLeaderboardPointBreakdown(
+  supabase: SupabaseClient,
+  poolId: string,
+  scoringStyle: MatchScoringStyle = 'classic',
+): Promise<{
+  breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]>
+  error: string | null
+}> {
+  const breakdownByMember = new Map<string, LeaderboardPointBreakdownItem[]>()
+
+  const { rows, error } = await fetchAllPoolPredictionsForBreakdown(
+    supabase,
+    poolId,
+  )
+
+  if (error) {
+    return { breakdownByMember, error }
+  }
+
+  for (const row of rows) {
     const matchRaw = row.matches
     const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
     if (!match) continue

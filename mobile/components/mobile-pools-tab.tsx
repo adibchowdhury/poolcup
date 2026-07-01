@@ -7,10 +7,8 @@ import {
   useComingSoonToast,
 } from '../lib/use-coming-soon-toast'
 import { MobileDashboardInsights } from './mobile-dashboard-insights'
-import { MobileKnockoutBanner } from './mobile-knockout-banner'
 import { MobileLiveScoreboard } from './mobile-live-scoreboard'
 import { MobilePoolCard } from './mobile-pool-card'
-import { MobileWorldCupBanner } from './mobile-world-cup-banner'
 
 type MobilePoolsTabProps = {
   pools: DashboardPoolCardData[]
@@ -34,8 +32,6 @@ export function MobilePoolsTab({
       <ComingSoonToast message={comingSoonMessage} />
 
       <div className="mx-auto w-full max-w-lg space-y-4">
-        <MobileKnockoutBanner onStubAction={() => showComingSoon()} />
-        <MobileWorldCupBanner />
         <MobileLiveScoreboard onOpenMatch={onOpenMatch} />
 
         <div className="flex items-center justify-between gap-3 pt-1">

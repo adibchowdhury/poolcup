@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase-mobile'
 const FALLBACK_OPENING_KICKOFF_MS = Date.parse('2026-06-11T19:00:00.000Z')
 
 const NOTICE_CLASS =
-  'rounded-lg border border-primary/30 border-l-4 border-l-primary bg-[#0d1f14] px-4 py-3 text-sm leading-relaxed'
+  'rounded-lg border border-border/80 border-l-4 border-l-white/20 bg-card/80 px-4 py-3 text-sm leading-relaxed'
 
 function formatDaysHoursRemaining(ms: number): string {
   if (ms <= 0) return '0 days 0 hours'
