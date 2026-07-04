@@ -12,7 +12,7 @@ export async function fetchWinnerKnockoutRoundMatches(
 ): Promise<{ matchesByNumber: R32BracketMatchesByNumber; error: string | null }> {
   const { data: matchRows, error: matchesError } = await supabase
     .from('matches')
-    .select('id, match_number, team1_name, team2_name, locked_at')
+    .select('id, match_number, team1_name, team2_name, kickoff_at, locked_at')
     .eq('round', round)
     .order('match_number', { ascending: true })
 
@@ -57,6 +57,7 @@ export async function fetchWinnerKnockoutRoundMatches(
       matchNumber: row.match_number,
       team1Name: row.team1_name,
       team2Name: row.team2_name,
+      kickoffAt: row.kickoff_at ?? null,
       lockedAt: row.locked_at,
       myPick: pick,
       savedPick: pick,

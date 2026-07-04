@@ -6,6 +6,7 @@ export type R32BracketMatchView = {
   matchNumber: number
   team1Name: string
   team2Name: string
+  kickoffAt: string | null
   lockedAt: string | null
   myPick: 1 | 2 | null
   savedPick: 1 | 2 | null

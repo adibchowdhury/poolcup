@@ -22,6 +22,7 @@ import {
   getR16ProjectedSides,
   type R32BracketMatchView,
 } from '@/src/lib/winner-only-r32-bracket'
+import { formatKickoffCompactOrNull } from '@/src/lib/match-kickoff-display'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 import { KnockoutBracketMobileList } from '@/components/predict/knockout-bracket-mobile'
 
@@ -273,6 +274,21 @@ function StaticKnockoutMatchupBlock({
   )
 }
 
+function KnockoutMatchKickoffLine({
+  kickoffAt,
+}: {
+  kickoffAt: string | null | undefined
+}) {
+  const formatted = formatKickoffCompactOrNull(kickoffAt)
+  if (!formatted) return null
+
+  return (
+    <p className="mb-0.5 truncate px-0.5 text-center text-[8px] leading-tight text-[#64748b] sm:text-[9px]">
+      {formatted}
+    </p>
+  )
+}
+
 function R32KnockoutMatchupBlock({
   label,
   registerRef,
@@ -306,6 +322,7 @@ function R32KnockoutMatchupBlock({
           </span>
         ) : null}
       </div>
+      <KnockoutMatchKickoffLine kickoffAt={match?.kickoffAt} />
       <div
         ref={registerRef}
         className="w-full min-w-0 rounded-md border border-[#1e293b]/90 bg-[#0a1018]/60 px-2 py-1.5 shadow-sm"

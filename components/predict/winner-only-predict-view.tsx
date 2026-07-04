@@ -190,65 +190,22 @@ export function WinnerOnlyPredictView({
 
     async function loadR32Bracket() {
       try {
-        const { data: matchRows, error: matchesError } = await supabase
-          .from('matches')
-          .select('id, match_number, team1_name, team2_name, locked_at')
-          .eq('round', 'r32')
+        const { matchesByNumber, error } = await fetchWinnerKnockoutRoundMatches(
+          supabase,
+          'r32',
+          pool.id,
+          memberId,
+        )
 
         if (cancelled) return
 
-        if (matchesError) {
-          console.error(
-            '[WinnerOnly] Failed to load r32 matches:',
-            matchesError.message,
-          )
+        if (error) {
+          console.error('[WinnerOnly] Failed to load r32 matches:', error)
           setR32MatchesByNumber(new Map())
           return
         }
 
-        const rows = matchRows ?? []
-        const matchIds = rows.map((row) => row.id)
-
-        let pickByMatchId = new Map<string, 1 | 2>()
-        if (matchIds.length > 0) {
-          const { data: predictionRows, error: predictionsError } =
-            await supabase
-              .from('predictions')
-              .select('match_id, advance_pick')
-              .eq('pool_id', pool.id)
-              .eq('member_id', memberId)
-              .in('match_id', matchIds)
-
-          if (cancelled) return
-
-          if (predictionsError) {
-            console.error(
-              '[WinnerOnly] Failed to load r32 predictions:',
-              predictionsError.message,
-            )
-          } else {
-            for (const row of predictionRows ?? []) {
-              if (row.advance_pick === 1 || row.advance_pick === 2) {
-                pickByMatchId.set(row.match_id, row.advance_pick)
-              }
-            }
-          }
-        }
-
-        const map: R32BracketMatchesByNumber = new Map()
-        for (const row of rows) {
-          const pick = pickByMatchId.get(row.id) ?? null
-          map.set(row.match_number, {
-            matchId: row.id,
-            matchNumber: row.match_number,
-            team1Name: row.team1_name,
-            team2Name: row.team2_name,
-            lockedAt: row.locked_at,
-            myPick: pick,
-            savedPick: pick,
-          })
-        }
-        setR32MatchesByNumber(map)
+        setR32MatchesByNumber(matchesByNumber)
       } finally {
         if (!cancelled) {
           setR32BracketLoaded(true)
