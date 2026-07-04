@@ -255,7 +255,6 @@ export function MobileMatchesTab({
   const isAll = selectedEventId === 'all'
   const isWorldCup = selectedEventId === 'wc'
   const isMockSport = !isAll && !isWorldCup
-  const selectedEvent = MOCK_SPORT_EVENTS.find((e) => e.id === selectedEventId)
   const allMockFixtures = useMemo(() => getAllMockFixtures(), [])
 
   const loadMatches = useCallback(async () => {
@@ -310,29 +309,8 @@ export function MobileMatchesTab({
   }, [isAll, matches, allMockFixtures])
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 pb-6">
       <div className="mx-auto w-full max-w-lg">
-        <header className="mb-4 border-b border-border/50 pb-4">
-          <div className="flex items-start gap-3">
-            <Calendar
-              className="mt-0.5 h-6 w-6 shrink-0 text-primary"
-              aria-hidden
-            />
-            <div className="min-w-0">
-              <h2 className="font-display text-3xl tracking-wide text-foreground">
-                UPCOMING GAMES
-              </h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {isAll
-                  ? 'Combined schedule across World Cup and mock sports previews.'
-                  : isWorldCup
-                    ? 'Track every upcoming World Cup fixture and see when predictions lock.'
-                    : `Mock ${selectedEvent?.label ?? 'sport'} schedule for design preview only.`}
-              </p>
-            </div>
-          </div>
-        </header>
-
         <div className="mb-5">
           <MobileEventSelector
             events={MOCK_SPORT_EVENTS}

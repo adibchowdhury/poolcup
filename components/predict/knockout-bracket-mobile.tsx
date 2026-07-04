@@ -12,7 +12,6 @@ import {
 } from '@/src/lib/r32-bracket-preview'
 import {
   countR32AdvancePicks,
-  getR16ProjectedSides,
   getR32R16AdvanceHint,
   isR32PickPersisted,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
@@ -496,39 +495,6 @@ export function KnockoutBracketMobileList({
   if (tab === 'r32') {
     if (!r32Bracket) return null
     return <R32MobileGameCardPicker r32Bracket={r32Bracket} />
-  }
-
-  if (tab === 'r16') {
-    const slots: Array<{ half: BracketSide; index: number }> = [
-      ...Array.from({ length: 4 }, (_, index) => ({
-        half: 'left' as const,
-        index,
-      })),
-      ...Array.from({ length: 4 }, (_, index) => ({
-        half: 'right' as const,
-        index,
-      })),
-    ]
-
-    return (
-      <div className="flex w-full min-w-0 flex-col gap-2">
-        {slots.map(({ half, index }) => {
-          const { home, away } = r32Bracket
-            ? getR16ProjectedSides(half, index, r32Bracket.matchesByNumber)
-            : { home: null, away: null }
-
-          return (
-            <KnockoutMobileReadOnlyCard
-              key={`${half}-r16-${index}`}
-              matchLabel={labelForKnockoutRound('r16', half, index)}
-              roundLabel={roundDisplayLabel('r16')}
-              homeName={home}
-              awayName={away}
-            />
-          )
-        })}
-      </div>
-    )
   }
 
   if (tab === 'qf') {

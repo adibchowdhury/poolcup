@@ -18,6 +18,7 @@ import {
   r32MatchNumberForPreviewSlot,
 } from '@/src/lib/r32-bracket-preview'
 import {
+  getR16MatchForVisualSlot,
   getR16ProjectedSides,
   type R32BracketMatchView,
 } from '@/src/lib/winner-only-r32-bracket'
@@ -29,6 +30,9 @@ export type R32BracketInteractiveProps = {
   nowMs: number
   onAdvancePick: (matchId: string, pick: 1 | 2) => void
 }
+
+/** Alias — same shape for R16 and other knockout pick rounds. */
+export type KnockoutRoundBracketProps = R32BracketInteractiveProps
 
 const CONNECTOR_COLOR = BRACKET_LAYOUT.connectorColor
 
@@ -57,6 +61,7 @@ export type KnockoutTabRoundPair = {
 
 export type KnockoutBracketPreviewProps = KnockoutTabRoundPair & {
   r32Bracket?: R32BracketInteractiveProps
+  r16Bracket?: KnockoutRoundBracketProps
 }
 
 type BracketHalf = 'left' | 'right'
@@ -108,6 +113,18 @@ export function TbdSlot() {
     >
       <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
       <span className="truncate text-[11px] text-[#4a5568]">TBD</span>
+    </div>
+  )
+}
+
+function ToBeDecidedSideSlot() {
+  return (
+    <div
+      aria-hidden
+      className="flex h-9 w-full min-w-0 items-center gap-2 rounded border border-dashed border-[#2a3545] bg-[#0a1018]/40 px-3 opacity-95"
+    >
+      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-dashed border-[#334155]" />
+      <span className="truncate text-[11px] text-[#64748b]">To be decided</span>
     </div>
   )
 }
@@ -321,6 +338,55 @@ function R32KnockoutMatchupBlock({
   )
 }
 
+function R16KnockoutMatchupBlock({
+  label,
+  registerRef,
+  match,
+  bracket,
+}: {
+  label: string
+  registerRef?: RefCallback<HTMLElement>
+  match: R32BracketMatchView | null
+  bracket: KnockoutRoundBracketProps
+}) {
+  if (!match) {
+    return (
+      <article
+        className="flex w-full min-w-0 flex-col opacity-95"
+        aria-label={`${label} to be decided`}
+      >
+        <div className="mb-1 flex min-w-0 items-center justify-center gap-1 px-0.5">
+          <p className="truncate text-center text-[8px] font-semibold uppercase tracking-wide text-[#64748b] sm:text-[9px] min-[1100px]:text-[10px]">
+            {label}
+          </p>
+          <span className="shrink-0 text-[8px] font-semibold uppercase tracking-wide text-[#64748b]">
+            Locked
+          </span>
+        </div>
+        <div
+          ref={registerRef}
+          className="w-full min-w-0 rounded-md border border-[#1e293b]/90 bg-[#0a1018]/40 px-2 py-1.5 shadow-sm"
+        >
+          <ToBeDecidedSideSlot />
+          <p className="py-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-[#334155]">
+            vs
+          </p>
+          <ToBeDecidedSideSlot />
+        </div>
+      </article>
+    )
+  }
+
+  return (
+    <R32KnockoutMatchupBlock
+      label={label}
+      registerRef={registerRef}
+      match={match}
+      r32Bracket={bracket}
+    />
+  )
+}
+
 /** Standard bracket join: horizontal stubs → vertical rail → horizontal into target center. */
 function bracketPairConnectorLtr(
   p1x: number,
@@ -373,6 +439,7 @@ function SourceRoundColumn({
   width,
   registerMatchupRef,
   r32Bracket,
+  r16Bracket,
 }: {
   half: BracketHalf
   round: KnockoutPreviewRound
@@ -384,6 +451,7 @@ function SourceRoundColumn({
     index: number,
   ) => RefCallback<HTMLElement>
   r32Bracket?: R32BracketInteractiveProps
+  r16Bracket?: KnockoutRoundBracketProps
 }) {
   return (
     <div
@@ -412,6 +480,24 @@ function SourceRoundColumn({
                   registerRef={registerMatchupRef(half, round, index)}
                   match={match}
                   r32Bracket={r32Bracket}
+                />
+              )
+            }
+
+            if (round === 'r16' && r16Bracket) {
+              const match = getR16MatchForVisualSlot(
+                half,
+                index,
+                r16Bracket.matchesByNumber,
+              )
+
+              return (
+                <R16KnockoutMatchupBlock
+                  key={index}
+                  label={labelForMatchup(round, half, index)}
+                  registerRef={registerMatchupRef(half, round, index)}
+                  match={match}
+                  bracket={r16Bracket}
                 />
               )
             }
@@ -620,6 +706,7 @@ function DesktopTwoSidedKnockoutBracket({
   sourceRound,
   targetRound,
   r32Bracket,
+  r16Bracket,
 }: KnockoutBracketPreviewProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -728,6 +815,7 @@ function DesktopTwoSidedKnockoutBracket({
           width={columnWidth}
           registerMatchupRef={registerMatchupRef}
           r32Bracket={r32Bracket}
+          r16Bracket={r16Bracket}
         />
 
         <TargetRoundColumn
@@ -760,6 +848,7 @@ function DesktopTwoSidedKnockoutBracket({
           width={BRACKET_LAYOUT.rightR32ColumnWidth}
           registerMatchupRef={registerMatchupRef}
           r32Bracket={r32Bracket}
+          r16Bracket={r16Bracket}
         />
     </BracketScrollCenter>
   )
@@ -918,6 +1007,7 @@ export function KnockoutBracketPreview({
   sourceRound,
   targetRound,
   r32Bracket,
+  r16Bracket,
 }: KnockoutBracketPreviewProps) {
   const sourceCount = matchupsPerSide(sourceRound)
   const targetCount = matchupsPerSide(targetRound)
@@ -933,6 +1023,7 @@ export function KnockoutBracketPreview({
       sourceRound={sourceRound}
       targetRound={targetRound}
       r32Bracket={r32Bracket}
+      r16Bracket={r16Bracket}
     />
   )
 }
@@ -951,14 +1042,40 @@ export type KnockoutBracketTabId = keyof typeof KNOCKOUT_TAB_PREVIEW | 'sf' | 'f
 export function KnockoutBracketForTab({
   tab,
   r32Bracket,
+  r16Bracket,
   desktopOnly = false,
   mobileOnly = false,
 }: {
   tab: KnockoutBracketTabId
   r32Bracket?: R32BracketInteractiveProps
+  r16Bracket?: KnockoutRoundBracketProps
   desktopOnly?: boolean
   mobileOnly?: boolean
 }) {
+  if (tab === 'r16') {
+    const bracket = (
+      <KnockoutBracketPreview
+        sourceRound="r16"
+        targetRound="qf"
+        r16Bracket={r16Bracket}
+      />
+    )
+
+    if (desktopOnly) {
+      return bracket
+    }
+    if (mobileOnly) {
+      return <div className="md:hidden">{bracket}</div>
+    }
+
+    return (
+      <>
+        <div className="hidden md:block">{bracket}</div>
+        <div className="md:hidden">{bracket}</div>
+      </>
+    )
+  }
+
   let desktop: ReactNode
 
   if (tab === 'sf') {
@@ -971,7 +1088,7 @@ export function KnockoutBracketForTab({
       <KnockoutBracketPreview
         sourceRound={preview.sourceRound}
         targetRound={preview.targetRound}
-        r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+        r32Bracket={tab === 'r32' ? r32Bracket : undefined}
       />
     )
   }

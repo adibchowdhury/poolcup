@@ -2,6 +2,7 @@
 
 import {
   KnockoutBracketForTab,
+  type KnockoutRoundBracketProps,
   type R32BracketInteractiveProps,
 } from '@/components/predict/knockout-bracket-preview'
 import { BRACKET_FULL_BLEED_WRAPPER_STYLE } from '@/components/pool/bracket-visual-tree'
@@ -11,7 +12,7 @@ import type { KnockoutBracketTabId } from '@/components/predict/knockout-bracket
 
 export const KNOCKOUT_TAB_INTRO: Record<KnockoutBracketTabId, string> = {
   r32: 'Pick who advances in each Round of 32 matchup. Each pick locks at kickoff.',
-  r16: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.r32} is complete.`,
+  r16: 'Pick who advances in each Round of 16 matchup. Each pick locks at kickoff.',
   qf: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.r16} is complete.`,
   sf: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.qf} end.`,
   final: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.sf} end.`,
@@ -34,18 +35,21 @@ export function isKnockoutBracketTab(
 export function KnockoutBracketTab({
   tab,
   r32Bracket,
+  r16Bracket,
   pickError,
   embedded = false,
 }: {
   tab: Exclude<WinnerOnlyRoundTabId, 'bracket'>
   r32Bracket?: R32BracketInteractiveProps
+  r16Bracket?: KnockoutRoundBracketProps
   pickError?: string | null
   embedded?: boolean
 }) {
   const desktopBracket = (
     <KnockoutBracketForTab
       tab={tab}
-      r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+      r32Bracket={tab === 'r32' ? r32Bracket : undefined}
+      r16Bracket={tab === 'r16' ? r16Bracket : undefined}
       desktopOnly
     />
   )
@@ -69,14 +73,16 @@ export function KnockoutBracketTab({
       ) : (
         <KnockoutBracketForTab
           tab={tab}
-          r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+          r32Bracket={tab === 'r32' ? r32Bracket : undefined}
+          r16Bracket={tab === 'r16' ? r16Bracket : undefined}
         />
       )}
 
       {embedded ? (
         <KnockoutBracketForTab
           tab={tab}
-          r32Bracket={tab === 'r32' || tab === 'r16' ? r32Bracket : undefined}
+          r32Bracket={tab === 'r32' ? r32Bracket : undefined}
+          r16Bracket={tab === 'r16' ? r16Bracket : undefined}
           mobileOnly
         />
       ) : null}

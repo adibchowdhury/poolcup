@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
-import { resolveAvatarFilename } from '@/src/lib/avatars'
 import { MobileAppDrawer } from '../components/mobile-app-drawer'
 import { MobileMatchDetail } from '../components/mobile-match-detail'
 import { MobileOverlayPlaceholderPage } from '../components/mobile-overlay-placeholder-page'
+import { MobileJoinPool } from '../components/mobile-join-pool'
 import { MobilePoolsTab } from '../components/mobile-pools-tab'
 import { MobilePoolDetail } from '../components/mobile-pool-detail'
 import { MobileMatchesTab } from '../components/mobile-matches-tab'
@@ -23,13 +23,17 @@ import {
 } from '../components/mobile-tab-bar'
 import { MobileSplashOverlay } from '../components/mobile-splash-overlay'
 import { fetchUserProfile } from '../lib/fetch-profile-data'
+import {
+  toCurrentUserAvatarState,
+  type CurrentUserAvatarState,
+} from '../lib/resolve-current-user-avatar'
 import type { MobileOverlayPageId } from '../lib/mobile-overlay-pages'
 import { supabase } from '../lib/supabase-mobile'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
 import type { PoolChatInboxItem } from '@/src/lib/pool-chats'
 
 type AuthStatus = 'checking' | 'signedOut' | 'signedIn'
-type PoolsView = 'list' | 'detail'
+type PoolsView = 'list' | 'detail' | 'join'
 
 type MatchDetailState = {
   matchId: string
@@ -61,7 +65,11 @@ export default function MobileHomePage() {
   )
   const [userId, setUserId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
-  const [avatarFilename, setAvatarFilename] = useState<string | null>(null)
+  const [currentUserAvatar, setCurrentUserAvatar] =
+    useState<CurrentUserAvatarState>({
+      customAvatarUrl: null,
+      avatarPreset: null,
+    })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null)
@@ -204,7 +212,7 @@ export default function MobileHomePage() {
         setOverlayPage(null)
         setUserId(null)
         setDisplayName(null)
-        setAvatarFilename(null)
+        setCurrentUserAvatar({ customAvatarUrl: null, avatarPreset: null })
       }
     })
 
@@ -230,7 +238,7 @@ export default function MobileHomePage() {
       if (userError || !user) {
         setUserId(null)
         setDisplayName(null)
-        setAvatarFilename(null)
+        setCurrentUserAvatar({ customAvatarUrl: null, avatarPreset: null })
         return
       }
 
@@ -241,7 +249,7 @@ export default function MobileHomePage() {
       if (cancelled) return
 
       setDisplayName(profile?.display_name?.trim() ?? null)
-      setAvatarFilename(resolveAvatarFilename(profile?.avatar))
+      setCurrentUserAvatar(toCurrentUserAvatarState(profile))
     }
 
     void loadProfile()
@@ -326,7 +334,7 @@ export default function MobileHomePage() {
 
         if (
           activeTabRef.current === 'pools' &&
-          viewRef.current === 'detail'
+          (viewRef.current === 'detail' || viewRef.current === 'join')
         ) {
           setView('list')
           setSelectedPool(null)
@@ -413,6 +421,52 @@ export default function MobileHomePage() {
   function closeChatThread() {
     setChatView('list')
     setSelectedChatPool(null)
+  }
+
+  function openJoinPool() {
+    setMatchDetail(null)
+    setOverlayPage(null)
+    setProfilePopoverOpen(false)
+    setDrawerOpen(false)
+    setActiveTab('pools')
+    setView('join')
+    setSelectedPool(null)
+  }
+
+  function closeJoinPool() {
+    setView('list')
+  }
+
+  async function refreshPools(): Promise<DashboardPoolCardData[]> {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setPoolsError(userError?.message ?? 'Could not load your account')
+      setPools([])
+      return []
+    }
+
+    const { pools: rows, error: fetchError } = await fetchDashboardPools(
+      supabase,
+      user.id,
+    )
+
+    setPools(rows)
+    setPoolsError(fetchError)
+    return rows
+  }
+
+  async function handleJoinedPool(poolId: string) {
+    const rows = await refreshPools()
+    const joined = rows.find((pool) => pool.id === poolId)
+    if (joined) {
+      openPoolDetail(joined)
+    } else {
+      setView('list')
+    }
   }
 
   function openPoolDetail(pool: DashboardPoolCardData) {
@@ -537,7 +591,7 @@ export default function MobileHomePage() {
           <MobileTopBar
             displayName={displayName}
             email={signedInEmail}
-            avatarFilename={avatarFilename}
+            currentUserAvatar={currentUserAvatar}
             onOpenDrawer={openDrawer}
             onOpenProfilePopover={openProfilePopover}
           />
@@ -549,13 +603,14 @@ export default function MobileHomePage() {
             onClose={closeDrawer}
             onSignOut={() => void handleSignOut()}
             onOpenOverlay={openOverlayPage}
+            onJoinPool={openJoinPool}
           />
 
           <MobileProfilePopover
             open={profilePopoverOpen}
             displayName={displayName}
             email={signedInEmail}
-            avatarFilename={avatarFilename}
+            currentUserAvatar={currentUserAvatar}
             onClose={closeProfilePopover}
             onOpenProfileTab={() => handleTabChange('profile')}
           />
@@ -580,6 +635,18 @@ export default function MobileHomePage() {
             {!overlayPage &&
             !matchDetail &&
             activeTab === 'pools' &&
+            view === 'join' &&
+            userId ? (
+              <MobileJoinPool
+                userId={userId}
+                onBack={closeJoinPool}
+                onJoined={handleJoinedPool}
+              />
+            ) : null}
+
+            {!overlayPage &&
+            !matchDetail &&
+            activeTab === 'pools' &&
             view === 'detail' &&
             selectedPool ? (
               <MobilePoolDetail pool={selectedPool} onBack={closePoolDetail} />
@@ -596,6 +663,7 @@ export default function MobileHomePage() {
                   poolsError={poolsError}
                   onOpenPool={openPoolDetail}
                   onOpenMatch={openMatchDetail}
+                  onJoinPool={openJoinPool}
                 />
               </main>
             ) : null}
@@ -617,6 +685,7 @@ export default function MobileHomePage() {
               <MobileProfileTab
                 pools={pools}
                 poolsLoading={poolsLoading}
+                onCurrentUserAvatarChange={setCurrentUserAvatar}
               />
             ) : null}
           </div>

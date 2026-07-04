@@ -22,6 +22,7 @@ export async function fetchPointsTransactions(
 export type UserProfileRow = {
   display_name: string | null
   avatar: string | null
+  custom_avatar_url: string | null
 }
 
 export async function fetchUserProfile(
@@ -30,7 +31,7 @@ export async function fetchUserProfile(
 ): Promise<{ profile: UserProfileRow | null; error: string | null }> {
   const { data, error } = await supabase
     .from('users')
-    .select('display_name, avatar')
+    .select('display_name, avatar, custom_avatar_url')
     .eq('id', userId)
     .maybeSingle()
 

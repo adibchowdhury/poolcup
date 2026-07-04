@@ -13,6 +13,45 @@ export type R32BracketMatchView = {
 
 export type R32BracketMatchesByNumber = Map<number, R32BracketMatchView>
 
+/** Shared knockout-round bracket props (R32, R16, …). */
+export type KnockoutRoundBracketProps = {
+  matchesByNumber: R32BracketMatchesByNumber
+  nowMs: number
+  onAdvancePick: (matchId: string, pick: 1 | 2) => void
+}
+
+export const R16_BRACKET_SLOT_POSITIONS: Array<{
+  half: BracketSide
+  index: number
+}> = [
+  ...Array.from({ length: 4 }, (_, index) => ({
+    half: 'left' as const,
+    index,
+  })),
+  ...Array.from({ length: 4 }, (_, index) => ({
+    half: 'right' as const,
+    index,
+  })),
+]
+
+export function r16SlotLabel(half: BracketSide, index: number): string {
+  return half === 'left' ? `R16 M${index + 1}` : `R16 M${index + 5}`
+}
+
+/** Real R16 DB rows mapped to bracket slot order; missing slots are null. */
+export function buildR16TabDisplayRows(
+  matchesByNumber: R32BracketMatchesByNumber,
+): Array<{ slotLabel: string; match: R32BracketMatchView | null }> {
+  const sorted = [...matchesByNumber.values()].sort(
+    (a, b) => a.matchNumber - b.matchNumber,
+  )
+
+  return R16_BRACKET_SLOT_POSITIONS.map(({ half, index }, slotIndex) => ({
+    slotLabel: r16SlotLabel(half, index),
+    match: slotIndex < sorted.length ? (sorted[slotIndex] ?? null) : null,
+  }))
+}
+
 export const WINNER_ONLY_KNOCKOUT_PICK_TOTALS = {
   r32: 16,
   r16: 8,
@@ -64,6 +103,20 @@ export function advancePickScores(pick: 1 | 2): {
   predTeam2: number
 } {
   return pick === 1 ? { predTeam1: 1, predTeam2: 0 } : { predTeam1: 0, predTeam2: 1 }
+}
+
+/** Real R16 DB row for a visual bracket slot (half + index), or null if TBD. */
+export function getR16MatchForVisualSlot(
+  half: BracketSide,
+  index: number,
+  matchesByNumber: R32BracketMatchesByNumber,
+): R32BracketMatchView | null {
+  const slotIndex = R16_BRACKET_SLOT_POSITIONS.findIndex(
+    (pos) => pos.half === half && pos.index === index,
+  )
+  if (slotIndex < 0) return null
+  const rows = buildR16TabDisplayRows(matchesByNumber)
+  return rows[slotIndex]?.match ?? null
 }
 
 export function getR32PickedTeamName(

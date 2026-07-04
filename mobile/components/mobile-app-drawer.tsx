@@ -25,6 +25,7 @@ type MobileAppDrawerProps = {
   onClose: () => void
   onSignOut: () => void
   onOpenOverlay: (pageId: MobileOverlayPageId) => void
+  onJoinPool: () => void
 }
 
 type DrawerItem = {
@@ -41,6 +42,7 @@ export function MobileAppDrawer({
   onClose,
   onSignOut,
   onOpenOverlay,
+  onJoinPool,
 }: MobileAppDrawerProps) {
   useEffect(() => {
     if (!open) return
@@ -57,6 +59,12 @@ export function MobileAppDrawer({
   }
 
   const items: DrawerItem[] = [
+    {
+      id: 'join-pool',
+      label: 'Join a pool',
+      icon: UserPlus,
+      action: onJoinPool,
+    },
     {
       id: 'support-us',
       label: 'Support us',

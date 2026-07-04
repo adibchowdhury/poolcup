@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { getAvatarSrc } from '@/src/lib/avatars'
-import { initialsFromDisplayName } from '@/src/lib/pool-chat-helpers'
+import { CurrentUserAvatar } from './current-user-avatar'
+import type { CurrentUserAvatarState } from '../lib/resolve-current-user-avatar'
 
 type MobileProfilePopoverProps = {
   open: boolean
   displayName: string | null
   email: string | null
-  avatarFilename: string | null
+  currentUserAvatar: CurrentUserAvatarState
   onClose: () => void
   onOpenProfileTab: () => void
 }
@@ -18,7 +18,7 @@ export function MobileProfilePopover({
   open,
   displayName,
   email,
-  avatarFilename,
+  currentUserAvatar,
   onClose,
   onOpenProfileTab,
 }: MobileProfilePopoverProps) {
@@ -43,7 +43,6 @@ export function MobileProfilePopover({
   if (!open) return null
 
   const name = displayName?.trim() || 'Your profile'
-  const showImage = Boolean(avatarFilename?.trim())
 
   return (
     <>
@@ -59,20 +58,11 @@ export function MobileProfilePopover({
         aria-label="Profile menu"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
-            {showImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={getAvatarSrc(avatarFilename)}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-semibold text-foreground">
-                {initialsFromDisplayName(displayName ?? 'You')}
-              </span>
-            )}
-          </div>
+          <CurrentUserAvatar
+            custom_avatar_url={currentUserAvatar.customAvatarUrl}
+            avatar={currentUserAvatar.avatarPreset}
+            size="md"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium text-foreground">{name}</p>
             {email ? (

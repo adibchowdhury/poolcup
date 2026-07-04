@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, UserPlus } from 'lucide-react'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import {
   ComingSoonToast,
@@ -16,6 +16,7 @@ type MobilePoolsTabProps = {
   poolsError: string | null
   onOpenPool: (pool: DashboardPoolCardData) => void
   onOpenMatch: (matchId: string) => void
+  onJoinPool: () => void
 }
 
 export function MobilePoolsTab({
@@ -24,6 +25,7 @@ export function MobilePoolsTab({
   poolsError,
   onOpenPool,
   onOpenMatch,
+  onJoinPool,
 }: MobilePoolsTabProps) {
   const { comingSoonMessage, showComingSoon } = useComingSoonToast()
 
@@ -41,14 +43,24 @@ export function MobilePoolsTab({
               Your Active Pools
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={() => showComingSoon()}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            Create a Pool
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onJoinPool}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
+            >
+              <UserPlus className="h-4 w-4" aria-hidden />
+              Join
+            </button>
+            <button
+              type="button"
+              onClick={() => showComingSoon()}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Create
+            </button>
+          </div>
         </div>
 
         {poolsLoading ? (

@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
-import { ChevronDown, Pencil, Target, TrendingUp, X, Zap } from 'lucide-react'
+import { ChevronDown, Pencil, Target, TrendingUp, Upload, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
+import { getAvatarSrc } from '@/src/lib/avatars'
 import {
   formatPointsDelta,
   formatRelativeTimestamp,
@@ -18,12 +18,22 @@ import {
 } from '../lib/fetch-profile-data'
 import { fetchProfileQuickStats } from '../lib/fetch-profile-quick-stats'
 import { buildProfileSportsEntries } from '../lib/profile-sports-display'
+import {
+  toCurrentUserAvatarState,
+  type CurrentUserAvatarState,
+} from '../lib/resolve-current-user-avatar'
+import {
+  clearCurrentUserCustomAvatar,
+  uploadCurrentUserAvatar,
+} from '../lib/upload-current-user-avatar'
 import { supabase } from '../lib/supabase-mobile'
 import { useLiveTotalPoints } from '../lib/use-live-total-points'
+import { CurrentUserAvatar } from './current-user-avatar'
 
 type MobileProfileTabProps = {
   pools: DashboardPoolCardData[]
   poolsLoading: boolean
+  onCurrentUserAvatarChange?: (avatar: CurrentUserAvatarState) => void
 }
 
 function StatPlaceholder() {
@@ -35,12 +45,13 @@ function StatPlaceholder() {
 export function MobileProfileTab({
   pools,
   poolsLoading,
+  onCurrentUserAvatarChange,
 }: MobileProfileTabProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
-  const [selectedAvatar, setSelectedAvatar] = useState(() =>
-    resolveAvatarFilename(null),
-  )
+  const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(null)
+  const [avatarPreset, setAvatarPreset] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
 
@@ -58,7 +69,16 @@ export function MobileProfileTab({
   const [editName, setEditName] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
   const [avatarSaving, setAvatarSaving] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [removingCustomAvatar, setRemovingCustomAvatar] = useState(false)
   const [editMessage, setEditMessage] = useState<string | null>(null)
+
+  const syncCurrentUserAvatar = useCallback(
+    (next: CurrentUserAvatarState) => {
+      onCurrentUserAvatarChange?.(next)
+    },
+    [onCurrentUserAvatarChange],
+  )
 
   const { formattedPoints, loading: pointsLoading } = useLiveTotalPoints(
     userId,
@@ -115,11 +135,14 @@ export function MobileProfileTab({
       const name = profile?.display_name?.trim() ?? ''
       setDisplayName(name)
       setEditName(name)
-      setSelectedAvatar(resolveAvatarFilename(profile?.avatar))
+      const avatarState = toCurrentUserAvatarState(profile)
+      setCustomAvatarUrl(avatarState.customAvatarUrl)
+      setAvatarPreset(avatarState.avatarPreset)
+      syncCurrentUserAvatar(avatarState)
     }
 
     setProfileLoading(false)
-  }, [])
+  }, [syncCurrentUserAvatar])
 
   const loadHistory = useCallback(async (uid: string) => {
     setHistoryLoading(true)
@@ -163,22 +186,88 @@ export function MobileProfileTab({
   }
 
   async function handleSelectAvatar(filename: string) {
-    if (!userId || filename === selectedAvatar || avatarSaving) return
+    if (!userId || avatarSaving || uploadingAvatar) return
+    if (!customAvatarUrl && avatarPreset === filename) return
 
-    const previous = selectedAvatar
+    const previousPreset = avatarPreset
+    const previousCustom = customAvatarUrl
     setAvatarSaving(filename)
-    setSelectedAvatar(filename)
+    setAvatarPreset(filename)
+    setCustomAvatarUrl(null)
+    syncCurrentUserAvatar({
+      customAvatarUrl: null,
+      avatarPreset: filename,
+    })
 
     const { error } = await supabase
       .from('users')
-      .update({ avatar: filename })
+      .update({ avatar: filename, custom_avatar_url: null })
       .eq('id', userId)
 
     setAvatarSaving(null)
 
     if (error) {
-      setSelectedAvatar(previous)
+      setAvatarPreset(previousPreset)
+      setCustomAvatarUrl(previousCustom)
+      syncCurrentUserAvatar({
+        customAvatarUrl: previousCustom,
+        avatarPreset: previousPreset,
+      })
       setEditMessage(error.message)
+    }
+  }
+
+  async function handleAvatarFileSelected(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file || !userId || uploadingAvatar || avatarSaving) return
+
+    setUploadingAvatar(true)
+    setEditMessage(null)
+
+    const { publicUrl, error } = await uploadCurrentUserAvatar(supabase, file)
+
+    setUploadingAvatar(false)
+
+    if (error || !publicUrl) {
+      setEditMessage(error ?? 'Could not upload photo')
+      return
+    }
+
+    setCustomAvatarUrl(publicUrl)
+    syncCurrentUserAvatar({
+      customAvatarUrl: publicUrl,
+      avatarPreset,
+    })
+  }
+
+  async function handleRemoveCustomAvatar() {
+    if (!userId || !customAvatarUrl || removingCustomAvatar) return
+
+    setRemovingCustomAvatar(true)
+    setEditMessage(null)
+
+    const previousCustom = customAvatarUrl
+    setCustomAvatarUrl(null)
+    syncCurrentUserAvatar({
+      customAvatarUrl: null,
+      avatarPreset,
+    })
+
+    const { error } = await clearCurrentUserCustomAvatar(supabase, userId)
+
+    setRemovingCustomAvatar(false)
+
+    if (error) {
+      setCustomAvatarUrl(previousCustom)
+      syncCurrentUserAvatar({
+        customAvatarUrl: previousCustom,
+        avatarPreset,
+      })
+      setEditMessage(error)
     }
   }
 
@@ -240,10 +329,10 @@ export function MobileProfileTab({
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6">
       <div className="mx-auto w-full max-w-lg space-y-8">
         <section className="flex flex-col items-center text-center">
-          <img
-            src={getAvatarSrc(selectedAvatar)}
-            alt=""
-            className="h-48 w-auto max-w-full object-contain object-bottom"
+          <CurrentUserAvatar
+            custom_avatar_url={customAvatarUrl}
+            avatar={avatarPreset}
+            size="hero"
           />
           <h2 className="mt-4 font-display text-4xl tracking-wide text-foreground">
             {shownName}
@@ -512,11 +601,58 @@ export function MobileProfileTab({
                   Choose Your Avatar
                 </h5>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Pick a character for your profile. Changes save instantly.
+                  Upload a photo or pick a preset character. Changes save
+                  instantly.
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-3">
+
+                <div className="mt-4 flex flex-col items-center gap-3">
+                  <CurrentUserAvatar
+                    custom_avatar_url={customAvatarUrl}
+                    avatar={avatarPreset}
+                    size="lg"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => void handleAvatarFileSelected(event)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={
+                      uploadingAvatar ||
+                      Boolean(avatarSaving) ||
+                      removingCustomAvatar
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Upload className="h-4 w-4" aria-hidden />
+                    {uploadingAvatar ? 'Uploading…' : 'Upload photo'}
+                  </button>
+                  {customAvatarUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveCustomAvatar()}
+                      disabled={
+                        removingCustomAvatar ||
+                        uploadingAvatar ||
+                        Boolean(avatarSaving)
+                      }
+                      className="text-sm text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {removingCustomAvatar
+                        ? 'Removing…'
+                        : 'Remove custom photo'}
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
                   {MOBILE_AVATAR_FILENAMES.map((filename) => {
-                    const isSelected = selectedAvatar === filename
+                    const isSelected =
+                      !customAvatarUrl && avatarPreset === filename
                     const isSaving = avatarSaving === filename
                     const avatarLabel = filename.replace(/\.[^.]+$/, '')
 
@@ -525,7 +661,11 @@ export function MobileProfileTab({
                         key={filename}
                         type="button"
                         onClick={() => void handleSelectAvatar(filename)}
-                        disabled={Boolean(avatarSaving)}
+                        disabled={
+                          uploadingAvatar ||
+                          Boolean(avatarSaving) ||
+                          removingCustomAvatar
+                        }
                         aria-pressed={isSelected}
                         aria-label={`Select ${avatarLabel} avatar`}
                         className={cn(

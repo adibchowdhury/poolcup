@@ -1,4 +1,4 @@
-import { teamsMatchOrderedForFixtureSync } from '@/src/lib/team-flags'
+import { areSameTeamName } from '@/src/lib/team-flags'
 import { isValidApiFootballFixtureId } from '@/src/lib/match-updater-guards'
 import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 import { mapLeagueRoundToGroup } from '@/src/lib/world-cup-groups'
@@ -11,6 +11,7 @@ export type DbMatchForFixtureSync = {
   fixture_id: string | null
   round: string
   kickoff_at: string
+  locked_at?: string | null
   team1_name: string
   team2_name: string
 }
@@ -25,9 +26,29 @@ export type ApiFixtureForSync = {
 }
 
 export type FixtureIdResolveOutcome =
-  | { status: 'already_synced'; fixtureId: string }
-  | { status: 'resolved'; fixtureId: string }
+  | { status: 'already_synced'; fixtureId: string; kickoffAt: string }
+  | { status: 'resolved'; fixtureId: string; kickoffAt: string }
   | { status: 'skipped'; reason: string }
+
+/** DB team1/team2 may be home/away in either order vs API. */
+function teamsMatchUnorderedForFixtureSync(
+  dbTeam1: string,
+  dbTeam2: string,
+  apiHome: string,
+  apiAway: string,
+): boolean {
+  return (
+    (areSameTeamName(dbTeam1, apiHome) && areSameTeamName(dbTeam2, apiAway)) ||
+    (areSameTeamName(dbTeam1, apiAway) && areSameTeamName(dbTeam2, apiHome))
+  )
+}
+
+function kickoffTimesEqual(a: string, b: string): boolean {
+  const aMs = new Date(a).getTime()
+  const bMs = new Date(b).getTime()
+  if (Number.isNaN(aMs) || Number.isNaN(bMs)) return false
+  return aMs === bMs
+}
 
 export function kickoffUtcDateKey(iso: string): string | null {
   const ms = new Date(iso).getTime()
@@ -59,7 +80,6 @@ export function apiFixtureRound(fixture: ApiFixtureForSync): string {
 function apiFixtureMatchesDbRow(
   fixture: ApiFixtureForSync,
   row: DbMatchForFixtureSync,
-  rowKickoffDate: string,
 ): boolean {
   if (apiFixtureRound(fixture) !== row.round) return false
 
@@ -69,10 +89,7 @@ function apiFixtureMatchesDbRow(
     return false
   }
 
-  const apiDate = kickoffUtcDateKey(fixture.fixture.date)
-  if (!apiDate || apiDate !== rowKickoffDate) return false
-
-  return teamsMatchOrderedForFixtureSync(
+  return teamsMatchUnorderedForFixtureSync(
     row.team1_name,
     row.team2_name,
     home,
@@ -89,10 +106,6 @@ export function resolveKnockoutFixtureIdForRow(
     return { status: 'skipped', reason: 'not a knockout round' }
   }
 
-  if (isValidApiFootballFixtureId(row.fixture_id)) {
-    return { status: 'already_synced', fixtureId: row.fixture_id!.trim() }
-  }
-
   if (
     !isResolvableTeamName(row.team1_name) ||
     !isResolvableTeamName(row.team2_name)
@@ -100,19 +113,14 @@ export function resolveKnockoutFixtureIdForRow(
     return { status: 'skipped', reason: 'unresolved team names on DB row' }
   }
 
-  const rowKickoffDate = kickoffUtcDateKey(row.kickoff_at)
-  if (!rowKickoffDate) {
-    return { status: 'skipped', reason: 'invalid kickoff_at on DB row' }
-  }
-
   const candidates = apiFixtures.filter((fixture) =>
-    apiFixtureMatchesDbRow(fixture, row, rowKickoffDate),
+    apiFixtureMatchesDbRow(fixture, row),
   )
 
   if (candidates.length === 0) {
     return {
       status: 'skipped',
-      reason: 'no API fixture matches round + teams + kickoff date',
+      reason: 'no API fixture matches round + team pair',
     }
   }
 
@@ -123,7 +131,8 @@ export function resolveKnockoutFixtureIdForRow(
     }
   }
 
-  const fixtureId = String(candidates[0]!.fixture.id)
+  const matched = candidates[0]!
+  const fixtureId = String(matched.fixture.id)
   if (!isValidApiFootballFixtureId(fixtureId)) {
     return { status: 'skipped', reason: 'resolved API id failed validation' }
   }
@@ -136,7 +145,19 @@ export function resolveKnockoutFixtureIdForRow(
     }
   }
 
-  return { status: 'resolved', fixtureId }
+  const kickoffAt = matched.fixture.date
+  if (!kickoffAt || Number.isNaN(new Date(kickoffAt).getTime())) {
+    return { status: 'skipped', reason: 'API fixture has invalid kickoff date' }
+  }
+
+  const rowFixtureId = row.fixture_id?.trim() ?? ''
+  const fixtureIdMatches =
+    isValidApiFootballFixtureId(rowFixtureId) && rowFixtureId === fixtureId
+  if (fixtureIdMatches && kickoffTimesEqual(row.kickoff_at, kickoffAt)) {
+    return { status: 'already_synced', fixtureId, kickoffAt }
+  }
+
+  return { status: 'resolved', fixtureId, kickoffAt }
 }
 
 export async function fetchWc2026SeasonFixtures(

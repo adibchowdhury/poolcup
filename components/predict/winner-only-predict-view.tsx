@@ -18,7 +18,7 @@ import {
 } from '@/components/predict/winner-only-round-tabs'
 import type { ClassicRoundTabId } from '@/components/predict/group-knockout-tabs'
 import { KnockoutBracketTab, isKnockoutBracketTab, KNOCKOUT_PICK_LABELS } from '@/components/predict/knockout-bracket-tab'
-import type { R32BracketInteractiveProps } from '@/components/predict/knockout-bracket-preview'
+import type { R32BracketInteractiveProps, KnockoutRoundBracketProps } from '@/components/predict/knockout-bracket-preview'
 import {
   advancePickScores,
   countR32AdvancePicks,
@@ -27,6 +27,7 @@ import {
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
   type R32BracketMatchesByNumber,
 } from '@/src/lib/winner-only-r32-bracket'
+import { fetchWinnerKnockoutRoundMatches } from '@/src/lib/fetch-winner-knockout-round'
 import { upsertPoolMatchPrediction } from '@/src/lib/pool-match-prediction-write'
 import { resolveDefaultClassicRoundTabForPredictions } from '@/src/lib/classic-round-tab-logic'
 import { useAuth } from '@/src/lib/auth-context'
@@ -120,6 +121,9 @@ export function WinnerOnlyPredictView({
   const [r32MatchesByNumber, setR32MatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
   const [r32BracketLoaded, setR32BracketLoaded] = useState(false)
+  const [r16MatchesByNumber, setR16MatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [r16BracketLoaded, setR16BracketLoaded] = useState(false)
   const predictionsCompletedTrackedRef = useRef(false)
   const thirdPlaceStartedTrackedRef = useRef(false)
 
@@ -260,7 +264,47 @@ export function WinnerOnlyPredictView({
   }, [memberId, pool.id])
 
   useEffect(() => {
-    if (defaultRoundTabSetRef.current || matchesLoading || !r32BracketLoaded) {
+    let cancelled = false
+
+    async function loadR16Bracket() {
+      try {
+        const { matchesByNumber, error } = await fetchWinnerKnockoutRoundMatches(
+          supabase,
+          'r16',
+          pool.id,
+          memberId,
+        )
+
+        if (cancelled) return
+
+        if (error) {
+          console.error('[WinnerOnly] Failed to load r16 matches:', error)
+          setR16MatchesByNumber(new Map())
+          return
+        }
+
+        setR16MatchesByNumber(matchesByNumber)
+      } finally {
+        if (!cancelled) {
+          setR16BracketLoaded(true)
+        }
+      }
+    }
+
+    void loadR16Bracket()
+
+    return () => {
+      cancelled = true
+    }
+  }, [memberId, pool.id])
+
+  useEffect(() => {
+    if (
+      defaultRoundTabSetRef.current ||
+      matchesLoading ||
+      !r32BracketLoaded ||
+      !r16BracketLoaded
+    ) {
       return
     }
 
@@ -271,6 +315,10 @@ export function WinnerOnlyPredictView({
       })),
       ...[...r32MatchesByNumber.values()].map((match) => ({
         round: 'r32',
+        lockedAt: match.lockedAt,
+      })),
+      ...[...r16MatchesByNumber.values()].map((match) => ({
+        round: 'r16',
         lockedAt: match.lockedAt,
       })),
     ]
@@ -285,7 +333,7 @@ export function WinnerOnlyPredictView({
       ),
     )
     defaultRoundTabSetRef.current = true
-  }, [matches, matchesLoading, r32BracketLoaded, r32MatchesByNumber])
+  }, [matches, matchesLoading, r16BracketLoaded, r16MatchesByNumber, r32BracketLoaded, r32MatchesByNumber])
 
   const handleR32AdvancePick = useCallback(
     (matchId: string, pick: 1 | 2) => {
@@ -313,6 +361,32 @@ export function WinnerOnlyPredictView({
     [mounted, nowMs, r32MatchesByNumber],
   )
 
+  const handleR16AdvancePick = useCallback(
+    (matchId: string, pick: 1 | 2) => {
+      const currentMatch = [...r16MatchesByNumber.values()].find(
+        (match) => match.matchId === matchId,
+      )
+      if (!currentMatch || currentMatch.myPick === pick) {
+        return
+      }
+
+      if (isR32MatchLocked(currentMatch, mounted ? nowMs : Date.now())) {
+        return
+      }
+
+      setSaveSuccess(false)
+      setSaveBarError(null)
+      setR16MatchesByNumber((prev) => {
+        const next = new Map(prev)
+        const existing = [...next.values()].find((match) => match.matchId === matchId)
+        if (!existing) return prev
+        next.set(existing.matchNumber, { ...existing, myPick: pick })
+        return next
+      })
+    },
+    [mounted, nowMs, r16MatchesByNumber],
+  )
+
   const r32PickCount = useMemo(
     () => countR32AdvancePicks(r32MatchesByNumber),
     [r32MatchesByNumber],
@@ -327,6 +401,22 @@ export function WinnerOnlyPredictView({
       },
     }),
     [handleR32AdvancePick, mounted, nowMs, r32MatchesByNumber],
+  )
+
+  const r16PickCount = useMemo(
+    () => countR32AdvancePicks(r16MatchesByNumber),
+    [r16MatchesByNumber],
+  )
+
+  const r16Bracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: r16MatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        handleR16AdvancePick(matchId, pick)
+      },
+    }),
+    [handleR16AdvancePick, mounted, nowMs, r16MatchesByNumber],
   )
 
   const groups = useMemo(() => {
@@ -345,9 +435,23 @@ export function WinnerOnlyPredictView({
     [mounted, nowMs, r32MatchesByNumber],
   )
 
+  const unsavedR16Count = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        r16MatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [mounted, nowMs, r16MatchesByNumber],
+  )
+
   const r32FullyComplete = useMemo(
     () => r32PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32,
     [r32PickCount],
+  )
+
+  const r16FullyComplete = useMemo(
+    () => r16PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16,
+    [r16PickCount],
   )
 
   const loadGroupPredictions = useCallback(async () => {
@@ -495,15 +599,26 @@ export function WinnerOnlyPredictView({
     thirdPlaceRankings,
   ])
 
-  const showSaveBar = activeTab === 'bracket' || activeTab === 'r32'
+  const showSaveBar =
+    activeTab === 'bracket' || activeTab === 'r32' || activeTab === 'r16'
   const saveBarUnsavedCount =
-    activeTab === 'r32' ? unsavedR32Count : unsavedGroupCount
+    activeTab === 'r32'
+      ? unsavedR32Count
+      : activeTab === 'r16'
+        ? unsavedR16Count
+        : unsavedGroupCount
   const saveBarComplete =
-    activeTab === 'r32' ? r32FullyComplete : predictionsFullyComplete
+    activeTab === 'r32'
+      ? r32FullyComplete
+      : activeTab === 'r16'
+        ? r16FullyComplete
+        : predictionsFullyComplete
   const saveBarDisabled =
     activeTab === 'r32'
       ? unsavedR32Count === 0
-      : unsavedGroupCount === 0 || !canSaveChanges
+      : activeTab === 'r16'
+        ? unsavedR16Count === 0
+        : unsavedGroupCount === 0 || !canSaveChanges
 
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null)
@@ -654,9 +769,122 @@ export function WinnerOnlyPredictView({
     window.setTimeout(() => setSaveSuccess(false), 2000)
   }
 
+  async function handleR16Save() {
+    if (unsavedR16Count === 0) return
+
+    setSaving(true)
+    setSaveBarError(null)
+    setSaveSuccess(false)
+    setSuccessMessage(null)
+
+    const now = mounted ? nowMs : Date.now()
+    let savedCount = 0
+    let lockedCount = 0
+    let errorCount = 0
+
+    for (const match of r16MatchesByNumber.values()) {
+      if (match.myPick === match.savedPick) continue
+
+      if (isR32MatchLocked(match, now)) {
+        lockedCount += 1
+        setR16MatchesByNumber((prev) => {
+          const next = new Map(prev)
+          const existing = next.get(match.matchNumber)
+          if (!existing) return prev
+          next.set(match.matchNumber, {
+            ...existing,
+            myPick: existing.savedPick,
+          })
+          return next
+        })
+        continue
+      }
+
+      if (match.myPick !== 1 && match.myPick !== 2) {
+        continue
+      }
+
+      const scores = advancePickScores(match.myPick)
+      const result = await upsertPoolMatchPrediction(supabase, {
+        poolId: pool.id,
+        memberId,
+        matchId: match.matchId,
+        predTeam1: scores.predTeam1,
+        predTeam2: scores.predTeam2,
+        advancePick: match.myPick,
+      })
+
+      if (!result.ok) {
+        if (result.isLockViolation) {
+          lockedCount += 1
+          setR16MatchesByNumber((prev) => {
+            const next = new Map(prev)
+            const existing = next.get(match.matchNumber)
+            if (!existing) return prev
+            next.set(match.matchNumber, {
+              ...existing,
+              myPick: existing.savedPick,
+            })
+            return next
+          })
+        } else {
+          errorCount += 1
+        }
+        continue
+      }
+
+      setR16MatchesByNumber((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(match.matchNumber)
+        if (!existing) return prev
+        next.set(match.matchNumber, {
+          ...existing,
+          savedPick: match.myPick,
+        })
+        return next
+      })
+      savedCount += 1
+      capturePostHog('prediction_submitted', {
+        pool_id: pool.id,
+        match_id: match.matchId,
+      })
+    }
+
+    setSaving(false)
+
+    if (errorCount > 0) {
+      setSaveBarError("Couldn't save predictions")
+      return
+    }
+
+    if (lockedCount > 0 && savedCount === 0) {
+      setSaveBarError('This match has locked')
+      return
+    }
+
+    if (lockedCount > 0) {
+      setSaveBarError('Some matches have locked')
+    }
+
+    if (savedCount === 0) {
+      return
+    }
+
+    setSaveSuccess(true)
+    setSuccessMessage(
+      `Saved ${savedCount} prediction${savedCount === 1 ? '' : 's'}`,
+    )
+    window.setTimeout(() => setSaveSuccess(false), 2000)
+  }
+
   async function handleSave() {
     if (activeTab === 'r32') {
       await handleR32Save()
+      return
+    }
+
+    if (activeTab === 'r16') {
+      await handleR16Save()
       return
     }
 
@@ -884,6 +1112,28 @@ export function WinnerOnlyPredictView({
                     />
                   </div>
                 </>
+              ) : activeTab === 'r16' ? (
+                <>
+                  <div className="hidden md:block">
+                    <ProgressHeader
+                      current={r16PickCount}
+                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16}
+                      label={KNOCKOUT_PICK_LABELS.r16}
+                      labelFirst
+                    />
+                  </div>
+                  <div className="md:hidden">
+                    <ProgressHeader
+                      current={r16PickCount}
+                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16}
+                      headline={
+                        r16PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16
+                          ? 'All 8 picks complete'
+                          : `${WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16 - r16PickCount} picks remaining`
+                      }
+                    />
+                  </div>
+                </>
               ) : (
                 <>
                   <ProgressHeader
@@ -977,6 +1227,7 @@ export function WinnerOnlyPredictView({
           <KnockoutBracketTab
             tab={activeTab}
             r32Bracket={r32Bracket}
+            r16Bracket={r16Bracket}
             pickError={saveBarError}
             embedded={embedded}
           />
