@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "seed:matches": "ts-node --project tsconfig.json scripts/seed-matches.ts",
-    "sync:knockout-fixture-ids": "ts-node --project tsconfig.json scripts/sync-knockout-fixture-ids.ts"
+    "sync:knockout-fixture-ids": "ts-node --project tsconfig.json scripts/sync-knockout-fixture-ids.ts",
+    "sync:knockout-round-rows": "ts-node --project tsconfig.json scripts/sync-knockout-round-rows.ts"
   },
   "dependencies": {
     "@capacitor-community/safe-area": "^8.0.1",

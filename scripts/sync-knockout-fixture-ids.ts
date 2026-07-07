@@ -2,11 +2,10 @@ import * as dotenv from 'dotenv'
 import path from 'path'
 import { KNOCKOUT_ROUND_IDS } from '@/src/lib/classic-round-tab-logic'
 import {
-  buildFixtureIdOwnerMap,
   apiFixtureRound,
   fetchWc2026SeasonFixtures,
   isKnockoutApiFixture,
-  resolveKnockoutFixtureIdForRow,
+  syncKnockoutFixtureIdsCore,
   type ApiFixtureForSync,
   type DbMatchForFixtureSync,
 } from '@/src/lib/fixture-id-sync'
@@ -140,7 +139,6 @@ async function main() {
   }
 
   const rows = (knockoutRows ?? []) as DbMatchForFixtureSync[]
-  const fixtureIdOwnerByFixtureId = buildFixtureIdOwnerMap(rows)
 
   const allFixtures = await fetchWc2026SeasonFixtures(apiKey)
   const knockoutApiFixtures = allFixtures.filter(isKnockoutApiFixture)
@@ -149,82 +147,12 @@ async function main() {
     printR16ReconcileReport(rows, knockoutApiFixtures)
   }
 
-  const summary = {
-    dry_run: dryRun,
-    round_filter: roundFilter,
-    knockout_rows: rows.length,
-    api_knockout_fixtures: knockoutApiFixtures.length,
-    already_synced: [] as Array<Record<string, unknown>>,
-    updated: [] as Array<Record<string, unknown>>,
-    skipped: [] as Array<Record<string, unknown>>,
-  }
-
-  for (const row of rows) {
-    const outcome = resolveKnockoutFixtureIdForRow(
-      row,
-      knockoutApiFixtures,
-      fixtureIdOwnerByFixtureId,
-    )
-
-    if (outcome.status === 'already_synced') {
-      summary.already_synced.push({
-        match_id: row.id,
-        round: row.round,
-        fixture_id: outcome.fixtureId,
-        team1_name: row.team1_name,
-        team2_name: row.team2_name,
-        kickoff_at: row.kickoff_at,
-        locked_at: row.locked_at,
-      })
-      continue
-    }
-
-    if (outcome.status === 'skipped') {
-      summary.skipped.push({
-        match_id: row.id,
-        round: row.round,
-        fixture_id: row.fixture_id,
-        team1_name: row.team1_name,
-        team2_name: row.team2_name,
-        kickoff_at: row.kickoff_at,
-        locked_at: row.locked_at,
-        reason: outcome.reason,
-      })
-      continue
-    }
-
-    if (!dryRun) {
-      const { error: updateError } = await supabase
-        .from('matches')
-        .update({
-          fixture_id: outcome.fixtureId,
-          kickoff_at: outcome.kickoffAt,
-          locked_at: outcome.kickoffAt,
-        })
-        .eq('id', row.id)
-
-      if (updateError) {
-        throw new Error(
-          `Failed to update match ${row.id} with fixture_id ${outcome.fixtureId}: ${updateError.message}`,
-        )
-      }
-    }
-
-    fixtureIdOwnerByFixtureId.set(outcome.fixtureId, row.id)
-
-    summary.updated.push({
-      match_id: row.id,
-      round: row.round,
-      previous_fixture_id: row.fixture_id,
-      fixture_id: outcome.fixtureId,
-      previous_kickoff_at: row.kickoff_at,
-      kickoff_at: outcome.kickoffAt,
-      previous_locked_at: row.locked_at,
-      locked_at: outcome.kickoffAt,
-      team1_name: row.team1_name,
-      team2_name: row.team2_name,
-    })
-  }
+  const summary = await syncKnockoutFixtureIdsCore(supabase, apiKey, {
+    dryRun,
+    roundFilter,
+    rows,
+    apiFixtures: knockoutApiFixtures,
+  })
 
   console.log(JSON.stringify(summary, null, 2))
 }

@@ -31,7 +31,7 @@ export type FixtureIdResolveOutcome =
   | { status: 'skipped'; reason: string }
 
 /** DB team1/team2 may be home/away in either order vs API. */
-function teamsMatchUnorderedForFixtureSync(
+export function teamsMatchUnorderedForFixtureSync(
   dbTeam1: string,
   dbTeam2: string,
   apiHome: string,
@@ -197,4 +197,134 @@ export function buildFixtureIdOwnerMap(
   }
 
   return map
+}
+
+export type KnockoutFixtureIdSyncSummary = {
+  dry_run: boolean
+  round_filter: string | null
+  knockout_rows: number
+  api_knockout_fixtures: number
+  already_synced: Array<Record<string, unknown>>
+  updated: Array<Record<string, unknown>>
+  skipped: Array<Record<string, unknown>>
+}
+
+/** Patch fixture_id / kickoff / locked_at on existing knockout rows from API season fixtures. */
+export async function syncKnockoutFixtureIdsCore(
+  supabase: import('@supabase/supabase-js').SupabaseClient,
+  apiKey: string,
+  options: {
+    dryRun: boolean
+    roundFilter?: string | null
+    rows?: DbMatchForFixtureSync[]
+    apiFixtures?: ApiFixtureForSync[]
+  } = { dryRun: false },
+): Promise<KnockoutFixtureIdSyncSummary> {
+  const roundFilter = options.roundFilter ?? null
+
+  let rows = options.rows
+  if (!rows) {
+    let query = supabase
+      .from('matches')
+      .select(
+        'id, fixture_id, round, kickoff_at, locked_at, team1_name, team2_name',
+      )
+      .in('round', ['r32', 'r16', 'qf', 'sf', 'final'])
+      .order('kickoff_at', { ascending: true })
+
+    if (roundFilter) {
+      query = query.eq('round', roundFilter)
+    }
+
+    const { data: knockoutRows, error: loadError } = await query
+    if (loadError) {
+      throw new Error(`Failed to load knockout matches: ${loadError.message}`)
+    }
+    rows = (knockoutRows ?? []) as DbMatchForFixtureSync[]
+  }
+
+  const knockoutApiFixtures =
+    options.apiFixtures ??
+    (await fetchWc2026SeasonFixtures(apiKey)).filter(isKnockoutApiFixture)
+
+  const fixtureIdOwnerByFixtureId = buildFixtureIdOwnerMap(rows)
+
+  const summary: KnockoutFixtureIdSyncSummary = {
+    dry_run: options.dryRun,
+    round_filter: roundFilter,
+    knockout_rows: rows.length,
+    api_knockout_fixtures: knockoutApiFixtures.length,
+    already_synced: [],
+    updated: [],
+    skipped: [],
+  }
+
+  for (const row of rows) {
+    const outcome = resolveKnockoutFixtureIdForRow(
+      row,
+      knockoutApiFixtures,
+      fixtureIdOwnerByFixtureId,
+    )
+
+    if (outcome.status === 'already_synced') {
+      summary.already_synced.push({
+        match_id: row.id,
+        round: row.round,
+        fixture_id: outcome.fixtureId,
+        team1_name: row.team1_name,
+        team2_name: row.team2_name,
+        kickoff_at: row.kickoff_at,
+        locked_at: row.locked_at,
+      })
+      continue
+    }
+
+    if (outcome.status === 'skipped') {
+      summary.skipped.push({
+        match_id: row.id,
+        round: row.round,
+        fixture_id: row.fixture_id,
+        team1_name: row.team1_name,
+        team2_name: row.team2_name,
+        kickoff_at: row.kickoff_at,
+        locked_at: row.locked_at,
+        reason: outcome.reason,
+      })
+      continue
+    }
+
+    if (!options.dryRun) {
+      const { error: updateError } = await supabase
+        .from('matches')
+        .update({
+          fixture_id: outcome.fixtureId,
+          kickoff_at: outcome.kickoffAt,
+          locked_at: outcome.kickoffAt,
+        })
+        .eq('id', row.id)
+
+      if (updateError) {
+        throw new Error(
+          `Failed to update match ${row.id} with fixture_id ${outcome.fixtureId}: ${updateError.message}`,
+        )
+      }
+    }
+
+    fixtureIdOwnerByFixtureId.set(outcome.fixtureId, row.id)
+
+    summary.updated.push({
+      match_id: row.id,
+      round: row.round,
+      previous_fixture_id: row.fixture_id,
+      fixture_id: outcome.fixtureId,
+      previous_kickoff_at: row.kickoff_at,
+      kickoff_at: outcome.kickoffAt,
+      previous_locked_at: row.locked_at,
+      locked_at: outcome.kickoffAt,
+      team1_name: row.team1_name,
+      team2_name: row.team2_name,
+    })
+  }
+
+  return summary
 }

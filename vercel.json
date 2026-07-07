@@ -9,6 +9,10 @@
     {
       "path": "/api/reconcile-stale-matches",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/sync-knockout-round-rows",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": [
