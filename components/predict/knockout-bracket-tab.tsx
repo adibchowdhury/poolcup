@@ -13,9 +13,9 @@ import type { KnockoutBracketTabId } from '@/components/predict/knockout-bracket
 export const KNOCKOUT_TAB_INTRO: Record<KnockoutBracketTabId, string> = {
   r32: 'Pick who advances in each Round of 32 matchup. Each pick locks at kickoff.',
   r16: 'Pick who advances in each Round of 16 matchup. Each pick locks at kickoff.',
-  qf: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.r16} is complete.`,
-  sf: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.qf} end.`,
-  final: `Unlocks once the ${TOURNAMENT_ROUND_LABELS.sf} end.`,
+  qf: 'Pick who advances in each Quarter-final matchup. Each pick locks at kickoff.',
+  sf: 'Pick who advances in each Semi-final matchup. Each pick locks at kickoff.',
+  final: 'Pick who wins the Final. Your pick locks at kickoff.',
 }
 
 export const KNOCKOUT_PICK_LABELS: Record<KnockoutBracketTabId, string> = {
@@ -36,22 +36,32 @@ export function KnockoutBracketTab({
   tab,
   r32Bracket,
   r16Bracket,
+  qfBracket,
+  sfBracket,
+  finalBracket,
   pickError,
   embedded = false,
 }: {
   tab: Exclude<WinnerOnlyRoundTabId, 'bracket'>
   r32Bracket?: R32BracketInteractiveProps
   r16Bracket?: KnockoutRoundBracketProps
+  qfBracket?: KnockoutRoundBracketProps
+  sfBracket?: KnockoutRoundBracketProps
+  finalBracket?: KnockoutRoundBracketProps
   pickError?: string | null
   embedded?: boolean
 }) {
+  const bracketProps = {
+    tab,
+    r32Bracket: tab === 'r32' ? r32Bracket : undefined,
+    r16Bracket: tab === 'r16' ? r16Bracket : undefined,
+    qfBracket: tab === 'qf' ? qfBracket : undefined,
+    sfBracket: tab === 'sf' ? sfBracket : undefined,
+    finalBracket: tab === 'final' ? finalBracket : undefined,
+  }
+
   const desktopBracket = (
-    <KnockoutBracketForTab
-      tab={tab}
-      r32Bracket={tab === 'r32' ? r32Bracket : undefined}
-      r16Bracket={tab === 'r16' ? r16Bracket : undefined}
-      desktopOnly
-    />
+    <KnockoutBracketForTab {...bracketProps} desktopOnly />
   )
 
   return (
@@ -71,20 +81,11 @@ export function KnockoutBracketTab({
           {desktopBracket}
         </div>
       ) : (
-        <KnockoutBracketForTab
-          tab={tab}
-          r32Bracket={tab === 'r32' ? r32Bracket : undefined}
-          r16Bracket={tab === 'r16' ? r16Bracket : undefined}
-        />
+        <KnockoutBracketForTab {...bracketProps} />
       )}
 
       {embedded ? (
-        <KnockoutBracketForTab
-          tab={tab}
-          r32Bracket={tab === 'r32' ? r32Bracket : undefined}
-          r16Bracket={tab === 'r16' ? r16Bracket : undefined}
-          mobileOnly
-        />
+        <KnockoutBracketForTab {...bracketProps} mobileOnly />
       ) : null}
     </div>
   )

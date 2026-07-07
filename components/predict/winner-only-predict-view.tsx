@@ -18,16 +18,23 @@ import {
 } from '@/components/predict/winner-only-round-tabs'
 import type { ClassicRoundTabId } from '@/components/predict/group-knockout-tabs'
 import { KnockoutBracketTab, isKnockoutBracketTab, KNOCKOUT_PICK_LABELS } from '@/components/predict/knockout-bracket-tab'
-import type { R32BracketInteractiveProps, KnockoutRoundBracketProps } from '@/components/predict/knockout-bracket-preview'
+import type {
+  KnockoutBracketTabId,
+  R32BracketInteractiveProps,
+  KnockoutRoundBracketProps,
+} from '@/components/predict/knockout-bracket-preview'
 import {
   advancePickScores,
   countR32AdvancePicks,
   countR32UnsavedPicks,
   isR32MatchLocked,
+  isWinnerKnockoutRoundComplete,
+  winnerKnockoutPickTotalForMatches,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
   type R32BracketMatchesByNumber,
 } from '@/src/lib/winner-only-r32-bracket'
 import { fetchWinnerKnockoutRoundMatches } from '@/src/lib/fetch-winner-knockout-round'
+import { saveWinnerKnockoutAdvancePicks } from '@/src/lib/save-winner-knockout-advance-picks'
 import { upsertPoolMatchPrediction } from '@/src/lib/pool-match-prediction-write'
 import { resolveDefaultClassicRoundTabForPredictions } from '@/src/lib/classic-round-tab-logic'
 import { useAuth } from '@/src/lib/auth-context'
@@ -60,6 +67,22 @@ import { cn } from '@/lib/utils'
 
 const TOTAL_GROUPS = 12
 const REQUIRED_THIRD_PLACE_PICKS = 8
+
+type WinnerKnockoutPickRound = 'r16' | 'qf' | 'sf' | 'final'
+
+const WINNER_KNOCKOUT_PICK_ROUNDS: WinnerKnockoutPickRound[] = [
+  'r16',
+  'qf',
+  'sf',
+  'final',
+]
+
+function knockoutProgressHeadline(pickCount: number, total: number): string {
+  if (pickCount >= total) {
+    return `All ${total} pick${total === 1 ? '' : 's'} complete`
+  }
+  return `${total - pickCount} picks remaining`
+}
 
 function winnerOnlyTabFromClassicRound(
   tab: ClassicRoundTabId,
@@ -123,7 +146,13 @@ export function WinnerOnlyPredictView({
   const [r32BracketLoaded, setR32BracketLoaded] = useState(false)
   const [r16MatchesByNumber, setR16MatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
-  const [r16BracketLoaded, setR16BracketLoaded] = useState(false)
+  const [qfMatchesByNumber, setQfMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [sfMatchesByNumber, setSfMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [finalMatchesByNumber, setFinalMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [laterKnockoutLoaded, setLaterKnockoutLoaded] = useState(false)
   const predictionsCompletedTrackedRef = useRef(false)
   const thirdPlaceStartedTrackedRef = useRef(false)
 
@@ -223,32 +252,48 @@ export function WinnerOnlyPredictView({
   useEffect(() => {
     let cancelled = false
 
-    async function loadR16Bracket() {
+    async function loadLaterKnockoutRounds() {
       try {
-        const { matchesByNumber, error } = await fetchWinnerKnockoutRoundMatches(
-          supabase,
-          'r16',
-          pool.id,
-          memberId,
+        const results = await Promise.all(
+          WINNER_KNOCKOUT_PICK_ROUNDS.map((round) =>
+            fetchWinnerKnockoutRoundMatches(
+              supabase,
+              round,
+              pool.id,
+              memberId,
+            ),
+          ),
         )
 
         if (cancelled) return
 
-        if (error) {
-          console.error('[WinnerOnly] Failed to load r16 matches:', error)
-          setR16MatchesByNumber(new Map())
-          return
+        const setters: Record<
+          WinnerKnockoutPickRound,
+          typeof setR16MatchesByNumber
+        > = {
+          r16: setR16MatchesByNumber,
+          qf: setQfMatchesByNumber,
+          sf: setSfMatchesByNumber,
+          final: setFinalMatchesByNumber,
         }
 
-        setR16MatchesByNumber(matchesByNumber)
+        WINNER_KNOCKOUT_PICK_ROUNDS.forEach((round, index) => {
+          const { matchesByNumber, error } = results[index]!
+          if (error) {
+            console.error(`[WinnerOnly] Failed to load ${round} matches:`, error)
+            setters[round](new Map())
+            return
+          }
+          setters[round](matchesByNumber)
+        })
       } finally {
         if (!cancelled) {
-          setR16BracketLoaded(true)
+          setLaterKnockoutLoaded(true)
         }
       }
     }
 
-    void loadR16Bracket()
+    void loadLaterKnockoutRounds()
 
     return () => {
       cancelled = true
@@ -260,7 +305,7 @@ export function WinnerOnlyPredictView({
       defaultRoundTabSetRef.current ||
       matchesLoading ||
       !r32BracketLoaded ||
-      !r16BracketLoaded
+      !laterKnockoutLoaded
     ) {
       return
     }
@@ -278,6 +323,18 @@ export function WinnerOnlyPredictView({
         round: 'r16',
         lockedAt: match.lockedAt,
       })),
+      ...[...qfMatchesByNumber.values()].map((match) => ({
+        round: 'qf',
+        lockedAt: match.lockedAt,
+      })),
+      ...[...sfMatchesByNumber.values()].map((match) => ({
+        round: 'sf',
+        lockedAt: match.lockedAt,
+      })),
+      ...[...finalMatchesByNumber.values()].map((match) => ({
+        round: 'final',
+        lockedAt: match.lockedAt,
+      })),
     ]
 
     if (roundTabItems.length === 0) {
@@ -290,7 +347,7 @@ export function WinnerOnlyPredictView({
       ),
     )
     defaultRoundTabSetRef.current = true
-  }, [matches, matchesLoading, r16BracketLoaded, r16MatchesByNumber, r32BracketLoaded, r32MatchesByNumber])
+  }, [finalMatchesByNumber, matches, matchesLoading, laterKnockoutLoaded, qfMatchesByNumber, r16MatchesByNumber, r32BracketLoaded, r32MatchesByNumber, sfMatchesByNumber])
 
   const handleR32AdvancePick = useCallback(
     (matchId: string, pick: 1 | 2) => {
@@ -318,9 +375,22 @@ export function WinnerOnlyPredictView({
     [mounted, nowMs, r32MatchesByNumber],
   )
 
-  const handleR16AdvancePick = useCallback(
-    (matchId: string, pick: 1 | 2) => {
-      const currentMatch = [...r16MatchesByNumber.values()].find(
+  const handleKnockoutAdvancePick = useCallback(
+    (round: WinnerKnockoutPickRound, matchId: string, pick: 1 | 2) => {
+      const matchesByNumber = {
+        r16: r16MatchesByNumber,
+        qf: qfMatchesByNumber,
+        sf: sfMatchesByNumber,
+        final: finalMatchesByNumber,
+      }[round]
+      const setMatchesByNumber = {
+        r16: setR16MatchesByNumber,
+        qf: setQfMatchesByNumber,
+        sf: setSfMatchesByNumber,
+        final: setFinalMatchesByNumber,
+      }[round]
+
+      const currentMatch = [...matchesByNumber.values()].find(
         (match) => match.matchId === matchId,
       )
       if (!currentMatch || currentMatch.myPick === pick) {
@@ -333,7 +403,7 @@ export function WinnerOnlyPredictView({
 
       setSaveSuccess(false)
       setSaveBarError(null)
-      setR16MatchesByNumber((prev) => {
+      setMatchesByNumber((prev) => {
         const next = new Map(prev)
         const existing = [...next.values()].find((match) => match.matchId === matchId)
         if (!existing) return prev
@@ -341,7 +411,14 @@ export function WinnerOnlyPredictView({
         return next
       })
     },
-    [mounted, nowMs, r16MatchesByNumber],
+    [
+      finalMatchesByNumber,
+      mounted,
+      nowMs,
+      qfMatchesByNumber,
+      r16MatchesByNumber,
+      sfMatchesByNumber,
+    ],
   )
 
   const r32PickCount = useMemo(
@@ -365,15 +442,85 @@ export function WinnerOnlyPredictView({
     [r16MatchesByNumber],
   )
 
+  const qfPickCount = useMemo(
+    () => countR32AdvancePicks(qfMatchesByNumber),
+    [qfMatchesByNumber],
+  )
+
+  const sfPickCount = useMemo(
+    () => countR32AdvancePicks(sfMatchesByNumber),
+    [sfMatchesByNumber],
+  )
+
+  const finalPickCount = useMemo(
+    () => countR32AdvancePicks(finalMatchesByNumber),
+    [finalMatchesByNumber],
+  )
+
+  const knockoutPickTotalByTab = useMemo(
+    (): Record<KnockoutBracketTabId, number> => ({
+      r32: WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32,
+      r16: winnerKnockoutPickTotalForMatches('r16', r16MatchesByNumber),
+      qf: winnerKnockoutPickTotalForMatches('qf', qfMatchesByNumber),
+      sf: winnerKnockoutPickTotalForMatches('sf', sfMatchesByNumber),
+      final: winnerKnockoutPickTotalForMatches('final', finalMatchesByNumber),
+    }),
+    [finalMatchesByNumber, qfMatchesByNumber, r16MatchesByNumber, sfMatchesByNumber],
+  )
+
+  const knockoutPickCountByTab = useMemo(
+    (): Record<KnockoutBracketTabId, number> => ({
+      r32: r32PickCount,
+      r16: r16PickCount,
+      qf: qfPickCount,
+      sf: sfPickCount,
+      final: finalPickCount,
+    }),
+    [finalPickCount, qfPickCount, r16PickCount, r32PickCount, sfPickCount],
+  )
+
   const r16Bracket = useMemo<KnockoutRoundBracketProps>(
     () => ({
       matchesByNumber: r16MatchesByNumber,
       nowMs: mounted ? nowMs : Date.now(),
       onAdvancePick: (matchId, pick) => {
-        handleR16AdvancePick(matchId, pick)
+        handleKnockoutAdvancePick('r16', matchId, pick)
       },
     }),
-    [handleR16AdvancePick, mounted, nowMs, r16MatchesByNumber],
+    [handleKnockoutAdvancePick, mounted, nowMs, r16MatchesByNumber],
+  )
+
+  const qfBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: qfMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        handleKnockoutAdvancePick('qf', matchId, pick)
+      },
+    }),
+    [handleKnockoutAdvancePick, mounted, nowMs, qfMatchesByNumber],
+  )
+
+  const sfBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: sfMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        handleKnockoutAdvancePick('sf', matchId, pick)
+      },
+    }),
+    [handleKnockoutAdvancePick, mounted, nowMs, sfMatchesByNumber],
+  )
+
+  const finalBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: finalMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        handleKnockoutAdvancePick('final', matchId, pick)
+      },
+    }),
+    [finalMatchesByNumber, handleKnockoutAdvancePick, mounted, nowMs],
   )
 
   const groups = useMemo(() => {
@@ -401,14 +548,90 @@ export function WinnerOnlyPredictView({
     [mounted, nowMs, r16MatchesByNumber],
   )
 
+  const unsavedQfCount = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        qfMatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [mounted, nowMs, qfMatchesByNumber],
+  )
+
+  const unsavedSfCount = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        sfMatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [mounted, nowMs, sfMatchesByNumber],
+  )
+
+  const unsavedFinalCount = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        finalMatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [finalMatchesByNumber, mounted, nowMs],
+  )
+
+  const unsavedKnockoutCountByTab = useMemo(
+    (): Record<KnockoutBracketTabId, number> => ({
+      r32: unsavedR32Count,
+      r16: unsavedR16Count,
+      qf: unsavedQfCount,
+      sf: unsavedSfCount,
+      final: unsavedFinalCount,
+    }),
+    [
+      unsavedFinalCount,
+      unsavedQfCount,
+      unsavedR16Count,
+      unsavedR32Count,
+      unsavedSfCount,
+    ],
+  )
+
   const r32FullyComplete = useMemo(
     () => r32PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32,
     [r32PickCount],
   )
 
   const r16FullyComplete = useMemo(
-    () => r16PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16,
-    [r16PickCount],
+    () => isWinnerKnockoutRoundComplete('r16', r16MatchesByNumber),
+    [r16MatchesByNumber],
+  )
+
+  const qfFullyComplete = useMemo(
+    () => isWinnerKnockoutRoundComplete('qf', qfMatchesByNumber),
+    [qfMatchesByNumber],
+  )
+
+  const sfFullyComplete = useMemo(
+    () => isWinnerKnockoutRoundComplete('sf', sfMatchesByNumber),
+    [sfMatchesByNumber],
+  )
+
+  const finalFullyComplete = useMemo(
+    () => isWinnerKnockoutRoundComplete('final', finalMatchesByNumber),
+    [finalMatchesByNumber],
+  )
+
+  const knockoutFullyCompleteByTab = useMemo(
+    (): Record<KnockoutBracketTabId, boolean> => ({
+      r32: r32FullyComplete,
+      r16: r16FullyComplete,
+      qf: qfFullyComplete,
+      sf: sfFullyComplete,
+      final: finalFullyComplete,
+    }),
+    [
+      finalFullyComplete,
+      qfFullyComplete,
+      r16FullyComplete,
+      r32FullyComplete,
+      sfFullyComplete,
+    ],
   )
 
   const loadGroupPredictions = useCallback(async () => {
@@ -557,25 +780,16 @@ export function WinnerOnlyPredictView({
   ])
 
   const showSaveBar =
-    activeTab === 'bracket' || activeTab === 'r32' || activeTab === 'r16'
-  const saveBarUnsavedCount =
-    activeTab === 'r32'
-      ? unsavedR32Count
-      : activeTab === 'r16'
-        ? unsavedR16Count
-        : unsavedGroupCount
-  const saveBarComplete =
-    activeTab === 'r32'
-      ? r32FullyComplete
-      : activeTab === 'r16'
-        ? r16FullyComplete
-        : predictionsFullyComplete
-  const saveBarDisabled =
-    activeTab === 'r32'
-      ? unsavedR32Count === 0
-      : activeTab === 'r16'
-        ? unsavedR16Count === 0
-        : unsavedGroupCount === 0 || !canSaveChanges
+    activeTab === 'bracket' || isKnockoutBracketTab(activeTab)
+  const saveBarUnsavedCount = isKnockoutBracketTab(activeTab)
+    ? unsavedKnockoutCountByTab[activeTab]
+    : unsavedGroupCount
+  const saveBarComplete = isKnockoutBracketTab(activeTab)
+    ? knockoutFullyCompleteByTab[activeTab]
+    : predictionsFullyComplete
+  const saveBarDisabled = isKnockoutBracketTab(activeTab)
+    ? unsavedKnockoutCountByTab[activeTab] === 0
+    : unsavedGroupCount === 0 || !canSaveChanges
 
   const dismissSuccessToast = useCallback(() => {
     setSuccessMessage(null)
@@ -726,86 +940,43 @@ export function WinnerOnlyPredictView({
     window.setTimeout(() => setSaveSuccess(false), 2000)
   }
 
-  async function handleR16Save() {
-    if (unsavedR16Count === 0) return
+  async function handleKnockoutRoundSave(round: WinnerKnockoutPickRound) {
+    const matchesByNumber = {
+      r16: r16MatchesByNumber,
+      qf: qfMatchesByNumber,
+      sf: sfMatchesByNumber,
+      final: finalMatchesByNumber,
+    }[round]
+    const setMatchesByNumber = {
+      r16: setR16MatchesByNumber,
+      qf: setQfMatchesByNumber,
+      sf: setSfMatchesByNumber,
+      final: setFinalMatchesByNumber,
+    }[round]
+
+    if (
+      countR32UnsavedPicks(
+        matchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ) === 0
+    ) {
+      return
+    }
 
     setSaving(true)
     setSaveBarError(null)
     setSaveSuccess(false)
     setSuccessMessage(null)
 
-    const now = mounted ? nowMs : Date.now()
-    let savedCount = 0
-    let lockedCount = 0
-    let errorCount = 0
-
-    for (const match of r16MatchesByNumber.values()) {
-      if (match.myPick === match.savedPick) continue
-
-      if (isR32MatchLocked(match, now)) {
-        lockedCount += 1
-        setR16MatchesByNumber((prev) => {
-          const next = new Map(prev)
-          const existing = next.get(match.matchNumber)
-          if (!existing) return prev
-          next.set(match.matchNumber, {
-            ...existing,
-            myPick: existing.savedPick,
-          })
-          return next
-        })
-        continue
-      }
-
-      if (match.myPick !== 1 && match.myPick !== 2) {
-        continue
-      }
-
-      const scores = advancePickScores(match.myPick)
-      const result = await upsertPoolMatchPrediction(supabase, {
-        poolId: pool.id,
+    const { savedCount, lockedCount, errorCount } =
+      await saveWinnerKnockoutAdvancePicks(
+        supabase,
+        pool.id,
         memberId,
-        matchId: match.matchId,
-        predTeam1: scores.predTeam1,
-        predTeam2: scores.predTeam2,
-        advancePick: match.myPick,
-      })
-
-      if (!result.ok) {
-        if (result.isLockViolation) {
-          lockedCount += 1
-          setR16MatchesByNumber((prev) => {
-            const next = new Map(prev)
-            const existing = next.get(match.matchNumber)
-            if (!existing) return prev
-            next.set(match.matchNumber, {
-              ...existing,
-              myPick: existing.savedPick,
-            })
-            return next
-          })
-        } else {
-          errorCount += 1
-        }
-        continue
-      }
-
-      setR16MatchesByNumber((prev) => {
-        const next = new Map(prev)
-        const existing = next.get(match.matchNumber)
-        if (!existing) return prev
-        next.set(match.matchNumber, {
-          ...existing,
-          savedPick: match.myPick,
-        })
-        return next
-      })
-      savedCount += 1
-      capturePostHog('prediction_submitted', {
-        pool_id: pool.id,
-        match_id: match.matchId,
-      })
-    }
+        matchesByNumber,
+        mounted ? nowMs : Date.now(),
+        setMatchesByNumber,
+      )
 
     setSaving(false)
 
@@ -840,8 +1011,13 @@ export function WinnerOnlyPredictView({
       return
     }
 
-    if (activeTab === 'r16') {
-      await handleR16Save()
+    if (
+      activeTab === 'r16' ||
+      activeTab === 'qf' ||
+      activeTab === 'sf' ||
+      activeTab === 'final'
+    ) {
+      await handleKnockoutRoundSave(activeTab)
       return
     }
 
@@ -1047,64 +1223,24 @@ export function WinnerOnlyPredictView({
 
           {isKnockoutBracketTab(activeTab) && (
             <div className="min-w-0 space-y-1">
-              {activeTab === 'r32' ? (
-                <>
-                  <div className="hidden md:block">
-                    <ProgressHeader
-                      current={r32PickCount}
-                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32}
-                      label={KNOCKOUT_PICK_LABELS.r32}
-                      labelFirst
-                    />
-                  </div>
-                  <div className="md:hidden">
-                    <ProgressHeader
-                      current={r32PickCount}
-                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32}
-                      headline={
-                        r32PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32
-                          ? 'All 16 picks complete'
-                          : `${WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32 - r32PickCount} picks remaining`
-                      }
-                    />
-                  </div>
-                </>
-              ) : activeTab === 'r16' ? (
-                <>
-                  <div className="hidden md:block">
-                    <ProgressHeader
-                      current={r16PickCount}
-                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16}
-                      label={KNOCKOUT_PICK_LABELS.r16}
-                      labelFirst
-                    />
-                  </div>
-                  <div className="md:hidden">
-                    <ProgressHeader
-                      current={r16PickCount}
-                      total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16}
-                      headline={
-                        r16PickCount >= WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16
-                          ? 'All 8 picks complete'
-                          : `${WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r16 - r16PickCount} picks remaining`
-                      }
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <ProgressHeader
-                    current={0}
-                    total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS[activeTab]}
-                    label={KNOCKOUT_PICK_LABELS[activeTab]}
-                    labelFirst
-                    className="opacity-60"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Unlocks once the Round of 32 is complete.
-                  </p>
-                </>
-              )}
+              <div className="hidden md:block">
+                <ProgressHeader
+                  current={knockoutPickCountByTab[activeTab]}
+                  total={knockoutPickTotalByTab[activeTab]}
+                  label={KNOCKOUT_PICK_LABELS[activeTab]}
+                  labelFirst
+                />
+              </div>
+              <div className="md:hidden">
+                <ProgressHeader
+                  current={knockoutPickCountByTab[activeTab]}
+                  total={knockoutPickTotalByTab[activeTab]}
+                  headline={knockoutProgressHeadline(
+                    knockoutPickCountByTab[activeTab],
+                    knockoutPickTotalByTab[activeTab],
+                  )}
+                />
+              </div>
             </div>
           )}
 
@@ -1185,6 +1321,9 @@ export function WinnerOnlyPredictView({
             tab={activeTab}
             r32Bracket={r32Bracket}
             r16Bracket={r16Bracket}
+            qfBracket={qfBracket}
+            sfBracket={sfBracket}
+            finalBracket={finalBracket}
             pickError={saveBarError}
             embedded={embedded}
           />

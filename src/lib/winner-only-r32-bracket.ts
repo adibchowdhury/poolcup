@@ -35,22 +35,83 @@ export const R16_BRACKET_SLOT_POSITIONS: Array<{
   })),
 ]
 
+export type WinnerKnockoutDisplayRound = 'r16' | 'qf' | 'sf' | 'final'
+
+export const QF_BRACKET_SLOT_POSITIONS: Array<{
+  half: BracketSide
+  index: number
+}> = [
+  { half: 'left', index: 0 },
+  { half: 'left', index: 1 },
+  { half: 'right', index: 0 },
+  { half: 'right', index: 1 },
+]
+
+export const SF_BRACKET_SLOT_POSITIONS: Array<{
+  half: BracketSide
+  index: number
+}> = [
+  { half: 'left', index: 0 },
+  { half: 'right', index: 0 },
+]
+
+export const FINAL_BRACKET_SLOT_POSITIONS: Array<{
+  half: BracketSide
+  index: number
+}> = [{ half: 'left', index: 0 }]
+
+export const WINNER_KNOCKOUT_SLOT_POSITIONS: Record<
+  WinnerKnockoutDisplayRound,
+  Array<{ half: BracketSide; index: number }>
+> = {
+  r16: R16_BRACKET_SLOT_POSITIONS,
+  qf: QF_BRACKET_SLOT_POSITIONS,
+  sf: SF_BRACKET_SLOT_POSITIONS,
+  final: FINAL_BRACKET_SLOT_POSITIONS,
+}
+
+export function knockoutSlotLabel(
+  round: WinnerKnockoutDisplayRound,
+  half: BracketSide,
+  index: number,
+): string {
+  switch (round) {
+    case 'r16':
+      return half === 'left' ? `R16 M${index + 1}` : `R16 M${index + 5}`
+    case 'qf':
+      return half === 'left' ? `QF M${index + 1}` : `QF M${index + 3}`
+    case 'sf':
+      return half === 'left' ? 'SF M1' : 'SF M2'
+    case 'final':
+      return 'Final'
+  }
+}
+
 export function r16SlotLabel(half: BracketSide, index: number): string {
-  return half === 'left' ? `R16 M${index + 1}` : `R16 M${index + 5}`
+  return knockoutSlotLabel('r16', half, index)
+}
+
+/** Real knockout DB rows mapped to visual slot order; missing slots are null. */
+export function buildKnockoutRoundTabDisplayRows(
+  round: WinnerKnockoutDisplayRound,
+  matchesByNumber: R32BracketMatchesByNumber,
+): Array<{ slotLabel: string; match: R32BracketMatchView | null }> {
+  const positions = WINNER_KNOCKOUT_SLOT_POSITIONS[round]
+  const sorted = [...matchesByNumber.values()].sort(
+    (a, b) => a.matchNumber - b.matchNumber,
+  )
+
+  return positions.map(({ half, index }, slotIndex) => ({
+    slotLabel: knockoutSlotLabel(round, half, index),
+    match: slotIndex < sorted.length ? (sorted[slotIndex] ?? null) : null,
+  }))
 }
 
 /** Real R16 DB rows mapped to bracket slot order; missing slots are null. */
 export function buildR16TabDisplayRows(
   matchesByNumber: R32BracketMatchesByNumber,
 ): Array<{ slotLabel: string; match: R32BracketMatchView | null }> {
-  const sorted = [...matchesByNumber.values()].sort(
-    (a, b) => a.matchNumber - b.matchNumber,
-  )
-
-  return R16_BRACKET_SLOT_POSITIONS.map(({ half, index }, slotIndex) => ({
-    slotLabel: r16SlotLabel(half, index),
-    match: slotIndex < sorted.length ? (sorted[slotIndex] ?? null) : null,
-  }))
+  return buildKnockoutRoundTabDisplayRows('r16', matchesByNumber)
 }
 
 export const WINNER_ONLY_KNOCKOUT_PICK_TOTALS = {
@@ -71,6 +132,25 @@ export function countR32AdvancePicks(
     }
   }
   return count
+}
+
+/** Picks required for a real-row knockout tab (DB rows only; TBD slots excluded). */
+export function winnerKnockoutPickTotalForMatches(
+  round: WinnerKnockoutDisplayRound,
+  matchesByNumber: R32BracketMatchesByNumber,
+): number {
+  const rowCount = matchesByNumber.size
+  if (rowCount > 0) return rowCount
+  return WINNER_ONLY_KNOCKOUT_PICK_TOTALS[round]
+}
+
+export function isWinnerKnockoutRoundComplete(
+  round: WinnerKnockoutDisplayRound,
+  matchesByNumber: R32BracketMatchesByNumber,
+): boolean {
+  const total = winnerKnockoutPickTotalForMatches(round, matchesByNumber)
+  if (total === 0) return false
+  return countR32AdvancePicks(matchesByNumber) >= total
 }
 
 export function isR32MatchLocked(
@@ -106,18 +186,28 @@ export function advancePickScores(pick: 1 | 2): {
   return pick === 1 ? { predTeam1: 1, predTeam2: 0 } : { predTeam1: 0, predTeam2: 1 }
 }
 
+/** Real DB row for a visual bracket slot (half + index), or null if TBD. */
+export function getKnockoutMatchForVisualSlot(
+  round: WinnerKnockoutDisplayRound,
+  half: BracketSide,
+  index: number,
+  matchesByNumber: R32BracketMatchesByNumber,
+): R32BracketMatchView | null {
+  const slotIndex = WINNER_KNOCKOUT_SLOT_POSITIONS[round].findIndex(
+    (pos) => pos.half === half && pos.index === index,
+  )
+  if (slotIndex < 0) return null
+  const rows = buildKnockoutRoundTabDisplayRows(round, matchesByNumber)
+  return rows[slotIndex]?.match ?? null
+}
+
 /** Real R16 DB row for a visual bracket slot (half + index), or null if TBD. */
 export function getR16MatchForVisualSlot(
   half: BracketSide,
   index: number,
   matchesByNumber: R32BracketMatchesByNumber,
 ): R32BracketMatchView | null {
-  const slotIndex = R16_BRACKET_SLOT_POSITIONS.findIndex(
-    (pos) => pos.half === half && pos.index === index,
-  )
-  if (slotIndex < 0) return null
-  const rows = buildR16TabDisplayRows(matchesByNumber)
-  return rows[slotIndex]?.match ?? null
+  return getKnockoutMatchForVisualSlot('r16', half, index, matchesByNumber)
 }
 
 export function getR32PickedTeamName(

@@ -4,18 +4,24 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { cn } from '@/lib/utils'
-import type { KnockoutBracketTabId } from '@/components/predict/knockout-bracket-preview'
-import type { R32BracketInteractiveProps } from '@/components/predict/knockout-bracket-preview'
 import {
   isResolvedR32Team,
   R32_PREVIEW_SLOT_TO_MATCH_NUMBER,
 } from '@/src/lib/r32-bracket-preview'
+import type {
+  KnockoutBracketTabId,
+  KnockoutRoundBracketProps,
+  R32BracketInteractiveProps,
+} from '@/components/predict/knockout-bracket-preview'
 import {
+  buildKnockoutRoundTabDisplayRows,
   countR32AdvancePicks,
   getR32R16AdvanceHint,
   isR32PickPersisted,
+  winnerKnockoutPickTotalForMatches,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
   type R32BracketMatchView,
+  type WinnerKnockoutDisplayRound,
 } from '@/src/lib/winner-only-r32-bracket'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 import type { BracketSide } from '@/src/lib/world-cup-2026-bracket'
@@ -485,16 +491,374 @@ function R32MobileGameCardPicker({
   )
 }
 
+function isKnockoutMatchPicked(
+  match: R32BracketMatchView | null | undefined,
+): boolean {
+  return match?.myPick === 1 || match?.myPick === 2
+}
+
+function KnockoutRoundMobileGameCard({
+  slotLabel,
+  round,
+  match,
+  bracket,
+  expanded,
+  onToggleExpand,
+  registerRef,
+}: {
+  slotLabel: string
+  round: WinnerKnockoutDisplayRound
+  match: R32BracketMatchView | null
+  bracket: KnockoutRoundBracketProps
+  expanded: boolean
+  onToggleExpand: () => void
+  registerRef?: (el: HTMLElement | null) => void
+}) {
+  if (!match) {
+    return (
+      <KnockoutMobileReadOnlyCard
+        matchLabel={slotLabel}
+        roundLabel={roundDisplayLabel(round)}
+      />
+    )
+  }
+
+  const { nowMs, onAdvancePick } = bracket
+  const locked =
+    match.lockedAt != null && new Date(match.lockedAt).getTime() <= nowMs
+  const myPick = match.myPick ?? null
+  const hasPick = myPick === 1 || myPick === 2
+  const hasPersistedPick =
+    isR32PickPersisted(match) && match.myPick === match.savedPick
+  const team1 = (match.team1Name ?? '').trim()
+  const team2 = (match.team2Name ?? '').trim()
+  const team1Resolved = isResolvedR32Team(team1)
+  const team2Resolved = isResolvedR32Team(team2)
+  const winnerName =
+    hasPick ? (myPick === 1 ? team1 : team2) : null
+  const loserName =
+    hasPick ? (myPick === 1 ? team2 : team1) : null
+  const canPick = !locked
+  const isCollapsed = (hasPick || locked) && !expanded
+
+  if (isCollapsed && winnerName && loserName) {
+    return (
+      <button
+        type="button"
+        ref={registerRef}
+        onClick={locked ? undefined : onToggleExpand}
+        disabled={locked}
+        className={cn(
+          'flex w-full min-w-0 flex-col rounded-lg border border-[#1e293b]/80 bg-[#0a1018]/80 px-3 py-2 text-left transition-colors',
+          locked ? 'opacity-80' : 'hover:border-primary/30 active:bg-[#0f172a]',
+        )}
+        style={{ minHeight: '2.75rem' }}
+        aria-label={`${slotLabel} pick: ${winnerName} over ${loserName}`}
+      >
+        <div className="flex min-w-0 items-center gap-1.5">
+          {hasPersistedPick ? (
+            <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+          ) : null}
+          <TeamFlagImage
+            countryName={winnerName}
+            imgClassName="h-3.5 w-auto max-w-[1rem] shrink-0 object-contain"
+            emojiClassName="text-sm leading-none"
+          />
+          <span className="min-w-0 truncate text-[11px] font-medium text-foreground">
+            {winnerName}{' '}
+            <span className="font-normal text-muted-foreground">over</span>{' '}
+            {loserName}
+          </span>
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <article
+      ref={registerRef}
+      className="w-full min-w-0 rounded-lg border border-[#1e293b]/90 bg-[#0a1018]/60 px-3 py-2 shadow-sm"
+      aria-label={`${slotLabel} matchup`}
+    >
+      <div className="mb-1.5 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[#94a3b8]">
+            {slotLabel} · {roundDisplayLabel(round)}
+          </p>
+          {locked ? (
+            <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-[#64748b]">
+              Locked
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {hasPick && winnerName && loserName ? (
+        <div className="space-y-1">
+          <div className="flex min-w-0 items-center gap-2 rounded border border-primary bg-primary/15 px-2 py-1.5">
+            {hasPersistedPick ? (
+              <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            ) : null}
+            <TeamFlagImage
+              countryName={winnerName}
+              imgClassName="h-3.5 w-auto max-w-[1rem] shrink-0 object-contain"
+              emojiClassName="text-sm leading-none"
+            />
+            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-primary">
+              {winnerName}
+            </span>
+            <span className="shrink-0 text-[8px] font-bold uppercase tracking-wide text-primary">
+              Advancing
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2 px-2 py-1 opacity-50">
+            <TeamFlagImage
+              countryName={loserName}
+              imgClassName="h-3.5 w-auto max-w-[1rem] shrink-0 object-contain"
+              emojiClassName="text-sm leading-none"
+            />
+            <span className="min-w-0 truncate text-[11px] text-[#94a3b8]">
+              {loserName}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-2 flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <MobileTeamName name={team1Resolved ? team1 : null} />
+          </div>
+          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#475569]">
+            VS
+          </span>
+          <div className="min-w-0 flex-1 text-right">
+            <div className="flex justify-end">
+              <MobileTeamName name={team2Resolved ? team2 : null} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {canPick ? (
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onAdvancePick(match.matchId, 1)}
+            disabled={!team1Resolved}
+            className={cn(
+              'min-w-0 flex-1 truncate rounded border px-2 py-1.5 text-[10px] font-semibold transition-colors',
+              myPick === 1
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-[#1e293b] bg-[#111827] text-[#e2e8f0] hover:border-primary/40',
+              !team1Resolved && 'cursor-not-allowed opacity-50',
+            )}
+          >
+            Pick {team1Resolved ? team1 : 'TBD'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onAdvancePick(match.matchId, 2)}
+            disabled={!team2Resolved}
+            className={cn(
+              'min-w-0 flex-1 truncate rounded border px-2 py-1.5 text-[10px] font-semibold transition-colors',
+              myPick === 2
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-[#1e293b] bg-[#111827] text-[#e2e8f0] hover:border-primary/40',
+              !team2Resolved && 'cursor-not-allowed opacity-50',
+            )}
+          >
+            Pick {team2Resolved ? team2 : 'TBD'}
+          </button>
+        </div>
+      ) : null}
+
+      {hasPick && !locked ? (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="mt-1.5 w-full text-center text-[9px] text-muted-foreground underline-offset-2 hover:underline"
+        >
+          Collapse
+        </button>
+      ) : null}
+    </article>
+  )
+}
+
+function KnockoutRoundMobileGameCardPicker({
+  round,
+  roundBracket,
+}: {
+  round: WinnerKnockoutDisplayRound
+  roundBracket: KnockoutRoundBracketProps
+}) {
+  const [filter, setFilter] = useState<R32MobileFilter>('all')
+  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null)
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map())
+
+  const pickCount = useMemo(
+    () => countR32AdvancePicks(roundBracket.matchesByNumber),
+    [roundBracket.matchesByNumber],
+  )
+  const total = winnerKnockoutPickTotalForMatches(
+    round,
+    roundBracket.matchesByNumber,
+  )
+  const allComplete = pickCount >= total
+
+  const sortedRows = useMemo(() => {
+    const rows = buildKnockoutRoundTabDisplayRows(
+      round,
+      roundBracket.matchesByNumber,
+    )
+    return [...rows].sort((a, b) => {
+      if (!a.match && !b.match) return 0
+      if (!a.match) return 1
+      if (!b.match) return -1
+      const aPicked = isKnockoutMatchPicked(a.match)
+      const bPicked = isKnockoutMatchPicked(b.match)
+      if (aPicked !== bPicked) return aPicked ? 1 : -1
+      return a.match.matchNumber - b.match.matchNumber
+    })
+  }, [round, roundBracket.matchesByNumber])
+
+  const visibleRows = useMemo(() => {
+    return sortedRows.filter((row) => {
+      if (!row.match) return filter === 'all'
+      const picked = isKnockoutMatchPicked(row.match)
+      if (filter === 'remaining') return !picked
+      if (filter === 'completed') return picked
+      return true
+    })
+  }, [filter, sortedRows])
+
+  const scrollToNextUnpicked = useCallback(() => {
+    const next = sortedRows.find(
+      (row) => row.match && !isKnockoutMatchPicked(row.match),
+    )
+    if (!next?.match) return
+    const el = cardRefs.current.get(next.match.matchId)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [sortedRows])
+
+  const handlePickSide = useCallback(
+    (matchId: string, pick: 1 | 2) => {
+      roundBracket.onAdvancePick(matchId, pick)
+      setExpandedMatchId(null)
+    },
+    [roundBracket],
+  )
+
+  const bracketWithCollapse = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      ...roundBracket,
+      onAdvancePick: handlePickSide,
+    }),
+    [handlePickSide, roundBracket],
+  )
+
+  return (
+    <>
+      <div className="flex gap-1.5">
+        {R32_FILTER_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setFilter(option.id)}
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors',
+              filter === option.id
+                ? 'border-primary bg-primary/15 text-primary'
+                : 'border-[#1e293b] text-muted-foreground hover:border-primary/30',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex w-full min-w-0 flex-col gap-2">
+        {visibleRows.map((row) => {
+          const cardKey = row.match?.matchId ?? `tbd-${row.slotLabel}`
+          const expanded = row.match
+            ? expandedMatchId === row.match.matchId
+            : false
+
+          return (
+            <KnockoutRoundMobileGameCard
+              key={cardKey}
+              slotLabel={row.slotLabel}
+              round={round}
+              match={row.match}
+              bracket={bracketWithCollapse}
+              expanded={expanded}
+              onToggleExpand={() =>
+                row.match
+                  ? setExpandedMatchId((prev) =>
+                      prev === row.match!.matchId ? null : row.match!.matchId,
+                    )
+                  : undefined
+              }
+              registerRef={(el) => {
+                if (row.match) {
+                  if (el) cardRefs.current.set(row.match.matchId, el)
+                  else cardRefs.current.delete(row.match.matchId)
+                }
+              }}
+            />
+          )
+        })}
+      </div>
+
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md md:hidden"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+          <p className="text-sm font-medium text-foreground">
+            <span className="font-mono text-primary">{pickCount}</span>
+            <span className="text-muted-foreground"> / </span>
+            <span className="font-mono">{total}</span>
+            <span className="text-muted-foreground"> complete</span>
+          </p>
+          {!allComplete ? (
+            <button
+              type="button"
+              onClick={scrollToNextUnpicked}
+              className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Continue
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </>
+  )
+}
+
 export function KnockoutBracketMobileList({
   tab,
   r32Bracket,
+  roundBracket,
 }: {
   tab: KnockoutBracketTabId
   r32Bracket?: R32BracketInteractiveProps
+  roundBracket?: KnockoutRoundBracketProps
 }) {
   if (tab === 'r32') {
     if (!r32Bracket) return null
     return <R32MobileGameCardPicker r32Bracket={r32Bracket} />
+  }
+
+  if (
+    (tab === 'r16' || tab === 'qf' || tab === 'sf' || tab === 'final') &&
+    roundBracket
+  ) {
+    return (
+      <KnockoutRoundMobileGameCardPicker
+        round={tab}
+        roundBracket={roundBracket}
+      />
+    )
   }
 
   if (tab === 'qf') {

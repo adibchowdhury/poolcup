@@ -18,9 +18,10 @@ import {
   r32MatchNumberForPreviewSlot,
 } from '@/src/lib/r32-bracket-preview'
 import {
-  getR16MatchForVisualSlot,
+  getKnockoutMatchForVisualSlot,
   getR16ProjectedSides,
   type R32BracketMatchView,
+  type WinnerKnockoutDisplayRound,
 } from '@/src/lib/winner-only-r32-bracket'
 import { formatKickoffCompactOrNull } from '@/src/lib/match-kickoff-display'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
@@ -62,6 +63,9 @@ export type KnockoutTabRoundPair = {
 
 export type KnockoutBracketPreviewProps = KnockoutTabRoundPair & {
   r32Bracket?: R32BracketInteractiveProps
+  /** Real DB rows for the source round when source is r16 or qf. */
+  sourceBracket?: KnockoutRoundBracketProps
+  /** @deprecated Prefer sourceBracket */
   r16Bracket?: KnockoutRoundBracketProps
 }
 
@@ -456,7 +460,7 @@ function SourceRoundColumn({
   width,
   registerMatchupRef,
   r32Bracket,
-  r16Bracket,
+  sourceBracket,
 }: {
   half: BracketHalf
   round: KnockoutPreviewRound
@@ -468,7 +472,7 @@ function SourceRoundColumn({
     index: number,
   ) => RefCallback<HTMLElement>
   r32Bracket?: R32BracketInteractiveProps
-  r16Bracket?: KnockoutRoundBracketProps
+  sourceBracket?: KnockoutRoundBracketProps
 }) {
   return (
     <div
@@ -501,11 +505,15 @@ function SourceRoundColumn({
               )
             }
 
-            if (round === 'r16' && r16Bracket) {
-              const match = getR16MatchForVisualSlot(
+            if (
+              (round === 'r16' || round === 'qf') &&
+              sourceBracket
+            ) {
+              const match = getKnockoutMatchForVisualSlot(
+                round as WinnerKnockoutDisplayRound,
                 half,
                 index,
-                r16Bracket.matchesByNumber,
+                sourceBracket.matchesByNumber,
               )
 
               return (
@@ -514,7 +522,7 @@ function SourceRoundColumn({
                   label={labelForMatchup(round, half, index)}
                   registerRef={registerMatchupRef(half, round, index)}
                   match={match}
-                  bracket={r16Bracket}
+                  bracket={sourceBracket}
                 />
               )
             }
@@ -723,8 +731,10 @@ function DesktopTwoSidedKnockoutBracket({
   sourceRound,
   targetRound,
   r32Bracket,
+  sourceBracket,
   r16Bracket,
 }: KnockoutBracketPreviewProps) {
+  const resolvedSourceBracket = sourceBracket ?? r16Bracket
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const matchupRefs = useRef(new Map<string, HTMLElement>())
@@ -832,7 +842,7 @@ function DesktopTwoSidedKnockoutBracket({
           width={columnWidth}
           registerMatchupRef={registerMatchupRef}
           r32Bracket={r32Bracket}
-          r16Bracket={r16Bracket}
+          sourceBracket={resolvedSourceBracket}
         />
 
         <TargetRoundColumn
@@ -865,14 +875,18 @@ function DesktopTwoSidedKnockoutBracket({
           width={BRACKET_LAYOUT.rightR32ColumnWidth}
           registerMatchupRef={registerMatchupRef}
           r32Bracket={r32Bracket}
-          r16Bracket={r16Bracket}
+          sourceBracket={resolvedSourceBracket}
         />
     </BracketScrollCenter>
   )
 }
 
 /** Semifinals tab: one matchup per half feeding a center Final preview. */
-function KnockoutSemifinalsToFinalPreview() {
+function KnockoutSemifinalsToFinalPreview({
+  sfBracket,
+}: {
+  sfBracket?: KnockoutRoundBracketProps
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const matchupRefs = useRef(new Map<string, HTMLElement>())
@@ -929,6 +943,19 @@ function KnockoutSemifinalsToFinalPreview() {
 
   useBracketConnectors(updateConnectors, containerRef, wrapperRef)
 
+  const leftMatch = getKnockoutMatchForVisualSlot(
+    'sf',
+    'left',
+    0,
+    sfBracket?.matchesByNumber ?? new Map(),
+  )
+  const rightMatch = getKnockoutMatchForVisualSlot(
+    'sf',
+    'right',
+    0,
+    sfBracket?.matchesByNumber ?? new Map(),
+  )
+
   return (
     <BracketScrollCenter
       wrapperRef={wrapperRef}
@@ -954,10 +981,19 @@ function KnockoutSemifinalsToFinalPreview() {
         className="flex min-w-0 flex-1 items-center justify-end self-stretch"
         style={{ width: columnWidth }}
       >
-        <StaticKnockoutMatchupBlock
-          label="SF M1"
-          registerRef={registerMatchupRef('left-sf')}
-        />
+        {sfBracket ? (
+          <R16KnockoutMatchupBlock
+            label="SF M1"
+            registerRef={registerMatchupRef('left-sf')}
+            match={leftMatch}
+            bracket={sfBracket}
+          />
+        ) : (
+          <StaticKnockoutMatchupBlock
+            label="SF M1"
+            registerRef={registerMatchupRef('left-sf')}
+          />
+        )}
       </div>
 
       <div
@@ -987,10 +1023,19 @@ function KnockoutSemifinalsToFinalPreview() {
         className="flex min-w-0 flex-1 items-center justify-start self-stretch"
         style={{ width: columnWidth }}
       >
-        <StaticKnockoutMatchupBlock
-          label="SF M2"
-          registerRef={registerMatchupRef('right-sf')}
-        />
+        {sfBracket ? (
+          <R16KnockoutMatchupBlock
+            label="SF M2"
+            registerRef={registerMatchupRef('right-sf')}
+            match={rightMatch}
+            bracket={sfBracket}
+          />
+        ) : (
+          <StaticKnockoutMatchupBlock
+            label="SF M2"
+            registerRef={registerMatchupRef('right-sf')}
+          />
+        )}
       </div>
     </BracketScrollCenter>
   )
@@ -999,7 +1044,18 @@ function KnockoutSemifinalsToFinalPreview() {
 const FINAL_ONLY_MIN_WIDTH = 280
 
 /** Final tab: single centered matchup with champion marker. */
-function KnockoutFinalOnlyPreview() {
+function KnockoutFinalOnlyPreview({
+  finalBracket,
+}: {
+  finalBracket?: KnockoutRoundBracketProps
+}) {
+  const finalMatch = getKnockoutMatchForVisualSlot(
+    'final',
+    'left',
+    0,
+    finalBracket?.matchesByNumber ?? new Map(),
+  )
+
   return (
     <div style={BRACKET_SCROLL_STYLE}>
       <div style={BRACKET_CENTER_STYLE}>
@@ -1008,7 +1064,15 @@ function KnockoutFinalOnlyPreview() {
           style={{ minWidth: FINAL_ONLY_MIN_WIDTH }}
         >
           <div className="w-full min-w-0" style={{ width: BRACKET_LAYOUT.leftR32ColumnWidth }}>
-            <StaticKnockoutMatchupBlock label="Final" />
+            {finalBracket ? (
+              <R16KnockoutMatchupBlock
+                label="Final"
+                match={finalMatch}
+                bracket={finalBracket}
+              />
+            ) : (
+              <StaticKnockoutMatchupBlock label="Final" />
+            )}
           </div>
           <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
             World Cup Champion
@@ -1024,6 +1088,7 @@ export function KnockoutBracketPreview({
   sourceRound,
   targetRound,
   r32Bracket,
+  sourceBracket,
   r16Bracket,
 }: KnockoutBracketPreviewProps) {
   const sourceCount = matchupsPerSide(sourceRound)
@@ -1040,6 +1105,7 @@ export function KnockoutBracketPreview({
       sourceRound={sourceRound}
       targetRound={targetRound}
       r32Bracket={r32Bracket}
+      sourceBracket={sourceBracket ?? r16Bracket}
       r16Bracket={r16Bracket}
     />
   )
@@ -1060,59 +1126,65 @@ export function KnockoutBracketForTab({
   tab,
   r32Bracket,
   r16Bracket,
+  qfBracket,
+  sfBracket,
+  finalBracket,
   desktopOnly = false,
   mobileOnly = false,
 }: {
   tab: KnockoutBracketTabId
   r32Bracket?: R32BracketInteractiveProps
   r16Bracket?: KnockoutRoundBracketProps
+  qfBracket?: KnockoutRoundBracketProps
+  sfBracket?: KnockoutRoundBracketProps
+  finalBracket?: KnockoutRoundBracketProps
   desktopOnly?: boolean
   mobileOnly?: boolean
 }) {
-  if (tab === 'r16') {
-    const bracket = (
-      <KnockoutBracketPreview
-        sourceRound="r16"
-        targetRound="qf"
-        r16Bracket={r16Bracket}
-      />
-    )
-
-    if (desktopOnly) {
-      return bracket
-    }
-    if (mobileOnly) {
-      return <div className="md:hidden">{bracket}</div>
-    }
-
-    return (
-      <>
-        <div className="hidden md:block">{bracket}</div>
-        <div className="md:hidden">{bracket}</div>
-      </>
-    )
-  }
+  const roundBracket =
+    tab === 'r16'
+      ? r16Bracket
+      : tab === 'qf'
+        ? qfBracket
+        : tab === 'sf'
+          ? sfBracket
+          : tab === 'final'
+            ? finalBracket
+            : undefined
 
   let desktop: ReactNode
 
-  if (tab === 'sf') {
-    desktop = <KnockoutSemifinalsToFinalPreview />
+  if (tab === 'r16' || tab === 'qf') {
+    const preview = KNOCKOUT_TAB_PREVIEW[tab]
+    desktop = (
+      <KnockoutBracketPreview
+        sourceRound={preview.sourceRound}
+        targetRound={preview.targetRound}
+        sourceBracket={roundBracket}
+      />
+    )
+  } else if (tab === 'sf') {
+    desktop = <KnockoutSemifinalsToFinalPreview sfBracket={sfBracket} />
   } else if (tab === 'final') {
-    desktop = <KnockoutFinalOnlyPreview />
+    desktop = <KnockoutFinalOnlyPreview finalBracket={finalBracket} />
   } else {
     const preview = KNOCKOUT_TAB_PREVIEW[tab]
     desktop = (
       <KnockoutBracketPreview
         sourceRound={preview.sourceRound}
         targetRound={preview.targetRound}
-        r32Bracket={tab === 'r32' ? r32Bracket : undefined}
+        r32Bracket={r32Bracket}
       />
     )
   }
 
   const mobile = (
     <div className="w-full min-w-0 max-w-full space-y-3 px-4 md:hidden">
-      <KnockoutBracketMobileList tab={tab} r32Bracket={r32Bracket} />
+      <KnockoutBracketMobileList
+        tab={tab}
+        r32Bracket={r32Bracket}
+        roundBracket={roundBracket}
+      />
     </div>
   )
 

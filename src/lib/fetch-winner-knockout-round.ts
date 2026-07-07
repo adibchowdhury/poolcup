@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { R32BracketMatchesByNumber } from '@/src/lib/winner-only-r32-bracket'
 
-type KnockoutRoundCode = 'r32' | 'r16'
+type KnockoutRoundCode = 'r32' | 'r16' | 'qf' | 'sf' | 'final'
 
 /** Load knockout-round matches + member advance_pick (mirrors winner pool R32 path). */
 export async function fetchWinnerKnockoutRoundMatches(
