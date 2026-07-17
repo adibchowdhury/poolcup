@@ -8,6 +8,7 @@ export const KNOCKOUT_ROUND_POINT_VALUES = {
   r16: { exact: 10, advance: 4 },
   qf: { exact: 12, advance: 5 },
   sf: { exact: 15, advance: 6 },
+  third: { exact: 15, advance: 6 },
   final: { exact: 20, advance: 8 },
 } as const satisfies Record<
   KnockoutRoundId,
@@ -16,7 +17,26 @@ export const KNOCKOUT_ROUND_POINT_VALUES = {
 
 export function formatKnockoutPointValuesFooter(round: KnockoutRoundId): string {
   const values = KNOCKOUT_ROUND_POINT_VALUES[round]
-  return `+${values.exact} exact / +${values.advance} advance`
+  const winnerLabel = round === 'third' ? 'winner' : 'advance'
+  return `+${values.exact} exact / +${values.advance} ${winnerLabel}`
+}
+
+export function knockoutWinnerPickLabel(round: string): string {
+  return round === 'third' ? 'Who wins?' : 'Who advances?'
+}
+
+export function knockoutWinnerPickHintText(
+  round: string,
+  isDraw: boolean,
+): string {
+  if (round === 'third') {
+    return isDraw
+      ? 'Pick the third-place winner if it goes to penalties'
+      : 'Winner pick follows your predicted score'
+  }
+  return isDraw
+    ? 'Pick a winner for the penalty bonus (optional)'
+    : "If it's level and goes to penalties"
 }
 
 export function isPredictedDraw(
@@ -27,9 +47,7 @@ export function isPredictedDraw(
 }
 
 export function getAdvancePickHintText(isDraw: boolean): string {
-  return isDraw
-    ? 'Pick a winner for the penalty bonus (optional)'
-    : "If it's level and goes to penalties"
+  return knockoutWinnerPickHintText('final', isDraw)
 }
 
 /** Decisive score → leading team; level score → user's pick (penalties). */

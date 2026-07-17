@@ -35,7 +35,7 @@ export const R16_BRACKET_SLOT_POSITIONS: Array<{
   })),
 ]
 
-export type WinnerKnockoutDisplayRound = 'r16' | 'qf' | 'sf' | 'final'
+export type WinnerKnockoutDisplayRound = 'r16' | 'qf' | 'sf' | 'third' | 'final'
 
 export const QF_BRACKET_SLOT_POSITIONS: Array<{
   half: BracketSide
@@ -60,6 +60,11 @@ export const FINAL_BRACKET_SLOT_POSITIONS: Array<{
   index: number
 }> = [{ half: 'left', index: 0 }]
 
+export const THIRD_PLACE_BRACKET_SLOT_POSITIONS: Array<{
+  half: BracketSide
+  index: number
+}> = [{ half: 'left', index: 0 }]
+
 export const WINNER_KNOCKOUT_SLOT_POSITIONS: Record<
   WinnerKnockoutDisplayRound,
   Array<{ half: BracketSide; index: number }>
@@ -67,6 +72,7 @@ export const WINNER_KNOCKOUT_SLOT_POSITIONS: Record<
   r16: R16_BRACKET_SLOT_POSITIONS,
   qf: QF_BRACKET_SLOT_POSITIONS,
   sf: SF_BRACKET_SLOT_POSITIONS,
+  third: THIRD_PLACE_BRACKET_SLOT_POSITIONS,
   final: FINAL_BRACKET_SLOT_POSITIONS,
 }
 
@@ -82,6 +88,8 @@ export function knockoutSlotLabel(
       return half === 'left' ? `QF M${index + 1}` : `QF M${index + 3}`
     case 'sf':
       return half === 'left' ? 'SF M1' : 'SF M2'
+    case 'third':
+      return '3rd Place'
     case 'final':
       return 'Final'
   }
@@ -119,6 +127,7 @@ export const WINNER_ONLY_KNOCKOUT_PICK_TOTALS = {
   r16: 8,
   qf: 4,
   sf: 2,
+  third: 1,
   final: 1,
 } as const
 

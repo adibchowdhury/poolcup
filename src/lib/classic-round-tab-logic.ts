@@ -3,7 +3,14 @@ import { CLASSIC_ROUND_TAB_ORDER } from '@/components/predict/group-knockout-tab
 import { isMatchLocked } from '@/src/lib/match-lock'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 
-export const KNOCKOUT_ROUND_IDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
+export const KNOCKOUT_ROUND_IDS = [
+  'r32',
+  'r16',
+  'qf',
+  'sf',
+  'third',
+  'final',
+] as const
 
 export type KnockoutRoundId = (typeof KNOCKOUT_ROUND_IDS)[number]
 
@@ -15,6 +22,7 @@ export function matchInClassicRoundTab(
   round: string,
   tab: ClassicRoundTabId,
 ): boolean {
+  if (tab === 'final' && round === 'third') return true
   return round === tab
 }
 

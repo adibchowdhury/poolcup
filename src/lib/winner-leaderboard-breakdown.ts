@@ -8,7 +8,8 @@ const KNOCKOUT_ROUND_ORDER: Record<string, number> = {
   r16: 2,
   qf: 3,
   sf: 4,
-  final: 5,
+  third: 5,
+  final: 6,
 }
 
 type GroupPredictionBreakdownRow = {
@@ -105,7 +106,8 @@ function knockoutBreakdownItem(
     predTeam1: row.pred_team1,
     predTeam2: row.pred_team2,
     pointsAwarded: row.points_awarded!,
-    reasonLabel: WINNER_KNOCKOUT_ADVANCE_REASON,
+    reasonLabel:
+      match.round === 'third' ? 'Correct winner' : WINNER_KNOCKOUT_ADVANCE_REASON,
     team1Name: match.team1_name,
     team2Name: match.team2_name,
     resultTeam1: match.result_team1,

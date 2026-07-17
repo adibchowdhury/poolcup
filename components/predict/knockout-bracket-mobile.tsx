@@ -35,7 +35,7 @@ function isR32MatchPicked(match: R32BracketMatchView | undefined): boolean {
 }
 
 function labelForKnockoutRound(
-  round: 'r16' | 'qf' | 'sf' | 'final',
+  round: WinnerKnockoutDisplayRound,
   half: BracketSide,
   index: number,
 ): string {
@@ -46,12 +46,14 @@ function labelForKnockoutRound(
       return half === 'left' ? `QF M${index + 1}` : `QF M${index + 3}`
     case 'sf':
       return half === 'left' ? 'SF M1' : 'SF M2'
+    case 'third':
+      return '3rd Place'
     case 'final':
       return 'Final'
   }
 }
 
-function roundDisplayLabel(round: 'r16' | 'qf' | 'sf' | 'final'): string {
+function roundDisplayLabel(round: WinnerKnockoutDisplayRound): string {
   return TOURNAMENT_ROUND_LABELS[round]
 }
 
@@ -540,6 +542,7 @@ function KnockoutRoundMobileGameCard({
     hasPick ? (myPick === 1 ? team2 : team1) : null
   const canPick = !locked
   const isCollapsed = (hasPick || locked) && !expanded
+  const resultLabel = round === 'third' ? 'Winner' : 'Advancing'
 
   if (isCollapsed && winnerName && loserName) {
     return (
@@ -608,7 +611,7 @@ function KnockoutRoundMobileGameCard({
               {winnerName}
             </span>
             <span className="shrink-0 text-[8px] font-bold uppercase tracking-wide text-primary">
-              Advancing
+              {resultLabel}
             </span>
           </div>
           <div className="flex min-w-0 items-center gap-2 px-2 py-1 opacity-50">
@@ -835,22 +838,80 @@ function KnockoutRoundMobileGameCardPicker({
   )
 }
 
+function KnockoutSingleRoundMobileCards({
+  round,
+  roundBracket,
+}: {
+  round: WinnerKnockoutDisplayRound
+  roundBracket?: KnockoutRoundBracketProps
+}) {
+  const rows = buildKnockoutRoundTabDisplayRows(
+    round,
+    roundBracket?.matchesByNumber ?? new Map(),
+  )
+  const bracket =
+    roundBracket ??
+    ({
+      matchesByNumber: new Map(),
+      nowMs: 0,
+      onAdvancePick: () => {},
+    } satisfies KnockoutRoundBracketProps)
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-2">
+      {rows.map((row) => (
+        <KnockoutRoundMobileGameCard
+          key={row.slotLabel}
+          slotLabel={row.slotLabel}
+          round={round}
+          match={row.match}
+          bracket={bracket}
+          expanded
+          onToggleExpand={() => {}}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function KnockoutBracketMobileList({
   tab,
   r32Bracket,
   roundBracket,
+  thirdBracket,
 }: {
   tab: KnockoutBracketTabId
   r32Bracket?: R32BracketInteractiveProps
   roundBracket?: KnockoutRoundBracketProps
+  thirdBracket?: KnockoutRoundBracketProps
 }) {
   if (tab === 'r32') {
     if (!r32Bracket) return null
     return <R32MobileGameCardPicker r32Bracket={r32Bracket} />
   }
 
+  if (tab === 'final') {
+    return (
+      <div className="flex w-full min-w-0 flex-col gap-4">
+        <KnockoutSingleRoundMobileCards
+          round="final"
+          roundBracket={roundBracket}
+        />
+        <section className="flex w-full min-w-0 flex-col gap-2">
+          <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#94a3b8]">
+            3rd Place Playoff
+          </p>
+          <KnockoutSingleRoundMobileCards
+            round="third"
+            roundBracket={thirdBracket}
+          />
+        </section>
+      </div>
+    )
+  }
+
   if (
-    (tab === 'r16' || tab === 'qf' || tab === 'sf' || tab === 'final') &&
+    (tab === 'r16' || tab === 'qf' || tab === 'sf') &&
     roundBracket
   ) {
     return (

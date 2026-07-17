@@ -66,6 +66,15 @@ export function mapLeagueRoundToGroup(leagueRound: string): {
     return { round: 'group', group_name: groupLetterMatch[1].toUpperCase() }
   }
 
+  if (
+    /3rd\s+place\s+final/i.test(label) ||
+    /third\s+place/i.test(label) ||
+    /third[- ]?place/i.test(label) ||
+    /play[- ]?off\s+for\s+third\s+place/i.test(label)
+  ) {
+    return { round: 'third', group_name: null }
+  }
+
   const ROUND_LABEL_MAP: Record<string, string> = {
     'Group Stage': 'group',
     'Round of 32': 'r32',

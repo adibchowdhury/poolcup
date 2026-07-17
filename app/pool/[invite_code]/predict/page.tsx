@@ -311,11 +311,33 @@ function ClassicKnockoutPredictCard({
           predTeam1={predTeam1}
           predTeam2={predTeam2}
           userAdvancePick={advancePick}
+          round={match.round}
           isLocked={card.isLocked}
           onAdvancePick={card.isLocked ? undefined : onAdvancePick}
         />
       </div>
     </div>
+  )
+}
+
+function ClassicThirdPlaceTbdCard() {
+  return (
+    <section className="space-y-2">
+      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        3rd Place Playoff
+      </p>
+      <div className="overflow-hidden rounded-xl border border-border/90 bg-card/40 px-4 py-5 text-center">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          3rd Place
+        </p>
+        <p className="mt-2 text-sm font-medium text-foreground">
+          To be decided
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          This pick unlocks once the official fixture is published.
+        </p>
+      </div>
+    </section>
   )
 }
 
@@ -943,7 +965,10 @@ export default function PredictPage() {
             )
           ) : (
             <div className="flex flex-col gap-3">
-              {knockoutTabMatches.map((match) => {
+              {(activeTab === 'final'
+                ? knockoutTabMatches.filter((match) => match.round === 'final')
+                : knockoutTabMatches
+              ).map((match) => {
                 const card = toSectionMatch(
                   match,
                   scores,
@@ -964,6 +989,46 @@ export default function PredictPage() {
                   />
                 )
               })}
+              {activeTab === 'final' ? (
+                (() => {
+                  const thirdMatch = knockoutTabMatches.find(
+                    (match) => match.round === 'third',
+                  )
+                  if (!thirdMatch) {
+                    return <ClassicThirdPlaceTbdCard />
+                  }
+                  const card = toSectionMatch(
+                    thirdMatch,
+                    scores,
+                    baselineScores,
+                    savedMatchIds,
+                    advancePicks,
+                    baselineAdvancePicks,
+                  )
+                  return (
+                    <section className="space-y-2">
+                      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        3rd Place Playoff
+                      </p>
+                      <ClassicKnockoutPredictCard
+                        key={thirdMatch.id}
+                        match={thirdMatch}
+                        card={card}
+                        advancePick={advancePicks[thirdMatch.id] ?? null}
+                        onAdvancePick={(pick) =>
+                          updateAdvancePick(thirdMatch.id, pick)
+                        }
+                        onHomeScoreChange={(v) =>
+                          updateScore(thirdMatch.id, 'score1', v)
+                        }
+                        onAwayScoreChange={(v) =>
+                          updateScore(thirdMatch.id, 'score2', v)
+                        }
+                      />
+                    </section>
+                  )
+                })()
+              ) : null}
             </div>
           )}
         </div>

@@ -18,6 +18,7 @@ export const KNOCKOUT_ROUND_CREATE_ORDER = [
   'r16',
   'qf',
   'sf',
+  'third',
   'final',
 ] as const satisfies readonly KnockoutRoundId[]
 
@@ -28,10 +29,11 @@ const PRIOR_ROUND: Record<KnockoutRoundCreateTarget, KnockoutRoundId> = {
   r16: 'r32',
   qf: 'r16',
   sf: 'qf',
+  third: 'sf',
   final: 'sf',
 }
 
-/** FIFA WC 2026 match_number slots per round (103 = 3rd-place, not created here). */
+/** FIFA WC 2026 match_number slots per round. */
 export const FIFA_MATCH_NUMBER_RANGES: Record<
   KnockoutRoundCreateTarget,
   readonly [number, number]
@@ -39,6 +41,7 @@ export const FIFA_MATCH_NUMBER_RANGES: Record<
   r16: [89, 96],
   qf: [97, 100],
   sf: [101, 102],
+  third: [103, 103],
   final: [104, 104],
 }
 
@@ -46,6 +49,7 @@ const EXPECTED_SLOT_COUNT: Record<KnockoutRoundCreateTarget, number> = {
   r16: 8,
   qf: 4,
   sf: 2,
+  third: 1,
   final: 1,
 }
 
@@ -124,6 +128,14 @@ function advancerNameFromRow(row: PriorRoundMatchRow): string | null {
   return isResolvableTeamName(name) ? name : null
 }
 
+function loserNameFromRow(row: PriorRoundMatchRow): string | null {
+  if (!row.is_final) return null
+  if (row.advancing_team !== 1 && row.advancing_team !== 2) return null
+  const name =
+    row.advancing_team === 1 ? row.team2_name.trim() : row.team1_name.trim()
+  return isResolvableTeamName(name) ? name : null
+}
+
 function buildAdvancerNames(
   priorRows: PriorRoundMatchRow[],
   priorRound: KnockoutRoundId,
@@ -132,6 +144,19 @@ function buildAdvancerNames(
   for (const row of priorRows) {
     if (row.round !== priorRound) continue
     const name = advancerNameFromRow(row)
+    if (name) names.push(name)
+  }
+  return names
+}
+
+function buildLoserNames(
+  priorRows: PriorRoundMatchRow[],
+  priorRound: KnockoutRoundId,
+): string[] {
+  const names: string[] = []
+  for (const row of priorRows) {
+    if (row.round !== priorRound) continue
+    const name = loserNameFromRow(row)
     if (name) names.push(name)
   }
   return names
@@ -302,13 +327,18 @@ export async function syncKnockoutRoundRows(
   for (const round of roundsToProcess) {
     const priorRound = PRIOR_ROUND[round]
     const roundRows = allRows.filter((row) => row.round === round)
-    const advancerNames = buildAdvancerNames(allRows, priorRound)
+    const advancerNames =
+      round === 'third'
+        ? buildLoserNames(allRows, priorRound)
+        : buildAdvancerNames(allRows, priorRound)
 
     let skippedEarly: string | null = null
     if (isRoundComplete(round, roundRows)) {
       skippedEarly = `round ${round} already has ${EXPECTED_SLOT_COUNT[round]} row(s) with valid fixture_id`
+    } else if (round === 'third' && advancerNames.length < 2) {
+      skippedEarly = `no finalized losers from both semifinal matches`
     } else if (advancerNames.length === 0) {
-      skippedEarly = `no finalized advancers from prior round ${priorRound}`
+      skippedEarly = `no finalized ${round === 'third' ? 'losers' : 'advancers'} from prior round ${priorRound}`
     }
 
     roundPlans.push({
@@ -544,6 +574,8 @@ export async function syncKnockoutRoundRows(
           locked_at: row.locked_at,
           team1_name: row.team1_name,
           team2_name: row.team2_name,
+          is_final: row.is_final,
+          advancing_team: row.advancing_team,
         }),
       )
 

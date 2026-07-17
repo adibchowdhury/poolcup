@@ -1046,8 +1046,10 @@ const FINAL_ONLY_MIN_WIDTH = 280
 /** Final tab: single centered matchup with champion marker. */
 function KnockoutFinalOnlyPreview({
   finalBracket,
+  thirdBracket,
 }: {
   finalBracket?: KnockoutRoundBracketProps
+  thirdBracket?: KnockoutRoundBracketProps
 }) {
   const finalMatch = getKnockoutMatchForVisualSlot(
     'final',
@@ -1055,28 +1057,53 @@ function KnockoutFinalOnlyPreview({
     0,
     finalBracket?.matchesByNumber ?? new Map(),
   )
+  const thirdMatch = getKnockoutMatchForVisualSlot(
+    'third',
+    'left',
+    0,
+    thirdBracket?.matchesByNumber ?? new Map(),
+  )
 
   return (
     <div style={BRACKET_SCROLL_STYLE}>
       <div style={BRACKET_CENTER_STYLE}>
         <div
-          className="flex flex-col items-center px-4 py-6 sm:px-6"
+          className="flex flex-col items-center gap-6 px-4 py-6 sm:px-6"
           style={{ minWidth: FINAL_ONLY_MIN_WIDTH }}
         >
-          <div className="w-full min-w-0" style={{ width: BRACKET_LAYOUT.leftR32ColumnWidth }}>
-            {finalBracket ? (
-              <R16KnockoutMatchupBlock
-                label="Final"
-                match={finalMatch}
-                bracket={finalBracket}
-              />
-            ) : (
-              <StaticKnockoutMatchupBlock label="Final" />
-            )}
+          <div className="flex w-full min-w-0 flex-col items-center">
+            <div className="w-full min-w-0" style={{ width: BRACKET_LAYOUT.leftR32ColumnWidth }}>
+              {finalBracket ? (
+                <R16KnockoutMatchupBlock
+                  label="Final"
+                  match={finalMatch}
+                  bracket={finalBracket}
+                />
+              ) : (
+                <StaticKnockoutMatchupBlock label="Final" />
+              )}
+            </div>
+            <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
+              World Cup Champion
+            </p>
           </div>
-          <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#22c55e]">
-            World Cup Champion
-          </p>
+
+          <div className="flex w-full min-w-0 flex-col items-center gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#94a3b8]">
+              3rd Place Playoff
+            </p>
+            <div className="w-full min-w-0" style={{ width: BRACKET_LAYOUT.leftR32ColumnWidth }}>
+              {thirdBracket ? (
+                <R16KnockoutMatchupBlock
+                  label="3rd Place"
+                  match={thirdMatch}
+                  bracket={thirdBracket}
+                />
+              ) : (
+                <StaticKnockoutMatchupBlock label="3rd Place" />
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1128,6 +1155,7 @@ export function KnockoutBracketForTab({
   r16Bracket,
   qfBracket,
   sfBracket,
+  thirdBracket,
   finalBracket,
   desktopOnly = false,
   mobileOnly = false,
@@ -1137,6 +1165,7 @@ export function KnockoutBracketForTab({
   r16Bracket?: KnockoutRoundBracketProps
   qfBracket?: KnockoutRoundBracketProps
   sfBracket?: KnockoutRoundBracketProps
+  thirdBracket?: KnockoutRoundBracketProps
   finalBracket?: KnockoutRoundBracketProps
   desktopOnly?: boolean
   mobileOnly?: boolean
@@ -1166,7 +1195,12 @@ export function KnockoutBracketForTab({
   } else if (tab === 'sf') {
     desktop = <KnockoutSemifinalsToFinalPreview sfBracket={sfBracket} />
   } else if (tab === 'final') {
-    desktop = <KnockoutFinalOnlyPreview finalBracket={finalBracket} />
+    desktop = (
+      <KnockoutFinalOnlyPreview
+        finalBracket={finalBracket}
+        thirdBracket={thirdBracket}
+      />
+    )
   } else {
     const preview = KNOCKOUT_TAB_PREVIEW[tab]
     desktop = (
@@ -1184,6 +1218,7 @@ export function KnockoutBracketForTab({
         tab={tab}
         r32Bracket={r32Bracket}
         roundBracket={roundBracket}
+        thirdBracket={thirdBracket}
       />
     </div>
   )

@@ -125,7 +125,7 @@ async function main() {
 
   let query = supabase
     .from('matches')
-    .select('id, fixture_id, round, kickoff_at, locked_at, team1_name, team2_name')
+    .select('id, fixture_id, round, kickoff_at, locked_at, team1_name, team2_name, is_final, advancing_team')
     .in('round', [...KNOCKOUT_ROUND_IDS])
     .order('kickoff_at', { ascending: true })
 

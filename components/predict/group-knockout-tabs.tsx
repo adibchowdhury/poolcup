@@ -1,21 +1,18 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import {
-  TOURNAMENT_ROUND_LABELS,
-  type TournamentRoundCode,
-} from '@/src/lib/tournament-round-labels'
+import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 
-export type ClassicRoundTabId = TournamentRoundCode
-
-export const CLASSIC_ROUND_TAB_ORDER: ClassicRoundTabId[] = [
+export const CLASSIC_ROUND_TAB_ORDER = [
   'group',
   'r32',
   'r16',
   'qf',
   'sf',
   'final',
-]
+] as const
+
+export type ClassicRoundTabId = (typeof CLASSIC_ROUND_TAB_ORDER)[number]
 
 interface ClassicRoundTabsProps {
   activeId: ClassicRoundTabId

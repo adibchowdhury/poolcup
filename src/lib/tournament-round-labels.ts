@@ -5,6 +5,7 @@ export const TOURNAMENT_ROUND_LABELS = {
   r16: 'Round of 16',
   qf: 'Quarterfinals',
   sf: 'Semifinals',
+  third: '3rd Place Playoff',
   final: 'Final',
 } as const
 

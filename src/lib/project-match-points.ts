@@ -168,9 +168,11 @@ export function formatLivePointsSummary(
 export function getScoringRulesLines(round: string): string[] {
   if (isKnockoutRound(round)) {
     const values = KNOCKOUT_ROUND_POINT_VALUES[round]
+    const winnerLabel =
+      round === 'third' ? 'Correct winner' : 'Correct who advances'
     return [
       `Exact score: +${values.exact} points`,
-      `Correct who advances: +${values.advance} points`,
+      `${winnerLabel}: +${values.advance} points`,
       'Both stack when applicable.',
     ]
   }

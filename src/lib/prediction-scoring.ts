@@ -69,6 +69,8 @@ export function getMatchRoundPointMultiplier(round: string): number {
       return 3
     case 'sf':
       return 4
+    case 'third':
+      return 4
     case 'final':
       return 5
     default:

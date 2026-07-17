@@ -14,6 +14,8 @@ export type DbMatchForFixtureSync = {
   locked_at?: string | null
   team1_name: string
   team2_name: string
+  is_final?: boolean | null
+  advancing_team?: number | null
 }
 
 export type ApiFixtureForSync = {
@@ -77,6 +79,39 @@ export function apiFixtureRound(fixture: ApiFixtureForSync): string {
   return mapLeagueRoundToGroup(fixture.league.round).round
 }
 
+function loserNameFromSemifinal(row: DbMatchForFixtureSync): string | null {
+  if (row.round !== 'sf') return null
+  if (!row.is_final) return null
+  if (row.advancing_team !== 1 && row.advancing_team !== 2) return null
+  const loser =
+    row.advancing_team === 1 ? row.team2_name.trim() : row.team1_name.trim()
+  return isResolvableTeamName(loser) ? loser : null
+}
+
+function buildSemifinalLoserNames(rows: DbMatchForFixtureSync[]): string[] {
+  const names: string[] = []
+  for (const row of rows) {
+    const loser = loserNameFromSemifinal(row)
+    if (loser) names.push(loser)
+  }
+  return names
+}
+
+function thirdPlaceTeamsMatchSemifinalLosers(
+  team1: string,
+  team2: string,
+  semifinalLoserNames: readonly string[],
+): boolean {
+  if (semifinalLoserNames.length < 2) return false
+  return semifinalLoserNames.some((loser1, index) =>
+    semifinalLoserNames.some(
+      (loser2, loserIndex) =>
+        loserIndex !== index &&
+        teamsMatchUnorderedForFixtureSync(team1, team2, loser1, loser2),
+    ),
+  )
+}
+
 function apiFixtureMatchesDbRow(
   fixture: ApiFixtureForSync,
   row: DbMatchForFixtureSync,
@@ -101,6 +136,7 @@ export function resolveKnockoutFixtureIdForRow(
   row: DbMatchForFixtureSync,
   apiFixtures: ApiFixtureForSync[],
   fixtureIdOwnerByFixtureId: ReadonlyMap<string, string>,
+  semifinalLoserNames: readonly string[] = [],
 ): FixtureIdResolveOutcome {
   if (!isKnockoutRound(row.round)) {
     return { status: 'skipped', reason: 'not a knockout round' }
@@ -111,6 +147,20 @@ export function resolveKnockoutFixtureIdForRow(
     !isResolvableTeamName(row.team2_name)
   ) {
     return { status: 'skipped', reason: 'unresolved team names on DB row' }
+  }
+
+  if (
+    row.round === 'third' &&
+    !thirdPlaceTeamsMatchSemifinalLosers(
+      row.team1_name,
+      row.team2_name,
+      semifinalLoserNames,
+    )
+  ) {
+    return {
+      status: 'skipped',
+      reason: 'third-place teams do not match finalized semifinal losers',
+    }
   }
 
   const candidates = apiFixtures.filter((fixture) =>
@@ -227,9 +277,9 @@ export async function syncKnockoutFixtureIdsCore(
     let query = supabase
       .from('matches')
       .select(
-        'id, fixture_id, round, kickoff_at, locked_at, team1_name, team2_name',
+        'id, fixture_id, round, kickoff_at, locked_at, team1_name, team2_name, is_final, advancing_team',
       )
-      .in('round', ['r32', 'r16', 'qf', 'sf', 'final'])
+      .in('round', ['r32', 'r16', 'qf', 'sf', 'third', 'final'])
       .order('kickoff_at', { ascending: true })
 
     if (roundFilter) {
@@ -248,6 +298,7 @@ export async function syncKnockoutFixtureIdsCore(
     (await fetchWc2026SeasonFixtures(apiKey)).filter(isKnockoutApiFixture)
 
   const fixtureIdOwnerByFixtureId = buildFixtureIdOwnerMap(rows)
+  const semifinalLoserNames = buildSemifinalLoserNames(rows)
 
   const summary: KnockoutFixtureIdSyncSummary = {
     dry_run: options.dryRun,
@@ -264,6 +315,7 @@ export async function syncKnockoutFixtureIdsCore(
       row,
       knockoutApiFixtures,
       fixtureIdOwnerByFixtureId,
+      semifinalLoserNames,
     )
 
     if (outcome.status === 'already_synced') {

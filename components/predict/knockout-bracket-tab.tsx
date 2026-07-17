@@ -15,7 +15,7 @@ export const KNOCKOUT_TAB_INTRO: Record<KnockoutBracketTabId, string> = {
   r16: 'Pick who advances in each Round of 16 matchup. Each pick locks at kickoff.',
   qf: 'Pick who advances in each Quarter-final matchup. Each pick locks at kickoff.',
   sf: 'Pick who advances in each Semi-final matchup. Each pick locks at kickoff.',
-  final: 'Pick who wins the Final. Your pick locks at kickoff.',
+  final: 'Pick who wins the Final and 3rd Place Playoff. Each pick locks at kickoff.',
 }
 
 export const KNOCKOUT_PICK_LABELS: Record<KnockoutBracketTabId, string> = {
@@ -23,7 +23,7 @@ export const KNOCKOUT_PICK_LABELS: Record<KnockoutBracketTabId, string> = {
   r16: `${TOURNAMENT_ROUND_LABELS.r16} picks`,
   qf: `${TOURNAMENT_ROUND_LABELS.qf} picks`,
   sf: `${TOURNAMENT_ROUND_LABELS.sf} picks`,
-  final: `${TOURNAMENT_ROUND_LABELS.final} picks`,
+  final: `${TOURNAMENT_ROUND_LABELS.final} + ${TOURNAMENT_ROUND_LABELS.third} picks`,
 }
 
 export function isKnockoutBracketTab(
@@ -38,6 +38,7 @@ export function KnockoutBracketTab({
   r16Bracket,
   qfBracket,
   sfBracket,
+  thirdBracket,
   finalBracket,
   pickError,
   embedded = false,
@@ -47,6 +48,7 @@ export function KnockoutBracketTab({
   r16Bracket?: KnockoutRoundBracketProps
   qfBracket?: KnockoutRoundBracketProps
   sfBracket?: KnockoutRoundBracketProps
+  thirdBracket?: KnockoutRoundBracketProps
   finalBracket?: KnockoutRoundBracketProps
   pickError?: string | null
   embedded?: boolean
@@ -57,6 +59,7 @@ export function KnockoutBracketTab({
     r16Bracket: tab === 'r16' ? r16Bracket : undefined,
     qfBracket: tab === 'qf' ? qfBracket : undefined,
     sfBracket: tab === 'sf' ? sfBracket : undefined,
+    thirdBracket: tab === 'final' ? thirdBracket : undefined,
     finalBracket: tab === 'final' ? finalBracket : undefined,
   }
 

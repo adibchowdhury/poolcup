@@ -60,7 +60,10 @@ export function getClassicKnockoutPredictionDisplayOutcome(
   if (exactHit && advanceHit) {
     return {
       points: values.exact + values.advance,
-      label: CLASSIC_KNOCKOUT_EXACT_AND_ADVANCE_REASON,
+      label:
+        round === 'third'
+          ? 'Exact score + winner'
+          : CLASSIC_KNOCKOUT_EXACT_AND_ADVANCE_REASON,
       kind: 'exact',
     }
   }
@@ -76,7 +79,7 @@ export function getClassicKnockoutPredictionDisplayOutcome(
   if (advanceHit) {
     return {
       points: values.advance,
-      label: CLASSIC_KNOCKOUT_ADVANCE_REASON,
+      label: round === 'third' ? 'Correct winner' : CLASSIC_KNOCKOUT_ADVANCE_REASON,
       kind: 'advance',
     }
   }
@@ -192,7 +195,8 @@ export function expandClassicKnockoutBreakdownLines(
       ...sharedFields(input),
       lineId: `${input.matchId}:advance`,
       pointsAwarded: values.advance,
-      reasonLabel: CLASSIC_KNOCKOUT_ADVANCE_REASON,
+      reasonLabel:
+        round === 'third' ? 'Correct winner' : CLASSIC_KNOCKOUT_ADVANCE_REASON,
     })
   }
 

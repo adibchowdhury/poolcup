@@ -24,6 +24,7 @@ const CLASSIC_KNOCKOUT_ROWS = [
   { round: 'Round of 16', exact: 10, advance: 4 },
   { round: 'Quarterfinals', exact: 12, advance: 5 },
   { round: 'Semifinals', exact: 15, advance: 6 },
+  { round: '3rd Place Playoff', exact: 15, advance: 6 },
   { round: 'Final', exact: 20, advance: 8 },
 ] as const
 
@@ -46,6 +47,7 @@ const WINNER_KNOCKOUT_ROWS = [
   { round: 'Round of 16', points: 4 },
   { round: 'Quarterfinals', points: 5 },
   { round: 'Semifinals', points: 6 },
+  { round: '3rd Place Playoff', points: 6 },
   { round: 'Final', points: 8 },
 ] as const
 

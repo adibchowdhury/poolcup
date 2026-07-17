@@ -26,8 +26,9 @@ import { isKnockoutRound, type KnockoutRoundId } from '@/src/lib/classic-round-t
 import { isMatchLocked } from '@/src/lib/match-lock'
 import {
   formatKnockoutPointValuesFooter,
-  getAdvancePickHintText,
   isPredictedDraw,
+  knockoutWinnerPickHintText,
+  knockoutWinnerPickLabel,
   resolveAdvancePickFromScores,
   resolveAdvancePickTeamName,
 } from '@/src/lib/knockout-match-prediction'
@@ -79,6 +80,7 @@ const ROUND_LABELS: Record<string, string> = {
   r16: 'Round of 16',
   qf: 'Quarter-finals',
   sf: 'Semi-finals',
+  third: '3rd Place Playoff',
   final: 'Final',
 }
 
@@ -151,6 +153,7 @@ export function KnockoutAdvancePicker({
   predTeam1,
   predTeam2,
   userAdvancePick,
+  round = 'final',
   preview = false,
   isLocked = false,
   onAdvancePick,
@@ -162,6 +165,7 @@ export function KnockoutAdvancePicker({
   predTeam1: number | null
   predTeam2: number | null
   userAdvancePick: number | null
+  round?: string
   preview?: boolean
   isLocked?: boolean
   onAdvancePick?: (pick: 1 | 2) => void
@@ -178,9 +182,11 @@ export function KnockoutAdvancePicker({
   return (
     <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-foreground">Who advances?</p>
+        <p className="text-xs font-semibold text-foreground">
+          {knockoutWinnerPickLabel(round)}
+        </p>
         <p className="text-[10px] text-muted-foreground">
-          {getAdvancePickHintText(isDraw)}
+          {knockoutWinnerPickHintText(round, isDraw)}
         </p>
         {preview ? (
           <div className="flex gap-2">
@@ -1047,6 +1053,7 @@ export function PredictionMatchCard({
               predTeam1={inputPredTeam1}
               predTeam2={inputPredTeam2}
               userAdvancePick={advancePick}
+              round={prediction.round}
               preview={preview}
               isLocked={isReadOnly}
               onAdvancePick={isEditable ? handleAdvancePick : undefined}

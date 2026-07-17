@@ -56,6 +56,7 @@ const ROUND_LABELS: Record<string, string> = {
   r16: 'Round of 16',
   qf: 'Quarter-finals',
   sf: 'Semi-finals',
+  third: '3rd Place Playoff',
   final: 'Final',
 }
 
@@ -648,6 +649,7 @@ export function MobileClassicPredictionCard({
           predTeam1={isReadOnly ? prediction.predTeam1 : predTeam1}
           predTeam2={isReadOnly ? prediction.predTeam2 : predTeam2}
           userAdvancePick={isReadOnly ? prediction.advancePick : advancePick}
+          round={prediction.round}
           isLocked={isReadOnly}
           onAdvancePick={isReadOnly ? undefined : handleAdvancePick}
         />

@@ -7,7 +7,7 @@ import {
   useComingSoonToast,
 } from '../lib/use-coming-soon-toast'
 import { MobileDashboardInsights } from './mobile-dashboard-insights'
-import { MobileLiveScoreboard } from './mobile-live-scoreboard'
+import { MobilePoolsScoreboardRow } from './mobile-pools-scoreboard-row'
 import { MobilePoolCard } from './mobile-pool-card'
 
 type MobilePoolsTabProps = {
@@ -34,7 +34,7 @@ export function MobilePoolsTab({
       <ComingSoonToast message={comingSoonMessage} />
 
       <div className="mx-auto w-full max-w-lg space-y-4">
-        <MobileLiveScoreboard onOpenMatch={onOpenMatch} />
+        <MobilePoolsScoreboardRow onOpenMatch={onOpenMatch} />
 
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -72,17 +72,24 @@ export function MobilePoolsTab({
         ) : pools.length === 0 ? (
           <p className="text-sm text-muted-foreground">No pools yet</p>
         ) : (
-          <ul className="space-y-3">
-            {pools.map((pool) => (
-              <li key={pool.id}>
-                <MobilePoolCard
-                  pool={pool}
-                  onOpen={() => onOpenPool(pool)}
-                  onPredictStub={() => showComingSoon()}
-                />
-              </li>
-            ))}
-          </ul>
+          <div
+            className="-mx-4 snap-x snap-mandatory overflow-x-auto px-4 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <ul className="flex w-max flex-nowrap gap-3">
+              {pools.map((pool) => (
+                <li
+                  key={pool.id}
+                  className="w-[85vw] max-w-[22rem] shrink-0 snap-start"
+                >
+                  <MobilePoolCard
+                    pool={pool}
+                    onOpen={() => onOpenPool(pool)}
+                    onPredictStub={() => showComingSoon()}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <MobileDashboardInsights

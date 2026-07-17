@@ -6,7 +6,7 @@ import {
   serializeWinnerLeaderboardBreakdown,
 } from '@/src/lib/winner-leaderboard-breakdown'
 
-const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const
+const KNOCKOUT_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'third', 'final'] as const
 
 export async function GET(
   _request: Request,

@@ -30,8 +30,10 @@ import {
 import {
   countR32AdvancePicks,
   WINNER_ONLY_KNOCKOUT_PICK_TOTALS,
+  winnerKnockoutPickTotalForMatches,
   type R32BracketMatchesByNumber,
 } from '@/src/lib/winner-only-r32-bracket'
+import { fetchWinnerKnockoutRoundMatches } from '@/src/lib/fetch-winner-knockout-round'
 import { fetchWinnerBracketPredictionsMobile } from '../lib/fetch-winner-bracket-predictions-mobile'
 import { fetchWinnerKnockoutR16Mobile, fetchWinnerKnockoutR32Mobile } from '../lib/fetch-winner-knockout-r32-mobile'
 import { supabase } from '../lib/supabase-mobile'
@@ -61,6 +63,14 @@ export function MobileWinnerBracketPredictionsReadonly({
     useState<R32BracketMatchesByNumber>(() => new Map())
   const [r16MatchesByNumber, setR16MatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
+  const [qfMatchesByNumber, setQfMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [sfMatchesByNumber, setSfMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [thirdMatchesByNumber, setThirdMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [finalMatchesByNumber, setFinalMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
   const [bracketLoading, setBracketLoading] = useState(true)
   const [knockoutLoading, setKnockoutLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,14 +98,29 @@ export function MobileWinnerBracketPredictionsReadonly({
     setKnockoutLoading(true)
     setKnockoutError(null)
 
-    const [r32Result, r16Result] = await Promise.all([
+    const [r32Result, r16Result, qfResult, sfResult, thirdResult, finalResult] = await Promise.all([
       fetchWinnerKnockoutR32Mobile(supabase, poolId, memberId),
       fetchWinnerKnockoutR16Mobile(supabase, poolId, memberId),
+      fetchWinnerKnockoutRoundMatches(supabase, 'qf', poolId, memberId),
+      fetchWinnerKnockoutRoundMatches(supabase, 'sf', poolId, memberId),
+      fetchWinnerKnockoutRoundMatches(supabase, 'third', poolId, memberId),
+      fetchWinnerKnockoutRoundMatches(supabase, 'final', poolId, memberId),
     ])
 
     setR32MatchesByNumber(r32Result.matchesByNumber)
     setR16MatchesByNumber(r16Result.matchesByNumber)
-    setKnockoutError(r32Result.error ?? r16Result.error)
+    setQfMatchesByNumber(qfResult.matchesByNumber)
+    setSfMatchesByNumber(sfResult.matchesByNumber)
+    setThirdMatchesByNumber(thirdResult.matchesByNumber)
+    setFinalMatchesByNumber(finalResult.matchesByNumber)
+    setKnockoutError(
+      r32Result.error ??
+        r16Result.error ??
+        qfResult.error ??
+        sfResult.error ??
+        thirdResult.error ??
+        finalResult.error,
+    )
     setKnockoutLoading(false)
   }, [memberId, poolId])
 
@@ -147,6 +172,23 @@ export function MobileWinnerBracketPredictionsReadonly({
     [r16MatchesByNumber],
   )
 
+  const qfPickCount = useMemo(
+    () => countR32AdvancePicks(qfMatchesByNumber),
+    [qfMatchesByNumber],
+  )
+
+  const sfPickCount = useMemo(
+    () => countR32AdvancePicks(sfMatchesByNumber),
+    [sfMatchesByNumber],
+  )
+
+  const finalPickCount = useMemo(
+    () =>
+      countR32AdvancePicks(finalMatchesByNumber) +
+      countR32AdvancePicks(thirdMatchesByNumber),
+    [finalMatchesByNumber, thirdMatchesByNumber],
+  )
+
   const r32Bracket = useMemo<R32BracketInteractiveProps>(
     () => ({
       matchesByNumber: r32MatchesByNumber,
@@ -163,6 +205,42 @@ export function MobileWinnerBracketPredictionsReadonly({
       onAdvancePick: () => {},
     }),
     [mounted, nowMs, r16MatchesByNumber],
+  )
+
+  const qfBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: qfMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: () => {},
+    }),
+    [mounted, nowMs, qfMatchesByNumber],
+  )
+
+  const sfBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: sfMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: () => {},
+    }),
+    [mounted, nowMs, sfMatchesByNumber],
+  )
+
+  const thirdBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: thirdMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: () => {},
+    }),
+    [mounted, nowMs, thirdMatchesByNumber],
+  )
+
+  const finalBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: finalMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: () => {},
+    }),
+    [finalMatchesByNumber, mounted, nowMs],
   )
 
   const loading = bracketLoading || knockoutLoading
@@ -246,7 +324,7 @@ export function MobileWinnerBracketPredictionsReadonly({
         <div
           className={cn(
             'pointer-events-none min-w-0',
-            (activeTab === 'r32' || activeTab === 'r16') && 'pb-24',
+            isKnockoutBracketTab(activeTab) && 'pb-24',
           )}
         >
           {knockoutError ? (
@@ -282,19 +360,24 @@ export function MobileWinnerBracketPredictionsReadonly({
               ) : isKnockoutBracketTab(activeTab) ? (
                 <div className="mb-4 min-w-0 space-y-1">
                   <ProgressHeader
-                    current={0}
-                    total={WINNER_ONLY_KNOCKOUT_PICK_TOTALS[activeTab]}
+                    current={
+                      activeTab === 'qf'
+                        ? qfPickCount
+                        : activeTab === 'sf'
+                          ? sfPickCount
+                          : finalPickCount
+                    }
+                    total={
+                      activeTab === 'qf'
+                        ? winnerKnockoutPickTotalForMatches('qf', qfMatchesByNumber)
+                        : activeTab === 'sf'
+                          ? winnerKnockoutPickTotalForMatches('sf', sfMatchesByNumber)
+                          : winnerKnockoutPickTotalForMatches('final', finalMatchesByNumber) +
+                            winnerKnockoutPickTotalForMatches('third', thirdMatchesByNumber)
+                    }
                     label={KNOCKOUT_PICK_LABELS[activeTab]}
                     labelFirst
-                    className="opacity-60"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {activeTab === 'qf'
-                      ? 'Unlocks once the Round of 16 is complete.'
-                      : activeTab === 'sf'
-                        ? 'Unlocks once the Quarterfinals end.'
-                        : 'Unlocks once the Semifinals end.'}
-                  </p>
                 </div>
               ) : null}
 
@@ -302,6 +385,10 @@ export function MobileWinnerBracketPredictionsReadonly({
                 tab={activeTab}
                 r32Bracket={r32Bracket}
                 r16Bracket={r16Bracket}
+                qfBracket={qfBracket}
+                sfBracket={sfBracket}
+                thirdBracket={thirdBracket}
+                finalBracket={finalBracket}
                 embedded
               />
             </>

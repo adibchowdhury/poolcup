@@ -68,12 +68,13 @@ import { cn } from '@/lib/utils'
 const TOTAL_GROUPS = 12
 const REQUIRED_THIRD_PLACE_PICKS = 8
 
-type WinnerKnockoutPickRound = 'r16' | 'qf' | 'sf' | 'final'
+type WinnerKnockoutPickRound = 'r16' | 'qf' | 'sf' | 'third' | 'final'
 
 const WINNER_KNOCKOUT_PICK_ROUNDS: WinnerKnockoutPickRound[] = [
   'r16',
   'qf',
   'sf',
+  'third',
   'final',
 ]
 
@@ -149,6 +150,8 @@ export function WinnerOnlyPredictView({
   const [qfMatchesByNumber, setQfMatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
   const [sfMatchesByNumber, setSfMatchesByNumber] =
+    useState<R32BracketMatchesByNumber>(() => new Map())
+  const [thirdMatchesByNumber, setThirdMatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
   const [finalMatchesByNumber, setFinalMatchesByNumber] =
     useState<R32BracketMatchesByNumber>(() => new Map())
@@ -274,6 +277,7 @@ export function WinnerOnlyPredictView({
           r16: setR16MatchesByNumber,
           qf: setQfMatchesByNumber,
           sf: setSfMatchesByNumber,
+          third: setThirdMatchesByNumber,
           final: setFinalMatchesByNumber,
         }
 
@@ -331,6 +335,10 @@ export function WinnerOnlyPredictView({
         round: 'sf',
         lockedAt: match.lockedAt,
       })),
+      ...[...thirdMatchesByNumber.values()].map((match) => ({
+        round: 'third',
+        lockedAt: match.lockedAt,
+      })),
       ...[...finalMatchesByNumber.values()].map((match) => ({
         round: 'final',
         lockedAt: match.lockedAt,
@@ -347,7 +355,7 @@ export function WinnerOnlyPredictView({
       ),
     )
     defaultRoundTabSetRef.current = true
-  }, [finalMatchesByNumber, matches, matchesLoading, laterKnockoutLoaded, qfMatchesByNumber, r16MatchesByNumber, r32BracketLoaded, r32MatchesByNumber, sfMatchesByNumber])
+  }, [finalMatchesByNumber, matches, matchesLoading, laterKnockoutLoaded, qfMatchesByNumber, r16MatchesByNumber, r32BracketLoaded, r32MatchesByNumber, sfMatchesByNumber, thirdMatchesByNumber])
 
   const handleR32AdvancePick = useCallback(
     (matchId: string, pick: 1 | 2) => {
@@ -381,12 +389,14 @@ export function WinnerOnlyPredictView({
         r16: r16MatchesByNumber,
         qf: qfMatchesByNumber,
         sf: sfMatchesByNumber,
+        third: thirdMatchesByNumber,
         final: finalMatchesByNumber,
       }[round]
       const setMatchesByNumber = {
         r16: setR16MatchesByNumber,
         qf: setQfMatchesByNumber,
         sf: setSfMatchesByNumber,
+        third: setThirdMatchesByNumber,
         final: setFinalMatchesByNumber,
       }[round]
 
@@ -418,6 +428,7 @@ export function WinnerOnlyPredictView({
       qfMatchesByNumber,
       r16MatchesByNumber,
       sfMatchesByNumber,
+      thirdMatchesByNumber,
     ],
   )
 
@@ -457,15 +468,22 @@ export function WinnerOnlyPredictView({
     [finalMatchesByNumber],
   )
 
+  const thirdPickCount = useMemo(
+    () => countR32AdvancePicks(thirdMatchesByNumber),
+    [thirdMatchesByNumber],
+  )
+
   const knockoutPickTotalByTab = useMemo(
     (): Record<KnockoutBracketTabId, number> => ({
       r32: WINNER_ONLY_KNOCKOUT_PICK_TOTALS.r32,
       r16: winnerKnockoutPickTotalForMatches('r16', r16MatchesByNumber),
       qf: winnerKnockoutPickTotalForMatches('qf', qfMatchesByNumber),
       sf: winnerKnockoutPickTotalForMatches('sf', sfMatchesByNumber),
-      final: winnerKnockoutPickTotalForMatches('final', finalMatchesByNumber),
+      final:
+        winnerKnockoutPickTotalForMatches('final', finalMatchesByNumber) +
+        winnerKnockoutPickTotalForMatches('third', thirdMatchesByNumber),
     }),
-    [finalMatchesByNumber, qfMatchesByNumber, r16MatchesByNumber, sfMatchesByNumber],
+    [finalMatchesByNumber, qfMatchesByNumber, r16MatchesByNumber, sfMatchesByNumber, thirdMatchesByNumber],
   )
 
   const knockoutPickCountByTab = useMemo(
@@ -474,9 +492,9 @@ export function WinnerOnlyPredictView({
       r16: r16PickCount,
       qf: qfPickCount,
       sf: sfPickCount,
-      final: finalPickCount,
+      final: finalPickCount + thirdPickCount,
     }),
-    [finalPickCount, qfPickCount, r16PickCount, r32PickCount, sfPickCount],
+    [finalPickCount, qfPickCount, r16PickCount, r32PickCount, sfPickCount, thirdPickCount],
   )
 
   const r16Bracket = useMemo<KnockoutRoundBracketProps>(
@@ -521,6 +539,17 @@ export function WinnerOnlyPredictView({
       },
     }),
     [finalMatchesByNumber, handleKnockoutAdvancePick, mounted, nowMs],
+  )
+
+  const thirdBracket = useMemo<KnockoutRoundBracketProps>(
+    () => ({
+      matchesByNumber: thirdMatchesByNumber,
+      nowMs: mounted ? nowMs : Date.now(),
+      onAdvancePick: (matchId, pick) => {
+        handleKnockoutAdvancePick('third', matchId, pick)
+      },
+    }),
+    [handleKnockoutAdvancePick, mounted, nowMs, thirdMatchesByNumber],
   )
 
   const groups = useMemo(() => {
@@ -575,13 +604,22 @@ export function WinnerOnlyPredictView({
     [finalMatchesByNumber, mounted, nowMs],
   )
 
+  const unsavedThirdCount = useMemo(
+    () =>
+      countR32UnsavedPicks(
+        thirdMatchesByNumber,
+        mounted ? nowMs : Date.now(),
+      ),
+    [mounted, nowMs, thirdMatchesByNumber],
+  )
+
   const unsavedKnockoutCountByTab = useMemo(
     (): Record<KnockoutBracketTabId, number> => ({
       r32: unsavedR32Count,
       r16: unsavedR16Count,
       qf: unsavedQfCount,
       sf: unsavedSfCount,
-      final: unsavedFinalCount,
+      final: unsavedFinalCount + unsavedThirdCount,
     }),
     [
       unsavedFinalCount,
@@ -589,6 +627,7 @@ export function WinnerOnlyPredictView({
       unsavedR16Count,
       unsavedR32Count,
       unsavedSfCount,
+      unsavedThirdCount,
     ],
   )
 
@@ -613,8 +652,10 @@ export function WinnerOnlyPredictView({
   )
 
   const finalFullyComplete = useMemo(
-    () => isWinnerKnockoutRoundComplete('final', finalMatchesByNumber),
-    [finalMatchesByNumber],
+    () =>
+      isWinnerKnockoutRoundComplete('final', finalMatchesByNumber) &&
+      isWinnerKnockoutRoundComplete('third', thirdMatchesByNumber),
+    [finalMatchesByNumber, thirdMatchesByNumber],
   )
 
   const knockoutFullyCompleteByTab = useMemo(
@@ -941,24 +982,28 @@ export function WinnerOnlyPredictView({
   }
 
   async function handleKnockoutRoundSave(round: WinnerKnockoutPickRound) {
-    const matchesByNumber = {
+    const matchesByRound = {
       r16: r16MatchesByNumber,
       qf: qfMatchesByNumber,
       sf: sfMatchesByNumber,
+      third: thirdMatchesByNumber,
       final: finalMatchesByNumber,
-    }[round]
-    const setMatchesByNumber = {
+    }
+    const setMatchesByRound = {
       r16: setR16MatchesByNumber,
       qf: setQfMatchesByNumber,
       sf: setSfMatchesByNumber,
+      third: setThirdMatchesByNumber,
       final: setFinalMatchesByNumber,
-    }[round]
+    }
+    const roundsToSave: WinnerKnockoutPickRound[] =
+      round === 'final' ? ['final', 'third'] : [round]
+    const now = mounted ? nowMs : Date.now()
 
     if (
-      countR32UnsavedPicks(
-        matchesByNumber,
-        mounted ? nowMs : Date.now(),
-      ) === 0
+      roundsToSave.every(
+        (saveRound) => countR32UnsavedPicks(matchesByRound[saveRound], now) === 0,
+      )
     ) {
       return
     }
@@ -968,15 +1013,24 @@ export function WinnerOnlyPredictView({
     setSaveSuccess(false)
     setSuccessMessage(null)
 
-    const { savedCount, lockedCount, errorCount } =
-      await saveWinnerKnockoutAdvancePicks(
+    let savedCount = 0
+    let lockedCount = 0
+    let errorCount = 0
+
+    for (const saveRound of roundsToSave) {
+      if (countR32UnsavedPicks(matchesByRound[saveRound], now) === 0) continue
+      const result = await saveWinnerKnockoutAdvancePicks(
         supabase,
         pool.id,
         memberId,
-        matchesByNumber,
-        mounted ? nowMs : Date.now(),
-        setMatchesByNumber,
+        matchesByRound[saveRound],
+        now,
+        setMatchesByRound[saveRound],
       )
+      savedCount += result.savedCount
+      lockedCount += result.lockedCount
+      errorCount += result.errorCount
+    }
 
     setSaving(false)
 
@@ -1323,6 +1377,7 @@ export function WinnerOnlyPredictView({
             r16Bracket={r16Bracket}
             qfBracket={qfBracket}
             sfBracket={sfBracket}
+            thirdBracket={thirdBracket}
             finalBracket={finalBracket}
             pickError={saveBarError}
             embedded={embedded}

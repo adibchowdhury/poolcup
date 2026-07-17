@@ -7,7 +7,7 @@ export type ClassicPredictionSortMode =
   | 'group'
   | 'status'
 
-const KNOCKOUT_ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'final'] as const
+const KNOCKOUT_ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'third', 'final'] as const
 
 function kickoffMs(kickoffAt: string): number {
   const ms = new Date(kickoffAt).getTime()
