@@ -5,14 +5,12 @@ import Link from 'next/link'
 import {
   Pencil,
   Plus,
-  Sparkles,
   Target,
   TrendingUp,
   Upload,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardInsightCards } from '@/components/dashboard/dashboard-insight-cards'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
@@ -22,8 +20,8 @@ import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
 import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
-import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
-import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
+import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
+import { EventPillsRow } from '@/components/dashboard/event-pills-row'
 import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
@@ -697,44 +695,22 @@ function DashboardViewContent({
               value="pools"
               className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
             >
-              <div className="-mt-4">
-                <WorldCupUrgencyBanner />
-              </div>
-              <LiveScoreboard />
+              <SportBubblesRow className="-mt-6 mb-6 sm:-mt-8" />
+              <EventPillsRow />
 
-              {/* New feed homepage (incremental). Keep legacy pools UI below until replaced. */}
               <DashboardFeed>
                 <LiveNowSection userId={userId} />
-                <YourPoolsSection userId={userId} />
+                <YourPoolsSection
+                  userId={userId}
+                  pools={dashboardPools}
+                  loading={dashboardPoolsLoading}
+                  error={dashboardPoolsError}
+                  onPoolDeleted={handleDashboardPoolDeleted}
+                />
                 <RecentResultsSection userId={userId} />
                 <GlobalActivitySection userId={userId} />
               </DashboardFeed>
 
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />
-                  <h2 className="font-display text-2xl tracking-wide text-foreground">
-                    Your Active Pools
-                  </h2>
-                </div>
-                <Button
-                  asChild
-                  className="shrink-0 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 group"
-                >
-                  <Link href="/create">
-                    <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-                    Create a Pool
-                  </Link>
-                </Button>
-              </div>
-
-              <ActivePoolsTab
-                userId={userId}
-                pools={dashboardPools}
-                loading={dashboardPoolsLoading}
-                error={dashboardPoolsError}
-                onPoolDeleted={handleDashboardPoolDeleted}
-              />
               <DashboardInsightCards pools={dashboardPools} />
             </TabsContent>
 

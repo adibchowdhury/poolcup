@@ -52,9 +52,9 @@ export function DashboardFeedSection({
       className={cn('flex flex-col gap-4', className)}
     >
       {title || action ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-row items-center justify-between gap-3">
           {title ? (
-            <h2 className="font-display text-2xl tracking-wide text-foreground">
+            <h2 className="min-w-0 truncate font-display text-2xl tracking-wide text-foreground">
               {title}
             </h2>
           ) : (

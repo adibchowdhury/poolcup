@@ -119,9 +119,25 @@ function RankMedalChip({ place }: { place: number | null }) {
 interface PoolCardProps {
   pool: DashboardPoolCardData
   onPoolDeleted?: (poolId: string) => void
+  /**
+   * Card chrome only. `dashboard` = deep near-black + subtle green tint
+   * (dashboard vibe). `default` = flat bg-card (pre-restyle; use to revert).
+   */
+  surface?: 'default' | 'dashboard'
 }
 
-export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
+const POOL_CARD_SURFACE_CLASS = {
+  default: 'overflow-hidden rounded-2xl border border-border/90 bg-card/90',
+  /** Matches page bg (#080b0f) with a light primary green wash — easy to revert. */
+  dashboard:
+    'overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.08]',
+} as const
+
+export function PoolCard({
+  pool,
+  onPoolDeleted,
+  surface = 'dashboard',
+}: PoolCardProps) {
   const [copied, setCopied] = useState(false)
   const deleteTriggerRef = useRef<HTMLDivElement>(null)
   const { mounted, nowMs } = useClientNow(1000)
@@ -166,7 +182,7 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
 
   return (
     <div className="dashboard-pool-card rounded-2xl">
-      <div className="overflow-hidden rounded-2xl border border-border/90 bg-card/90">
+      <div className={POOL_CARD_SURFACE_CLASS[surface]}>
       <div className="border-b border-border px-[15px] py-[13px]">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-col gap-1">

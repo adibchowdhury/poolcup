@@ -19,6 +19,7 @@ import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { WebMobileAppDrawer } from '@/components/dashboard/web-mobile-app-drawer'
 import { WebMobileProfilePopover } from '@/components/dashboard/web-mobile-profile-popover'
 import { WebMobileTopBar } from '@/components/dashboard/web-mobile-top-bar'
+import { HeaderNotificationBell } from '@/components/dashboard/header-notification-bell'
 import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
 import {
   Dialog,
@@ -169,7 +170,8 @@ export function DashboardAppShell({
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
                   <ReportIssueButton />
 
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                    <HeaderNotificationBell />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button

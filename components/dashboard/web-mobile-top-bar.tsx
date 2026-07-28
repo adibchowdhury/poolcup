@@ -3,6 +3,7 @@
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { HeaderNotificationBell } from '@/components/dashboard/header-notification-bell'
 import { cn } from '@/lib/utils'
 
 type WebMobileTopBarProps = {
@@ -50,6 +51,8 @@ export function WebMobileTopBar({
       </Link>
 
       <div className="min-w-0 flex-1" aria-hidden />
+
+      <HeaderNotificationBell />
 
       <button
         type="button"

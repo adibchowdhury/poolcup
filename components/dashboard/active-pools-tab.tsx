@@ -96,7 +96,11 @@ export function ActivePoolsTab({
         <div className={POOL_CAROUSEL_TRACK_CLASS}>
           {resolvedPools.map((pool) => (
             <div key={pool.id} className={POOL_CAROUSEL_ITEM_CLASS}>
-              <PoolCard pool={pool} onPoolDeleted={handlePoolDeleted} />
+              <PoolCard
+                pool={pool}
+                onPoolDeleted={handlePoolDeleted}
+                surface="dashboard"
+              />
             </div>
           ))}
 
