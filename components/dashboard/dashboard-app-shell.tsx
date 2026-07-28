@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { Heart, Mail, Settings, CircleHelp } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,10 +13,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useDashboardSignOut } from '@/components/dashboard-sign-out'
-import { DashboardMobileNavMenu } from '@/components/dashboard/dashboard-mobile-nav-menu'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { ReportIssueButton } from '@/components/report-issue-dialog'
+import { WebMobileAppDrawer } from '@/components/dashboard/web-mobile-app-drawer'
+import { WebMobileProfilePopover } from '@/components/dashboard/web-mobile-profile-popover'
+import { WebMobileTopBar } from '@/components/dashboard/web-mobile-top-bar'
 import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
 import {
   Dialog,
@@ -31,7 +32,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS, DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
-import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 import { supabase } from '@/src/lib/supabase'
 
 export type DashboardAppShellProps = {
@@ -39,13 +40,9 @@ export type DashboardAppShellProps = {
   email: string
   displayName?: string | null
   avatar?: string | null
+  customAvatarUrl?: string | null
   children: React.ReactNode
   mainClassName?: string
-}
-
-function getAvatarInitial(name: string): string {
-  const trimmed = name.trim()
-  return trimmed.charAt(0).toUpperCase() || '?'
 }
 
 export function DashboardAppShell({
@@ -53,10 +50,13 @@ export function DashboardAppShell({
   email,
   displayName,
   avatar,
+  customAvatarUrl,
   children,
   mainClassName,
 }: DashboardAppShellProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [accountMessage, setAccountMessage] = useState<string | null>(null)
   const [accountSaving, setAccountSaving] = useState(false)
@@ -68,7 +68,6 @@ export function DashboardAppShell({
   const { handleSignOut, loading: signOutLoading } = useDashboardSignOut()
 
   const headerName = displayName ?? ''
-  const selectedAvatar = resolveAvatarFilename(avatar)
 
   const canSaveEmail = useMemo(() => Boolean(newEmail.trim()), [newEmail])
 
@@ -146,21 +145,31 @@ export function DashboardAppShell({
       <div className="relative z-10">
         <div className="z-50 md:sticky md:top-0">
           <header className="border-b border-border bg-background/80 backdrop-blur-xl">
-            <div className="mx-auto max-w-6xl px-4 py-4">
-              <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="mx-auto max-w-6xl px-4">
+              {/* Mobile-only header (app layout): hamburger | logo | profile */}
+              <WebMobileTopBar
+                className="sm:hidden"
+                displayName={headerName}
+                avatar={avatar}
+                customAvatarUrl={customAvatarUrl}
+                onOpenDrawer={() => {
+                  setProfilePopoverOpen(false)
+                  setDrawerOpen(true)
+                }}
+                onOpenProfilePopover={() => {
+                  setDrawerOpen(false)
+                  setProfilePopoverOpen(true)
+                }}
+              />
+
+              {/* Desktop header — unchanged */}
+              <div className="hidden items-center justify-between gap-2 py-4 sm:flex sm:gap-3">
                 <PoolCupLogo href="/dashboard" />
 
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
                   <ReportIssueButton />
 
-                  <DashboardMobileNavMenu
-                    className="sm:hidden"
-                    displayName={headerName}
-                    email={email}
-                    onOpenSettings={() => setSettingsOpen(true)}
-                  />
-
-                  <div className="hidden shrink-0 sm:flex sm:items-center sm:gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -171,16 +180,11 @@ export function DashboardAppShell({
                             {headerName.trim() || 'Account'}
                           </span>
                           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-border bg-muted ring-1 ring-border/80">
-                            <Avatar className="size-full">
-                              <AvatarImage
-                                src={getAvatarSrc(selectedAvatar)}
-                                alt=""
-                                className="object-cover object-center"
-                              />
-                              <AvatarFallback className="bg-muted font-medium text-muted-foreground">
-                                {getAvatarInitial(headerName)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <UserAvatarImage
+                              avatar={avatar}
+                              customAvatarUrl={customAvatarUrl}
+                              className="size-full rounded-full border-0"
+                            />
                           </div>
                         </button>
                       </DropdownMenuTrigger>
@@ -232,6 +236,26 @@ export function DashboardAppShell({
               </div>
             </div>
           </header>
+
+          <WebMobileAppDrawer
+            open={drawerOpen}
+            userId={userId}
+            signOutLoading={signOutLoading}
+            onClose={() => setDrawerOpen(false)}
+            onSignOut={() => {
+              void handleSignOut()
+            }}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+
+          <WebMobileProfilePopover
+            open={profilePopoverOpen}
+            displayName={headerName}
+            email={email}
+            avatar={avatar}
+            customAvatarUrl={customAvatarUrl}
+            onClose={() => setProfilePopoverOpen(false)}
+          />
 
           <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
             <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl">

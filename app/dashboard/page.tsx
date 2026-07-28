@@ -32,7 +32,7 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, points, avatar, support_prompt_last_shown_at')
+    .select('display_name, points, avatar, custom_avatar_url, support_prompt_last_shown_at')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -90,6 +90,7 @@ export default async function DashboardPage({
         user.user_metadata,
       )}
       avatar={profile?.avatar ?? null}
+      customAvatarUrl={profile?.custom_avatar_url ?? null}
       supportPromptLastShownAt={profile?.support_prompt_last_shown_at ?? null}
       quickStats={{
         totalPoints: profile?.points ?? 0,

@@ -33,6 +33,7 @@ type ChatsPageViewProps = {
   email: string
   displayName?: string | null
   avatar?: string | null
+  customAvatarUrl?: string | null
 }
 
 function ChatInboxRow({
@@ -90,6 +91,7 @@ function ChatInboxRow({
                       member={{
                         name: member.name,
                         avatar: member.avatar,
+                        customAvatarUrl: member.customAvatarUrl,
                         isYou: member.isYou,
                       }}
                       className="h-7 w-7 text-[10px] sm:h-7 sm:w-7"
@@ -156,6 +158,7 @@ export function ChatsPageView({
   email,
   displayName,
   avatar,
+  customAvatarUrl,
 }: ChatsPageViewProps) {
   const [items, setItems] = useState<PoolChatInboxItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -245,6 +248,7 @@ export function ChatsPageView({
       email={email}
       displayName={displayName}
       avatar={avatar}
+      customAvatarUrl={customAvatarUrl}
       mainClassName="py-6 sm:py-8"
     >
       <Tabs value="chat" className="gap-8">

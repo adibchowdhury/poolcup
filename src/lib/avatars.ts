@@ -29,6 +29,25 @@ export function resolveAvatarFilename(avatar: string | null | undefined): string
   return DEFAULT_AVATAR
 }
 
+/** Preset-only src (pool crests, preset pickers). Always returns a path under /avatars/. */
 export function getAvatarSrc(avatar: string | null | undefined): string {
   return `/avatars/${resolveAvatarFilename(avatar)}`
+}
+
+export type UserAvatarFields = {
+  customAvatarUrl?: string | null
+  avatar?: string | null
+}
+
+/**
+ * User avatar resolution: custom Storage URL → preset filename → DEFAULT preset.
+ * Never empty — always a usable image src.
+ */
+export function getUserAvatarSrc({
+  customAvatarUrl,
+  avatar,
+}: UserAvatarFields): string {
+  const custom = customAvatarUrl?.trim()
+  if (custom) return custom
+  return getAvatarSrc(avatar)
 }

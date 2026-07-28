@@ -16,6 +16,29 @@ import {
 import { expandClassicKnockoutBreakdownLines } from '@/src/lib/classic-knockout-breakdown-lines'
 import { isKnockoutRound } from '@/src/lib/classic-round-tab-logic'
 
+export type MemberAvatarRecord = {
+  avatar: string | null
+  customAvatarUrl: string | null
+}
+
+/** Accepts new {avatar, customAvatarUrl} records or legacy preset-only strings. */
+export type MemberAvatarMapValue = MemberAvatarRecord | string | null
+
+export function normalizeMemberAvatarRecord(
+  value: MemberAvatarMapValue | undefined,
+): MemberAvatarRecord {
+  if (value == null) {
+    return { avatar: null, customAvatarUrl: null }
+  }
+  if (typeof value === 'string') {
+    return { avatar: value, customAvatarUrl: null }
+  }
+  return {
+    avatar: value.avatar ?? null,
+    customAvatarUrl: value.customAvatarUrl ?? null,
+  }
+}
+
 export type PoolLeaderboardMember = {
   id: string
   user_id: string
@@ -39,7 +62,9 @@ type BuildPoolLeaderboardParams = {
   currentUserId: string
   predictionsByMember: Map<string, number>
   isWinnerPool: boolean
-  avatarsByMemberId: Map<string, string | null>
+  avatarsByMemberId: {
+    get(key: string): MemberAvatarMapValue | undefined
+  }
   breakdownByMember?: Map<string, LeaderboardPointBreakdownItem[]>
 }
 
@@ -460,19 +485,25 @@ export function buildPoolLeaderboardMembers({
     }))
   }
 
-  return entries.map((entry) => ({
-    id: entry.member_id,
-    userId: entry.user_id,
-    name: entry.display_name,
-    isYou: currentUserId === entry.user_id,
-    avatar: avatarsByMemberId.get(entry.member_id) ?? null,
-    points: entry.points,
-    correctPredictions: entry.correct_predictions,
-    totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
-    movement: getMovement(entry.rank, entry.prev_rank),
-    streak: 0,
-    pointBreakdown: breakdownByMember?.get(entry.member_id) ?? [],
-  }))
+  return entries.map((entry) => {
+    const avatarFields = normalizeMemberAvatarRecord(
+      avatarsByMemberId.get(entry.member_id),
+    )
+    return {
+      id: entry.member_id,
+      userId: entry.user_id,
+      name: entry.display_name,
+      isYou: currentUserId === entry.user_id,
+      avatar: avatarFields.avatar,
+      customAvatarUrl: avatarFields.customAvatarUrl,
+      points: entry.points,
+      correctPredictions: entry.correct_predictions,
+      totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
+      movement: getMovement(entry.rank, entry.prev_rank),
+      streak: 0,
+      pointBreakdown: breakdownByMember?.get(entry.member_id) ?? [],
+    }
+  })
 }
 
 export function getMemberConsecutivePlace(

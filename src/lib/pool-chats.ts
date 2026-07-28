@@ -16,6 +16,7 @@ export type PoolChatMemberPreview = {
   name: string
   isYou: boolean
   avatar: string | null
+  customAvatarUrl: string | null
 }
 
 export type PoolChatInboxItem = UserPoolChatRow & {
@@ -38,6 +39,7 @@ type PoolAvatarBatchRow = {
   user_id: string
   display_name: string
   avatar: string | null
+  custom_avatar_url: string | null
 }
 
 export function getVisibleMemberOverflow(memberCount: number): number {
@@ -174,7 +176,10 @@ async function fetchMemberPreviewsByPoolId(
     return membersByPoolId
   }
 
-  const avatarByMemberId = new Map<string, string | null>()
+  const avatarByMemberId = new Map<
+    string,
+    { avatar: string | null; customAvatarUrl: string | null }
+  >()
   const { data: avatarRows, error: avatarError } = await supabase.rpc(
     'get_pool_member_avatars_batch',
     { p_pool_ids: poolIds },
@@ -187,19 +192,24 @@ async function fetchMemberPreviewsByPoolId(
     )
   } else {
     for (const row of (avatarRows ?? []) as PoolAvatarBatchRow[]) {
-      avatarByMemberId.set(String(row.member_id), row.avatar ?? null)
+      avatarByMemberId.set(String(row.member_id), {
+        avatar: row.avatar ?? null,
+        customAvatarUrl: row.custom_avatar_url ?? null,
+      })
     }
   }
 
   for (const row of (memberRows ?? []) as PoolMemberRow[]) {
     const displayName = row.display_name?.trim() || 'Member'
     const members = membersByPoolId.get(row.pool_id) ?? []
+    const avatarFields = avatarByMemberId.get(row.id)
     members.push({
       memberId: row.id,
       userId: row.user_id,
       name: displayName,
       isYou: row.user_id === currentUserId,
-      avatar: avatarByMemberId.get(row.id) ?? null,
+      avatar: avatarFields?.avatar ?? null,
+      customAvatarUrl: avatarFields?.customAvatarUrl ?? null,
     })
     membersByPoolId.set(row.pool_id, members)
   }

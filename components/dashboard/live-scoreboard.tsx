@@ -110,7 +110,7 @@ function computeLiveMatchClockDisplay(
   return null
 }
 
-function useLiveMatchClock(
+export function useLiveMatchClock(
   match: Pick<FeaturedMatch, 'kickoff_at' | 'status_short'>,
 ): string | null {
   const [mounted, setMounted] = useState(false)

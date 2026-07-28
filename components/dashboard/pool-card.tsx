@@ -27,13 +27,19 @@ import {
   getPoolLeaderboardHref,
 } from '@/src/lib/pool-unread-counts'
 import { trackEvent } from '@/src/lib/track'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 
 export type PoolMemberAvatar = {
   displayName: string
-  initials: string
+  /** @deprecated Prefer avatar + customAvatarUrl; kept optional for mobile consumers. */
+  initials?: string
+  avatar?: string | null
+  customAvatarUrl?: string | null
 }
 
 export type ScoringStyleId = 'winner' | 'classic' | 'exact' // exact: legacy DB pools only
+
+export type RankMovement = 'up' | 'down' | 'none'
 
 export type DashboardPoolCardData = {
   id: string
@@ -44,6 +50,10 @@ export type DashboardPoolCardData = {
   members: number
   memberAvatars: PoolMemberAvatar[]
   yourRank: number | null
+  /** Direction from leaderboard_cache prev_rank vs rank. */
+  movement: RankMovement
+  /** Absolute place change (|prev_rank - rank|); 0 when none. */
+  rankDelta: number
   totalPredictions: number
   yourPredictions: number
   nextMatchKickoffAt: string | null
@@ -233,18 +243,16 @@ export function PoolCard({ pool, onPoolDeleted }: PoolCardProps) {
           <div className="flex items-center gap-2">
             <div className="flex items-center">
               {visibleAvatars.map((member, index) => (
-                <div
+                <UserAvatarImage
                   key={`${member.displayName}-${index}`}
+                  avatar={member.avatar}
+                  customAvatarUrl={member.customAvatarUrl}
+                  alt={member.displayName}
                   className={cn(
-                    'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 border-card bg-[#1a2535] text-[10px] font-semibold ring-2 ring-card',
-                    index === 0 ? 'text-primary' : 'text-white',
+                    'h-[26px] w-[26px] border-2 border-card ring-2 ring-card',
                     index > 0 && '-ml-[7px]',
                   )}
-                  title={member.displayName}
-                  aria-label={member.displayName}
-                >
-                  {member.initials}
-                </div>
+                />
               ))}
               {overflowCount > 0 ? (
                 <div

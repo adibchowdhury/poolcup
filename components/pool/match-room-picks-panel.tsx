@@ -1,10 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getAvatarSrc } from '@/src/lib/avatars'
 import {
   fetchMatchPoolPicks,
   type MatchPoolPick,
@@ -17,13 +15,15 @@ import {
 } from '@/src/lib/prediction-scoring'
 import { projectMatchPoints } from '@/src/lib/project-match-points'
 import { supabase } from '@/src/lib/supabase'
+import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 
 type MatchRoomPicksPanelProps = {
   poolId: string
   matchId: string
   scoringStyle: MatchScoringStyle
   currentUserId: string
-  avatarsByMemberId: Map<string, string | null>
+  avatarsByMemberId: Map<string, MemberAvatarRecord>
   isFinal: boolean
   resultTeam1: number | null
   resultTeam2: number | null
@@ -156,31 +156,20 @@ function PickStatusPill({
 function PickAvatar({
   name,
   avatar,
+  customAvatarUrl,
   isYou,
 }: {
   name: string
   avatar: string | null
+  customAvatarUrl: string | null
   isYou: boolean
 }) {
   return (
-    <div
-      className={cn(
-        'relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold',
-        isYou ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-      )}
-    >
-      {avatar ? (
-        <Image
-          src={getAvatarSrc(avatar)}
-          alt=""
-          width={36}
-          height={36}
-          className="size-9 shrink-0 object-cover object-top"
-        />
-      ) : (
-        name.charAt(0).toUpperCase()
-      )}
-    </div>
+    <UserAvatarImage
+      avatar={avatar}
+      customAvatarUrl={customAvatarUrl}
+      className={cn('h-9 w-9', isYou && 'ring-2 ring-primary/40')}
+    />
   )
 }
 
@@ -246,11 +235,13 @@ function PickListItem({
   pick,
   rank,
   avatar,
+  customAvatarUrl,
   isYou,
 }: {
   pick: EnrichedPick
   rank: number
   avatar: string | null
+  customAvatarUrl: string | null
   isYou: boolean
 }) {
   return (
@@ -263,7 +254,12 @@ function PickListItem({
       <span className="w-5 shrink-0 text-center font-mono text-xs text-muted-foreground">
         {rank}
       </span>
-      <PickAvatar name={pick.displayName} avatar={avatar} isYou={isYou} />
+      <PickAvatar
+        name={pick.displayName}
+        avatar={avatar}
+        customAvatarUrl={customAvatarUrl}
+        isYou={isYou}
+      />
       <p
         className={cn(
           'min-w-0 flex-1 truncate text-sm',
@@ -440,7 +436,13 @@ export function MatchRoomPicksPanel({
                 <PickListItem
                   pick={yourPick}
                   rank={yourPickRank}
-                  avatar={avatarsByMemberId.get(yourPick.memberId) ?? null}
+                  avatar={
+                    avatarsByMemberId.get(yourPick.memberId)?.avatar ?? null
+                  }
+                  customAvatarUrl={
+                    avatarsByMemberId.get(yourPick.memberId)?.customAvatarUrl ??
+                    null
+                  }
                   isYou
                 />
               </div>
@@ -454,7 +456,10 @@ export function MatchRoomPicksPanel({
                   rank={
                     enrichedPicks.findIndex((p) => p.memberId === pick.memberId) + 1
                   }
-                  avatar={avatarsByMemberId.get(pick.memberId) ?? null}
+                  avatar={avatarsByMemberId.get(pick.memberId)?.avatar ?? null}
+                  customAvatarUrl={
+                    avatarsByMemberId.get(pick.memberId)?.customAvatarUrl ?? null
+                  }
                   isYou={false}
                 />
               ))}

@@ -10,13 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
-import { getAvatarSrc } from '@/src/lib/avatars'
 import {
   isPoolAvatarFilename,
   POOL_AVATAR_FILENAMES,
   resolvePoolAvatarFilename,
   type PoolAvatarFilename,
 } from '@/src/lib/pool-avatars'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 import {
   isPoolNameUnchanged,
   normalizePoolName,
@@ -341,19 +341,11 @@ export function PoolSquadTab({
                 Captain
               </p>
               <div className="mt-2 flex items-center gap-3">
-                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                  {captain.avatar ? (
-                    <Image
-                      src={getAvatarSrc(captain.avatar)}
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="size-10 shrink-0 object-cover object-top"
-                    />
-                  ) : (
-                    captain.name.charAt(0).toUpperCase()
-                  )}
-                </div>
+                <UserAvatarImage
+                  avatar={captain.avatar}
+                  customAvatarUrl={captain.customAvatarUrl}
+                  className="h-10 w-10"
+                />
                 <div className="min-w-0">
                   <p className="truncate font-medium text-foreground">{captain.name}</p>
                   <p className="text-xs text-muted-foreground">Pool creator</p>
@@ -444,26 +436,14 @@ export function PoolSquadTab({
                           : 'bg-muted/20',
                       )}
                     >
-                      <div
+                      <UserAvatarImage
+                        avatar={member.avatar}
+                        customAvatarUrl={member.customAvatarUrl}
                         className={cn(
-                          'relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold',
-                          member.isYou
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-foreground',
+                          'h-9 w-9',
+                          member.isYou && 'ring-2 ring-primary/40',
                         )}
-                      >
-                        {member.avatar ? (
-                          <Image
-                            src={getAvatarSrc(member.avatar)}
-                            alt=""
-                            width={36}
-                            height={36}
-                            className="size-9 shrink-0 object-cover object-top"
-                          />
-                        ) : (
-                          member.name.charAt(0).toUpperCase()
-                        )}
-                      </div>
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
                           <span

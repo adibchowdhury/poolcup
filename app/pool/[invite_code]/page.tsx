@@ -32,6 +32,7 @@ import {
   fetchWinnerPoolLeaderboardPointBreakdown,
   verifyLeaderboardBreakdownPointDerivation,
   verifyLeaderboardBreakdownTotals,
+  type MemberAvatarRecord,
 } from '@/src/lib/pool-leaderboard'
 
 type Pool = {
@@ -86,7 +87,7 @@ export default function PoolPage() {
   const [memberId, setMemberId] = useState<string | null>(null)
   const [canDelete, setCanDelete] = useState(false)
   const [avatarByMemberId, setAvatarByMemberId] = useState(
-    () => new Map<string, string | null>(),
+    () => new Map<string, MemberAvatarRecord>(),
   )
   const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(null)
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
@@ -198,7 +199,7 @@ export default function PoolPage() {
 
     const poolMembers = (membersData ?? []) as PoolMember[]
 
-    const avatarByMemberId = new Map<string, string | null>()
+    const avatarByMemberId = new Map<string, MemberAvatarRecord>()
     const { data: avatarRows, error: avatarError } = await supabase.rpc(
       'get_pool_member_avatars',
       { p_pool_id: pool.id },
@@ -209,7 +210,10 @@ export default function PoolPage() {
     } else {
       for (const row of avatarRows ?? []) {
         const memberId = String(row.member_id)
-        avatarByMemberId.set(memberId, row.avatar ?? null)
+        avatarByMemberId.set(memberId, {
+          avatar: row.avatar ?? null,
+          customAvatarUrl: row.custom_avatar_url ?? null,
+        })
       }
     }
 
@@ -217,9 +221,11 @@ export default function PoolPage() {
 
     const profilesByUserId = new Map<string, PoolChatMemberProfile>()
     for (const member of poolMembers) {
+      const avatarFields = avatarByMemberId.get(member.id)
       profilesByUserId.set(member.user_id, {
         displayName: member.display_name,
-        avatar: avatarByMemberId.get(member.id) ?? null,
+        avatar: avatarFields?.avatar ?? null,
+        customAvatarUrl: avatarFields?.customAvatarUrl ?? null,
       })
     }
     setMemberProfilesByUserId(profilesByUserId)

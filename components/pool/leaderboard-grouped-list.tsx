@@ -1,14 +1,13 @@
 'use client'
 
 import { useId, useState } from 'react'
-import Image from 'next/image'
 import { ChevronDown, Medal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
   LeaderboardMember,
   LeaderboardPointBreakdownItem,
 } from '@/components/pool/leaderboard-row'
-import { getAvatarSrc, resolveAvatarFilename } from '@/src/lib/avatars'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
@@ -131,38 +130,24 @@ function MemberAvatar({
   className,
   imageClassName,
 }: {
-  member: Pick<LeaderboardMember, 'name' | 'avatar' | 'isYou'>
+  member: Pick<
+    LeaderboardMember,
+    'name' | 'avatar' | 'customAvatarUrl' | 'isYou'
+  >
   className?: string
   imageClassName?: string
 }) {
-  const avatarFilename = resolveAvatarFilename(member.avatar)
-  const showAvatarImage = Boolean(member.avatar?.trim())
-
   return (
-    <div
+    <UserAvatarImage
+      avatar={member.avatar}
+      customAvatarUrl={member.customAvatarUrl}
       className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold sm:h-10 sm:w-10 sm:text-sm',
-        member.isYou
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-muted text-foreground',
+        'h-9 w-9 sm:h-10 sm:w-10',
+        member.isYou && 'ring-2 ring-primary/40',
         className,
       )}
-    >
-      {showAvatarImage ? (
-        <Image
-          src={getAvatarSrc(avatarFilename)}
-          alt=""
-          width={40}
-          height={40}
-          className={cn(
-            'size-full shrink-0 object-contain object-center',
-            imageClassName,
-          )}
-        />
-      ) : (
-        member.name.charAt(0).toUpperCase()
-      )}
-    </div>
+      imgClassName={imageClassName}
+    />
   )
 }
 

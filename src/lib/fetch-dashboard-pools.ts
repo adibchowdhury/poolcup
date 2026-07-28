@@ -28,12 +28,28 @@ type MembershipRow = {
   } | null
 }
 
-function memberInitials(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase()
+type PoolAvatarBatchRow = {
+  member_id: string
+  avatar: string | null
+  custom_avatar_url: string | null
+}
+
+type RankMovementFields = {
+  movement: 'up' | 'down' | 'none'
+  rankDelta: number
+}
+
+function rankMovementFromCache(
+  rank: number | null | undefined,
+  prevRank: number | null | undefined,
+): RankMovementFields {
+  if (rank == null || prevRank == null || prevRank <= 0) {
+    return { movement: 'none', rankDelta: 0 }
   }
-  return (parts[0] ?? '?').slice(0, 2).toUpperCase()
+  const delta = prevRank - rank
+  if (delta > 0) return { movement: 'up', rankDelta: delta }
+  if (delta < 0) return { movement: 'down', rankDelta: Math.abs(delta) }
+  return { movement: 'none', rankDelta: 0 }
 }
 
 export async function fetchDashboardPools(
@@ -102,13 +118,40 @@ export async function fetchDashboardPools(
   const memberCountByPool = new Map<string, number>()
   const memberAvatarsByPool = new Map<
     string,
-    { displayName: string; initials: string }[]
+    {
+      displayName: string
+      avatar: string | null
+      customAvatarUrl: string | null
+    }[]
   >()
 
   if (poolIds.length > 0) {
+    const avatarByMemberId = new Map<
+      string,
+      { avatar: string | null; customAvatarUrl: string | null }
+    >()
+    const { data: avatarRows, error: avatarError } = await supabase.rpc(
+      'get_pool_member_avatars_batch',
+      { p_pool_ids: poolIds },
+    )
+
+    if (avatarError) {
+      console.error(
+        'Failed to load member avatars for dashboard pools:',
+        avatarError.message,
+      )
+    } else {
+      for (const row of (avatarRows ?? []) as PoolAvatarBatchRow[]) {
+        avatarByMemberId.set(String(row.member_id), {
+          avatar: row.avatar ?? null,
+          customAvatarUrl: row.custom_avatar_url ?? null,
+        })
+      }
+    }
+
     const { data: memberRowsAll } = await supabase
       .from('pool_members')
-      .select('pool_id, display_name')
+      .select('id, pool_id, display_name')
       .in('pool_id', poolIds)
       .order('joined_at', { ascending: true })
 
@@ -119,10 +162,12 @@ export async function fetchDashboardPools(
       )
 
       const displayName = row.display_name?.trim() || 'Member'
+      const avatarFields = avatarByMemberId.get(row.id)
       const avatars = memberAvatarsByPool.get(row.pool_id) ?? []
       avatars.push({
         displayName,
-        initials: memberInitials(displayName),
+        avatar: avatarFields?.avatar ?? null,
+        customAvatarUrl: avatarFields?.customAvatarUrl ?? null,
       })
       memberAvatarsByPool.set(row.pool_id, avatars)
     }
@@ -230,20 +275,28 @@ export async function fetchDashboardPools(
   }
 
   const placeByMember = new Map<string, number>()
+  const movementByMember = new Map<string, RankMovementFields>()
   for (const row of validMemberships) {
     const pool = row.pools!
     const isWinnerPool = pool.scoring_style === 'winner'
+    const cacheRows = cacheRowsByPool.get(pool.id) ?? null
     const poolMembers = poolMembersByPool.get(pool.id) ?? []
     const leaderboardMembers = buildPoolLeaderboardMembers({
       poolMembers,
       creatorUserId: pool.creator_id,
-      cacheRows: cacheRowsByPool.get(pool.id) ?? null,
+      cacheRows,
       matchesPlayedCount,
       currentUserId: userId,
       predictionsByMember: new Map(),
       isWinnerPool,
       avatarsByMemberId: new Map(),
     })
+
+    const myCache = cacheRows?.find((cacheRow) => cacheRow.member_id === row.id)
+    movementByMember.set(
+      row.id,
+      rankMovementFromCache(myCache?.rank, myCache?.prev_rank),
+    )
 
     if (
       !poolHasLeaderboardResults(
@@ -270,6 +323,10 @@ export async function fetchDashboardPools(
     const poolTotalPredictions = isWinnerPool
       ? WINNER_ONLY_DASHBOARD_PROGRESS_TOTAL
       : totalPredictions
+    const movementFields = movementByMember.get(row.id) ?? {
+      movement: 'none' as const,
+      rankDelta: 0,
+    }
     return {
       id: pool.id,
       name: pool.name,
@@ -279,6 +336,8 @@ export async function fetchDashboardPools(
       members: memberCountByPool.get(pool.id) ?? 1,
       memberAvatars: memberAvatarsByPool.get(pool.id) ?? [],
       yourRank: placeByMember.get(row.id) ?? null,
+      movement: movementFields.movement,
+      rankDelta: movementFields.rankDelta,
       totalPredictions: poolTotalPredictions,
       yourPredictions,
       nextMatchKickoffAt,

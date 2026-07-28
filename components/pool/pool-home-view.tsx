@@ -37,6 +37,7 @@ import {
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
+import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -68,7 +69,7 @@ interface PoolHomeViewProps {
     advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
-  avatarsByMemberId: Map<string, string | null>
+  avatarsByMemberId: Map<string, MemberAvatarRecord>
   poolCreatorUserId?: string
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
   onPoolNameChange?: (name: string) => void

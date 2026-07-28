@@ -30,6 +30,7 @@ import {
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
 import { useClientNow } from '@/hooks/use-client-now'
+import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 
 type PoolMatchRoomProps = {
   poolId: string
@@ -40,7 +41,7 @@ type PoolMatchRoomProps = {
   currentUserId: string
   poolCreatorUserId: string
   memberProfilesByUserId: Map<string, PoolChatMemberProfile>
-  avatarsByMemberId: Map<string, string | null>
+  avatarsByMemberId: Map<string, MemberAvatarRecord>
   onClose: () => void
 }
 

@@ -16,20 +16,20 @@ import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import {
   ALLOWED_CHAT_REACTIONS,
   aggregateReactions,
-  avatarColorClassForUser,
   buildChatListItems,
   formatChatTimestamp,
-  initialsFromDisplayName,
   isDuplicateReactionError,
   type AggregatedReaction,
   type MessageReactionRow,
   type PoolChatMessage,
 } from '@/src/lib/pool-chat-helpers'
 import { supabase } from '@/src/lib/supabase'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 
 export type PoolChatMemberProfile = {
   displayName: string
   avatar: string | null
+  customAvatarUrl: string | null
 }
 
 type PoolChatTabProps = {
@@ -53,27 +53,22 @@ function resolveAuthor(
     profiles.get(userId) ?? {
       displayName: 'Member',
       avatar: null,
+      customAvatarUrl: null,
     }
   )
 }
 
-function ChatMonogramAvatar({
-  userId,
-  displayName,
+function ChatUserAvatar({
+  profile,
 }: {
-  userId: string
-  displayName: string
+  profile: PoolChatMemberProfile
 }) {
   return (
-    <div
-      className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
-        avatarColorClassForUser(userId),
-      )}
-      aria-hidden
-    >
-      {initialsFromDisplayName(displayName)}
-    </div>
+    <UserAvatarImage
+      avatar={profile.avatar}
+      customAvatarUrl={profile.customAvatarUrl}
+      className="h-8 w-8"
+    />
   )
 }
 
@@ -309,7 +304,7 @@ function ChatMessageGroup({
   return (
     <div className={cn('flex w-full min-w-0', !isYou && 'gap-2')}>
       {!isYou ? (
-        <ChatMonogramAvatar userId={userId} displayName={author.displayName} />
+        <ChatUserAvatar profile={author} />
       ) : null}
 
       <div

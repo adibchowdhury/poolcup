@@ -8,14 +8,19 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  Upload,
   Zap,
 } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardInsightCards } from '@/components/dashboard/dashboard-insight-cards'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
+import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
+import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
+import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
+import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
+import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { WorldCupUrgencyBanner } from '@/components/dashboard/world-cup-urgency-banner'
@@ -35,8 +40,10 @@ import {
   resolveAvatarFilename,
 } from '@/src/lib/avatars'
 import {
-  getPlayerLevelFromPoints,
-} from '@/src/lib/player-level'
+  clearCurrentUserCustomAvatar,
+  uploadCurrentUserAvatar,
+} from '@/src/lib/upload-user-avatar'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 import { supabase } from '@/src/lib/supabase'
 import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
 import {
@@ -55,7 +62,14 @@ import {
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { useAnimatedNumber } from '@/hooks/use-animated-number'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 export type DashboardQuickStats = {
   totalPoints: number
@@ -68,6 +82,7 @@ interface DashboardViewProps {
   email: string
   displayName?: string | null
   avatar?: string | null
+  customAvatarUrl?: string | null
   supportPromptLastShownAt?: string | null
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
@@ -105,6 +120,7 @@ function DashboardViewContent({
   email,
   displayName,
   avatar,
+  customAvatarUrl: initialCustomAvatarUrl = null,
   supportPromptLastShownAt = null,
   quickStats,
   passwordResetSuccess,
@@ -118,8 +134,14 @@ function DashboardViewContent({
   const [selectedAvatar, setSelectedAvatar] = useState(() =>
     resolveAvatarFilename(avatar),
   )
+  const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(
+    () => initialCustomAvatarUrl?.trim() || null,
+  )
   const [avatarSaving, setAvatarSaving] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [removingCustomAvatar, setRemovingCustomAvatar] = useState(false)
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
   const [pointsAnimKey, setPointsAnimKey] = useState(0)
@@ -213,6 +235,10 @@ function DashboardViewContent({
   }, [avatar])
 
   useEffect(() => {
+    setCustomAvatarUrl(initialCustomAvatarUrl?.trim() || null)
+  }, [initialCustomAvatarUrl])
+
+  useEffect(() => {
     const name = displayName ?? ''
     setFullName(name)
     setHeaderName(name)
@@ -302,22 +328,75 @@ function DashboardViewContent({
   }, [fullName])
 
   async function handleSelectAvatar(filename: string) {
-    if (filename === selectedAvatar || avatarSaving) return
+    if (avatarSaving || uploadingAvatar || removingCustomAvatar) return
+    if (!customAvatarUrl && filename === selectedAvatar) return
 
+    const previousPreset = selectedAvatar
+    const previousCustom = customAvatarUrl
     setAvatarSaving(filename)
     setSelectedAvatar(filename)
+    setCustomAvatarUrl(null)
 
     const { error } = await supabase
       .from('users')
-      .update({ avatar: filename })
+      .update({ avatar: filename, custom_avatar_url: null })
       .eq('id', userId)
 
     setAvatarSaving(null)
 
     if (error) {
-      setSelectedAvatar(resolveAvatarFilename(avatar))
+      setSelectedAvatar(previousPreset)
+      setCustomAvatarUrl(previousCustom)
+      setEditProfileMessage(error.message)
       console.error('Failed to save avatar:', error.message)
+      return
     }
+
+    setEditProfileMessage('Avatar updated.')
+  }
+
+  async function handleAvatarFileSelected(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || uploadingAvatar || avatarSaving || removingCustomAvatar) return
+
+    setUploadingAvatar(true)
+    setEditProfileMessage(null)
+
+    const { publicUrl, error } = await uploadCurrentUserAvatar(supabase, file)
+
+    setUploadingAvatar(false)
+
+    if (error || !publicUrl) {
+      setEditProfileMessage(error ?? 'Upload failed')
+      return
+    }
+
+    setCustomAvatarUrl(publicUrl)
+    setEditProfileMessage('Photo uploaded.')
+  }
+
+  async function handleRemoveCustomAvatar() {
+    if (!customAvatarUrl || removingCustomAvatar || uploadingAvatar) return
+
+    const previousCustom = customAvatarUrl
+    setRemovingCustomAvatar(true)
+    setCustomAvatarUrl(null)
+    setEditProfileMessage(null)
+
+    const { error } = await clearCurrentUserCustomAvatar(supabase, userId)
+
+    setRemovingCustomAvatar(false)
+
+    if (error) {
+      setCustomAvatarUrl(previousCustom)
+      setEditProfileMessage(error)
+      return
+    }
+
+    setEditProfileMessage('Custom photo removed.')
   }
 
   async function handleSaveDisplayName() {
@@ -348,31 +427,28 @@ function DashboardViewContent({
     setEditProfileOpen(true)
   }
 
-  const playerLevel = useMemo(
-    () => getPlayerLevelFromPoints(liveTotalPoints),
-    [liveTotalPoints],
-  )
+  const shownName = headerName.trim() || 'Player'
 
   const quickStatItems = [
     {
       label: 'Total Points',
       icon: Zap,
+      value: liveTotalPoints,
       color: 'text-primary',
     },
     {
       label: 'Predictions Made',
-      value: quickStats.predictionsMade.toLocaleString(),
       icon: Target,
+      value: quickStats.predictionsMade,
       color: 'text-[#ffb300]',
     },
     {
       label: 'Win Rate',
-      value:
-        quickStats.winRate != null ? `${quickStats.winRate}%` : '—',
       icon: TrendingUp,
+      value: quickStats.winRate != null ? `${quickStats.winRate}%` : '—',
       color: 'text-primary',
     },
-  ]
+  ] as const
 
   return (
     <DashboardAppShell
@@ -380,6 +456,7 @@ function DashboardViewContent({
       email={email}
       displayName={headerName}
       avatar={selectedAvatar}
+      customAvatarUrl={customAvatarUrl}
     >
       <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4">
         <KnockoutBracketSetBanner userId={userId} />
@@ -406,164 +483,213 @@ function DashboardViewContent({
             <DashboardDesktopNav />
 
             <TabsContent value="profile" className="mt-4">
-              <div className="flex w-full items-center justify-center">
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-stretch gap-12 lg:flex-row lg:items-center">
-                  <PointsHistoryFeed
-                    userId={userId}
-                    animKey={pointsAnimKey}
-                    active={activeTab === 'profile'}
-                    mobileCollapsible
-                    className="order-2 lg:order-1"
+              <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
+                <section className="flex flex-col items-center text-center">
+                  <UserAvatarImage
+                    avatar={selectedAvatar}
+                    customAvatarUrl={customAvatarUrl}
+                    className="h-48 w-48 border border-border"
+                    imgClassName={
+                      customAvatarUrl
+                        ? 'object-cover'
+                        : 'object-contain object-bottom p-2'
+                    }
                   />
-                  <div className="order-1 mx-auto flex flex-col items-center gap-12 lg:order-2 lg:flex-row">
-                  <div className="flex flex-col items-center gap-3 text-center sm:gap-4 lg:grid lg:h-full lg:min-h-0 lg:grid-rows-[1fr_auto] lg:gap-4">
-                    <div className="flex min-h-[320px] w-full max-w-[380px] items-end justify-center sm:max-w-[480px] lg:h-full lg:min-h-0 lg:w-full lg:max-w-[min(100%,580px)]">
-                      <Image
-                        src={getAvatarSrc(selectedAvatar)}
-                        alt={`${playerLevel.title} — Level ${playerLevel.level}`}
-                        width={580}
-                        height={800}
-                        priority
-                        className="h-[320px] w-auto max-w-full object-contain object-bottom sm:h-[400px] lg:h-full"
-                        sizes="(max-width: 1024px) 420px, 580px"
+                  <h2 className="mt-4 font-display text-4xl tracking-wide text-foreground">
+                    {shownName}
+                  </h2>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 gap-2"
+                    onClick={openEditProfile}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit profile
+                  </Button>
+                </section>
+
+                <section className="grid grid-cols-3 gap-3">
+                  {quickStatItems.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-2xl border border-border bg-card/50 px-3 py-4 text-center"
+                    >
+                      <stat.icon
+                        className={cn('mx-auto h-5 w-5', stat.color)}
+                        aria-hidden
                       />
-                    </div>
-
-                    <div className="shrink-0 text-center">
-                      <p className="font-display text-5xl tracking-wide text-foreground sm:text-6xl">
-                        {playerLevel.title}
-                      </p>
-                      <p className="mt-1 text-lg text-muted-foreground sm:text-xl">
-                        Level {playerLevel.level}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-4 gap-2"
-                        onClick={openEditProfile}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit profile
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-                    <DialogContent className="sm:max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Edit profile</DialogTitle>
-                        <DialogDescription>
-                          Update how you appear in pools and on your profile.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-profile-full-name">Display name</Label>
-                          <Input
-                            id="edit-profile-full-name"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="John Doe"
+                      <p className="mt-2 font-display text-2xl leading-none text-foreground">
+                        {stat.label === 'Total Points' ? (
+                          <AnimatedTotalPointsDisplay
+                            key={pointsAnimKey}
+                            target={liveTotalPoints}
                           />
-                        </div>
+                        ) : typeof stat.value === 'number' ? (
+                          stat.value.toLocaleString()
+                        ) : (
+                          stat.value
+                        )}
+                      </p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {stat.label}
+                      </p>
+                    </div>
+                  ))}
+                </section>
 
-                        <div className="space-y-2">
-                          <h3 className="font-display text-xl tracking-wide">
-                            Choose Your Avatar
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Pick a character for your profile. Changes save instantly.
-                          </p>
-                        </div>
+                <PointsHistoryFeed
+                  userId={userId}
+                  animKey={pointsAnimKey}
+                  active={activeTab === 'profile'}
+                  alwaysCollapsible
+                />
 
-                        <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-                          {availableAvatars.map((filename) => {
-                            const isSelected = selectedAvatar === filename
-                            const isSaving = avatarSaving === filename
-                            const avatarLabel = filename.replace(/\.[^.]+$/, '')
+                <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+                  <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Edit profile</DialogTitle>
+                      <DialogDescription>
+                        Update how you appear in pools and on your profile.
+                      </DialogDescription>
+                    </DialogHeader>
 
-                            return (
-                              <button
-                                key={filename}
-                                type="button"
-                                onClick={() => void handleSelectAvatar(filename)}
-                                disabled={Boolean(avatarSaving)}
-                                aria-pressed={isSelected}
-                                aria-label={`Select ${avatarLabel} avatar`}
-                                className={cn(
-                                  'rounded-lg border-2 bg-muted/20 p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                                  isSelected
-                                    ? 'border-primary ring-2 ring-primary/40'
-                                    : 'border-border hover:border-muted-foreground/50',
-                                )}
-                              >
-                                <Image
-                                  src={getAvatarSrc(filename)}
-                                  alt=""
-                                  width={80}
-                                  height={80}
-                                  className="mx-auto h-20 w-20 object-contain"
-                                />
-                                {isSaving && (
-                                  <span className="sr-only">Saving…</span>
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-profile-full-name">Display name</Label>
+                        <Input
+                          id="edit-profile-full-name"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="John Doe"
+                        />
+                      </div>
 
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          {editProfileMessage ? (
-                            <p className="text-sm text-muted-foreground">
-                              {editProfileMessage}
-                            </p>
-                          ) : (
-                            <span />
-                          )}
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl tracking-wide">
+                          Choose Your Avatar
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Upload a photo or pick a preset character. Changes
+                          save instantly.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-3">
+                        <UserAvatarImage
+                          avatar={selectedAvatar}
+                          customAvatarUrl={customAvatarUrl}
+                          className="h-24 w-24 border border-border"
+                          imgClassName={
+                            customAvatarUrl
+                              ? 'object-cover'
+                              : 'object-contain object-bottom p-1'
+                          }
+                        />
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(event) => void handleAvatarFileSelected(event)}
+                        />
+                        <div className="flex flex-wrap items-center justify-center gap-2">
                           <Button
                             type="button"
-                            onClick={handleSaveDisplayName}
-                            disabled={profileSaving || !canSaveDisplayName}
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            disabled={
+                              uploadingAvatar ||
+                              Boolean(avatarSaving) ||
+                              removingCustomAvatar
+                            }
+                            onClick={() => fileInputRef.current?.click()}
                           >
-                            {profileSaving ? 'Saving…' : 'Save name'}
+                            <Upload className="h-4 w-4" aria-hidden />
+                            {uploadingAvatar ? 'Uploading…' : 'Upload photo'}
                           </Button>
+                          {customAvatarUrl ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={
+                                removingCustomAvatar ||
+                                uploadingAvatar ||
+                                Boolean(avatarSaving)
+                              }
+                              onClick={() => void handleRemoveCustomAvatar()}
+                            >
+                              {removingCustomAvatar
+                                ? 'Removing…'
+                                : 'Remove custom'}
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
 
-                  <div className="flex h-full min-h-0 flex-col items-start justify-center gap-12 py-4 sm:gap-14 lg:min-h-0 lg:gap-16 lg:py-0 lg:pl-4">
-                    {quickStatItems.map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="flex items-center gap-6 sm:gap-7"
-                      >
-                        <stat.icon
-                          className={cn('h-12 w-12 shrink-0 sm:h-14 sm:w-14', stat.color)}
-                          aria-hidden
-                        />
-                        <div className="text-left">
-                          <div className="font-display text-6xl leading-none text-foreground sm:text-7xl lg:text-8xl">
-                            {stat.label === 'Total Points' ? (
-                              <AnimatedTotalPointsDisplay
-                                key={pointsAnimKey}
-                                target={liveTotalPoints}
+                      <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+                        {availableAvatars.map((filename) => {
+                          const isSelected =
+                            !customAvatarUrl && selectedAvatar === filename
+                          const isSaving = avatarSaving === filename
+                          const avatarLabel = filename.replace(/\.[^.]+$/, '')
+
+                          return (
+                            <button
+                              key={filename}
+                              type="button"
+                              onClick={() => void handleSelectAvatar(filename)}
+                              disabled={
+                                Boolean(avatarSaving) ||
+                                uploadingAvatar ||
+                                removingCustomAvatar
+                              }
+                              aria-pressed={isSelected}
+                              aria-label={`Select ${avatarLabel} avatar`}
+                              className={cn(
+                                'rounded-lg border-2 bg-muted/20 p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                isSelected
+                                  ? 'border-primary ring-2 ring-primary/40'
+                                  : 'border-border hover:border-muted-foreground/50',
+                              )}
+                            >
+                              <Image
+                                src={getAvatarSrc(filename)}
+                                alt=""
+                                width={80}
+                                height={80}
+                                className="mx-auto h-20 w-20 object-contain"
                               />
-                            ) : (
-                              stat.value
-                            )}
-                          </div>
-                          <div className="mt-2 text-lg text-muted-foreground sm:text-xl">
-                            {stat.label}
-                          </div>
-                        </div>
+                              {isSaving ? (
+                                <span className="sr-only">Saving…</span>
+                              ) : null}
+                            </button>
+                          )
+                        })}
                       </div>
-                    ))}
-                  </div>
-                  </div>
-                </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        {editProfileMessage ? (
+                          <p className="text-sm text-muted-foreground">
+                            {editProfileMessage}
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        <Button
+                          type="button"
+                          onClick={handleSaveDisplayName}
+                          disabled={profileSaving || !canSaveDisplayName}
+                        >
+                          {profileSaving ? 'Saving…' : 'Save name'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </TabsContent>
 
@@ -575,6 +701,15 @@ function DashboardViewContent({
                 <WorldCupUrgencyBanner />
               </div>
               <LiveScoreboard />
+
+              {/* New feed homepage (incremental). Keep legacy pools UI below until replaced. */}
+              <DashboardFeed>
+                <LiveNowSection userId={userId} />
+                <YourPoolsSection userId={userId} />
+                <RecentResultsSection userId={userId} />
+                <GlobalActivitySection userId={userId} />
+              </DashboardFeed>
+
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Sparkles className="h-5 w-5 shrink-0 text-[#ffb300]" />

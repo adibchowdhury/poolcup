@@ -19,7 +19,7 @@ export default async function ChatPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, avatar')
+    .select('display_name, avatar, custom_avatar_url')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -33,6 +33,7 @@ export default async function ChatPage() {
           user.user_metadata,
         )}
         avatar={profile?.avatar ?? null}
+        customAvatarUrl={profile?.custom_avatar_url ?? null}
       />
     </Suspense>
   )

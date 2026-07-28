@@ -176,3 +176,29 @@ export async function fetchFeaturedMatch(
 
   return { match: null, mode: null }
 }
+
+/**
+ * All matches currently live by status (featured live set).
+ * Status-filtered only — no kickoff fallback — so stalled NS rows are excluded.
+ */
+export async function fetchLiveMatches(
+  supabase: SupabaseClient,
+): Promise<FeaturedMatch[]> {
+  const liveKickoffCutoff = new Date(
+    Date.now() - LIVE_MAX_AGE_MINUTES * 60_000,
+  ).toISOString()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select(FEATURED_MATCH_COLUMNS)
+    .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
+    .eq('is_final', false)
+    .gt('kickoff_at', liveKickoffCutoff)
+    .order('kickoff_at', { ascending: false })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (data ?? []) as FeaturedMatch[]
+}

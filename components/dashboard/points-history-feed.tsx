@@ -20,6 +20,8 @@ type PointsHistoryFeedProps = {
   className?: string
   /** On viewports below lg, show a collapsed-by-default toggle header. Desktop is unchanged. */
   mobileCollapsible?: boolean
+  /** Collapsed-by-default toggle on all breakpoints (matches app profile). */
+  alwaysCollapsible?: boolean
 }
 
 export function PointsHistoryFeed({
@@ -28,10 +30,11 @@ export function PointsHistoryFeed({
   active,
   className,
   mobileCollapsible = false,
+  alwaysCollapsible = false,
 }: PointsHistoryFeedProps) {
   const [transactions, setTransactions] = useState<PointsTransactionRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   const loadTransactions = useCallback(async () => {
     setLoading(true)
@@ -100,44 +103,74 @@ export function PointsHistoryFeed({
   return (
     <div
       className={cn(
-        'w-full min-w-0 lg:flex-1 lg:max-w-md xl:max-w-lg',
+        'w-full min-w-0',
+        !alwaysCollapsible && 'lg:flex-1 lg:max-w-md xl:max-w-lg',
         className,
       )}
     >
-      <h2
-        className={cn(
-          'font-display text-2xl tracking-wide text-foreground',
-          mobileCollapsible ? 'hidden lg:block' : 'block',
-        )}
-      >
-        POINT HISTORY
-      </h2>
-
-      {mobileCollapsible && (
+      {alwaysCollapsible ? (
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card/80 px-4 py-3 text-left transition-colors hover:bg-muted/40 lg:hidden"
-          aria-expanded={mobileExpanded}
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/50 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+          aria-expanded={expanded}
           aria-label="Toggle points history"
-          onClick={() => setMobileExpanded((open) => !open)}
+          onClick={() => setExpanded((open) => !open)}
         >
-          <span className="font-display text-lg tracking-wide text-foreground">
+          <span className="font-display text-2xl tracking-wide text-foreground">
             Points history{countLabel}
           </span>
           <ChevronDown
             className={cn(
               'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
-              mobileExpanded && 'rotate-180',
+              expanded && 'rotate-180',
             )}
             aria-hidden
           />
         </button>
+      ) : (
+        <>
+          <h2
+            className={cn(
+              'font-display text-2xl tracking-wide text-foreground',
+              mobileCollapsible ? 'hidden lg:block' : 'block',
+            )}
+          >
+            POINT HISTORY
+          </h2>
+
+          {mobileCollapsible ? (
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card/80 px-4 py-3 text-left transition-colors hover:bg-muted/40 lg:hidden"
+              aria-expanded={expanded}
+              aria-label="Toggle points history"
+              onClick={() => setExpanded((open) => !open)}
+            >
+              <span className="font-display text-lg tracking-wide text-foreground">
+                Points history{countLabel}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
+                  expanded && 'rotate-180',
+                )}
+                aria-hidden
+              />
+            </button>
+          ) : null}
+        </>
       )}
 
       <div
         className={cn(
-          'mt-6',
-          mobileCollapsible && !mobileExpanded && 'hidden lg:block',
+          alwaysCollapsible ? 'mt-2' : 'mt-6',
+          alwaysCollapsible
+            ? expanded
+              ? 'block'
+              : 'hidden'
+            : mobileCollapsible && !expanded
+              ? 'hidden lg:block'
+              : 'block',
         )}
       >
         {feedBody}

@@ -3,6 +3,11 @@ export type PointsTransactionReason =
   | 'referral'
   | 'correct_winner'
   | 'exact_score'
+  | 'correct_draw'
+  | 'correct_advance'
+  | 'exact_score_and_advance'
+  | 'winner_group'
+  | 'third_place'
   | 'pool_created'
 
 export type PointsTransactionRow = {
@@ -17,6 +22,11 @@ const REASON_DESCRIPTIONS: Record<PointsTransactionReason, string> = {
   referral: 'Friend joined your pool',
   correct_winner: 'Correct winner prediction',
   exact_score: 'Exact score prediction',
+  correct_draw: 'Correct draw prediction',
+  correct_advance: 'Correct advance pick',
+  exact_score_and_advance: 'Exact score + advance',
+  winner_group: 'Group standings points',
+  third_place: 'Third-place ranking points',
   pool_created: 'Created a pool',
 }
 

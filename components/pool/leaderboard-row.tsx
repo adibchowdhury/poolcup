@@ -1,9 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { LeaderboardAccuracyBlock } from '@/components/pool/leaderboard-accuracy'
-import { getAvatarSrc } from '@/src/lib/avatars'
+import { UserAvatarImage } from '@/components/user-avatar-image'
 
 export type LeaderboardPointBreakdownItem = {
   matchId: string
@@ -30,6 +29,7 @@ export type LeaderboardMember = {
   name: string
   isYou: boolean
   avatar: string | null
+  customAvatarUrl: string | null
   points: number
   correctPredictions: number
   totalPredictions: number
@@ -58,26 +58,14 @@ export function LeaderboardRow({ member, rank }: LeaderboardRowProps) {
         <span className="font-mono text-lg text-muted-foreground">{rank}</span>
       </div>
 
-      <div
+      <UserAvatarImage
+        avatar={member.avatar}
+        customAvatarUrl={member.customAvatarUrl}
         className={cn(
-          'relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold',
-          member.isYou
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-foreground',
+          'h-10 w-10',
+          member.isYou && 'ring-2 ring-primary/40',
         )}
-      >
-        {member.avatar ? (
-          <Image
-            src={getAvatarSrc(member.avatar)}
-            alt=""
-            width={40}
-            height={40}
-            className="size-10 shrink-0 object-cover object-top"
-          />
-        ) : (
-          member.name.charAt(0).toUpperCase()
-        )}
-      </div>
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
