@@ -3,16 +3,18 @@ import { cn } from '@/lib/utils'
 
 /**
  * Vertical dashboard homepage feed.
- * Add new sections as children in order; replace old dashboard pieces only
- * after each section is verified.
- *
- * Planned section order:
- * 1. Live Now (when something is genuinely live)
+ * Section order (pools tab; sport/event pills sit above this wrapper):
+ * 1. Live Now
  * 2. Your Pools
- * 3. Official Pools (discover / join public PoolCup pools)
- * 4. Recent Results
- * 5. Global PoolCup Activity
- * …additional sections TBD
+ * 3. Continue Playing
+ * 4. Daily Challenge
+ * 5. Discover Pools (OfficialPoolsSection)
+ * 6. Your Progress (RecentResultsSection)
+ * 7. Activity
+ * 8. Global PoolCup Activity
+ * 9. Friends Activity
+ * 10. Achievements
+ * 11. Trending
  */
 type DashboardFeedProps = {
   children: ReactNode

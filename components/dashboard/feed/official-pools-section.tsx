@@ -113,7 +113,7 @@ export function OfficialPoolsSection({
   }
 
   return (
-    <DashboardFeedSection id="official-pools" title="Official Pools">
+    <DashboardFeedSection id="official-pools" title="Discover Pools">
       {loading ? (
         <div
           className={cn(
@@ -121,7 +121,7 @@ export function OfficialPoolsSection({
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
           )}
           aria-busy="true"
-          aria-label="Loading official pools"
+          aria-label="Discover pools"
         >
           <div
             className="grid grid-flow-col grid-rows-2 gap-2.5"
@@ -237,8 +237,9 @@ function OfficialPoolCard({
         aria-hidden
       />
 
-      <div className="relative z-10 mt-auto flex min-h-0 flex-col">
-        <div className="min-w-0 px-3 pb-3 pt-8 sm:px-3.5 sm:pb-3.5">
+      <div className="relative z-10 flex h-full min-h-0 flex-col justify-between">
+        {/* League identity stays anchored at the top-left. */}
+        <div className="min-w-0 px-3 pt-3.5 sm:px-3.5 sm:pt-4">
           <div className="flex items-start gap-2">
             <h3 className="min-w-0 flex-1 text-2xl font-bold leading-[1.05] tracking-tight text-white sm:text-3xl">
               {pool.leagueName}
@@ -246,26 +247,23 @@ function OfficialPoolCard({
             <OfficialVerifiedBadge className="mt-1 h-6 w-6 sm:h-7 sm:w-7" />
           </div>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-white/85 sm:text-base">
-            {pool.seasonLabel ? <span>{pool.seasonLabel}</span> : null}
+          <div className="mt-2.5 flex flex-col items-start gap-1 text-sm font-semibold text-white/85 sm:text-base">
+            {pool.seasonLabel ? <span className="block">{pool.seasonLabel}</span> : null}
             {status.kind !== 'none' && status.label ? (
-              <>
-                {pool.seasonLabel ? <span aria-hidden>·</span> : null}
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1.5',
-                    status.kind === 'live' && 'font-bold text-primary',
-                  )}
-                >
-                  {status.kind === 'live' ? (
-                    <span
-                      className="stage-live-dot h-2 w-2 shrink-0 rounded-full bg-primary"
-                      aria-hidden
-                    />
-                  ) : null}
-                  {status.label}
-                </span>
-              </>
+              <span
+                className={cn(
+                  'flex items-center gap-1.5',
+                  status.kind === 'live' && 'font-bold text-primary',
+                )}
+              >
+                {status.kind === 'live' ? (
+                  <span
+                    className="stage-live-dot h-2 w-2 shrink-0 rounded-full bg-primary"
+                    aria-hidden
+                  />
+                ) : null}
+                {status.label}
+              </span>
             ) : null}
           </div>
 
@@ -274,16 +272,16 @@ function OfficialPoolCard({
           ) : null}
         </div>
 
-        {/* Bottom bar: players | (future entry fee slot) | Join/Open */}
+        {/* Bottom stack: full player count, then a full-width Join/Open action. */}
         <div
           className={cn(
-            'flex items-center gap-2 border-t border-white/10',
+            'flex flex-col gap-2 border-t border-white/10',
             'bg-black/50 px-3 py-2.5 backdrop-blur-[2px] sm:px-3.5 sm:py-3',
           )}
         >
-          <p className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-semibold tabular-nums text-white/90">
+          <p className="inline-flex w-full items-center gap-1.5 text-sm font-semibold tabular-nums text-white/90">
             <Users className="h-4 w-4 shrink-0 opacity-85" aria-hidden />
-            <span className="truncate">{playersLabel}</span>
+            <span>{playersLabel}</span>
           </p>
 
           {/* Reserved for future entry fee, e.g. "1 🎟️ Entry ·" — free for now */}
@@ -293,7 +291,7 @@ function OfficialPoolCard({
             <Link
               href={`/pool/${pool.inviteCode}`}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold',
+                'block w-full rounded-full px-3 py-1.5 text-center text-sm font-semibold',
                 'bg-white/15 text-white transition-colors hover:bg-white/25',
               )}
             >
@@ -305,7 +303,7 @@ function OfficialPoolCard({
               disabled={joining || joinDisabled}
               onClick={onJoin}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold',
+                'w-full rounded-full px-3 py-1.5 text-center text-sm font-semibold',
                 'bg-primary text-primary-foreground transition-colors hover:bg-primary/90',
                 'disabled:pointer-events-none disabled:opacity-60',
               )}

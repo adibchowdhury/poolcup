@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   ArrowDown,
   ArrowUp,
+  Flame,
   Sparkles,
   Target,
   TrendingUp,
@@ -43,23 +44,44 @@ function StatChip({
   tone?: 'default' | 'good' | 'warn'
 }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-center">
+    <div
+      className={cn(
+        'rounded-xl border px-3 py-3.5 text-center sm:py-4',
+        tone === 'good' &&
+          'border-emerald-500/35 bg-emerald-500/10 shadow-[0_0_0_1px_rgba(16,185,129,0.08)_inset]',
+        tone === 'warn' &&
+          'border-[#ffb300]/35 bg-[#ffb300]/10 shadow-[0_0_0_1px_rgba(255,179,0,0.08)_inset]',
+        (!tone || tone === 'default') &&
+          'border-primary/30 bg-primary/10 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]',
+      )}
+    >
       <Icon
         className={cn(
-          'mx-auto h-4 w-4',
+          'mx-auto h-5 w-5',
           tone === 'good' && 'text-emerald-400',
           tone === 'warn' && 'text-[#ffb300]',
           (!tone || tone === 'default') && 'text-primary',
         )}
         aria-hidden
       />
-      <p className="mt-1.5 font-display text-xl leading-none tabular-nums text-foreground">
+      <p className="mt-2 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground sm:text-3xl">
         {value}
       </p>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
     </div>
   )
 }
+
+/**
+ * TODO(mock): Replace with real streak from predictions / points history.
+ * Shape: { currentStreak: number; streakActive: boolean }
+ */
+const MOCK_STREAK = {
+  currentStreak: 4,
+  streakActive: true,
+} as const
 
 function BestPredictionCard({ best }: { best: BestPrediction }) {
   return (
@@ -96,10 +118,11 @@ function BestPredictionCard({ best }: { best: BestPrediction }) {
 function RecentResultsSkeleton() {
   return (
     <div className="space-y-3" aria-hidden>
-      <div className="grid grid-cols-3 gap-2">
-        <ShimmerBlock className="h-[72px] rounded-xl" />
-        <ShimmerBlock className="h-[72px] rounded-xl" />
-        <ShimmerBlock className="h-[72px] rounded-xl" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <ShimmerBlock className="h-[88px] rounded-xl" />
+        <ShimmerBlock className="h-[88px] rounded-xl" />
+        <ShimmerBlock className="h-[88px] rounded-xl" />
+        <ShimmerBlock className="h-[88px] rounded-xl" />
       </div>
       <ShimmerBlock className="h-20 w-full rounded-xl" />
       <ShimmerBlock className="h-24 w-full rounded-xl" />
@@ -123,7 +146,7 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
   }, [load])
 
   return (
-    <DashboardFeedSection id="recent-results" title="Recent Results">
+    <DashboardFeedSection id="your-progress" title="Your Progress">
       <DashboardPlainCard>
         {loading && !data ? (
           <RecentResultsSkeleton />
@@ -140,15 +163,30 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
             </Button>
           </div>
         ) : data?.isEmpty ? (
-          <div className="space-y-2 py-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatChip icon={Zap} label="Recent pts" value="—" />
+              <StatChip icon={TrendingUp} label="Accuracy" value="—" tone="warn" />
+              <StatChip icon={Target} label="Correct" value="—" />
+              <StatChip
+                icon={Flame}
+                label="Streak"
+                value={
+                  MOCK_STREAK.streakActive
+                    ? `${MOCK_STREAK.currentStreak}d`
+                    : '0'
+                }
+                tone={MOCK_STREAK.streakActive ? 'warn' : 'default'}
+              />
+            </div>
+            <p className="text-center text-sm text-muted-foreground">
               No scored results yet. Once matches finish, your points, accuracy,
               and best picks will show up here.
             </p>
           </div>
         ) : data ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <StatChip
                 icon={Zap}
                 label="Recent pts"
@@ -169,6 +207,16 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
                     ? `${data.correctPredictions}/${data.settledPredictions}`
                     : '—'
                 }
+              />
+              <StatChip
+                icon={Flame}
+                label="Streak"
+                value={
+                  MOCK_STREAK.streakActive
+                    ? `${MOCK_STREAK.currentStreak}d`
+                    : '0'
+                }
+                tone={MOCK_STREAK.streakActive ? 'warn' : 'default'}
               />
             </div>
 

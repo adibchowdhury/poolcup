@@ -11,14 +11,19 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DashboardInsightCards } from '@/components/dashboard/dashboard-insight-cards'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
+import { AchievementsSection } from '@/components/dashboard/feed/achievements-section'
+import { ActivitySection } from '@/components/dashboard/feed/activity-section'
+import { ContinuePlayingSection } from '@/components/dashboard/feed/continue-playing-section'
+import { DailyChallengeSection } from '@/components/dashboard/feed/daily-challenge-section'
+import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
 import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
-import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
 import { OfficialPoolsSection } from '@/components/dashboard/feed/official-pools-section'
+import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
+import { TrendingSection } from '@/components/dashboard/feed/trending-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
@@ -708,16 +713,20 @@ function DashboardViewContent({
                   error={dashboardPoolsError}
                   onPoolDeleted={handleDashboardPoolDeleted}
                 />
+                <ContinuePlayingSection />
+                <DailyChallengeSection />
                 <OfficialPoolsSection
                   userId={userId}
                   email={email}
                   onJoined={() => void loadDashboardPools()}
                 />
                 <RecentResultsSection userId={userId} />
+                <ActivitySection />
                 <GlobalActivitySection userId={userId} />
+                <FriendsActivitySection />
+                <AchievementsSection />
+                <TrendingSection />
               </DashboardFeed>
-
-              <DashboardInsightCards pools={dashboardPools} />
             </TabsContent>
 
             <TabsContent value="games" className="mt-2">

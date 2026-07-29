@@ -103,8 +103,8 @@ export function formatOfficialStatusLabel(
 }
 
 export function formatPlayerCountLabel(count: number): string {
-  if (count === 1) return '1 player'
-  return `${count} players`
+  if (count === 1) return '1 player joined'
+  return `${count} players joined`
 }
 
 /**

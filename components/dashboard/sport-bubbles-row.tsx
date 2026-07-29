@@ -27,8 +27,8 @@ const SPORT_BUBBLES: SportBubble[] = [
   { id: 'ufc', label: 'UFC', iconPng: null },
 ]
 
-/** 48px */
-const BALL_SIZE = 'h-12 w-12'
+/** 56px */
+const BALL_SIZE = 'h-14 w-14'
 
 function SportBubbleItem({ sport }: { sport: SportBubble }) {
   const [imgFailed, setImgFailed] = useState(false)
@@ -37,8 +37,8 @@ function SportBubbleItem({ sport }: { sport: SportBubble }) {
   return (
     <div
       className={cn(
-        'flex w-14 shrink-0 cursor-pointer flex-col items-center gap-0.5',
-        'select-none sm:w-16',
+        'flex w-16 shrink-0 cursor-pointer flex-col items-center gap-0.5',
+        'select-none sm:w-[4.5rem]',
       )}
     >
       {showIcon ? (
@@ -49,21 +49,21 @@ function SportBubbleItem({ sport }: { sport: SportBubble }) {
             BALL_SIZE,
           )}
         >
-          <Swords className="h-5 w-5 text-foreground" aria-hidden />
+          <Swords className="h-6 w-6 text-foreground" aria-hidden />
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/sports/${sport.iconPng}`}
           alt=""
-          width={48}
-          height={48}
+          width={56}
+          height={56}
           className={cn(BALL_SIZE, 'object-contain')}
           draggable={false}
           onError={() => setImgFailed(true)}
         />
       )}
-      <span className="w-full truncate text-center text-[9px] font-medium leading-none text-foreground sm:text-[10px]">
+      <span className="w-full truncate text-center text-[10px] font-medium leading-none text-foreground sm:text-[11px]">
         {sport.label}
       </span>
     </div>
