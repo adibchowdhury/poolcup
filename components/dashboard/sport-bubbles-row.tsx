@@ -16,7 +16,7 @@ type SportBubble = {
  * Order: World Cup first, then major US leagues, then remaining balls, UFC last.
  */
 const SPORT_BUBBLES: SportBubble[] = [
-  { id: 'wc', label: 'World Cup', iconPng: 'soccer.png' },
+  { id: 'wc', label: 'Futbol', iconPng: 'soccer.png' },
   { id: 'nba', label: 'NBA', iconPng: 'basketball.png' },
   { id: 'nfl', label: 'NFL', iconPng: 'football.png' },
   { id: 'nhl', label: 'NHL', iconPng: 'hockey.png' },

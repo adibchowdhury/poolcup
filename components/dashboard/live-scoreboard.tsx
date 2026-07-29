@@ -332,11 +332,6 @@ function CompactLiveScoreboardCard({
 }) {
   const isLive = mode === 'live'
   const isUpcoming = mode === 'upcoming'
-  const statusLabel = formatFeaturedMatchStatusLabel(
-    match.status_short,
-    match.elapsed_minute,
-    match.is_final || mode === 'final',
-  )
   const score1 = match.result_team1 ?? 0
   const score2 = match.result_team2 ?? 0
   const kickoffCountdown = useKickoffCountdown(match.kickoff_at)
@@ -359,65 +354,73 @@ function CompactLiveScoreboardCard({
       )}
     >
       <DashboardGlassBackdrops variant="compact" />
-      <div className="relative flex items-center gap-2 sm:gap-2.5">
-        <CompactScoreboardTeam
-          name={match.team1_name}
-          dbFlag={match.team1_flag}
-          align="left"
-        />
+      <div className="relative flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <CompactScoreboardTeam
+            name={match.team1_name}
+            dbFlag={match.team1_flag}
+            align="left"
+          />
 
-        <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-1">
-          {isLive || mode === 'final' ? (
-            <p className="font-display text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
-              <span className="text-primary">{score1}</span>
-              <span className="mx-0.5 text-muted-foreground/80">–</span>
-              <span className="text-primary">{score2}</span>
-            </p>
-          ) : (
-            <>
-              <span className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                vs
-              </span>
-              {isUpcoming ? (
-                <FeaturedMatchCountdownDisplay compact {...kickoffCountdown} />
-              ) : null}
-            </>
-          )}
-        </div>
+          <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-1">
+            {isLive || mode === 'final' ? (
+              <p className="font-display text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
+                <span className="text-primary">{score1}</span>
+                <span className="mx-0.5 text-muted-foreground/80">–</span>
+                <span className="text-primary">{score2}</span>
+              </p>
+            ) : (
+              <>
+                <span className="font-display text-sm uppercase tracking-wider text-muted-foreground">
+                  vs
+                </span>
+                {isUpcoming ? (
+                  <FeaturedMatchCountdownDisplay compact {...kickoffCountdown} />
+                ) : null}
+              </>
+            )}
+          </div>
 
-        <CompactScoreboardTeam
-          name={match.team2_name}
-          dbFlag={match.team2_flag}
-          align="right"
-        />
+          <CompactScoreboardTeam
+            name={match.team2_name}
+            dbFlag={match.team2_flag}
+            align="right"
+          />
 
-        <div className="ml-0.5 shrink-0 border-l border-white/10 pl-2.5 sm:pl-3">
-          {isLive ? (
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-400">
-                <span
-                  className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
-                  aria-hidden
-                />
-                Live
-              </span>
-              <span
-                className="text-[11px] font-medium tabular-nums leading-none text-primary sm:text-xs"
-                suppressHydrationWarning
-              >
-                {liveTopRightLabel}
-              </span>
+          {isLive || isUpcoming ? (
+            <div className="ml-0.5 shrink-0 border-l border-white/10 pl-2.5 sm:pl-3">
+              {isLive ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-400">
+                    <span
+                      className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
+                      aria-hidden
+                    />
+                    Live
+                  </span>
+                  <span
+                    className="text-[11px] font-medium tabular-nums leading-none text-primary sm:text-xs"
+                    suppressHydrationWarning
+                  >
+                    {liveTopRightLabel}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-primary sm:text-xs">
+                  Up next
+                </span>
+              )}
             </div>
-          ) : isUpcoming ? (
-            <span className="text-[10px] font-bold uppercase tracking-wide text-primary sm:text-xs">
-              Up next
-            </span>
-          ) : (
-            <span className="max-w-[4.5rem] text-right text-[10px] font-medium uppercase leading-tight tracking-wide text-muted-foreground sm:max-w-none sm:text-xs">
-              {statusLabel}
-            </span>
-          )}
+          ) : null}
         </div>
+
+        <time
+          dateTime={match.kickoff_at}
+          className="block w-full text-center text-[10px] font-medium leading-tight text-muted-foreground sm:text-[11px]"
+          suppressHydrationWarning
+        >
+          {formatFeaturedKickoffLocal(match.kickoff_at)}
+        </time>
       </div>
     </ScoreboardCardShell>
   )

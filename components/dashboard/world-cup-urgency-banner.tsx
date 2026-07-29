@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useClientNow } from '@/hooks/use-client-now'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 import { supabase } from '@/src/lib/supabase'
 import { DashboardNoticeBanner } from '@/components/dashboard/dashboard-notice-banner'
 
@@ -28,12 +29,16 @@ export function WorldCupUrgencyBanner() {
     let cancelled = false
 
     async function loadOpeningKickoff() {
-      const { data, error } = await supabase
+      const eventId = await resolveCurrentEventId(supabase)
+
+      let query = supabase
         .from('matches')
         .select('kickoff_at')
         .order('kickoff_at', { ascending: true })
         .limit(1)
-        .maybeSingle()
+      if (eventId) query = query.eq('event_id', eventId)
+
+      const { data, error } = await query.maybeSingle()
 
       if (cancelled) return
 

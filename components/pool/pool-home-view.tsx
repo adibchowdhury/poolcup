@@ -51,6 +51,7 @@ export type PoolHomeMeta = {
   nextMatchKickoffAt: string | null
   acceptingMembers: boolean
   avatar: string | null
+  eventId: string | null
 }
 
 interface PoolHomeViewProps {
@@ -376,6 +377,7 @@ export function PoolHomeView({
                         name: pool.name,
                         invite_code: pool.inviteCode,
                         scoring_style: pool.scoringStyle,
+                        event_id: pool.eventId,
                       }
                     : undefined
                 }

@@ -96,6 +96,7 @@ type Pool = {
   name: string
   invite_code: string
   scoring_style: string
+  event_id: string | null
 }
 
 type GroupPredictionRow = {
@@ -173,12 +174,17 @@ export function WinnerOnlyPredictView({
   const loadMatches = useCallback(async () => {
     setMatchesLoading(true)
 
+    let matchesQuery = supabase
+      .from('matches')
+      .select('round, group_name, team1_name, team2_name, kickoff_at, locked_at')
+      .eq('round', 'group')
+      .order('kickoff_at', { ascending: true })
+    if (pool.event_id) {
+      matchesQuery = matchesQuery.eq('event_id', pool.event_id)
+    }
+
     const [matchesResult, teamGroupResult] = await Promise.all([
-      supabase
-        .from('matches')
-        .select('round, group_name, team1_name, team2_name, kickoff_at, locked_at')
-        .eq('round', 'group')
-        .order('kickoff_at', { ascending: true }),
+      matchesQuery,
       fetch('/api/team-group-map'),
     ])
 
@@ -211,7 +217,7 @@ export function WinnerOnlyPredictView({
     setTeamToGroup(teamGroupMap)
     setMatches(rows)
     setMatchesLoading(false)
-  }, [])
+  }, [pool.event_id])
 
   useEffect(() => {
     loadMatches()
@@ -227,6 +233,7 @@ export function WinnerOnlyPredictView({
           'r32',
           pool.id,
           memberId,
+          { eventId: pool.event_id },
         )
 
         if (cancelled) return
@@ -250,7 +257,7 @@ export function WinnerOnlyPredictView({
     return () => {
       cancelled = true
     }
-  }, [memberId, pool.id])
+  }, [memberId, pool.id, pool.event_id])
 
   useEffect(() => {
     let cancelled = false
@@ -264,6 +271,7 @@ export function WinnerOnlyPredictView({
               round,
               pool.id,
               memberId,
+              { eventId: pool.event_id },
             ),
           ),
         )
@@ -302,7 +310,7 @@ export function WinnerOnlyPredictView({
     return () => {
       cancelled = true
     }
-  }, [memberId, pool.id])
+  }, [memberId, pool.id, pool.event_id])
 
   useEffect(() => {
     if (

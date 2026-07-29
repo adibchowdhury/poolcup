@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
  * Planned section order:
  * 1. Live Now (when something is genuinely live)
  * 2. Your Pools
- * 3. Recent Results
- * 4. Global PoolCup Activity
- * 5. Upcoming matches (later)
+ * 3. Official Pools (discover / join public PoolCup pools)
+ * 4. Recent Results
+ * 5. Global PoolCup Activity
  * …additional sections TBD
  */
 type DashboardFeedProps = {

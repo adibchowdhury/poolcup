@@ -18,6 +18,7 @@ import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
 import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
 import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
+import { OfficialPoolsSection } from '@/components/dashboard/feed/official-pools-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
 import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
@@ -706,6 +707,11 @@ function DashboardViewContent({
                   loading={dashboardPoolsLoading}
                   error={dashboardPoolsError}
                   onPoolDeleted={handleDashboardPoolDeleted}
+                />
+                <OfficialPoolsSection
+                  userId={userId}
+                  email={email}
+                  onJoined={() => void loadDashboardPools()}
                 />
                 <RecentResultsSection userId={userId} />
                 <GlobalActivitySection userId={userId} />

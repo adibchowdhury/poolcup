@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog, poolCreatedMode } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
+import { getCurrentEvent } from '@/src/lib/current-event'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
@@ -188,12 +189,21 @@ export default function CreatePoolPage() {
     )
     const eventName = selectedEvent?.title ?? 'FIFA World Cup 2026'
 
+    const currentEvent = await getCurrentEvent(supabase)
+    if (!currentEvent) {
+      setSubmitting(false)
+      setLoadingMessage(null)
+      setError('Could not resolve the current sporting event. Please try again.')
+      return
+    }
+
     const { data: pool, error: insertError } = await supabase
       .from('pools')
       .insert({
         name: poolName.trim(),
         scoring_style: scoringStyle,
         event_name: eventName,
+        event_id: currentEvent.id,
         creator_id: user.id,
       })
       .select('id, invite_code')

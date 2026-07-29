@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 import {
   buildPoolLeaderboardMembers,
@@ -83,35 +84,44 @@ export async function fetchDashboardPools(
   const validMemberships = memberRows.filter((row) => row.pools != null)
   const poolIds = validMemberships.map((row) => row.pool_id)
 
-  const { count: totalMatchCount } = await supabase
+  const eventId = await resolveCurrentEventId(supabase)
+
+  let totalMatchQuery = supabase
     .from('matches')
     .select('*', { count: 'exact', head: true })
+  if (eventId) totalMatchQuery = totalMatchQuery.eq('event_id', eventId)
+  const { count: totalMatchCount } = await totalMatchQuery
 
   const totalPredictions = totalMatchCount ?? 0
 
   const nowIso = new Date().toISOString()
 
-  const { data: nextMatch } = await supabase
+  let nextMatchQuery = supabase
     .from('matches')
     .select('kickoff_at')
     .gt('kickoff_at', nowIso)
     .order('kickoff_at', { ascending: true })
     .limit(1)
-    .maybeSingle()
+  if (eventId) nextMatchQuery = nextMatchQuery.eq('event_id', eventId)
+  const { data: nextMatch } = await nextMatchQuery.maybeSingle()
 
   const nextMatchKickoffAt = nextMatch?.kickoff_at ?? null
 
-  const { count: upcomingMatchCount } = await supabase
+  let upcomingMatchQuery = supabase
     .from('matches')
     .select('*', { count: 'exact', head: true })
     .gt('kickoff_at', nowIso)
+  if (eventId) upcomingMatchQuery = upcomingMatchQuery.eq('event_id', eventId)
+  const { count: upcomingMatchCount } = await upcomingMatchQuery
 
   const predictionsLocked = (upcomingMatchCount ?? 0) === 0
 
-  const { count: matchesPlayed } = await supabase
+  let matchesPlayedQuery = supabase
     .from('matches')
     .select('*', { count: 'exact', head: true })
     .eq('is_final', true)
+  if (eventId) matchesPlayedQuery = matchesPlayedQuery.eq('event_id', eventId)
+  const { count: matchesPlayed } = await matchesPlayedQuery
 
   const matchesPlayedCount = matchesPlayed ?? 0
 

@@ -20,6 +20,7 @@ type WinnerOnlyPool = {
   name: string
   invite_code: string
   scoring_style: string
+  event_id: string | null
 }
 
 type PoolPredictionsTabProps = {

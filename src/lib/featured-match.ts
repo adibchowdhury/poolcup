@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 
 export const FEATURED_COMPETITION_LABEL = 'FIFA World Cup 2026'
 
@@ -103,13 +104,15 @@ export function formatFeaturedCountdown(kickoffAt: string, nowMs: number): strin
 
 export async function fetchFeaturedMatch(
   supabase: SupabaseClient,
+  options?: { eventId?: string | null },
 ): Promise<{ match: FeaturedMatch | null; mode: FeaturedMatchMode | null }> {
   const nowIso = new Date().toISOString()
   const liveKickoffCutoff = new Date(
     Date.now() - LIVE_MAX_AGE_MINUTES * 60_000,
   ).toISOString()
+  const eventId = await resolveCurrentEventId(supabase, options?.eventId)
 
-  const { data: liveByStatus, error: liveStatusError } = await supabase
+  let liveByStatusQuery = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
@@ -117,6 +120,9 @@ export async function fetchFeaturedMatch(
     .gt('kickoff_at', liveKickoffCutoff)
     .order('kickoff_at', { ascending: false })
     .limit(1)
+  if (eventId) liveByStatusQuery = liveByStatusQuery.eq('event_id', eventId)
+
+  const { data: liveByStatus, error: liveStatusError } = await liveByStatusQuery
 
   if (liveStatusError) {
     throw new Error(liveStatusError.message)
@@ -126,7 +132,7 @@ export async function fetchFeaturedMatch(
     return { match: liveByStatus[0] as FeaturedMatch, mode: 'live' }
   }
 
-  const { data: liveByKickoff, error: liveKickoffError } = await supabase
+  let liveByKickoffQuery = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .lte('kickoff_at', nowIso)
@@ -134,6 +140,10 @@ export async function fetchFeaturedMatch(
     .gt('kickoff_at', liveKickoffCutoff)
     .order('kickoff_at', { ascending: false })
     .limit(1)
+  if (eventId) liveByKickoffQuery = liveByKickoffQuery.eq('event_id', eventId)
+
+  const { data: liveByKickoff, error: liveKickoffError } =
+    await liveByKickoffQuery
 
   if (liveKickoffError) {
     throw new Error(liveKickoffError.message)
@@ -143,13 +153,16 @@ export async function fetchFeaturedMatch(
     return { match: liveByKickoff[0] as FeaturedMatch, mode: 'live' }
   }
 
-  const { data: upcoming, error: upcomingError } = await supabase
+  let upcomingQuery = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .gt('kickoff_at', nowIso)
     .eq('is_final', false)
     .order('kickoff_at', { ascending: true })
     .limit(1)
+  if (eventId) upcomingQuery = upcomingQuery.eq('event_id', eventId)
+
+  const { data: upcoming, error: upcomingError } = await upcomingQuery
 
   if (upcomingError) {
     throw new Error(upcomingError.message)
@@ -159,12 +172,15 @@ export async function fetchFeaturedMatch(
     return { match: upcoming[0] as FeaturedMatch, mode: 'upcoming' }
   }
 
-  const { data: recentFinal, error: finalError } = await supabase
+  let recentFinalQuery = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .eq('is_final', true)
     .order('kickoff_at', { ascending: false })
     .limit(1)
+  if (eventId) recentFinalQuery = recentFinalQuery.eq('event_id', eventId)
+
+  const { data: recentFinal, error: finalError } = await recentFinalQuery
 
   if (finalError) {
     throw new Error(finalError.message)
@@ -183,18 +199,23 @@ export async function fetchFeaturedMatch(
  */
 export async function fetchLiveMatches(
   supabase: SupabaseClient,
+  options?: { eventId?: string | null },
 ): Promise<FeaturedMatch[]> {
   const liveKickoffCutoff = new Date(
     Date.now() - LIVE_MAX_AGE_MINUTES * 60_000,
   ).toISOString()
+  const eventId = await resolveCurrentEventId(supabase, options?.eventId)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
     .eq('is_final', false)
     .gt('kickoff_at', liveKickoffCutoff)
     .order('kickoff_at', { ascending: false })
+  if (eventId) query = query.eq('event_id', eventId)
+
+  const { data, error } = await query
 
   if (error) {
     throw new Error(error.message)

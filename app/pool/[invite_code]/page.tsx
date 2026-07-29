@@ -43,6 +43,7 @@ type Pool = {
   scoring_style: string
   accepting_members: boolean | null
   avatar: string | null
+  event_id: string | null
 }
 
 type PoolMember = {
@@ -168,7 +169,9 @@ export default function PoolPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code, creator_id, scoring_style, accepting_members, avatar')
+      .select(
+        'id, name, invite_code, creator_id, scoring_style, accepting_members, avatar, event_id',
+      )
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -231,6 +234,7 @@ export default function PoolPage() {
     setMemberProfilesByUserId(profilesByUserId)
 
     const isWinnerPool = pool.scoring_style === 'winner'
+    const poolEventId = pool.event_id
 
     const { predictionsByMember } = await fetchMemberPredictionCounts(
       supabase,
@@ -240,21 +244,27 @@ export default function PoolPage() {
       })),
     )
 
-    const { count: totalMatches } = await supabase
+    let totalMatchQuery = supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
+    if (poolEventId) totalMatchQuery = totalMatchQuery.eq('event_id', poolEventId)
+    const { count: totalMatches } = await totalMatchQuery
 
-    const { count: matchesPlayed } = await supabase
+    let matchesPlayedQuery = supabase
       .from('matches')
       .select('*', { count: 'exact', head: true })
       .eq('is_final', true)
+    if (poolEventId) matchesPlayedQuery = matchesPlayedQuery.eq('event_id', poolEventId)
+    const { count: matchesPlayed } = await matchesPlayedQuery
 
     const matchesPlayedCount = matchesPlayed ?? 0
 
-    const { data: stageMatchRows } = await supabase
+    let stageMatchQuery = supabase
       .from('matches')
       .select('round, kickoff_at, is_final')
       .order('kickoff_at', { ascending: true })
+    if (poolEventId) stageMatchQuery = stageMatchQuery.eq('event_id', poolEventId)
+    const { data: stageMatchRows } = await stageMatchQuery
 
     const currentStage = deriveCurrentTournamentStage(
       (stageMatchRows ?? []) as Pick<
@@ -265,13 +275,14 @@ export default function PoolPage() {
 
     let nextMatchIn: string | null = null
     let nextMatchKickoffAt: string | null = null
-    const { data: nextMatch } = await supabase
+    let nextMatchQuery = supabase
       .from('matches')
       .select('kickoff_at')
       .gt('kickoff_at', new Date().toISOString())
       .order('kickoff_at', { ascending: true })
       .limit(1)
-      .maybeSingle()
+    if (poolEventId) nextMatchQuery = nextMatchQuery.eq('event_id', poolEventId)
+    const { data: nextMatch } = await nextMatchQuery.maybeSingle()
 
     if (nextMatch?.kickoff_at) {
       nextMatchKickoffAt = nextMatch.kickoff_at
@@ -283,13 +294,18 @@ export default function PoolPage() {
     let loadedUserPredictions: UserPoolPrediction[] = []
 
     if (currentMember && pool.scoring_style !== 'winner') {
+      let classicMatchesQuery = supabase
+        .from('matches')
+        .select(
+          'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team',
+        )
+        .order('kickoff_at', { ascending: true })
+      if (poolEventId) {
+        classicMatchesQuery = classicMatchesQuery.eq('event_id', poolEventId)
+      }
+
       const [matchesResult, userPredResult] = await Promise.all([
-        supabase
-          .from('matches')
-          .select(
-            'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team',
-          )
-          .order('kickoff_at', { ascending: true }),
+        classicMatchesQuery,
         supabase
           .from('predictions')
           .select(
@@ -328,6 +344,7 @@ export default function PoolPage() {
       nextMatchKickoffAt,
       acceptingMembers: pool.accepting_members ?? true,
       avatar: pool.avatar ?? null,
+      eventId: pool.event_id,
     })
     setUserPredictions(loadedUserPredictions)
     setPageLoading(false)

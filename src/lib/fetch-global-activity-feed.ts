@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 import { isMatchLocked } from '@/src/lib/match-lock'
 import {
   buildOutcomeRows,
@@ -244,14 +245,18 @@ async function fetchClosestCall(
   supabase: SupabaseClient,
 ): Promise<{ closestCall: ClosestCallActivity | null; error: string | null }> {
   const nowIso = new Date().toISOString()
+  const eventId = await resolveCurrentEventId(supabase)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('matches')
     .select(MATCH_COLUMNS)
     .not('locked_at', 'is', null)
     .lte('locked_at', nowIso)
     .order('kickoff_at', { ascending: false })
     .limit(LOCKED_MATCH_SAMPLE_LIMIT)
+  if (eventId) query = query.eq('event_id', eventId)
+
+  const { data, error } = await query
 
   if (error) {
     return { closestCall: null, error: error.message }

@@ -9,12 +9,18 @@ export async function fetchWinnerKnockoutRoundMatches(
   round: KnockoutRoundCode,
   poolId: string,
   memberId: string,
+  options?: { eventId?: string | null },
 ): Promise<{ matchesByNumber: R32BracketMatchesByNumber; error: string | null }> {
-  const { data: matchRows, error: matchesError } = await supabase
+  let matchesQuery = supabase
     .from('matches')
     .select('id, match_number, team1_name, team2_name, kickoff_at, locked_at')
     .eq('round', round)
     .order('match_number', { ascending: true })
+  if (options?.eventId) {
+    matchesQuery = matchesQuery.eq('event_id', options.eventId)
+  }
+
+  const { data: matchRows, error: matchesError } = await matchesQuery
 
   if (matchesError) {
     return {

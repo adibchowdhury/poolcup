@@ -19,6 +19,7 @@ import {
   type MockFixtureWithSport,
 } from '@/src/lib/mock-sports-fixtures'
 import { supabase } from '@/src/lib/supabase'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 import {
   formatDateHeader,
   formatGroupAccentLabel,
@@ -42,7 +43,9 @@ async function fetchUpcomingMatchesFromDb(): Promise<{
   matches: UpcomingMatch[] | null
   error: string | null
 }> {
-  const { data, error: fetchError } = await supabase
+  const eventId = await resolveCurrentEventId(supabase)
+
+  let query = supabase
     .from('matches')
     .select(
       'id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
@@ -51,6 +54,9 @@ async function fetchUpcomingMatchesFromDb(): Promise<{
     .eq('is_final', false)
     .order('kickoff_at', { ascending: true })
     .limit(UPCOMING_MATCHES_QUERY_LIMIT)
+  if (eventId) query = query.eq('event_id', eventId)
+
+  const { data, error: fetchError } = await query
 
   if (fetchError) {
     return { matches: null, error: fetchError.message }

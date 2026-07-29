@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolveCurrentEventId } from '@/src/lib/current-event'
 
 export type MemberScoringContext = {
   memberId: string
@@ -31,10 +32,11 @@ export async function fetchMemberPredictionCounts(
     .map((row) => row.memberId)
 
   if (classicMemberIds.length > 0) {
-    const { data: settledMatches } = await supabase
-      .from('matches')
-      .select('id')
-      .eq('is_final', true)
+    const eventId = await resolveCurrentEventId(supabase)
+
+    let settledQuery = supabase.from('matches').select('id').eq('is_final', true)
+    if (eventId) settledQuery = settledQuery.eq('event_id', eventId)
+    const { data: settledMatches } = await settledQuery
 
     const settledMatchIds = new Set((settledMatches ?? []).map((row) => row.id))
 

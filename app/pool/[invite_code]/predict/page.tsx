@@ -52,6 +52,7 @@ type Pool = {
   name: string
   invite_code: string
   scoring_style: ScoringStyle
+  event_id: string | null
 }
 
 type Match = {
@@ -379,7 +380,7 @@ export default function PredictPage() {
 
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
-      .select('id, name, invite_code, scoring_style')
+      .select('id, name, invite_code, scoring_style, event_id')
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
@@ -403,12 +404,16 @@ export default function PredictPage() {
       return
     }
 
-    const { data: matchesData, error: matchesError } = await supabase
+    let matchesQuery = supabase
       .from('matches')
       .select(
         'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
       )
       .order('kickoff_at', { ascending: true })
+    if (poolData.event_id) {
+      matchesQuery = matchesQuery.eq('event_id', poolData.event_id)
+    }
+    const { data: matchesData, error: matchesError } = await matchesQuery
 
     if (matchesError) {
       console.error('Failed to load matches:', matchesError.message)
