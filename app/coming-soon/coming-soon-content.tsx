@@ -132,12 +132,9 @@ export function ComingSoonContent() {
         </h1>
 
         <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Thank you for being part of PoolCup&apos;s first chapter. More than
-          1,700 of you created pools, made predictions, and competed with friends
-          during the World Cup — and this is just the beginning. PoolCup is being
-          rebuilt into something bigger and better: more sports, more events, and
-          new ways to compete all year long. We&apos;re back August 24. — The
-          PoolCup Team
+          PoolCup is being rebuilt into something bigger and better: more sports,
+          more events, and new ways to compete all year long. Something big is
+          coming. — The PoolCup Team
         </p>
 
         <div className="mt-10 w-full max-w-md">
