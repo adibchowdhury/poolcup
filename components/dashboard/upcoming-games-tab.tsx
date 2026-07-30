@@ -1,108 +1,96 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Calendar, Clock } from 'lucide-react'
-import { EventSelector } from '@/components/dashboard/event-selector'
+import { Calendar } from 'lucide-react'
 import {
-  MatchListCard,
-  TeamMonogram,
-} from '@/components/dashboard/match-list-card'
-import { TeamFlagImage } from '@/components/predict/team-flag-image'
-import { useClientNow } from '@/hooks/use-client-now'
-import { cn } from '@/lib/utils'
+  EventSelector,
+  type EventSelectorItem,
+} from '@/components/dashboard/event-selector'
+import { PremiumMatchCard } from '@/components/dashboard/premium-match-card'
 import {
-  getAllMockFixtures,
-  getMockFixturesForSport,
-  groupMockFixturesByDay,
-  MOCK_SPORT_EVENTS,
-  type MockFixture,
-  type MockFixtureWithSport,
-} from '@/src/lib/mock-sports-fixtures'
+  listSportingEvents,
+  type SportingEvent,
+} from '@/src/lib/current-event'
+import { fetchInHorizonEventIds } from '@/src/lib/fetch-event-slider-matches'
+import {
+  fetchMatchesTabMatches,
+  isMatchesTabLive,
+  type MatchesTabMatch,
+} from '@/src/lib/fetch-matches-tab'
 import { supabase } from '@/src/lib/supabase'
-import { resolveCurrentEventId } from '@/src/lib/current-event'
 import {
   formatDateHeader,
-  formatGroupAccentLabel,
-  formatKickoffCompact,
-  getCountdownLabel,
-  groupMatchesByDay,
   groupScheduleItemsByDay,
-  type UpcomingMatch,
 } from '@/src/lib/upcoming-match-display'
-import {
-  getUpcomingHorizonEndIso,
-  isWithinUpcomingHorizon,
-} from '@/src/lib/upcoming-match-horizon'
+import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
 
-/** Fetch enough upcoming rows within the horizon window. */
-const UPCOMING_MATCHES_QUERY_LIMIT = 100
+const MATCH_CARD_GRID =
+  'grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3'
 
-let cachedMatches: UpcomingMatch[] | null = null
-let loadPromise: Promise<{
-  matches: UpcomingMatch[] | null
-  error: string | null
-}> | null = null
+const ALL_EVENT_ID = 'all'
 
-async function fetchUpcomingMatchesFromDb(): Promise<{
-  matches: UpcomingMatch[] | null
-  error: string | null
-}> {
-  const eventId = await resolveCurrentEventId(supabase)
-  const nowMs = Date.now()
-  const nowIso = new Date(nowMs).toISOString()
-  const horizonEndIso = getUpcomingHorizonEndIso(nowMs)
-
-  let query = supabase
-    .from('matches')
-    .select(
-      'id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
-    )
-    .gt('kickoff_at', nowIso)
-    .lte('kickoff_at', horizonEndIso)
-    .eq('is_final', false)
-    .order('kickoff_at', { ascending: true })
-    .limit(UPCOMING_MATCHES_QUERY_LIMIT)
-  if (eventId) query = query.eq('event_id', eventId)
-
-  const { data, error: fetchError } = await query
-
-  if (fetchError) {
-    return { matches: null, error: fetchError.message }
+function sportIconPng(sport: string): string | null {
+  const normalized = sport.trim().toLowerCase()
+  if (normalized === 'soccer' || normalized === 'football') return 'soccer.png'
+  if (normalized === 'basketball') return 'basketball.png'
+  if (normalized === 'american_football' || normalized === 'nfl') {
+    return 'football.png'
   }
-
-  const matches = ((data ?? []) as UpcomingMatch[]).filter((match) =>
-    isWithinUpcomingHorizon(match.kickoff_at, nowMs),
-  )
-
-  return { matches, error: null }
+  if (normalized === 'hockey' || normalized === 'nhl') return 'hockey.png'
+  if (normalized === 'baseball' || normalized === 'mlb') return 'baseball.png'
+  return null
 }
 
-function loadUpcomingMatches() {
-  if (cachedMatches !== null) {
-    return Promise.resolve({ matches: cachedMatches, error: null })
-  }
+function toSelectorItems(events: SportingEvent[]): EventSelectorItem[] {
+  return [
+    { id: ALL_EVENT_ID, label: 'All', iconPng: null },
+    ...events.map((event) => ({
+      id: event.id,
+      label: event.name,
+      iconPng: sportIconPng(event.sport),
+    })),
+  ]
+}
 
-  if (!loadPromise) {
-    loadPromise = fetchUpcomingMatchesFromDb().then((result) => {
-      if (!result.error && result.matches) {
-        cachedMatches = result.matches
-      } else {
-        loadPromise = null
-      }
-      return result
-    })
-  }
+type PrefetchCache = {
+  events: SportingEvent[]
+  matches: MatchesTabMatch[]
+}
 
-  return loadPromise
+let prefetchCache: PrefetchCache | null = null
+let prefetchPromise: Promise<PrefetchCache> | null = null
+
+async function loadMatchesTabData(): Promise<PrefetchCache> {
+  if (prefetchCache) return prefetchCache
+  if (prefetchPromise) return prefetchPromise
+
+  prefetchPromise = (async () => {
+    const [allEvents, inHorizonIds] = await Promise.all([
+      listSportingEvents(supabase),
+      fetchInHorizonEventIds(supabase),
+    ])
+
+    const events = allEvents.filter((event) => inHorizonIds.has(event.id))
+    const eventIds = events.map((event) => event.id)
+    const matches = await fetchMatchesTabMatches(supabase, eventIds)
+
+    const next: PrefetchCache = { events, matches }
+    prefetchCache = next
+    return next
+  })().catch((err) => {
+    prefetchPromise = null
+    throw err
+  })
+
+  return prefetchPromise
 }
 
 /** Warm cache while the user is on another dashboard tab. */
 export function prefetchUpcomingMatches() {
-  void loadUpcomingMatches()
+  void loadMatchesTabData().catch(() => {
+    // Prefetch is best-effort; the tab will surface errors on open.
+  })
 }
-
-const MATCH_CARD_GRID =
-  'grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3'
 
 function DateSectionHeader({
   kickoffIso,
@@ -131,173 +119,28 @@ function DateSectionHeader({
   )
 }
 
-function CountdownPill({ label }: { label: string }) {
-  return (
-    <div
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30',
-        'bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-tight text-primary',
-      )}
-      suppressHydrationWarning
-    >
-      <Clock className="h-3 w-3 shrink-0" aria-hidden />
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function LivePill({ label }: { label: string }) {
-  return (
-    <div
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/40',
-        'bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase leading-tight text-red-400',
-      )}
-    >
-      <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-400" />
-      <span>Live · {label}</span>
-    </div>
-  )
-}
-
 function RealMatchCard({
   match,
-  mounted,
-  nowMs,
+  eventLabel,
 }: {
-  match: UpcomingMatch
-  mounted: boolean
-  nowMs: number
+  match: MatchesTabMatch
+  eventLabel?: string | null
 }) {
-  const countdown = mounted ? getCountdownLabel(match.kickoff_at, nowMs) : null
-  const groupAccentLabel = formatGroupAccentLabel(match.round, match.group_name)
+  const isLive = isMatchesTabLive(match.status_short)
+  const isFinal =
+    match.is_final ||
+    ['FT', 'AET', 'PEN'].includes((match.status_short ?? '').toUpperCase())
+  const mode = isFinal ? 'final' : isLive ? 'live' : 'upcoming'
 
   return (
-    <MatchListCard
-      accentLabel={groupAccentLabel}
-      headerRight={
-        countdown ? (
-          <CountdownPill label={countdown} />
-        ) : (
-          <span className="sr-only">Kickoff scheduled</span>
-        )
-      }
-      team1Name={match.team1_name}
-      team2Name={match.team2_name}
-      team1Visual={
-        <TeamFlagImage
-          countryName={match.team1_name}
-          dbFlag={match.team1_flag}
-          imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
-          emojiClassName="text-4xl leading-none"
-        />
-      }
-      team2Visual={
-        <TeamFlagImage
-          countryName={match.team2_name}
-          dbFlag={match.team2_flag}
-          imgClassName="aspect-[3/2] h-[3.75rem] w-auto object-cover"
-          emojiClassName="text-4xl leading-none"
-        />
-      }
-      centerContent={
-        <span
-          className="text-[9px] font-normal uppercase tracking-wide text-muted-foreground/40"
-          aria-hidden
-        >
-          vs
-        </span>
-      }
-      footer={
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          <time dateTime={match.kickoff_at} suppressHydrationWarning>
-            {formatKickoffCompact(match.kickoff_at)}
-          </time>
-        </p>
-      }
-      interactive
+    <PremiumMatchCard
+      match={match}
+      mode={mode}
+      competitionName={eventLabel}
       href={`/match/${match.id}`}
-      ariaLabel={`${match.team1_name} vs ${match.team2_name}`}
     />
   )
 }
-
-function MockMatchCard({
-  fixture,
-  mounted,
-  nowMs,
-  sportLabel,
-}: {
-  fixture: MockFixture
-  mounted: boolean
-  nowMs: number
-  sportLabel?: string
-}) {
-  const isLive = fixture.status === 'live'
-  const countdown =
-    !isLive && mounted ? getCountdownLabel(fixture.kickoff_at, nowMs) : null
-  const accentLabel = sportLabel
-    ? `${sportLabel} · ${fixture.round_label}`.toUpperCase()
-    : fixture.round_label.toUpperCase()
-
-  return (
-    <MatchListCard
-      accentLabel={accentLabel}
-      headerRight={
-        isLive ? (
-          <LivePill label={fixture.live_label ?? 'Now'} />
-        ) : countdown ? (
-          <CountdownPill label={countdown} />
-        ) : (
-          <span className="sr-only">Kickoff scheduled</span>
-        )
-      }
-      team1Name={fixture.team1_name}
-      team2Name={fixture.team2_name}
-      team1Visual={<TeamMonogram code={fixture.team1_code} />}
-      team2Visual={<TeamMonogram code={fixture.team2_code} />}
-      centerContent={
-        isLive && fixture.score1 != null && fixture.score2 != null ? (
-          <p className="font-display text-2xl leading-none tracking-wide tabular-nums text-primary">
-            {fixture.score1}
-            <span className="mx-0.5 text-muted-foreground/70">–</span>
-            {fixture.score2}
-          </p>
-        ) : (
-          <span
-            className="text-[9px] font-normal uppercase tracking-wide text-muted-foreground/40"
-            aria-hidden
-          >
-            vs
-          </span>
-        )
-      }
-      footer={
-        isLive ? (
-          <p className="mt-3 text-center text-xs font-medium text-red-400/90">
-            Mock preview — not a real match
-          </p>
-        ) : (
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            <time dateTime={fixture.kickoff_at} suppressHydrationWarning>
-              {formatKickoffCompact(fixture.kickoff_at)}
-            </time>
-          </p>
-        )
-      }
-      interactive={false}
-      ariaLabel={`${fixture.team1_name} vs ${fixture.team2_name} (mock)`}
-    />
-  )
-}
-
-type CombinedScheduleItem =
-  | { kind: 'real'; kickoff_at: string; match: UpcomingMatch }
-  | {
-      kind: 'mock'
-      kickoff_at: string
-      fixture: MockFixtureWithSport
-    }
 
 function MatchesContentSkeleton() {
   return (
@@ -306,9 +149,9 @@ function MatchesContentSkeleton() {
         <div key={section} className="space-y-2.5">
           <div className="h-6 w-40 animate-pulse rounded bg-muted/40" />
           <div className={MATCH_CARD_GRID}>
-            <div className="h-36 animate-pulse rounded-2xl bg-muted/30" />
-            <div className="hidden h-36 animate-pulse rounded-2xl bg-muted/30 md:block" />
-            <div className="hidden h-36 animate-pulse rounded-2xl bg-muted/30 lg:block" />
+            <div className="h-[12.25rem] animate-pulse rounded-[1.4rem] bg-muted/30" />
+            <div className="hidden h-[12.25rem] animate-pulse rounded-[1.4rem] bg-muted/30 md:block" />
+            <div className="hidden h-[12.25rem] animate-pulse rounded-[1.4rem] bg-muted/30 lg:block" />
           </div>
         </div>
       ))}
@@ -316,232 +159,133 @@ function MatchesContentSkeleton() {
   )
 }
 
+/**
+ * Matches tab — real sporting_events + in-horizon matches only.
+ * Selector mirrors dashboard event pills (events with live / upcoming ≤30d).
+ */
 export function UpcomingGamesTab() {
-  const [selectedEventId, setSelectedEventId] = useState('all')
-  const [matches, setMatches] = useState<UpcomingMatch[]>([])
+  const [selectedEventId, setSelectedEventId] = useState(ALL_EVENT_ID)
+  const [events, setEvents] = useState<SportingEvent[]>([])
+  const [matches, setMatches] = useState<MatchesTabMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { mounted, nowMs } = useClientNow(60_000)
 
-  const isAll = selectedEventId === 'all'
-  const isWorldCup = selectedEventId === 'wc'
-  const isMockSport = !isAll && !isWorldCup
-  const allMockFixtures = useMemo(
-    () =>
-      getAllMockFixtures().filter((fixture) =>
-        isWithinUpcomingHorizon(fixture.kickoff_at, nowMs),
-      ),
-    [nowMs],
-  )
-
-  const loadMatches = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    const { matches: rows, error: fetchError } = await loadUpcomingMatches()
-
-    if (fetchError) {
-      setError(fetchError)
+    try {
+      // Bust stale prefetch after errors; reuse warm cache on happy path.
+      const data = await loadMatchesTabData()
+      setEvents(data.events)
+      setMatches(data.matches)
+      setSelectedEventId((prev) => {
+        if (prev === ALL_EVENT_ID) return prev
+        if (data.events.some((event) => event.id === prev)) return prev
+        return ALL_EVENT_ID
+      })
+    } catch (err) {
+      prefetchCache = null
+      prefetchPromise = null
+      setEvents([])
       setMatches([])
-    } else {
-      setMatches(rows ?? [])
+      setError(err instanceof Error ? err.message : 'Failed to load matches')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    void loadMatches()
-  }, [loadMatches])
+    void load()
+  }, [load])
+
+  const selectorEvents = useMemo(() => toSelectorItems(events), [events])
+
+  const eventNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const event of events) map.set(event.id, event.name)
+    return map
+  }, [events])
+
+  const visibleMatches = useMemo(() => {
+    if (selectedEventId === ALL_EVENT_ID) return matches
+    return matches.filter((match) => match.event_id === selectedEventId)
+  }, [matches, selectedEventId])
 
   const matchesByDay = useMemo(
-    () =>
-      groupMatchesByDay(
-        matches.filter((match) => isWithinUpcomingHorizon(match.kickoff_at, nowMs)),
-      ),
-    [matches, nowMs],
+    () => groupScheduleItemsByDay(visibleMatches),
+    [visibleMatches],
   )
-  const mockFixtures = useMemo(
-    () =>
-      isMockSport
-        ? getMockFixturesForSport(selectedEventId).filter((fixture) =>
-            isWithinUpcomingHorizon(fixture.kickoff_at, nowMs),
-          )
-        : [],
-    [isMockSport, selectedEventId, nowMs],
-  )
-  const mockFixturesByDay = useMemo(
-    () => groupMockFixturesByDay(mockFixtures),
-    [mockFixtures],
-  )
-  const combinedByDay = useMemo(() => {
-    if (!isAll) return null
-
-    const items: CombinedScheduleItem[] = [
-      ...matches
-        .filter((match) => isWithinUpcomingHorizon(match.kickoff_at, nowMs))
-        .map((match) => ({
-          kind: 'real' as const,
-          kickoff_at: match.kickoff_at,
-          match,
-        })),
-      ...allMockFixtures.map((fixture) => ({
-        kind: 'mock' as const,
-        kickoff_at: fixture.kickoff_at,
-        fixture,
-      })),
-    ]
-
-    return groupScheduleItemsByDay(items)
-  }, [isAll, matches, allMockFixtures, nowMs])
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-5">
-        <EventSelector
-          events={MOCK_SPORT_EVENTS}
-          selectedId={selectedEventId}
-          onSelect={setSelectedEventId}
-        />
+        {loading && events.length === 0 ? (
+          <div className="flex gap-3 overflow-hidden py-1.5" aria-hidden>
+            <div className="h-10 w-16 animate-pulse rounded bg-muted/40" />
+            <div className="h-10 w-28 animate-pulse rounded bg-muted/40" />
+            <div className="h-10 w-24 animate-pulse rounded bg-muted/40" />
+          </div>
+        ) : events.length > 0 ? (
+          <EventSelector
+            events={selectorEvents}
+            selectedId={selectedEventId}
+            onSelect={setSelectedEventId}
+          />
+        ) : null}
       </div>
 
-      {isAll ? (
-        loading ? (
-          <MatchesContentSkeleton />
-        ) : combinedByDay && combinedByDay.size > 0 ? (
-          <div className="space-y-5">
-            {error ? (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                World Cup matches could not be loaded. Showing mock games only.
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {error}
-                </span>
-              </div>
-            ) : null}
-            {Array.from(combinedByDay.entries()).map(([dayKey, dayItems]) => (
-              <section key={dayKey}>
-                <DateSectionHeader
-                  kickoffIso={dayItems[0]!.kickoff_at}
-                  matchCount={dayItems.length}
-                />
-                <ul className={MATCH_CARD_GRID}>
-                  {dayItems.map((item) =>
-                    item.kind === 'real' ? (
-                      <li key={item.match.id} className="min-w-0">
-                        <RealMatchCard
-                          match={item.match}
-                          mounted={mounted}
-                          nowMs={nowMs}
-                        />
-                      </li>
-                    ) : (
-                      <li key={item.fixture.id} className="min-w-0">
-                        <MockMatchCard
-                          fixture={item.fixture}
-                          mounted={mounted}
-                          nowMs={nowMs}
-                          sportLabel={item.fixture.sportLabel}
-                        />
-                      </li>
-                    ),
-                  )}
-                </ul>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {error ? (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
-                <p className="text-sm text-destructive">
-                  Could not load upcoming matches.
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">{error}</p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
-                <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="font-display text-xl tracking-wide text-foreground">
-                  No upcoming matches
-                </p>
-              </div>
-            )}
-          </div>
-        )
-      ) : isWorldCup ? (
-        loading ? (
-          <MatchesContentSkeleton />
-        ) : error ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
-            <p className="text-sm text-destructive">
-              Could not load upcoming matches.
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">{error}</p>
-          </div>
-        ) : matches.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
-            <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="font-display text-xl tracking-wide text-foreground">
-              No upcoming matches
-            </p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              Check back when new fixtures are scheduled. Final matches are
-              hidden once results are in.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {Array.from(matchesByDay.entries()).map(([dayKey, dayMatches]) => (
-              <section key={dayKey}>
-                <DateSectionHeader
-                  kickoffIso={dayMatches[0]!.kickoff_at}
-                  matchCount={dayMatches.length}
-                />
-                <ul className={MATCH_CARD_GRID}>
-                  {dayMatches.map((match) => (
-                    <li key={match.id} className="min-w-0">
-                      <RealMatchCard
-                        match={match}
-                        mounted={mounted}
-                        nowMs={nowMs}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )
-      ) : mockFixtures.length === 0 ? (
+      {loading && matches.length === 0 ? (
+        <MatchesContentSkeleton />
+      ) : error ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-8 text-center">
+          <p className="text-sm text-destructive">
+            Could not load upcoming matches.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{error}</p>
+          <button
+            type="button"
+            className="mt-4 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            onClick={() => void load()}
+          >
+            Try again
+          </button>
+        </div>
+      ) : visibleMatches.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            No mock fixtures for this sport.
+          <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="font-display text-xl tracking-wide text-foreground">
+            No upcoming matches in the next {UPCOMING_HORIZON_DAYS} days
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            Check back when new fixtures fall inside the {UPCOMING_HORIZON_DAYS}
+            -day window.
           </p>
         </div>
       ) : (
         <div className="space-y-5">
-          {Array.from(mockFixturesByDay.entries()).map(
-            ([dayKey, dayFixtures]) => (
-              <section key={dayKey}>
-                <DateSectionHeader
-                  kickoffIso={dayFixtures[0]!.kickoff_at}
-                  matchCount={dayFixtures.length}
-                />
-                <ul className={MATCH_CARD_GRID}>
-                  {dayFixtures.map((fixture) => (
-                    <li key={fixture.id} className="min-w-0">
-                      <MockMatchCard
-                        fixture={fixture}
-                        mounted={mounted}
-                        nowMs={nowMs}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ),
-          )}
+          {Array.from(matchesByDay.entries()).map(([dayKey, dayMatches]) => (
+            <section key={dayKey}>
+              <DateSectionHeader
+                kickoffIso={dayMatches[0]!.kickoff_at}
+                matchCount={dayMatches.length}
+              />
+              <ul className={MATCH_CARD_GRID}>
+                {dayMatches.map((match) => (
+                  <li key={match.id} className="min-w-0">
+                    <RealMatchCard
+                      match={match}
+                      eventLabel={
+                        match.event_id
+                          ? eventNameById.get(match.event_id)
+                          : null
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
     </div>

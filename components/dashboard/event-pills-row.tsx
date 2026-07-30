@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { LiveScoreboardCard } from '@/components/dashboard/live-scoreboard'
+import { PremiumMatchCard } from '@/components/dashboard/premium-match-card'
 import { cn } from '@/lib/utils'
 import {
   listSportingEvents,
@@ -196,11 +196,11 @@ export function EventPillsRow({ className }: { className?: string }) {
                   role="listitem"
                   className="w-[min(85vw,20rem)] shrink-0 sm:w-[22rem]"
                 >
-                  <LiveScoreboardCard
+                  <PremiumMatchCard
                     match={match}
                     mode={match.mode}
-                    compact
-                    matchHref={`/match/${match.id}`}
+                    competitionName={selectedEvent?.name}
+                    href={`/match/${match.id}`}
                   />
                 </div>
               ))}
@@ -224,7 +224,7 @@ function PillSkeleton() {
 function MatchCardSkeleton() {
   return (
     <div
-      className="h-[4.5rem] w-[min(85vw,20rem)] shrink-0 animate-pulse rounded-xl border border-border/60 bg-muted/40 sm:w-[22rem]"
+      className="h-[12.25rem] w-[min(85vw,20rem)] shrink-0 animate-pulse rounded-[1.4rem] border border-border/60 bg-muted/40 sm:w-[22rem]"
       aria-hidden
     />
   )

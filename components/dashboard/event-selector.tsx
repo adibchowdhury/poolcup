@@ -3,15 +3,19 @@
 import { Fragment, useState } from 'react'
 import { LayoutGrid, Swords, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { MockSportEvent } from '@/src/lib/mock-sports-fixtures'
+
+export type EventSelectorItem = {
+  id: string
+  label: string
+  iconPng?: string | null
+}
 
 const FALLBACK_ICONS: Record<string, LucideIcon> = {
   all: LayoutGrid,
-  ufc: Swords,
 }
 
 type EventSelectorProps = {
-  events: MockSportEvent[]
+  events: EventSelectorItem[]
   selectedId: string
   onSelect: (id: string) => void
 }
@@ -20,7 +24,7 @@ function EventIcon({
   event,
   selected,
 }: {
-  event: MockSportEvent
+  event: EventSelectorItem
   selected: boolean
 }) {
   const [imgFailed, setImgFailed] = useState(false)
