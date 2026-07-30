@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/src/lib/auth-context'
+import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { trackEvent } from '@/src/lib/track'
 
 type PoolInviteCardProps = {
@@ -16,10 +18,15 @@ export function PoolInviteCard({
   poolId,
   className,
 }: PoolInviteCardProps) {
+  const { user } = useAuth()
   const [copied, setCopied] = useState(false)
 
   function copyInviteLink() {
-    const joinUrl = `${window.location.origin}/join/${inviteCode}`
+    const joinUrl = buildJoinInviteUrl(
+      window.location.origin,
+      inviteCode,
+      user?.id,
+    )
     navigator.clipboard.writeText(joinUrl)
     trackEvent('invite_link_copied', {
       poolId: poolId ?? null,

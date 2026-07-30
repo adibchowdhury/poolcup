@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { isStaleAuthSessionError } from './auth-session'
+import { fireRecordReferralBestEffort } from './referral'
 import { supabase } from './supabase'
 
 export type SignUpProfile = {
@@ -60,6 +61,12 @@ export async function signUpWithPassword(
   }
 
   const userId = data.user?.id
+
+  // Best-effort referral: fire even without a session (email confirmation).
+  // Never await — must not block or fail signup/redirect.
+  if (userId) {
+    fireRecordReferralBestEffort(userId)
+  }
 
   if (userId && data.session) {
     const { error: profileError } = await supabase

@@ -36,6 +36,7 @@ import {
   MOBILE_BOTTOM_NAV_PAD_CLASS,
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
+import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 
@@ -110,7 +111,11 @@ export function PoolHomeView({
 
   const copyInviteLink = () => {
     if (!pool.acceptingMembers) return
-    const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
+    const joinUrl = buildJoinInviteUrl(
+      window.location.origin,
+      pool.inviteCode,
+      currentUserId,
+    )
     navigator.clipboard.writeText(joinUrl)
     trackEvent('invite_link_copied', {
       poolId: poolId ?? null,

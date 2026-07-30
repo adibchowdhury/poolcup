@@ -1,4 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  isReferralUuid,
+  POOLCUP_REF_COOKIE,
+  POOLCUP_REF_MAX_AGE_SECONDS,
+} from '@/src/lib/referral'
 
 const COOKIE_NAME = 'poolcup_preview'
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 // 1 year
@@ -36,13 +41,47 @@ function isPassthroughPath(pathname: string): boolean {
 }
 
 /**
+ * First-touch attribution: set poolcup_ref from ?ref=<uuid> only when no valid
+ * ref cookie exists yet. Captured even when the coming-soon gate rewrites.
+ */
+function getFirstTouchRefToSet(request: NextRequest): string | null {
+  const raw = request.nextUrl.searchParams.get('ref')?.trim()
+  if (!isReferralUuid(raw)) return null
+
+  const existing = request.cookies.get(POOLCUP_REF_COOKIE)?.value?.trim()
+  if (isReferralUuid(existing)) return null
+
+  return raw
+}
+
+function applyRefCookie(
+  response: NextResponse,
+  ref: string | null,
+): NextResponse {
+  if (!ref) return response
+  response.cookies.set({
+    name: POOLCUP_REF_COOKIE,
+    value: ref,
+    // Readable client-side for the email signup path; server reads it too.
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: POOLCUP_REF_MAX_AGE_SECONDS,
+  })
+  return response
+}
+
+/**
  * Next.js 16 network boundary (formerly middleware.ts).
- * When COMING_SOON_MODE is not exactly 'on', this is a pure no-op.
+ * Always captures ?ref= (first-touch). Coming-soon gate is unchanged otherwise.
  */
 export function proxy(request: NextRequest) {
-  // Zero behavior change when gate is off or unset.
+  const refToSet = getFirstTouchRefToSet(request)
+
+  // Gate off: still capture ref, otherwise pure passthrough.
   if (!isComingSoonEnabled()) {
-    return NextResponse.next()
+    return applyRefCookie(NextResponse.next(), refToSet)
   }
 
   const bypassToken = getBypassToken()
@@ -50,7 +89,7 @@ export function proxy(request: NextRequest) {
 
   // Always allow Next internals, APIs, static assets, and the holding page.
   if (isPassthroughPath(pathname)) {
-    return NextResponse.next()
+    return applyRefCookie(NextResponse.next(), refToSet)
   }
 
   // ?preview=<token> — set cookie and redirect to a clean URL (no token in bar).
@@ -69,19 +108,20 @@ export function proxy(request: NextRequest) {
       path: '/',
       maxAge: COOKIE_MAX_AGE_SECONDS,
     })
-    return response
+    return applyRefCookie(response, refToSet)
   }
 
   // Valid bypass cookie — full site access.
   if (bypassToken && hasValidBypassCookie(request, bypassToken)) {
-    return NextResponse.next()
+    return applyRefCookie(NextResponse.next(), refToSet)
   }
 
   // Gate active: serve the coming-soon page for all user-facing routes.
+  // Preserve referral cookie even though the rewrite drops the query string.
   const comingSoonUrl = request.nextUrl.clone()
   comingSoonUrl.pathname = '/coming-soon'
   comingSoonUrl.search = ''
-  return NextResponse.rewrite(comingSoonUrl)
+  return applyRefCookie(NextResponse.rewrite(comingSoonUrl), refToSet)
 }
 
 export const config = {

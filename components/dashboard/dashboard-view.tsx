@@ -720,7 +720,7 @@ function DashboardViewContent({
                 <ActivitySection />
                 <GlobalActivitySection userId={userId} />
                 <FriendsActivitySection />
-                <AchievementsSection totalPoints={liveTotalPoints} />
+                <AchievementsSection userId={userId} />
                 <NewsSection />
               </DashboardFeed>
             </TabsContent>

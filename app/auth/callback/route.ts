@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { getSafeRedirectPath } from '@/src/lib/safe-redirect'
+import { isLikelyNewAuthUser } from '@/src/lib/referral'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -32,6 +33,28 @@ export async function GET(request: Request) {
         }).catch((welcomeError) => {
           console.error('handle-new-user callback trigger failed:', welcomeError)
         })
+
+        // Referral: NEW Google accounts only (created_at within ~5 min).
+        // Returning logins skip this. UNIQUE(referred_id) is the ultimate guard.
+        // Best-effort — never await; never block redirect.
+        if (isLikelyNewAuthUser(user.created_at)) {
+          const cookieHeader = request.headers.get('cookie')
+          void fetch(`${origin}/api/record-referral`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+              ...(process.env.INTERNAL_WEBHOOK_SECRET
+                ? {
+                    Authorization: `Bearer ${process.env.INTERNAL_WEBHOOK_SECRET}`,
+                  }
+                : {}),
+            },
+            body: JSON.stringify({ referredId: user.id }),
+          }).catch(() => {
+            /* best-effort — never surface */
+          })
+        }
       }
 
       return NextResponse.redirect(`${origin}${next}`)

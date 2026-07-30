@@ -27,6 +27,8 @@ import {
   getPoolLeaderboardHref,
 } from '@/src/lib/pool-unread-counts'
 import { trackEvent } from '@/src/lib/track'
+import { useAuth } from '@/src/lib/auth-context'
+import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 
 export type PoolMemberAvatar = {
@@ -138,6 +140,7 @@ export function PoolCard({
   onPoolDeleted,
   surface = 'dashboard',
 }: PoolCardProps) {
+  const { user } = useAuth()
   const [copied, setCopied] = useState(false)
   const deleteTriggerRef = useRef<HTMLDivElement>(null)
   const { mounted, nowMs } = useClientNow(1000)
@@ -166,7 +169,11 @@ export function PoolCard({
   const playersLabel = `${pool.members} ${pool.members === 1 ? 'player' : 'players'}`
 
   const copyCode = () => {
-    const joinUrl = `${window.location.origin}/join/${pool.inviteCode}`
+    const joinUrl = buildJoinInviteUrl(
+      window.location.origin,
+      pool.inviteCode,
+      user?.id,
+    )
     navigator.clipboard.writeText(joinUrl)
     trackEvent('invite_link_copied', {
       poolId: pool.id,
