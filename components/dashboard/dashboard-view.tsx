@@ -1,14 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import {
-  Pencil,
-  Plus,
-  Target,
-  TrendingUp,
   Upload,
-  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
@@ -23,7 +17,7 @@ import { NewsSection } from '@/components/dashboard/feed/news-section'
 import { OfficialPoolsSection } from '@/components/dashboard/feed/official-pools-section'
 import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
-import { PointsHistoryFeed } from '@/components/dashboard/points-history-feed'
+import { ProfileShowcase } from '@/components/dashboard/profile-showcase'
 import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
 import { EventPillsRow } from '@/components/dashboard/event-pills-row'
 import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
@@ -62,7 +56,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { useAnimatedNumber } from '@/hooks/use-animated-number'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Suspense,
@@ -112,11 +105,6 @@ function dashboardTabFromParam(tabParam: string | null): string {
   return DASHBOARD_TAB_PARAM_TO_VALUE[tabParam] ?? DEFAULT_DASHBOARD_TAB
 }
 
-function AnimatedTotalPointsDisplay({ target }: { target: number }) {
-  const displayed = useAnimatedNumber(target)
-  return <>{displayed.toLocaleString()}</>
-}
-
 function DashboardViewContent({
   userId,
   email,
@@ -146,7 +134,6 @@ function DashboardViewContent({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
-  const [pointsAnimKey, setPointsAnimKey] = useState(0)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { registerDashboardNavHandler, setActiveNavId } = useDashboardTab()
@@ -196,13 +183,8 @@ function DashboardViewContent({
       const params = new URLSearchParams(searchParams.toString())
       params.set('tab', DASHBOARD_TAB_VALUE_TO_PARAM[value] ?? DEFAULT_DASHBOARD_TAB)
       router.replace(`/dashboard?${params.toString()}`, { scroll: false })
-
-      if (value === 'profile') {
-        setPointsAnimKey((k) => k + 1)
-        void refreshUserPoints()
-      }
     },
-    [router, searchParams, refreshUserPoints],
+    [router, searchParams],
   )
 
   useEffect(() => {
@@ -282,22 +264,6 @@ function DashboardViewContent({
       void supabase.removeChannel(channel)
     }
   }, [userId, refreshUserPoints])
-
-  useEffect(() => {
-    function refreshIfProfileVisible() {
-      if (document.visibilityState === 'visible' && activeTab === 'profile') {
-        void refreshUserPoints()
-      }
-    }
-
-    window.addEventListener('focus', refreshIfProfileVisible)
-    document.addEventListener('visibilitychange', refreshIfProfileVisible)
-
-    return () => {
-      window.removeEventListener('focus', refreshIfProfileVisible)
-      document.removeEventListener('visibilitychange', refreshIfProfileVisible)
-    }
-  }, [activeTab, refreshUserPoints])
 
   useEffect(() => {
     void prefetchUpcomingMatches()
@@ -431,27 +397,6 @@ function DashboardViewContent({
 
   const shownName = headerName.trim() || 'Player'
 
-  const quickStatItems = [
-    {
-      label: 'Total Points',
-      icon: Zap,
-      value: liveTotalPoints,
-      color: 'text-primary',
-    },
-    {
-      label: 'Predictions Made',
-      icon: Target,
-      value: quickStats.predictionsMade,
-      color: 'text-[#ffb300]',
-    },
-    {
-      label: 'Win Rate',
-      icon: TrendingUp,
-      value: quickStats.winRate != null ? `${quickStats.winRate}%` : '—',
-      color: 'text-primary',
-    },
-  ] as const
-
   return (
     <DashboardAppShell
       userId={userId}
@@ -485,69 +430,18 @@ function DashboardViewContent({
             <DashboardDesktopNav />
 
             <TabsContent value="profile" className="mt-4">
-              <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
-                <section className="flex flex-col items-center text-center">
-                  <UserAvatarImage
-                    avatar={selectedAvatar}
-                    customAvatarUrl={customAvatarUrl}
-                    className="h-48 w-48 border border-border"
-                    imgClassName={
-                      customAvatarUrl
-                        ? 'object-cover'
-                        : 'object-contain object-bottom p-2'
-                    }
-                  />
-                  <h2 className="mt-4 font-display text-4xl tracking-wide text-foreground">
-                    {shownName}
-                  </h2>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 gap-2"
-                    onClick={openEditProfile}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Edit profile
-                  </Button>
-                </section>
+              <ProfileShowcase
+                userId={userId}
+                displayName={shownName}
+                avatar={selectedAvatar}
+                customAvatarUrl={customAvatarUrl}
+                predictionsMade={quickStats.predictionsMade}
+                accuracy={quickStats.winRate}
+                active={activeTab === 'profile'}
+                onEditProfile={openEditProfile}
+              />
 
-                <section className="grid grid-cols-3 gap-3">
-                  {quickStatItems.map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-2xl border border-border bg-card/50 px-3 py-4 text-center"
-                    >
-                      <stat.icon
-                        className={cn('mx-auto h-5 w-5', stat.color)}
-                        aria-hidden
-                      />
-                      <p className="mt-2 font-display text-2xl leading-none text-foreground">
-                        {stat.label === 'Total Points' ? (
-                          <AnimatedTotalPointsDisplay
-                            key={pointsAnimKey}
-                            target={liveTotalPoints}
-                          />
-                        ) : typeof stat.value === 'number' ? (
-                          stat.value.toLocaleString()
-                        ) : (
-                          stat.value
-                        )}
-                      </p>
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        {stat.label}
-                      </p>
-                    </div>
-                  ))}
-                </section>
-
-                <PointsHistoryFeed
-                  userId={userId}
-                  animKey={pointsAnimKey}
-                  active={activeTab === 'profile'}
-                  alwaysCollapsible
-                />
-
+              <div className="mx-auto w-full max-w-4xl">
                 <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
                   <DialogContent className="sm:max-w-lg">
                     <DialogHeader>

@@ -30,6 +30,21 @@ export type AchievementCategoryGroup = {
   badges: AchievementWithStatus[]
 }
 
+export type UserAchievementProgress = {
+  achievement_id: string
+  name: string
+  description: string
+  category: string
+  tier: string
+  xp_value: number
+  buildable: AchievementBuildable
+  condition_metric: string
+  threshold: number
+  current_value: number
+  earned: boolean
+  progress_pct: number
+}
+
 export type UserAchievementsData = {
   achievements: AchievementWithStatus[]
   groups: AchievementCategoryGroup[]
@@ -172,4 +187,29 @@ export async function fetchUserAchievements(
       ? `Could not refresh awards: ${evalError.message}`
       : null,
   }
+}
+
+/** Real metric progress for profile achievement cards and career highlights. */
+export async function fetchUserAchievementProgress(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserAchievementProgress[]> {
+  if (!userId) return []
+
+  const { data, error } = await supabase.rpc(
+    'get_user_achievement_progress',
+    { p_user_id: userId },
+  )
+
+  if (error) {
+    console.error('get_user_achievement_progress failed:', error.message)
+    return []
+  }
+
+  return ((data ?? []) as UserAchievementProgress[]).map((row) => ({
+    ...row,
+    threshold: Math.max(0, Number(row.threshold) || 0),
+    current_value: Math.max(0, Number(row.current_value) || 0),
+    progress_pct: Math.min(100, Math.max(0, Number(row.progress_pct) || 0)),
+  }))
 }
