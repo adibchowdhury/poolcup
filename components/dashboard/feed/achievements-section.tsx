@@ -1,95 +1,212 @@
 'use client'
 
-import { Award, Flame, Star } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import {
+  ArrowRight,
+  Award,
+  Flame,
+  LockKeyholeOpen,
+  Sparkles,
+  Trophy,
+} from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
-import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
+import { Button } from '@/components/ui/button'
+import {
+  ACHIEVEMENTS_CATALOGUE,
+  PLACEHOLDER_EARNED_ACHIEVEMENT_IDS,
+  getAchievementSummary,
+} from '@/src/lib/achievements-catalogue'
+import { pointsToLevel } from '@/src/lib/levels'
+
+type AchievementsSectionProps = {
+  /** Real total points from the dashboard's existing profile/points state. */
+  totalPoints: number
+}
 
 /**
- * TODO(mock): Replace with real badges / streak milestones / level XP.
+ * PLACEHOLDER: There is no streak tracker or achievement-progress evaluator yet.
+ * Replace these values when those systems ship.
  */
-const MOCK_ACHIEVEMENTS = {
-  newBadges: [
-    { id: 'exact-5', label: 'Sharpshooter', detail: '5 exact scores' },
-    { id: 'pool-host', label: 'Pool Host', detail: 'Created a pool' },
-  ],
-  streakMilestone: { days: 7, label: 'Week warrior' },
-  level: { current: 4, progressPct: 62, nextLabel: 'Level 5' },
+const PLACEHOLDER_STREAK_DAYS = 7
+const PLACEHOLDER_NEXT_ACHIEVEMENT = {
+  name: 'Sharpshooter',
+  message: 'Get 1 more exact score to unlock Sharpshooter.',
 } as const
 
-export function AchievementsSection() {
-  const mock = MOCK_ACHIEVEMENTS
+const PLACEHOLDER_RECENT_BADGES = PLACEHOLDER_EARNED_ACHIEVEMENT_IDS.slice(-2)
+  .map((id) => ACHIEVEMENTS_CATALOGUE.find((badge) => badge.id === id))
+  .filter((badge): badge is NonNullable<typeof badge> => badge != null)
+
+function CompactStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: typeof Award
+  value: string | number
+  label: string
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-background/45 px-2.5 py-3 text-center shadow-[0_8px_24px_rgba(0,0,0,0.18),0_1px_0_rgba(255,255,255,0.04)_inset] sm:px-3">
+      <Icon className="mx-auto h-4 w-4 text-primary" aria-hidden />
+      <p className="mt-1.5 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground">
+        {value}
+      </p>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+export function AchievementsSection({
+  totalPoints,
+}: AchievementsSectionProps) {
+  // REAL: level and progress are derived only from the user's live total points.
+  const displayPoints = Math.max(
+    0,
+    Math.floor(Number.isFinite(totalPoints) ? totalPoints : 0),
+  )
+  const level = pointsToLevel(displayPoints)
+
+  // PLACEHOLDER: earned badge IDs are faked until user_achievements is wired.
+  const badgeSummary = getAchievementSummary()
 
   return (
     <DashboardFeedSection id="achievements" title="Achievements">
-      <DashboardPlainCard>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/70 bg-background/40 p-3 sm:col-span-2">
-            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              <Award className="h-3.5 w-3.5 text-primary" aria-hidden />
-              New badges
-            </p>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {mock.newBadges.map((badge) => (
-                <li
-                  key={badge.id}
-                  className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background/40 px-3 py-3"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                    <Star className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {badge.label}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {badge.detail}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-foreground">
+          Level {level.level}
+          <span className="mx-2 text-border">•</span>
+          {PLACEHOLDER_STREAK_DAYS}-Day Streak
+          <span className="mx-2 text-border">•</span>
+          {badgeSummary.earned} Badges
+        </p>
 
-          <div className="space-y-2">
-            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-3.5 text-center shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset] sm:py-4">
-              <Flame className="mx-auto h-5 w-5 text-primary" aria-hidden />
-              <p className="mt-2 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground sm:text-3xl">
-                {mock.streakMilestone.days}d
+        <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-[radial-gradient(circle_at_15%_15%,rgba(0,230,118,0.2),transparent_38%),linear-gradient(135deg,rgba(17,26,39,0.98),rgba(8,11,15,0.97))] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.32),0_1px_0_rgba(255,255,255,0.06)_inset] sm:p-5">
+          <div
+            className="absolute -bottom-14 -right-10 h-36 w-36 rounded-full border border-primary/10 bg-primary/5"
+            aria-hidden
+          />
+          <div className="relative flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Current level
               </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Streak · {mock.streakMilestone.label}
+              <p className="mt-1 font-display text-6xl leading-none tracking-tight tabular-nums text-foreground">
+                {level.level}
               </p>
             </div>
-            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-3.5 text-center shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset] sm:py-4">
-              <Award className="mx-auto h-5 w-5 text-primary" aria-hidden />
-              <p className="mt-2 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground sm:text-3xl">
-                {mock.level.current}
+            <div className="text-right">
+              <p className="font-display text-2xl tracking-wide tabular-nums text-foreground sm:text-3xl">
+                {displayPoints.toLocaleString()}
               </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Level
-              </p>
+              <p className="text-xs text-muted-foreground">total points</p>
+            </div>
+          </div>
+
+          <div className="relative mt-5">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+              <span className="font-semibold text-foreground">
+                {level.nextLevelThreshold == null
+                  ? 'Top level reached'
+                  : `${level.pointsToNext.toLocaleString()} pts to Level ${level.level + 1}`}
+              </span>
+              <span className="tabular-nums text-muted-foreground">
+                {level.progressPct}%
+              </span>
+            </div>
+            <div
+              className="h-3 overflow-hidden rounded-full border border-white/10 bg-black/35"
+              role="progressbar"
+              aria-label={
+                level.nextLevelThreshold == null
+                  ? `Level ${level.level} complete`
+                  : `Progress to Level ${level.level + 1}`
+              }
+              aria-valuenow={level.progressPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
-                className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-valuenow={mock.level.progressPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Progress to ${mock.level.nextLabel}`}
-              >
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${mock.level.progressPct}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                {mock.level.progressPct}% to {mock.level.nextLabel}
-              </p>
+                className="h-full rounded-full bg-[linear-gradient(90deg,#00b85f,#00e676)] shadow-[0_0_16px_rgba(0,230,118,0.45)]"
+                style={{ width: `${level.progressPct}%` }}
+              />
             </div>
           </div>
         </div>
-      </DashboardPlainCard>
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <CompactStat icon={Trophy} value={level.level} label="Level" />
+          <CompactStat
+            icon={Flame}
+            value={`${PLACEHOLDER_STREAK_DAYS}d`}
+            label="Streak"
+          />
+          <CompactStat
+            icon={Award}
+            value={badgeSummary.earned}
+            label="Badges"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-card/85 p-3.5 shadow-[0_12px_32px_rgba(0,0,0,0.22),0_1px_0_rgba(255,255,255,0.04)_inset] sm:p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <LockKeyholeOpen className="h-3.5 w-3.5 text-primary" aria-hidden />
+              Recently unlocked
+            </p>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+              <Link href="/achievements">
+                View collection
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            {PLACEHOLDER_RECENT_BADGES.map((badge) => (
+              <div
+                key={badge.id}
+                className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-background/40 p-2.5"
+              >
+                <Image
+                  src={badge.imageUrl}
+                  alt=""
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 shrink-0 object-contain"
+                  unoptimized
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {badge.name}
+                  </p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {badge.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(115deg,rgba(0,230,118,0.1),rgba(17,26,39,0.92)_45%,rgba(17,26,39,0.98))] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+          <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Next achievement
+          </p>
+          <p className="mt-1 text-sm font-semibold text-foreground">
+            {PLACEHOLDER_NEXT_ACHIEVEMENT.name}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {PLACEHOLDER_NEXT_ACHIEVEMENT.message}
+          </p>
+        </div>
+      </div>
     </DashboardFeedSection>
   )
 }

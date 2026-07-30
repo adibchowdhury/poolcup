@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Badge placeholder">
+  <defs>
+    <linearGradient id="shield" x1="18" y1="8" x2="78" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00e676"/>
+      <stop offset="1" stop-color="#009e4f"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="28" y1="14" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="48" cy="48" r="44" fill="#0b1219" stroke="#1f2a37" stroke-width="2"/>
+  <path
+    d="M48 14c10.5 5.5 19 6.5 27 6.5v22.8c0 16.7-10.7 31.4-27 36.7-16.3-5.3-27-20-27-36.7V20.5C29 20.5 37.5 19.5 48 14z"
+    fill="url(#shield)"
+  />
+  <path
+    d="M48 20c8.2 4.2 14.8 5 21 5.2v18.4c0 13.2-8.3 24.8-21 29.1-12.7-4.3-21-15.9-21-29.1V25.2c6.2-.2 12.8-1 21-5.2z"
+    fill="url(#shine)"
+  />
+  <circle cx="48" cy="46" r="10" fill="#061018" fill-opacity="0.35"/>
+  <path
+    d="M48 38.5l2.4 4.8 5.3.8-3.8 3.7.9 5.3L48 50.6l-4.8 2.5.9-5.3-3.8-3.7 5.3-.8L48 38.5z"
+    fill="#ecfff4"
+  />
+</svg>

@@ -5,7 +5,6 @@ import { Flame, Sparkles, TrendingUp, Zap } from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
-import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import {
@@ -153,58 +152,56 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
 
   return (
     <DashboardFeedSection id="your-progress" title="Your Progress">
-      <DashboardPlainCard>
-        {loading && !data ? (
-          <RecentResultsSkeleton />
-        ) : data?.error && data.isEmpty ? (
-          <div className="space-y-3 py-2 text-center">
-            <p className="text-sm text-destructive">{data.error}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void load()}
-            >
-              Try again
-            </Button>
-          </div>
-        ) : data ? (
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)]">
-              <PointsHero points={data.totalPoints} />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
-                <SupportingStat
-                  icon={TrendingUp}
-                  label="Accuracy"
-                  value={data.winRate != null ? `${data.winRate}%` : '—'}
-                />
-                <SupportingStat
-                  icon={Flame}
-                  label="Current streak"
-                  value={`${data.currentStreak}`}
-                  accent="flame"
-                />
-              </div>
+      {loading && !data ? (
+        <RecentResultsSkeleton />
+      ) : data?.error && data.isEmpty ? (
+        <div className="space-y-3 py-2 text-center">
+          <p className="text-sm text-destructive">{data.error}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void load()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : data ? (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)]">
+            <PointsHero points={data.totalPoints} />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+              <SupportingStat
+                icon={TrendingUp}
+                label="Accuracy"
+                value={data.winRate != null ? `${data.winRate}%` : '—'}
+              />
+              <SupportingStat
+                icon={Flame}
+                label="Current streak"
+                value={`${data.currentStreak}`}
+                accent="flame"
+              />
             </div>
-
-            {data.bestPrediction ? (
-              <BestPredictionCard best={data.bestPrediction} />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Your best prediction will appear after a result is scored.
-                </p>
-              </div>
-            )}
-
-            {data.error ? (
-              <p className="text-[11px] text-muted-foreground">
-                Some progress data may be incomplete: {data.error}
-              </p>
-            ) : null}
           </div>
-        ) : null}
-      </DashboardPlainCard>
+
+          {data.bestPrediction ? (
+            <BestPredictionCard best={data.bestPrediction} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Your best prediction will appear after a result is scored.
+              </p>
+            </div>
+          )}
+
+          {data.error ? (
+            <p className="text-[11px] text-muted-foreground">
+              Some progress data may be incomplete: {data.error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </DashboardFeedSection>
   )
 }
