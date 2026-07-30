@@ -133,13 +133,11 @@ export function ComingSoonContent() {
 
         <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
           Thank you for being part of PoolCup&apos;s first chapter. More than
-          1,700 of you predicted, competed, and talked trash with friends during
-          the World Cup — and this is just the beginning. PoolCup is being
-          rebuilt into something bigger: more sports, more events, and new ways
-          to compete all year long. We&apos;re back August 24.
-        </p>
-        <p className="mt-3 text-sm font-semibold text-foreground/90">
-          — Adib, Founder of PoolCup
+          1,700 of you created pools, made predictions, and competed with friends
+          during the World Cup — and this is just the beginning. PoolCup is being
+          rebuilt into something bigger and better: more sports, more events, and
+          new ways to compete all year long. We&apos;re back August 24. — Adib,
+          Founder of PoolCup
         </p>
 
         <div className="mt-10 w-full max-w-md">
