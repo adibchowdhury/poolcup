@@ -136,8 +136,8 @@ export function ComingSoonContent() {
           1,700 of you created pools, made predictions, and competed with friends
           during the World Cup — and this is just the beginning. PoolCup is being
           rebuilt into something bigger and better: more sports, more events, and
-          new ways to compete all year long. We&apos;re back August 24. — Adib,
-          Founder of PoolCup
+          new ways to compete all year long. We&apos;re back August 24. — The
+          PoolCup Team
         </p>
 
         <div className="mt-10 w-full max-w-md">
