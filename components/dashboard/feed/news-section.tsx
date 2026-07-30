@@ -20,10 +20,12 @@ type NewsApiResponse = {
 const DASHBOARD_NEWS_ITEM_LIMIT = 6
 
 function NewsCard({ item }: { item: FootballNewsItem }) {
+  const [imageFailed, setImageFailed] = useState(false)
   const relative =
     item.publishedAt != null
       ? formatRelativeTimestamp(item.publishedAt)
       : null
+  const showImage = Boolean(item.imageUrl) && !imageFailed
 
   return (
     <a
@@ -38,14 +40,15 @@ function NewsCard({ item }: { item: FootballNewsItem }) {
       )}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/40">
-        {item.imageUrl ? (
+        {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- RSS hostnames vary; next/image remote allowlist not practical here
           <img
-            src={item.imageUrl}
+            src={item.imageUrl!}
             alt=""
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             loading="lazy"
             decoding="async"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(0,230,118,0.16),transparent_55%),linear-gradient(160deg,#111a27,#080b0f)]">
