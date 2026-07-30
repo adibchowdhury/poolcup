@@ -29,8 +29,12 @@ import {
   groupScheduleItemsByDay,
   type UpcomingMatch,
 } from '@/src/lib/upcoming-match-display'
+import {
+  getUpcomingHorizonEndIso,
+  isWithinUpcomingHorizon,
+} from '@/src/lib/upcoming-match-horizon'
 
-/** Tournament has 72 fixtures; fetch all upcoming rows in one query. */
+/** Fetch enough upcoming rows within the horizon window. */
 const UPCOMING_MATCHES_QUERY_LIMIT = 100
 
 let cachedMatches: UpcomingMatch[] | null = null
@@ -44,13 +48,17 @@ async function fetchUpcomingMatchesFromDb(): Promise<{
   error: string | null
 }> {
   const eventId = await resolveCurrentEventId(supabase)
+  const nowMs = Date.now()
+  const nowIso = new Date(nowMs).toISOString()
+  const horizonEndIso = getUpcomingHorizonEndIso(nowMs)
 
   let query = supabase
     .from('matches')
     .select(
       'id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
     )
-    .gt('kickoff_at', new Date().toISOString())
+    .gt('kickoff_at', nowIso)
+    .lte('kickoff_at', horizonEndIso)
     .eq('is_final', false)
     .order('kickoff_at', { ascending: true })
     .limit(UPCOMING_MATCHES_QUERY_LIMIT)
@@ -62,7 +70,11 @@ async function fetchUpcomingMatchesFromDb(): Promise<{
     return { matches: null, error: fetchError.message }
   }
 
-  return { matches: (data ?? []) as UpcomingMatch[], error: null }
+  const matches = ((data ?? []) as UpcomingMatch[]).filter((match) =>
+    isWithinUpcomingHorizon(match.kickoff_at, nowMs),
+  )
+
+  return { matches, error: null }
 }
 
 function loadUpcomingMatches() {
@@ -314,7 +326,13 @@ export function UpcomingGamesTab() {
   const isAll = selectedEventId === 'all'
   const isWorldCup = selectedEventId === 'wc'
   const isMockSport = !isAll && !isWorldCup
-  const allMockFixtures = useMemo(() => getAllMockFixtures(), [])
+  const allMockFixtures = useMemo(
+    () =>
+      getAllMockFixtures().filter((fixture) =>
+        isWithinUpcomingHorizon(fixture.kickoff_at, nowMs),
+      ),
+    [nowMs],
+  )
 
   const loadMatches = useCallback(async () => {
     setLoading(true)
@@ -337,10 +355,21 @@ export function UpcomingGamesTab() {
     void loadMatches()
   }, [loadMatches])
 
-  const matchesByDay = useMemo(() => groupMatchesByDay(matches), [matches])
+  const matchesByDay = useMemo(
+    () =>
+      groupMatchesByDay(
+        matches.filter((match) => isWithinUpcomingHorizon(match.kickoff_at, nowMs)),
+      ),
+    [matches, nowMs],
+  )
   const mockFixtures = useMemo(
-    () => (isMockSport ? getMockFixturesForSport(selectedEventId) : []),
-    [isMockSport, selectedEventId],
+    () =>
+      isMockSport
+        ? getMockFixturesForSport(selectedEventId).filter((fixture) =>
+            isWithinUpcomingHorizon(fixture.kickoff_at, nowMs),
+          )
+        : [],
+    [isMockSport, selectedEventId, nowMs],
   )
   const mockFixturesByDay = useMemo(
     () => groupMockFixturesByDay(mockFixtures),
@@ -350,11 +379,13 @@ export function UpcomingGamesTab() {
     if (!isAll) return null
 
     const items: CombinedScheduleItem[] = [
-      ...matches.map((match) => ({
-        kind: 'real' as const,
-        kickoff_at: match.kickoff_at,
-        match,
-      })),
+      ...matches
+        .filter((match) => isWithinUpcomingHorizon(match.kickoff_at, nowMs))
+        .map((match) => ({
+          kind: 'real' as const,
+          kickoff_at: match.kickoff_at,
+          match,
+        })),
       ...allMockFixtures.map((fixture) => ({
         kind: 'mock' as const,
         kickoff_at: fixture.kickoff_at,
@@ -363,7 +394,7 @@ export function UpcomingGamesTab() {
     ]
 
     return groupScheduleItemsByDay(items)
-  }, [isAll, matches, allMockFixtures])
+  }, [isAll, matches, allMockFixtures, nowMs])
 
   return (
     <div className="mx-auto w-full max-w-6xl">

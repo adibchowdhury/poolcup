@@ -6,15 +6,13 @@ import { cn } from '@/lib/utils'
  * Section order (pools tab; sport/event pills sit above this wrapper):
  * 1. Live Now
  * 2. Your Pools
- * 3. Continue Playing
- * 4. Daily Challenge
- * 5. Discover Pools (OfficialPoolsSection)
- * 6. Your Progress (RecentResultsSection)
- * 7. Activity
- * 8. Global PoolCup Activity
- * 9. Friends Activity
- * 10. Achievements
- * 11. Trending
+ * 3. Discover Pools (OfficialPoolsSection)
+ * 4. Your Progress (RecentResultsSection)
+ * 5. Activity
+ * 6. Global PoolCup Activity
+ * 7. Friends Activity
+ * 8. Achievements
+ * 9. News & Highlights (RSS link-out teasers)
  */
 type DashboardFeedProps = {
   children: ReactNode

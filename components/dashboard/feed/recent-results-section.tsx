@@ -1,26 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
-import {
-  ArrowDown,
-  ArrowUp,
-  Flame,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Trophy,
-  Zap,
-} from 'lucide-react'
+import { Flame, Sparkles, TrendingUp, Zap } from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
 import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
-import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
-import { cn } from '@/lib/utils'
-import { formatPointsDelta } from '@/src/lib/points-transaction-feed'
 import {
   fetchRecentResultsFeed,
   type BestPrediction,
@@ -32,82 +19,101 @@ type RecentResultsSectionProps = {
   userId: string
 }
 
-function StatChip({
+function SupportingStat({
   icon: Icon,
   label,
   value,
-  tone,
+  accent = 'primary',
 }: {
   icon: typeof Zap
   label: string
   value: string
-  tone?: 'default' | 'good' | 'warn'
+  accent?: 'primary' | 'flame'
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-xl border px-3 py-3.5 text-center sm:py-4',
-        tone === 'good' &&
-          'border-emerald-500/35 bg-emerald-500/10 shadow-[0_0_0_1px_rgba(16,185,129,0.08)_inset]',
-        tone === 'warn' &&
-          'border-[#ffb300]/35 bg-[#ffb300]/10 shadow-[0_0_0_1px_rgba(255,179,0,0.08)_inset]',
-        (!tone || tone === 'default') &&
-          'border-primary/30 bg-primary/10 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]',
-      )}
-    >
-      <Icon
-        className={cn(
-          'mx-auto h-5 w-5',
-          tone === 'good' && 'text-emerald-400',
-          tone === 'warn' && 'text-[#ffb300]',
-          (!tone || tone === 'default') && 'text-primary',
-        )}
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-background/55 px-3 py-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.2),0_1px_0_rgba(255,255,255,0.04)_inset] sm:px-4 sm:py-4">
+      <div
+        className={
+          accent === 'flame'
+            ? 'absolute -right-5 -top-5 h-16 w-16 rounded-full bg-[#ffb300]/10 blur-xl'
+            : 'absolute -right-5 -top-5 h-16 w-16 rounded-full bg-primary/10 blur-xl'
+        }
         aria-hidden
       />
-      <p className="mt-2 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground sm:text-3xl">
+      <Icon
+        className={
+          accent === 'flame'
+            ? 'relative h-5 w-5 text-[#ffb300]'
+            : 'relative h-5 w-5 text-primary'
+        }
+        aria-hidden
+      />
+      <p className="relative mt-3 font-display text-3xl leading-none tracking-wide tabular-nums text-foreground sm:text-4xl">
         {value}
       </p>
-      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="relative mt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         {label}
       </p>
     </div>
   )
 }
 
-/**
- * TODO(mock): Replace with real streak from predictions / points history.
- * Shape: { currentStreak: number; streakActive: boolean }
- */
-const MOCK_STREAK = {
-  currentStreak: 4,
-  streakActive: true,
-} as const
+function PointsHero({ points }: { points: number }) {
+  return (
+    <div className="relative min-h-44 overflow-hidden rounded-2xl border border-primary/25 bg-[radial-gradient(circle_at_15%_20%,rgba(0,230,118,0.18),transparent_42%),linear-gradient(135deg,rgba(17,26,39,0.98),rgba(8,11,15,0.96))] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.06)_inset] sm:min-h-48 sm:p-6">
+      <div
+        className="absolute -bottom-16 -right-12 h-44 w-44 rounded-full border border-primary/10 bg-primary/5 blur-sm"
+        aria-hidden
+      />
+      <div className="relative flex h-full flex-col justify-between gap-6">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15">
+            <Zap className="h-4 w-4" aria-hidden />
+          </span>
+          Total points
+        </div>
+        <div>
+          <p className="font-display text-6xl leading-[0.82] tracking-tight tabular-nums text-foreground sm:text-7xl">
+            {points.toLocaleString()}
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Keep predicting. Every result moves your total.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function BestPredictionCard({ best }: { best: BestPrediction }) {
   return (
-    <div className="rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 sm:px-4">
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-primary">
-        <Sparkles className="h-3.5 w-3.5" aria-hidden />
-        Best prediction
+    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(115deg,rgba(0,230,118,0.12),rgba(17,26,39,0.92)_42%,rgba(17,26,39,0.98))] px-4 py-4 shadow-[0_12px_35px_rgba(0,0,0,0.25),0_1px_0_rgba(255,255,255,0.05)_inset] sm:px-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          Best prediction
+        </div>
+        <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-primary">
+          +{best.points} pts
+        </span>
       </div>
       {best.kind === 'match' ? (
-        <div className="mt-2 space-y-1">
-          <p className="text-sm font-semibold text-foreground">
+        <div className="mt-3">
+          <p className="text-base font-semibold text-foreground">
             {best.label}
-            <span className="ml-2 font-mono text-primary">
-              +{best.points} pts
-            </span>
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground">
             {best.team1Name} {best.resultTeam1}–{best.resultTeam2}{' '}
             {best.team2Name}
           </p>
-          <p className="font-mono text-xs tabular-nums text-muted-foreground">
+          <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
             Your pick {best.predTeam1}–{best.predTeam2}
           </p>
         </div>
       ) : (
-        <p className="mt-2 text-sm font-semibold text-foreground">
+        <p className="mt-3 text-sm font-semibold text-foreground">
           {best.summary}
         </p>
       )}
@@ -118,14 +124,14 @@ function BestPredictionCard({ best }: { best: BestPrediction }) {
 function RecentResultsSkeleton() {
   return (
     <div className="space-y-3" aria-hidden>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <ShimmerBlock className="h-[88px] rounded-xl" />
-        <ShimmerBlock className="h-[88px] rounded-xl" />
-        <ShimmerBlock className="h-[88px] rounded-xl" />
-        <ShimmerBlock className="h-[88px] rounded-xl" />
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)]">
+        <ShimmerBlock className="h-44 rounded-2xl sm:h-48" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+          <ShimmerBlock className="h-[82px] rounded-2xl sm:h-[90px]" />
+          <ShimmerBlock className="h-[82px] rounded-2xl sm:h-[90px]" />
+        </div>
       </div>
-      <ShimmerBlock className="h-20 w-full rounded-xl" />
-      <ShimmerBlock className="h-24 w-full rounded-xl" />
+      <ShimmerBlock className="h-24 w-full rounded-2xl" />
     </div>
   )
 }
@@ -150,7 +156,7 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
       <DashboardPlainCard>
         {loading && !data ? (
           <RecentResultsSkeleton />
-        ) : data?.error && !data.recentEvents.length && data.isEmpty ? (
+        ) : data?.error && data.isEmpty ? (
           <div className="space-y-3 py-2 text-center">
             <p className="text-sm text-destructive">{data.error}</p>
             <Button
@@ -162,154 +168,38 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
               Try again
             </Button>
           </div>
-        ) : data?.isEmpty ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatChip icon={Zap} label="Recent pts" value="—" />
-              <StatChip icon={TrendingUp} label="Accuracy" value="—" tone="warn" />
-              <StatChip icon={Target} label="Correct" value="—" />
-              <StatChip
-                icon={Flame}
-                label="Streak"
-                value={
-                  MOCK_STREAK.streakActive
-                    ? `${MOCK_STREAK.currentStreak}d`
-                    : '0'
-                }
-                tone={MOCK_STREAK.streakActive ? 'warn' : 'default'}
-              />
-            </div>
-            <p className="text-center text-sm text-muted-foreground">
-              No scored results yet. Once matches finish, your points, accuracy,
-              and best picks will show up here.
-            </p>
-          </div>
         ) : data ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatChip
-                icon={Zap}
-                label="Recent pts"
-                value={formatPointsDelta(data.recentPointsTotal)}
-                tone={data.recentPointsTotal > 0 ? 'good' : 'default'}
-              />
-              <StatChip
-                icon={TrendingUp}
-                label="Accuracy"
-                value={data.winRate != null ? `${data.winRate}%` : '—'}
-                tone="warn"
-              />
-              <StatChip
-                icon={Target}
-                label="Correct"
-                value={
-                  data.settledPredictions > 0
-                    ? `${data.correctPredictions}/${data.settledPredictions}`
-                    : '—'
-                }
-              />
-              <StatChip
-                icon={Flame}
-                label="Streak"
-                value={
-                  MOCK_STREAK.streakActive
-                    ? `${MOCK_STREAK.currentStreak}d`
-                    : '0'
-                }
-                tone={MOCK_STREAK.streakActive ? 'warn' : 'default'}
-              />
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(12rem,0.8fr)]">
+              <PointsHero points={data.totalPoints} />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                <SupportingStat
+                  icon={TrendingUp}
+                  label="Accuracy"
+                  value={data.winRate != null ? `${data.winRate}%` : '—'}
+                />
+                <SupportingStat
+                  icon={Flame}
+                  label="Current streak"
+                  value={`${data.currentStreak}`}
+                  accent="flame"
+                />
+              </div>
             </div>
 
             {data.bestPrediction ? (
               <BestPredictionCard best={data.bestPrediction} />
-            ) : null}
-
-            {data.rankChanges.length > 0 ? (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Rank changes
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your best prediction will appear after a result is scored.
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Since last scored update in each pool
-                </p>
-                <ul className="mt-2 space-y-2">
-                  {data.rankChanges.map((row) => (
-                    <li
-                      key={row.poolId}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2"
-                    >
-                      <Link
-                        href={`/pool/${row.inviteCode}`}
-                        className="min-w-0 truncate text-xs font-medium text-foreground hover:text-primary"
-                      >
-                        {row.poolName}
-                      </Link>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums">
-                          <Trophy
-                            className="h-3 w-3 text-[#ffb300]"
-                            aria-hidden
-                          />
-                          {row.yourRank != null
-                            ? ordinalPlace(row.yourRank)
-                            : '—'}
-                        </span>
-                        {row.movement === 'up' ? (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-400">
-                            <ArrowUp className="h-3.5 w-3.5" aria-hidden />
-                            {row.rankDelta}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-medium text-rose-400">
-                            <ArrowDown className="h-3.5 w-3.5" aria-hidden />
-                            {row.rankDelta}
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            ) : null}
-
-            {data.recentEvents.length > 0 ? (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Recent points
-                </p>
-                <ul className="mt-2 divide-y divide-border/50">
-                  {data.recentEvents.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground">
-                          {event.description}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {event.relativeTime}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          'shrink-0 font-mono text-xs font-semibold tabular-nums',
-                          event.points >= 0
-                            ? 'text-emerald-400'
-                            : 'text-rose-400',
-                        )}
-                      >
-                        {formatPointsDelta(event.points)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            )}
 
             {data.error ? (
               <p className="text-[11px] text-muted-foreground">
-                Some pool standings may be incomplete: {data.error}
+                Some progress data may be incomplete: {data.error}
               </p>
             ) : null}
           </div>

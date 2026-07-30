@@ -9,6 +9,7 @@ import {
   type LeaderboardCacheRow,
   type PoolLeaderboardMember,
 } from '@/src/lib/pool-leaderboard'
+import { getUpcomingHorizonEndIso } from '@/src/lib/upcoming-match-horizon'
 import {
   computeWinnerOnlyDashboardProgress,
   parseStandingsJson,
@@ -95,11 +96,13 @@ export async function fetchDashboardPools(
   const totalPredictions = totalMatchCount ?? 0
 
   const nowIso = new Date().toISOString()
+  const horizonEndIso = getUpcomingHorizonEndIso()
 
   let nextMatchQuery = supabase
     .from('matches')
     .select('kickoff_at')
     .gt('kickoff_at', nowIso)
+    .lte('kickoff_at', horizonEndIso)
     .order('kickoff_at', { ascending: true })
     .limit(1)
   if (eventId) nextMatchQuery = nextMatchQuery.eq('event_id', eventId)
@@ -111,6 +114,7 @@ export async function fetchDashboardPools(
     .from('matches')
     .select('*', { count: 'exact', head: true })
     .gt('kickoff_at', nowIso)
+    .lte('kickoff_at', horizonEndIso)
   if (eventId) upcomingMatchQuery = upcomingMatchQuery.eq('event_id', eventId)
   const { count: upcomingMatchCount } = await upcomingMatchQuery
 

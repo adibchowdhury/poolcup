@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveCurrentEventId } from '@/src/lib/current-event'
+import { getUpcomingHorizonEndIso } from '@/src/lib/upcoming-match-horizon'
 
 export const FEATURED_COMPETITION_LABEL = 'FIFA World Cup 2026'
 
@@ -157,6 +158,7 @@ export async function fetchFeaturedMatch(
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .gt('kickoff_at', nowIso)
+    .lte('kickoff_at', getUpcomingHorizonEndIso())
     .eq('is_final', false)
     .order('kickoff_at', { ascending: true })
     .limit(1)

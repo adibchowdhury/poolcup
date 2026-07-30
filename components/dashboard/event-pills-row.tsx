@@ -9,8 +9,10 @@ import {
 } from '@/src/lib/current-event'
 import {
   fetchEventSliderMatches,
+  fetchInHorizonEventIds,
   type EventSliderMatch,
 } from '@/src/lib/fetch-event-slider-matches'
+import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
 import { supabase } from '@/src/lib/supabase'
 
 type PrefetchEntry =
@@ -19,8 +21,10 @@ type PrefetchEntry =
 
 /**
  * Real sporting-event pills + inline match slider.
- * Prefetches each event's slider matches once on mount; pill clicks only
- * swap the selected event id — no re-fetch, no loading flash.
+ *
+ * Pills: only events with ≥1 in-horizon match (live OR upcoming ≤30d).
+ * Historical / far-future-only events are hidden.
+ * Prefetches slider matches only for qualifying events (batched ID check first).
  */
 export function EventPillsRow({ className }: { className?: string }) {
   const [events, setEvents] = useState<SportingEvent[]>([])
@@ -39,19 +43,30 @@ export function EventPillsRow({ className }: { className?: string }) {
       setEventsError(null)
 
       try {
-        const rows = await listSportingEvents(supabase)
+        const [allEvents, inHorizonIds] = await Promise.all([
+          listSportingEvents(supabase),
+          fetchInHorizonEventIds(supabase),
+        ])
         if (cancelled) return
 
-        setEvents(rows)
-        setSelectedEventId((prev) => prev ?? rows[0]?.id ?? null)
+        // Only events with live or upcoming-within-horizon matches.
+        const qualifying = allEvents.filter((event) =>
+          inHorizonIds.has(event.id),
+        )
 
-        if (rows.length === 0) {
+        setEvents(qualifying)
+        setSelectedEventId((prev) => {
+          if (prev && qualifying.some((e) => e.id === prev)) return prev
+          return qualifying[0]?.id ?? null
+        })
+
+        if (qualifying.length === 0) {
           setMatchesByEventId({})
           return
         }
 
         const results = await Promise.all(
-          rows.map(async (event) => {
+          qualifying.map(async (event) => {
             try {
               const matches = await fetchEventSliderMatches(supabase, event.id)
               return [
@@ -117,7 +132,9 @@ export function EventPillsRow({ className }: { className?: string }) {
           ) : eventsError ? (
             <p className="text-sm text-muted-foreground">{eventsError}</p>
           ) : events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No events in the next {UPCOMING_HORIZON_DAYS} days.
+            </p>
           ) : (
             events.map((event) => {
               const selected = event.id === selectedEventId
@@ -151,7 +168,7 @@ export function EventPillsRow({ className }: { className?: string }) {
           <MatchCardSkeleton />
           <MatchCardSkeleton />
         </div>
-      ) : selectedEventId ? (
+      ) : events.length === 0 ? null : selectedEventId ? (
         <div
           className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="list"

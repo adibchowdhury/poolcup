@@ -1,49 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { RankMovement } from '@/components/dashboard/pool-card'
-import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
 import {
   fetchMemberPredictionCounts,
   sumMemberCounts,
 } from '@/src/lib/member-prediction-counts'
-import {
-  formatRelativeTimestamp,
-  getPointsTransactionDescription,
-  type PointsTransactionRow,
-} from '@/src/lib/points-transaction-feed'
 import { projectMatchPoints } from '@/src/lib/project-match-points'
 import { getPredictionOutcomeLabel } from '@/src/lib/prediction-scoring'
-
-const RECENT_TRANSACTION_FETCH_LIMIT = 40
-const RECENT_SCORING_EVENT_LIMIT = 8
-
-/** Scoring-related reasons (excludes signup / referral / pool_created). */
-const SCORING_REASONS = new Set([
-  'correct_winner',
-  'exact_score',
-  'correct_draw',
-  'correct_advance',
-  'exact_score_and_advance',
-  'winner_group',
-  'third_place',
-])
-
-export type RecentPointsEvent = {
-  id: string
-  reason: string
-  description: string
-  points: number
-  createdAt: string
-  relativeTime: string
-}
-
-export type RecentRankChange = {
-  poolId: string
-  poolName: string
-  inviteCode: string
-  yourRank: number | null
-  movement: RankMovement
-  rankDelta: number
-}
 
 export type BestPrediction =
   | {
@@ -71,14 +32,12 @@ export type BestPrediction =
     }
 
 export type RecentResultsFeedData = {
-  recentPointsTotal: number
-  recentEvents: RecentPointsEvent[]
+  totalPoints: number
   winRate: number | null
-  correctPredictions: number
-  settledPredictions: number
-  rankChanges: RecentRankChange[]
+  /** Consecutive settled matches with at least one positive-scoring pick. */
+  currentStreak: number
   bestPrediction: BestPrediction | null
-  /** True when the user has no scored activity to show. */
+  /** True when the user has no points or settled prediction activity. */
   isEmpty: boolean
   error: string | null
 }
@@ -107,6 +66,17 @@ type PredictionBestRow = {
   matches: MatchJoin | MatchJoin[] | null
 }
 
+type StreakMatchJoin = {
+  kickoff_at: string
+  is_final: boolean
+}
+
+type StreakPredictionRow = {
+  match_id: string
+  points_awarded: number
+  matches: StreakMatchJoin | StreakMatchJoin[] | null
+}
+
 function unwrapPool(row: MembershipRow) {
   const raw = row.pools
   return Array.isArray(raw) ? raw[0] ?? null : raw
@@ -117,8 +87,46 @@ function unwrapMatch(raw: MatchJoin | MatchJoin[] | null): MatchJoin | null {
   return Array.isArray(raw) ? raw[0] ?? null : raw
 }
 
-function isScoringReason(reason: string): boolean {
-  return SCORING_REASONS.has(reason)
+function unwrapStreakMatch(
+  raw: StreakMatchJoin | StreakMatchJoin[] | null,
+): StreakMatchJoin | null {
+  if (!raw) return null
+  return Array.isArray(raw) ? raw[0] ?? null : raw
+}
+
+/**
+ * Current momentum across real settled fixtures. Multiple pool predictions for
+ * the same match count once; a match is successful when any pick scored points.
+ */
+function calculateCurrentStreak(rows: StreakPredictionRow[]): number {
+  const byMatch = new Map<
+    string,
+    { kickoffMs: number; scored: boolean }
+  >()
+
+  for (const row of rows) {
+    const match = unwrapStreakMatch(row.matches)
+    if (!match?.is_final) continue
+    const kickoffMs = new Date(match.kickoff_at).getTime()
+    if (!Number.isFinite(kickoffMs)) continue
+
+    const existing = byMatch.get(row.match_id)
+    byMatch.set(row.match_id, {
+      kickoffMs,
+      scored: (existing?.scored ?? false) || row.points_awarded > 0,
+    })
+  }
+
+  const settled = [...byMatch.values()].sort(
+    (a, b) => b.kickoffMs - a.kickoffMs,
+  )
+
+  let streak = 0
+  for (const match of settled) {
+    if (!match.scored) break
+    streak += 1
+  }
+  return streak
 }
 
 function buildMatchBestPrediction(row: PredictionBestRow): BestPrediction | null {
@@ -156,12 +164,9 @@ export async function fetchRecentResultsFeed(
   userId: string,
 ): Promise<RecentResultsFeedData> {
   const empty: RecentResultsFeedData = {
-    recentPointsTotal: 0,
-    recentEvents: [],
+    totalPoints: 0,
     winRate: null,
-    correctPredictions: 0,
-    settledPredictions: 0,
-    rankChanges: [],
+    currentStreak: 0,
     bestPrediction: null,
     isEmpty: true,
     error: null,
@@ -169,46 +174,28 @@ export async function fetchRecentResultsFeed(
 
   try {
     const [
-      txResult,
+      userResult,
       membershipsResult,
-      poolsResult,
     ] = await Promise.all([
       supabase
-        .from('points_transactions')
-        .select('id, reason, points, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(RECENT_TRANSACTION_FETCH_LIMIT),
+        .from('users')
+        .select('points')
+        .eq('id', userId)
+        .maybeSingle(),
       supabase
         .from('pool_members')
         .select('id, pools(scoring_style)')
         .eq('user_id', userId),
-      fetchDashboardPools(supabase, userId),
     ])
 
-    if (txResult.error) {
-      return { ...empty, error: txResult.error.message }
+    if (userResult.error) {
+      return { ...empty, error: userResult.error.message }
     }
     if (membershipsResult.error) {
       return { ...empty, error: membershipsResult.error.message }
     }
 
-    const txRows = (txResult.data ?? []) as PointsTransactionRow[]
-    const scoringEvents = txRows
-      .filter((row) => isScoringReason(row.reason))
-      .slice(0, RECENT_SCORING_EVENT_LIMIT)
-    const recentEvents: RecentPointsEvent[] = scoringEvents.map((row) => ({
-      id: row.id,
-      reason: row.reason,
-      description: getPointsTransactionDescription(row.reason),
-      points: row.points,
-      createdAt: row.created_at,
-      relativeTime: formatRelativeTimestamp(row.created_at),
-    }))
-    const recentPointsTotal = recentEvents.reduce(
-      (sum, row) => sum + row.points,
-      0,
-    )
+    const totalPoints = Number(userResult.data?.points ?? 0)
 
     const memberships = (membershipsResult.data ?? []) as MembershipRow[]
     const memberContexts = memberships.flatMap((row) => {
@@ -219,14 +206,14 @@ export async function fetchRecentResultsFeed(
     const memberIds = memberContexts.map((row) => row.memberId)
 
     let winRate: number | null = null
-    let correctPredictions = 0
-    let settledPredictions = 0
+    let currentStreak = 0
     let bestPrediction: BestPrediction | null = null
 
     if (memberIds.length > 0) {
       const [
         counts,
         cacheResult,
+        streakResult,
         bestMatchResult,
         bestGroupResult,
         bestThirdResult,
@@ -235,6 +222,19 @@ export async function fetchRecentResultsFeed(
         supabase
           .from('leaderboard_cache')
           .select('member_id, correct_winners')
+          .in('member_id', memberIds),
+        supabase
+          .from('predictions')
+          .select(
+            `
+            match_id,
+            points_awarded,
+            matches!inner (
+              kickoff_at,
+              is_final
+            )
+          `,
+          )
           .in('member_id', memberIds),
         supabase
           .from('predictions')
@@ -283,14 +283,17 @@ export async function fetchRecentResultsFeed(
       if (cacheResult.error) {
         return { ...empty, error: cacheResult.error.message }
       }
+      if (streakResult.error) {
+        return { ...empty, error: streakResult.error.message }
+      }
 
       const correctByMember = new Map<string, number>()
       for (const row of cacheResult.data ?? []) {
         correctByMember.set(row.member_id, row.correct_winners ?? 0)
       }
 
-      correctPredictions = sumMemberCounts(memberIds, correctByMember)
-      settledPredictions = sumMemberCounts(
+      const correctPredictions = sumMemberCounts(memberIds, correctByMember)
+      const settledPredictions = sumMemberCounts(
         memberIds,
         counts.classicMatchPredictionsByMember,
       )
@@ -298,6 +301,10 @@ export async function fetchRecentResultsFeed(
         settledPredictions > 0
           ? Math.round((correctPredictions / settledPredictions) * 100)
           : null
+
+      currentStreak = calculateCurrentStreak(
+        (streakResult.data ?? []) as StreakPredictionRow[],
+      )
 
       const candidates: BestPrediction[] = []
 
@@ -335,33 +342,19 @@ export async function fetchRecentResultsFeed(
       }
     }
 
-    const rankChanges: RecentRankChange[] = (poolsResult.pools ?? [])
-      .filter((pool) => pool.movement !== 'none' && pool.rankDelta > 0)
-      .map((pool) => ({
-        poolId: pool.id,
-        poolName: pool.name,
-        inviteCode: pool.inviteCode,
-        yourRank: pool.yourRank,
-        movement: pool.movement,
-        rankDelta: pool.rankDelta,
-      }))
-
     const isEmpty =
-      recentEvents.length === 0 &&
+      totalPoints <= 0 &&
       bestPrediction == null &&
       winRate == null &&
-      rankChanges.length === 0
+      currentStreak === 0
 
     return {
-      recentPointsTotal,
-      recentEvents,
+      totalPoints,
       winRate,
-      correctPredictions,
-      settledPredictions,
-      rankChanges,
+      currentStreak,
       bestPrediction,
       isEmpty,
-      error: poolsResult.error,
+      error: null,
     }
   } catch (err) {
     return {

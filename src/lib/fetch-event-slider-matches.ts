@@ -4,6 +4,11 @@ import {
   type FeaturedMatch,
   type FeaturedMatchMode,
 } from '@/src/lib/featured-match'
+import {
+  getUpcomingHorizonEndIso,
+  isBeyondUpcomingHorizon,
+  isWithinUpcomingHorizon,
+} from '@/src/lib/upcoming-match-horizon'
 
 const FEATURED_MATCH_COLUMNS =
   'id, team1_name, team2_name, team1_flag, team2_flag, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
@@ -13,11 +18,14 @@ export const EVENT_SLIDER_MATCH_LIMIT = 20
 
 /**
  * TEMPORARY — Event pill slider currently includes COMPLETED / historical matches
- * so the UI is populated while both WC and CL are finished seasons.
+ * so the UI is populated while seasons have recent results alongside upcoming.
  *
- * LATER: set this to `false` (or delete the completed branch in
- * `filterEventSliderMatches`) so the slider shows LIVE + UPCOMING only.
+ * LATER: set this to `false` so the slider shows LIVE + UPCOMING only.
+ * Upcoming is always capped at UPCOMING_HORIZON_DAYS regardless.
  * One-line flip when live prediction seasons resume.
+ *
+ * NOTE: completed matches do NOT qualify an event for a pill — only live or
+ * upcoming-within-horizon do (see fetchInHorizonEventIds).
  */
 export const EVENT_SLIDER_INCLUDE_COMPLETED_TEMPORARY = true
 
@@ -31,23 +39,33 @@ function isLiveStatus(statusShort: string | null): boolean {
 }
 
 /**
- * TEMPORARY filter: keep all statuses when INCLUDE_COMPLETED is true.
- * Later (INCLUDE_COMPLETED false): keep only live + upcoming (kickoff in future, not final).
+ * Safety-net filter for slider rows.
+ * - Live: always keep
+ * - Upcoming (kickoff > now): keep ONLY if within UPCOMING_HORIZON_DAYS
+ * - Past / final: keep only when TEMPORARY completed flag is on
  */
 export function filterEventSliderMatches(
   matches: FeaturedMatch[],
   nowMs: number = Date.now(),
 ): FeaturedMatch[] {
-  if (EVENT_SLIDER_INCLUDE_COMPLETED_TEMPORARY) {
-    return matches
-  }
-
-  // --- LIVE + UPCOMING ONLY (enable when EVENT_SLIDER_INCLUDE_COMPLETED_TEMPORARY = false) ---
   return matches.filter((match) => {
-    if (match.is_final) return false
     if (isLiveStatus(match.status_short)) return true
+
     const kickoffMs = new Date(match.kickoff_at).getTime()
-    return kickoffMs > nowMs
+    if (!Number.isFinite(kickoffMs)) return false
+
+    // Future kickoff → upcoming horizon only (never keep >30d out).
+    if (kickoffMs > nowMs) {
+      if (isBeyondUpcomingHorizon(match.kickoff_at, nowMs)) return false
+      return isWithinUpcomingHorizon(match.kickoff_at, nowMs)
+    }
+
+    // Past / started / final
+    if (match.is_final || kickoffMs <= nowMs) {
+      return EVENT_SLIDER_INCLUDE_COMPLETED_TEMPORARY
+    }
+
+    return false
   })
 }
 
@@ -90,30 +108,124 @@ export function sortEventSliderMatches(
   })
 }
 
+function dedupeMatchesById(matches: FeaturedMatch[]): FeaturedMatch[] {
+  const seen = new Set<string>()
+  const out: FeaturedMatch[] = []
+  for (const match of matches) {
+    if (seen.has(match.id)) continue
+    seen.add(match.id)
+    out.push(match)
+  }
+  return out
+}
+
+/**
+ * Batched (2 queries total — not N+1): event ids that have ≥1 in-horizon match
+ * for pill visibility — live now, OR upcoming with kickoff ≤ now+30d.
+ * Completed-only events (WC/CL historical) are intentionally excluded.
+ */
+export async function fetchInHorizonEventIds(
+  supabase: SupabaseClient,
+  nowMs: number = Date.now(),
+): Promise<Set<string>> {
+  const nowIso = new Date(nowMs).toISOString()
+  const horizonEndIso = getUpcomingHorizonEndIso(nowMs)
+
+  const [liveResult, upcomingResult] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('event_id')
+      .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
+      .eq('is_final', false)
+      .not('event_id', 'is', null),
+    supabase
+      .from('matches')
+      .select('event_id')
+      .gt('kickoff_at', nowIso)
+      .lte('kickoff_at', horizonEndIso)
+      .eq('is_final', false)
+      .not('event_id', 'is', null),
+  ])
+
+  if (liveResult.error) {
+    throw new Error(liveResult.error.message)
+  }
+  if (upcomingResult.error) {
+    throw new Error(upcomingResult.error.message)
+  }
+
+  const ids = new Set<string>()
+  for (const row of liveResult.data ?? []) {
+    const id = (row as { event_id: string | null }).event_id
+    if (id) ids.add(id)
+  }
+  for (const row of upcomingResult.data ?? []) {
+    const id = (row as { event_id: string | null }).event_id
+    if (id) ids.add(id)
+  }
+  return ids
+}
+
 /**
  * Fetch matches for one sporting event for the dashboard pill slider.
- * Ordered live → upcoming → recent completed (see sortEventSliderMatches).
+ * Upcoming rows are constrained at query time to UPCOMING_HORIZON_DAYS
+ * (never fetches >30d-out fixtures as upcoming).
  */
 export async function fetchEventSliderMatches(
   supabase: SupabaseClient,
   eventId: string,
 ): Promise<EventSliderMatch[]> {
-  const { data, error } = await supabase
+  const nowMs = Date.now()
+  const nowIso = new Date(nowMs).toISOString()
+  const horizonEndIso = getUpcomingHorizonEndIso(nowMs)
+
+  const liveQuery = supabase
     .from('matches')
     .select(FEATURED_MATCH_COLUMNS)
     .eq('event_id', eventId)
+    .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
+    .eq('is_final', false)
     .order('kickoff_at', { ascending: false })
-    .limit(200)
+    .limit(EVENT_SLIDER_MATCH_LIMIT)
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  // Query-level horizon: only upcoming kickoffs in (now, now+30d].
+  const upcomingQuery = supabase
+    .from('matches')
+    .select(FEATURED_MATCH_COLUMNS)
+    .eq('event_id', eventId)
+    .gt('kickoff_at', nowIso)
+    .lte('kickoff_at', horizonEndIso)
+    .eq('is_final', false)
+    .order('kickoff_at', { ascending: true })
+    .limit(EVENT_SLIDER_MATCH_LIMIT)
 
-  const nowMs = Date.now()
-  const filtered = filterEventSliderMatches(
-    (data ?? []) as FeaturedMatch[],
-    nowMs,
-  )
+  const completedQuery = EVENT_SLIDER_INCLUDE_COMPLETED_TEMPORARY
+    ? supabase
+        .from('matches')
+        .select(FEATURED_MATCH_COLUMNS)
+        .eq('event_id', eventId)
+        .eq('is_final', true)
+        .order('kickoff_at', { ascending: false })
+        .limit(EVENT_SLIDER_MATCH_LIMIT)
+    : null
+
+  const [liveResult, upcomingResult, completedResult] = await Promise.all([
+    liveQuery,
+    upcomingQuery,
+    completedQuery,
+  ])
+
+  if (liveResult.error) throw new Error(liveResult.error.message)
+  if (upcomingResult.error) throw new Error(upcomingResult.error.message)
+  if (completedResult?.error) throw new Error(completedResult.error.message)
+
+  const merged = dedupeMatchesById([
+    ...((liveResult.data ?? []) as FeaturedMatch[]),
+    ...((upcomingResult.data ?? []) as FeaturedMatch[]),
+    ...((completedResult?.data ?? []) as FeaturedMatch[]),
+  ])
+
+  const filtered = filterEventSliderMatches(merged, nowMs)
   return sortEventSliderMatches(filtered, nowMs).slice(
     0,
     EVENT_SLIDER_MATCH_LIMIT,
