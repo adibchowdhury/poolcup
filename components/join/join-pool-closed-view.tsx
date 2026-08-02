@@ -15,7 +15,7 @@ export function JoinPoolClosedView({
   return (
     <main
       className={cn(
-        'flex min-h-screen flex-col items-center justify-center bg-[#080b0f] px-4 py-10',
+        'flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10',
         MOBILE_BOTTOM_NAV_PAD_CLASS,
       )}
     >

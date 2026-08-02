@@ -661,12 +661,7 @@ export function GlobalMatchDetailView({
 
   return (
     <div className={cn('min-h-screen bg-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}>
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-match-surface/40 blur-3xl" />
-        <div className="absolute right-20 top-40 h-96 w-96 rounded-full bg-[#ffb300]/5 blur-3xl" />
-      </div>
-
-      <div className="relative z-10" id="main-content">
+      <div className="relative" id="main-content">
         <header className="sticky top-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
           <div className="mx-auto max-w-4xl px-4 py-2.5 sm:py-3">
             <div className="flex items-center gap-3">

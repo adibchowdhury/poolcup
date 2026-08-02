@@ -43,7 +43,7 @@ export default function PredictMatchesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080b0f] pb-24 pt-20">
+    <div className="min-h-screen bg-background pb-24 pt-20">
       <div className="max-w-lg mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

@@ -74,7 +74,7 @@ function CreateAccountPageContent() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080b0f] px-4">
+    <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl">
         <div className="flex justify-center">
           <PoolCupLogo />

@@ -229,7 +229,7 @@ export default function JoinPoolPage() {
     return (
       <main
         className={cn(
-          'min-h-screen bg-[#080b0f] flex items-center justify-center',
+          'min-h-screen bg-background flex items-center justify-center',
           MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
@@ -242,7 +242,7 @@ export default function JoinPoolPage() {
     return (
       <main
         className={cn(
-          'min-h-screen bg-[#080b0f] flex items-center justify-center px-4',
+          'min-h-screen bg-background flex items-center justify-center px-4',
           MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
@@ -269,7 +269,7 @@ export default function JoinPoolPage() {
     return (
       <main
         className={cn(
-          'min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-10',
+          'min-h-screen bg-background flex flex-col items-center justify-center px-4 py-10',
           MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
@@ -350,7 +350,7 @@ export default function JoinPoolPage() {
     return (
       <main
         className={cn(
-          'flex min-h-screen items-center justify-center bg-[#080b0f]',
+          'flex min-h-screen items-center justify-center bg-background',
           MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
@@ -362,7 +362,7 @@ export default function JoinPoolPage() {
   return (
     <main
       className={cn(
-        'min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10',
+        'min-h-screen bg-background flex items-center justify-center px-4 py-10',
         MOBILE_BOTTOM_NAV_PAD_CLASS,
       )}
     >

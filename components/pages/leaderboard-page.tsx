@@ -14,7 +14,7 @@ const leaderboardData = [
 
 export default function LeaderboardPage() {
   return (
-    <div className="min-h-screen bg-[#080b0f] pt-20 pb-10">
+    <div className="min-h-screen bg-background pt-20 pb-10">
       <div className="max-w-lg mx-auto px-4">
         {/* Header */}
         <div className="mb-6">

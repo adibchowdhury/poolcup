@@ -6,7 +6,7 @@
 /* PoolCup Design System - Dark Stadium Theme */
 :root {
   /* Core colors */
-  --background: #080b0f;
+  --background: #131313;
   --foreground: #f0f4f8;
   --card: #111a27;
   --card-foreground: #f0f4f8;
@@ -123,23 +123,6 @@
 /* Space Mono for scores and timers */
 .font-mono {
   font-family: 'Space Mono', monospace;
-}
-
-/* Radial glow effect */
-.glow-green {
-  background: radial-gradient(ellipse at top center, rgba(0, 230, 118, 0.15) 0%, transparent 60%);
-}
-
-.glow-green-subtle {
-  background: radial-gradient(ellipse at center, rgba(0, 230, 118, 0.08) 0%, transparent 70%);
-}
-
-/* Field line pattern */
-.field-pattern {
-  background-image: 
-    linear-gradient(rgba(0, 230, 118, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 230, 118, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
 }
 
 /* Score input styling */
@@ -445,8 +428,8 @@
   background: radial-gradient(
     ellipse 90% 80% at 50% 50%,
     transparent 30%,
-    rgba(8, 11, 15, 0.5) 75%,
-    rgba(8, 11, 15, 0.9) 100%
+    rgba(19, 19, 19, 0.5) 75%,
+    rgba(19, 19, 19, 0.9) 100%
   );
 }
 

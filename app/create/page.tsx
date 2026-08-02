@@ -375,7 +375,7 @@ export default function CreatePoolPage() {
     return (
       <main
         className={cn(
-          'min-h-screen bg-[#080b0f] flex items-center justify-center',
+          'min-h-screen bg-background flex items-center justify-center',
           MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
@@ -393,7 +393,7 @@ export default function CreatePoolPage() {
   return (
     <main
       className={cn(
-        'min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-10',
+        'min-h-screen bg-background flex items-center justify-center px-4 py-10',
         MOBILE_BOTTOM_NAV_PAD_CLASS,
       )}
     >

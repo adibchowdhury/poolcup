@@ -11,7 +11,7 @@ export default function CreatePoolPage() {
   const [selectedStyle, setSelectedStyle] = useState("winner")
 
   return (
-    <div className="min-h-screen bg-[#080b0f] flex items-center justify-center px-4 py-20">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-md">
         {/* Card */}
         <div className="bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl overflow-hidden">

@@ -48,7 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#080b0f',
+  themeColor: '#131313',
 }
 
 export default function RootLayout({
@@ -57,9 +57,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-[#080b0f]">
+    <html lang="en" className="bg-background">
       <body
-        className="font-sans antialiased bg-[#080b0f] text-[#f0f4f8]"
+        className="font-sans antialiased bg-background text-[#f0f4f8]"
         suppressHydrationWarning
       >
         <script

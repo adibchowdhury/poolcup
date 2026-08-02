@@ -14,7 +14,7 @@ const tabs = [
 
 export default function MobileHomePage() {
   return (
-    <div className="min-h-screen bg-[#080b0f] flex flex-col items-center justify-center px-4 py-20">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-20">
       {/* Phone Frame */}
       <div className="relative">
         {/* Phone Shell */}

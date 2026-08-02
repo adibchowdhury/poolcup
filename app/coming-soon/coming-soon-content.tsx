@@ -131,14 +131,6 @@ function LaunchCountdown() {
 export function ComingSoonContent() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-6 py-16">
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        aria-hidden
-      >
-        <div className="absolute left-1/4 top-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 h-96 w-96 rounded-full bg-[#ffb300]/10 blur-3xl" />
-      </div>
-
       <main className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

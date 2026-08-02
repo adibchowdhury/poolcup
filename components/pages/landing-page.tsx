@@ -116,7 +116,7 @@ export default function LandingPage() {
   }, [accountDeletedMessage])
 
   return (
-    <div className="overflow-x-hidden bg-[#080b0f]">
+    <div className="overflow-x-hidden bg-background">
       {accountDeletedMessage && (
         <div className="relative border-b border-primary/30 bg-primary/10 px-4 py-3 text-center text-sm text-[#f0f4f8]">
           Your account has been deleted.
@@ -131,9 +131,9 @@ export default function LandingPage() {
         </div>
       )}
       {/* ===== SECTION 1: HERO ===== */}
-      <section className="relative min-h-screen overflow-hidden bg-[#080b0f]">
+      <section className="relative min-h-screen overflow-hidden bg-background">
         <HeroBackgroundCarousel />
-        <div className="pointer-events-none absolute inset-0 bg-[#080b0f]/70" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 bg-background/70" aria-hidden />
         {/* Layered background */}
         <div className="hero-glow-layer hero-glow-primary" aria-hidden />
         <div className="hero-glow-layer hero-glow-secondary" aria-hidden />
@@ -355,7 +355,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== PREDICT EVERY MATCH ===== */}
-      <section className="py-24 md:py-32 bg-[#080b0f]">
+      <section className="py-24 md:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* UI Preview - Left */}
@@ -604,7 +604,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <SiteFooter backgroundClass="bg-[#080b0f]" />
+      <SiteFooter backgroundClass="bg-background" />
     </div>
   )
 }
