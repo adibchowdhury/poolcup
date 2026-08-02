@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -15,10 +14,6 @@ import {
   type BadgeUnlockItem,
 } from '@/components/achievements/badge-unlock-modal'
 import type { UserAchievementsData } from '@/src/lib/fetch-user-achievements'
-import {
-  TEST_FORCE_WELCOME_BADGE,
-  TEST_WELCOME_ABOARD_BADGE,
-} from '@/src/lib/badge-unlock-test'
 
 type BadgeUnlockContextValue = {
   /** Enqueue newly-awarded badges from a fetchUserAchievements result (deduped). */
@@ -75,21 +70,6 @@ export function BadgeUnlockProvider({ children }: { children: ReactNode }) {
     },
     [enqueueBadges],
   )
-
-  // TEMPORARY TEST CODE — force Welcome Aboard celebration on every mount.
-  useEffect(() => {
-    if (!TEST_FORCE_WELCOME_BADGE) return
-
-    // Bypass session dedupe so the design can be re-tested on each load.
-    seenIdsRef.current.delete(TEST_WELCOME_ABOARD_BADGE.id)
-    enqueueBadges([
-      {
-        id: TEST_WELCOME_ABOARD_BADGE.id,
-        name: TEST_WELCOME_ABOARD_BADGE.name,
-        xp_value: TEST_WELCOME_ABOARD_BADGE.xp_value,
-      },
-    ])
-  }, [enqueueBadges])
 
   const dismissCurrent = useCallback(() => {
     setQueue((current) => current.slice(1))
