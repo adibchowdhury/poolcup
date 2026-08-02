@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Lock, Loader2 } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
+import {
+  BadgeUnlockProvider,
+  useBadgeUnlock,
+} from '@/components/achievements/badge-unlock-provider'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
@@ -83,7 +87,16 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
 }
 
 export function AchievementsPageView() {
+  return (
+    <BadgeUnlockProvider>
+      <AchievementsPageContent />
+    </BadgeUnlockProvider>
+  )
+}
+
+function AchievementsPageContent() {
   const { user, loading: authLoading } = useAuth()
+  const { enqueueFromAchievementsData } = useBadgeUnlock()
   const [data, setData] = useState<UserAchievementsData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -101,13 +114,14 @@ export function AchievementsPageView() {
     void fetchUserAchievements(supabase, user.id).then((result) => {
       if (cancelled) return
       setData(result)
+      enqueueFromAchievementsData(result)
       setLoading(false)
     })
 
     return () => {
       cancelled = true
     }
-  }, [authLoading, user?.id])
+  }, [authLoading, user?.id, enqueueFromAchievementsData])
 
   if (authLoading || loading) {
     return (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
+import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
   Award,
   CheckCircle2,
@@ -154,6 +155,7 @@ export function ProfileShowcase({
   const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>([])
   const [loading, setLoading] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
+  const badgeUnlock = useBadgeUnlockOptional()
 
   useEffect(() => {
     if (!active || !userId) return
@@ -165,6 +167,7 @@ export function ProfileShowcase({
       const progress = await fetchUserAchievementProgress(supabase, userId)
       if (cancelled) return
       setData(result)
+      badgeUnlock?.enqueueFromAchievementsData(result)
       setProgressRows(progress)
       setLoading(false)
     })()
@@ -172,7 +175,7 @@ export function ProfileShowcase({
     return () => {
       cancelled = true
     }
-  }, [active, userId])
+  }, [active, userId, badgeUnlock])
 
   const progressById = useMemo(
     () =>

@@ -17,6 +17,7 @@ import {
 } from '@/components/dashboard/feed/dashboard-feed'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/src/lib/supabase'
+import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
   fetchUserAchievements,
   type UserAchievementsData,
@@ -66,6 +67,7 @@ function CompactStat({
 export function AchievementsSection({ userId }: AchievementsSectionProps) {
   const [data, setData] = useState<UserAchievementsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const badgeUnlock = useBadgeUnlockOptional()
 
   useEffect(() => {
     if (!userId) {
@@ -80,13 +82,14 @@ export function AchievementsSection({ userId }: AchievementsSectionProps) {
     void fetchUserAchievements(supabase, userId).then((result) => {
       if (cancelled) return
       setData(result)
+      badgeUnlock?.enqueueFromAchievementsData(result)
       setLoading(false)
     })
 
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, badgeUnlock])
 
   const level = data?.level ?? xpToLevel(0)
   const totalXp = data?.totalXp ?? 0

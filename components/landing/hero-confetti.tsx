@@ -56,7 +56,11 @@ function buildConfettiPieces(): ConfettiPiece[] {
   }))
 }
 
-export function HeroConfetti() {
+type HeroConfettiProps = {
+  className?: string
+}
+
+export function HeroConfetti({ className }: HeroConfettiProps) {
   const [mounted, setMounted] = useState(false)
   const pieces = useMemo(() => buildConfettiPieces(), [])
 
@@ -68,7 +72,10 @@ export function HeroConfetti() {
 
   return (
     <div
-      className="hero-confetti pointer-events-none absolute inset-0 z-[1] overflow-hidden"
+      className={cn(
+        'hero-confetti pointer-events-none absolute inset-0 z-[1] overflow-hidden',
+        className,
+      )}
       aria-hidden
     >
       {pieces.map((piece, index) => {

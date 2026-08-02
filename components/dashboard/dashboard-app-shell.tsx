@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { BadgeUnlockProvider } from '@/components/achievements/badge-unlock-provider'
 import { useDashboardSignOut } from '@/components/dashboard-sign-out'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { PoolCupLogo } from '@/components/poolcup-logo'
@@ -136,6 +137,7 @@ export function DashboardAppShell({
   }, [settingsOpen])
 
   return (
+    <BadgeUnlockProvider>
     <div className="min-h-screen bg-background">
       <div className="relative">
         <div className="z-50 md:sticky md:top-0">
@@ -392,5 +394,6 @@ export function DashboardAppShell({
         </main>
       </div>
     </div>
+    </BadgeUnlockProvider>
   )
 }
