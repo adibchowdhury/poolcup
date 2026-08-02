@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { achievementBadgeImageSrc } from '@/src/lib/achievement-badge-art'
 import { xpToLevel, type XpLevel } from '@/src/lib/levels'
 
-/** Shared placeholder until real badge art lands. */
-export const ACHIEVEMENT_PLACEHOLDER_IMAGE = '/badges/placeholder-badge.svg'
+export { ACHIEVEMENT_PLACEHOLDER_IMAGE } from '@/src/lib/achievement-badge-art'
 
 export type AchievementBuildable = 'green' | 'yellow'
 
@@ -159,7 +159,7 @@ export async function fetchUserAchievements(
       buildable: row.buildable === 'yellow' ? 'yellow' : 'green',
       earned: earned_at != null,
       earned_at,
-      imageUrl: ACHIEVEMENT_PLACEHOLDER_IMAGE,
+      imageUrl: achievementBadgeImageSrc(row.id),
     }
   })
 

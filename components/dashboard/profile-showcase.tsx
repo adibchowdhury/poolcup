@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
+import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import {
   Award,
   CheckCircle2,
@@ -439,14 +439,7 @@ export function ProfileShowcase({
                         !badge.earned && 'opacity-55 grayscale',
                       )}
                     >
-                      <Image
-                        src={badge.imageUrl}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 object-contain"
-                        unoptimized
-                      />
+                      <AchievementBadgeArt achievementId={badge.id} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">

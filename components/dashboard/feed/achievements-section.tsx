@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
+import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import {
   ArrowRight,
   Award,
@@ -215,14 +215,9 @@ export function AchievementsSection({ userId }: AchievementsSectionProps) {
                       key={badge.id}
                       className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-background/40 p-2.5"
                     >
-                      <Image
-                        src={badge.imageUrl}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 shrink-0 object-contain"
-                        unoptimized
-                      />
+                      <div className="h-10 w-10 shrink-0">
+                        <AchievementBadgeArt achievementId={badge.id} />
+                      </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">
                           {badge.name}

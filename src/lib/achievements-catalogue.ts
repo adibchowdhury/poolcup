@@ -9,6 +9,10 @@
  * do not invent awarding logic here.
  */
 
+import { achievementBadgeImageSrc } from '@/src/lib/achievement-badge-art'
+
+export { ACHIEVEMENT_PLACEHOLDER_IMAGE } from '@/src/lib/achievement-badge-art'
+
 export const ACHIEVEMENT_CATEGORIES = [
   'Prediction Volume',
   'Accuracy / Correctness',
@@ -30,18 +34,15 @@ export type AchievementBadge = {
   description: string
   category: AchievementCategory
   tier?: AchievementTier
-  /** Per-badge art path — currently a shared placeholder SVG. */
+  /** Id-based art path (`/badges/badge_<id>.png`); UI falls back to placeholder on miss. */
   imageUrl: string
 }
-
-/** Shared placeholder until real badge art lands. */
-export const ACHIEVEMENT_PLACEHOLDER_IMAGE = '/badges/placeholder-badge.svg'
 
 function badge(
   partial: Omit<AchievementBadge, 'imageUrl'> & { imageUrl?: string },
 ): AchievementBadge {
   return {
-    imageUrl: ACHIEVEMENT_PLACEHOLDER_IMAGE,
+    imageUrl: achievementBadgeImageSrc(partial.id),
     ...partial,
   }
 }
