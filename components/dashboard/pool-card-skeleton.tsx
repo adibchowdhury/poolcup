@@ -49,7 +49,7 @@ export function ActivePoolsSkeleton() {
   return (
     <div
       className={cn(
-        '-mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+        '@container -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
         '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
         '[scrollbar-width:thin]',
         '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',
@@ -59,10 +59,10 @@ export function ActivePoolsSkeleton() {
       aria-label="Loading your pools"
     >
       <div className="flex w-max min-w-full gap-4 px-4 pb-1">
-        <div className="w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
+        <div className="w-[calc(100cqi/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
           <PoolCardSkeleton />
         </div>
-        <div className="w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
+        <div className="w-[calc(100cqi/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]">
           <PoolCardSkeleton />
         </div>
       </div>

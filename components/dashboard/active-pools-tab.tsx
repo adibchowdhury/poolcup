@@ -8,12 +8,17 @@ import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useCallback, useEffect, useState } from 'react'
 
-/** ~1.15 cards visible on mobile; fixed widths on larger breakpoints for multi-card peek. */
+/**
+ * ~1.15 cards visible on mobile; fixed widths on larger breakpoints for multi-card peek.
+ * Size from the scrollport via container queries (100cqi) — not 100vw — so Pool-tab
+ * cards cannot widen the document and disturb viewport-fixed overlays (Profile/Chat
+ * hide this carousel, which is why the modal looked fine there).
+ */
 const POOL_CAROUSEL_ITEM_CLASS =
-  'w-[calc((100vw-2rem)/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]'
+  'w-[calc(100cqi/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]'
 
 const POOL_CAROUSEL_SCROLL_CLASS = cn(
-  '-mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+  '@container -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
   '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
   '[scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]',
   '[&::-webkit-scrollbar]:h-1',

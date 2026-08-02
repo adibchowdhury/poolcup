@@ -26,20 +26,10 @@ const CONFETTI_COLORS = ['#00e676', '#ffb300', '#f0f4f8', '#34d399']
 const INITIAL_BURST_MS = 550
 
 /**
- * Root cause of the bottom-right → center snap (previous attempts missed this):
- *
- * 1) `animate-in zoom-in-95 fade-in` ran an enter transform on the badge
- *    (`scale` via tw-animate `enter` keyframes). That made the celebration
- *    read as growing from an off-center first paint into place.
- * 2) `canvas-confetti` with `useWorker: true` calls `transferControlToOffscreen`
- *    on the modal canvas and sets large `canvas.width`/`height` bitmaps. During
- *    worker init (~1s), that canvas can disrupt layout next to flex-centered
- *    content, so the block appears anchored bottom-right until the worker
- *    settles and layout recalculates to center.
- *
- * Fix: portal to `document.body`, center with absolute `left/top 50%` +
- * translate (no flex, no enter animation), confetti on a non-worker canvas
- * that never participates in document/flex layout.
+ * Mount: createPortal → document.body (single fixed root).
+ * Centering: grid place-items-center on an inset-0 layer.
+ * Scroll-lock: overflow:hidden on body only — never body padding-right
+ * (that shifts fixed body-children and mis-centers on scrolling tabs).
  */
 function fireShortBurst(fire: confetti.CreateTypes) {
   void fire({
@@ -75,12 +65,26 @@ function fireShortBurst(fire: confetti.CreateTypes) {
   }, 120)
 }
 
+function sizeCanvasToViewport(canvas: HTMLCanvasElement) {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  // Fill the fixed portal root — never leave the HTML 300×150 default.
+  canvas.style.position = 'absolute'
+  canvas.style.inset = '0'
+  canvas.style.width = '100%'
+  canvas.style.height = '100%'
+  canvas.style.pointerEvents = 'none'
+  if (canvas.width !== w) canvas.width = w
+  if (canvas.height !== h) canvas.height = h
+}
+
 export function BadgeUnlockModal({
   badge,
   onDismiss,
   remainingCount = 0,
 }: BadgeUnlockModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const [portalReady, setPortalReady] = useState(false)
   const [showRain, setShowRain] = useState(false)
 
@@ -91,18 +95,31 @@ export function BadgeUnlockModal({
   useLayoutEffect(() => {
     if (!badge) return
 
+    // Scroll-lock only — do NOT pad body for the scrollbar. padding-right on
+    // document.body shifts this fixed portal (a body child) and parks the
+    // modal in the bottom-right on tall/scrolling tabs (Pool). Brief page
+    // reflow when the scrollbar disappears is acceptable.
     const previousOverflow = document.body.style.overflow
-    const previousPaddingRight = document.body.style.paddingRight
-    const scrollbarWidth =
-      window.innerWidth - document.documentElement.clientWidth
     document.body.style.overflow = 'hidden'
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`
+
+    if (canvasRef.current) {
+      sizeCanvasToViewport(canvasRef.current)
+    }
+
+    // Dev-only sanity: portal root must be a direct child of document.body.
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      rootRef.current &&
+      rootRef.current.parentElement !== document.body
+    ) {
+      console.warn(
+        '[BadgeUnlockModal] portal root is not mounted on document.body',
+        rootRef.current.parentElement,
+      )
     }
 
     return () => {
       document.body.style.overflow = previousOverflow
-      document.body.style.paddingRight = previousPaddingRight
     }
   }, [badge])
 
@@ -112,18 +129,17 @@ export function BadgeUnlockModal({
     setShowRain(false)
 
     const canvas = canvasRef.current
-    // Keep CSS box = overlay; never let bitmap size affect layout.
-    canvas.style.position = 'absolute'
-    canvas.style.inset = '0'
-    canvas.style.width = '100%'
-    canvas.style.height = '100%'
-    canvas.style.pointerEvents = 'none'
+    sizeCanvasToViewport(canvas)
 
-    // useWorker:false — OffscreenCanvas transfer was contributing to the layout snap.
+    // resize:false — we own sizing via sizeCanvasToViewport + window resize.
+    // resize:true races a rAF re-measure against our manual bitmap size (~snap).
     const fire = confetti.create(canvas, {
-      resize: true,
+      resize: false,
       useWorker: false,
     })
+
+    const onResize = () => sizeCanvasToViewport(canvas)
+    window.addEventListener('resize', onResize)
 
     fireShortBurst(fire)
 
@@ -140,6 +156,7 @@ export function BadgeUnlockModal({
       window.clearTimeout(rainTimer)
       fire.reset()
       window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('resize', onResize)
     }
   }, [badge?.id, onDismiss])
 
@@ -147,86 +164,110 @@ export function BadgeUnlockModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[120] overflow-hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="badge-unlock-title"
-      aria-describedby="badge-unlock-subtitle"
+      ref={rootRef}
+      data-badge-unlock-root
+      className="pointer-events-none fixed inset-0 z-[120]"
+      // Viewport-fixed — measured from the viewport, not body padding box.
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 'auto',
+        height: 'auto',
+      }}
     >
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        className="pointer-events-auto absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={onDismiss}
         aria-hidden
       />
 
-      {/* Burst canvas — absolute overlay only; not a flex/layout participant */}
+      {/* Confetti burst — bitmap sized to innerWidth/innerHeight; CSS fills root */}
       <canvas
         ref={canvasRef}
-        className="pointer-events-none absolute inset-0 z-20"
+        data-badge-unlock-canvas
+        className="pointer-events-none absolute inset-0 z-[1]"
+        width={1920}
+        height={1080}
         aria-hidden
       />
 
-      {/* Continuous gentle rain — same effect as the homepage hero */}
+      {/* Continuous gentle rain — homepage hero effect */}
       {showRain ? (
-        <HeroConfetti className="z-[15]" />
+        <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
+          <HeroConfetti />
+        </div>
       ) : null}
 
       <button
         type="button"
         onClick={onDismiss}
-        className="absolute right-4 top-4 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-background/70 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+        className="pointer-events-auto absolute right-4 top-4 z-[4] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-background/70 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
         aria-label="Close"
       >
         <X className="h-5 w-5" aria-hidden />
       </button>
 
       {/*
-        Center from first paint via absolute + translate — no flex centering,
-        no enter/zoom animation that can read as an off-center start.
+        Content — absolute inset-0 + grid center (no translate-based centering).
+        Lives under the body-portaled root so Pool-tab filters/transforms cannot
+        become its containing block.
       */}
       <div
-        className="absolute left-1/2 top-1/2 z-10 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 px-4 text-center"
-        onClick={(event) => event.stopPropagation()}
+        className="pointer-events-none absolute inset-0 z-[3] grid place-items-center px-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="badge-unlock-title"
+        aria-describedby="badge-unlock-subtitle"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
-          Congratulations!
-        </p>
-
-        <div className="relative mx-auto mt-6 h-40 w-40 sm:h-48 sm:w-48">
-          <div
-            className="pointer-events-none absolute inset-[-18%] rounded-full bg-primary/25 blur-3xl"
-            aria-hidden
-          />
-          <div className="relative h-full w-full drop-shadow-[0_0_28px_rgba(0,230,118,0.35)]">
-            <AchievementBadgeArt achievementId={badge.id} />
-          </div>
-        </div>
-
-        <h2
-          id="badge-unlock-title"
-          className="mt-6 font-display text-3xl tracking-wide text-foreground sm:text-4xl"
+        <div
+          data-badge-unlock-content
+          className="pointer-events-auto w-full max-w-sm text-center"
+          onClick={(event) => event.stopPropagation()}
         >
-          {badge.name}
-        </h2>
-        <p
-          id="badge-unlock-subtitle"
-          className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-primary"
-        >
-          New Badge!
-        </p>
-        {badge.xp_value > 0 ? (
-          <p className="mt-2 text-sm tabular-nums text-primary/85">
-            +{badge.xp_value} XP
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Congratulations!
           </p>
-        ) : null}
 
-        <Button
-          type="button"
-          className="mt-8 min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={onDismiss}
-        >
-          {remainingCount > 0 ? 'Next badge' : 'Continue'}
-        </Button>
+          <div className="relative mx-auto mt-6 h-40 w-40 sm:h-48 sm:w-48">
+            <div
+              className="pointer-events-none absolute inset-[-18%] rounded-full bg-primary/25 blur-3xl"
+              aria-hidden
+            />
+            <div className="relative h-full w-full drop-shadow-[0_0_28px_rgba(0,230,118,0.35)]">
+              <AchievementBadgeArt achievementId={badge.id} />
+            </div>
+          </div>
+
+          <h2
+            id="badge-unlock-title"
+            className="mt-6 font-display text-3xl tracking-wide text-foreground sm:text-4xl"
+          >
+            {badge.name}
+          </h2>
+          <p
+            id="badge-unlock-subtitle"
+            className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-primary"
+          >
+            New Badge!
+          </p>
+          {badge.xp_value > 0 ? (
+            <p className="mt-2 text-sm tabular-nums text-primary/85">
+              +{badge.xp_value} XP
+            </p>
+          ) : null}
+
+          <Button
+            type="button"
+            className="mt-8 min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={onDismiss}
+          >
+            {remainingCount > 0 ? 'Next badge' : 'Continue'}
+          </Button>
+        </div>
       </div>
     </div>,
     document.body,
