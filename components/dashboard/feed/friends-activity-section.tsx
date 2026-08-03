@@ -1,36 +1,20 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Loader2 } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
+import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
-
-export type FriendsActivityKind =
-  | 'badge_earned'
-  | 'pool_joined'
-  | 'level_reached'
-
-export type FriendsActivityItem = {
-  id: string
-  kind: FriendsActivityKind
-  /** ISO timestamp used for Today / Yesterday / This Week grouping. */
-  occurredAt: string
-  userId: string
-  displayName: string
-  avatar: string
-  /** badge_earned */
-  badgeName?: string
-  badgeAchievementId?: string
-  /** pool_joined */
-  poolName?: string
-  /** Absolute or public path for pool crest thumbnail. */
-  poolImageSrc?: string | null
-  /** level_reached */
-  level?: number
-}
+import {
+  getFriendActivity,
+  type FriendActivityRow,
+} from '@/src/lib/friendships'
+import { supabase } from '@/src/lib/supabase'
 
 type ActivityGroupLabel = 'Today' | 'Yesterday' | 'This Week'
 
@@ -41,124 +25,40 @@ const ACTIVITY_GROUP_LIMITS: Record<ActivityGroupLabel, number> = {
   'This Week': 1,
 }
 
+const FETCH_LIMIT = 30
+
 type ActivityGroup = {
   label: ActivityGroupLabel
-  items: FriendsActivityItem[]
+  items: FriendActivityRow[]
 }
-
-function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
-}
-
-function daysAgo(days: number, hour = 14): string {
-  const d = new Date()
-  d.setDate(d.getDate() - days)
-  d.setHours(hour, 20, 0, 0)
-  return d.toISOString()
-}
-
-/**
- * TEMPORARY — replace with real friend activity RPC
- * (friends' badge earns + pool joins + level-ups).
- * Design-scaffolding mock only; do not ship as product data.
- */
-const MOCK_FRIENDS_ACTIVITY: FriendsActivityItem[] = [
-  {
-    id: 'mock-today-1',
-    kind: 'badge_earned',
-    occurredAt: hoursAgo(1.5),
-    userId: '00000000-0000-4000-8000-000000000001',
-    displayName: 'Michael Wu',
-    avatar: 'goal_keeper.png',
-    badgeName: 'Sharpshooter',
-    badgeAchievementId: 'picture_perfect',
-  },
-  {
-    id: 'mock-today-2',
-    kind: 'pool_joined',
-    occurredAt: hoursAgo(4),
-    userId: '00000000-0000-4000-8000-000000000002',
-    displayName: 'Jessica',
-    avatar: 'cheerleader.png',
-    poolName: 'Champions League Official',
-    poolImageSrc: '/avatars/goal_keeper_red.png',
-  },
-  {
-    id: 'mock-today-3',
-    kind: 'level_reached',
-    occurredAt: hoursAgo(6),
-    userId: '00000000-0000-4000-8000-000000000003',
-    displayName: 'Priya Patel',
-    avatar: 'white_skin_avatar_girl.png',
-    level: 7,
-  },
-  {
-    id: 'mock-yesterday-1',
-    kind: 'badge_earned',
-    occurredAt: daysAgo(1, 19),
-    userId: '00000000-0000-4000-8000-000000000004',
-    displayName: 'Marcus Cole',
-    avatar: 'brown_skin_avatar.png',
-    badgeName: 'Welcome Aboard',
-    badgeAchievementId: 'welcome_aboard',
-  },
-  {
-    id: 'mock-yesterday-2',
-    kind: 'pool_joined',
-    occurredAt: daysAgo(1, 11),
-    userId: '00000000-0000-4000-8000-000000000005',
-    displayName: 'Elena Rossi',
-    avatar: 'white_skin_avatar.png',
-    poolName: 'Office World Cup',
-    poolImageSrc: '/avatars/goal_keeper.png',
-  },
-  {
-    id: 'mock-week-1',
-    kind: 'level_reached',
-    occurredAt: daysAgo(3, 16),
-    userId: '00000000-0000-4000-8000-000000000006',
-    displayName: 'Diego Alvarez',
-    avatar: 'goal_keeper_red.png',
-    level: 4,
-  },
-  {
-    id: 'mock-week-2',
-    kind: 'badge_earned',
-    occurredAt: daysAgo(4, 10),
-    userId: '00000000-0000-4000-8000-000000000001',
-    displayName: 'Michael Wu',
-    avatar: 'goal_keeper.png',
-    badgeName: 'First Steps',
-    badgeAchievementId: 'first_steps',
-  },
-  {
-    id: 'mock-week-3',
-    kind: 'pool_joined',
-    occurredAt: daysAgo(5, 20),
-    userId: '00000000-0000-4000-8000-000000000002',
-    displayName: 'Jessica',
-    avatar: 'cheerleader.png',
-    poolName: 'World Cup 2026 Predictions',
-    poolImageSrc: '/avatars/cheerleader.png',
-  },
-]
 
 function startOfLocalDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
-function activityActionText(item: FriendsActivityItem): string {
-  if (item.kind === 'badge_earned') {
-    return `earned the ${item.badgeName ?? 'achievement'} badge`
+function activityActionText(item: FriendActivityRow): string {
+  if (item.activity_type === 'badge') {
+    return `earned the ${item.title?.trim() || 'achievement'} badge`
   }
-  if (item.kind === 'pool_joined') {
-    return `joined ${item.poolName ?? 'a pool'}`
-  }
-  return `reached Level ${item.level ?? '?'}`
+  return `joined ${item.title?.trim() || 'a pool'}`
 }
 
-function groupFriendsActivity(
-  items: FriendsActivityItem[],
+function activityRowKey(item: FriendActivityRow, index: number): string {
+  return [
+    item.activity_type,
+    item.actor_id,
+    item.ref_id ?? '',
+    item.occurred_at,
+    String(index),
+  ].join(':')
+}
+
+/**
+ * Group by calendar day buckets, newest first within each, then cap.
+ * Today = same day; Yesterday = previous day; This Week = last 7 days before yesterday.
+ */
+export function groupFriendActivity(
+  items: FriendActivityRow[],
   now = new Date(),
 ): ActivityGroup[] {
   const todayStart = startOfLocalDay(now)
@@ -167,18 +67,18 @@ function groupFriendsActivity(
   const weekStart = new Date(todayStart)
   weekStart.setDate(weekStart.getDate() - 6)
 
-  const buckets: Record<ActivityGroupLabel, FriendsActivityItem[]> = {
+  const buckets: Record<ActivityGroupLabel, FriendActivityRow[]> = {
     Today: [],
     Yesterday: [],
     'This Week': [],
   }
 
   const sorted = [...items].sort(
-    (a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt),
+    (a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at),
   )
 
   for (const item of sorted) {
-    const at = new Date(item.occurredAt)
+    const at = new Date(item.occurred_at)
     if (Number.isNaN(at.getTime())) continue
     if (at >= todayStart) {
       buckets.Today.push(item)
@@ -198,58 +98,61 @@ function groupFriendsActivity(
     .filter((group) => group.items.length > 0)
 }
 
-function ActivityThumbnail({ item }: { item: FriendsActivityItem }) {
-  if (item.kind === 'badge_earned' && item.badgeAchievementId) {
+function ActivityThumbnail({ item }: { item: FriendActivityRow }) {
+  if (item.activity_type === 'badge' && item.ref_id) {
     return (
       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/35 p-0.5">
         <AchievementBadgeArt
-          achievementId={item.badgeAchievementId}
-          alt={item.badgeName ?? 'Badge'}
+          achievementId={item.ref_id}
+          alt={item.title ?? 'Badge'}
           className="h-full w-full"
         />
       </div>
     )
   }
 
-  if (item.kind === 'pool_joined' && item.poolImageSrc) {
+  if (item.activity_type === 'pool_join' && item.pool_avatar) {
     return (
-      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/35">
-        {/* eslint-disable-next-line @next/next/no-img-element -- mock public asset */}
-        <img
-          src={item.poolImageSrc}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      </div>
+      <PoolAvatarImage
+        avatar={item.pool_avatar}
+        size="sm"
+        className="h-9 w-9 rounded-lg border-white/10"
+      />
     )
   }
 
   return null
 }
 
-function FriendsActivityRow({ item }: { item: FriendsActivityItem }) {
+function FriendsActivityRow({ item }: { item: FriendActivityRow }) {
+  const name = item.actor_name?.trim() || 'PoolCup player'
   const action = activityActionText(item)
 
   return (
     <li className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
       <UserProfileLink
-        userId={item.userId}
-        ariaLabel={`${item.displayName}'s profile`}
+        userId={item.actor_id}
+        ariaLabel={`${name}'s profile`}
         className="shrink-0"
       >
         <UserAvatarImage
-          avatar={item.avatar}
+          avatar={item.actor_avatar}
+          customAvatarUrl={item.actor_custom_avatar_url}
           className="h-9 w-9"
-          imgClassName="object-contain object-bottom p-0.5"
+          imgClassName={
+            item.actor_custom_avatar_url
+              ? 'object-cover'
+              : 'object-contain object-bottom p-0.5'
+          }
         />
       </UserProfileLink>
 
       <p className="min-w-0 flex-1 truncate text-sm leading-snug">
         <UserProfileLink
-          userId={item.userId}
+          userId={item.actor_id}
           className="font-semibold text-foreground hover:underline"
         >
-          {item.displayName}
+          {name}
         </UserProfileLink>{' '}
         <span className="font-normal text-muted-foreground">{action}</span>
       </p>
@@ -259,12 +162,27 @@ function FriendsActivityRow({ item }: { item: FriendsActivityItem }) {
   )
 }
 
-/**
- * Dashboard feed: Friends Activity.
- * Currently driven by MOCK_FRIENDS_ACTIVITY — swap for real RPC next.
- */
+/** Dashboard feed: accepted friends' badge earns + pool joins. */
 export function FriendsActivitySection() {
-  const groups = groupFriendsActivity(MOCK_FRIENDS_ACTIVITY)
+  const [rows, setRows] = useState<FriendActivityRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+
+    void getFriendActivity(supabase, FETCH_LIMIT).then((next) => {
+      if (cancelled) return
+      setRows(next)
+      setLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const groups = useMemo(() => groupFriendActivity(rows), [rows])
 
   return (
     <DashboardFeedSection
@@ -279,10 +197,26 @@ export function FriendsActivitySection() {
         </Link>
       }
     >
-      {groups.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          No friend activity yet.
-        </p>
+      {loading ? (
+        <div
+          className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
+          aria-label="Loading friend activity"
+        >
+          <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+          Loading…
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            No friend activity yet. Add friends to see what they&apos;re up to.
+          </p>
+          <Link
+            href="/friends#find"
+            className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+          >
+            Find friends
+          </Link>
+        </div>
       ) : (
         <div className="space-y-5">
           {groups.map((group) => (
@@ -291,8 +225,11 @@ export function FriendsActivitySection() {
                 {group.label}
               </h3>
               <ul className="divide-y divide-white/[0.05]">
-                {group.items.map((item) => (
-                  <FriendsActivityRow key={item.id} item={item} />
+                {group.items.map((item, index) => (
+                  <FriendsActivityRow
+                    key={activityRowKey(item, index)}
+                    item={item}
+                  />
                 ))}
               </ul>
             </div>
@@ -302,6 +239,3 @@ export function FriendsActivitySection() {
     </DashboardFeedSection>
   )
 }
-
-/** Exported for the upcoming real-data swap / tests. */
-export { MOCK_FRIENDS_ACTIVITY, groupFriendsActivity }

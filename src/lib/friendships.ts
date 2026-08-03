@@ -53,6 +53,23 @@ export type UserSearchRow = {
   friendship_status: Exclude<FriendshipStatus, 'self'>
 }
 
+/** Friend social activity from get_friend_activity (badge earns + pool joins). */
+export type FriendActivityType = 'badge' | 'pool_join'
+
+export type FriendActivityRow = {
+  activity_type: FriendActivityType
+  actor_id: string
+  actor_name: string | null
+  actor_avatar: string | null
+  actor_custom_avatar_url: string | null
+  occurred_at: string
+  /** Badge name or pool name. */
+  title: string | null
+  /** achievement_id (badge) or pool_id (pool_join). */
+  ref_id: string | null
+  pool_avatar: string | null
+}
+
 function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
 }
@@ -146,6 +163,28 @@ function coerceUserSearchRow(raw: unknown): UserSearchRow | null {
     avatar: asString(row.avatar),
     custom_avatar_url: asString(row.custom_avatar_url),
     friendship_status: status,
+  }
+}
+
+function coerceFriendActivityRow(raw: unknown): FriendActivityRow | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const activityType = asString(row.activity_type)
+  if (activityType !== 'badge' && activityType !== 'pool_join') return null
+  const actorId = asString(row.actor_id)
+  if (!actorId) return null
+  const occurredAt = asString(row.occurred_at)
+  if (!occurredAt) return null
+  return {
+    activity_type: activityType,
+    actor_id: actorId,
+    actor_name: asString(row.actor_name),
+    actor_avatar: asString(row.actor_avatar),
+    actor_custom_avatar_url: asString(row.actor_custom_avatar_url),
+    occurred_at: occurredAt,
+    title: asString(row.title),
+    ref_id: asString(row.ref_id),
+    pool_avatar: asString(row.pool_avatar),
   }
 }
 
@@ -295,6 +334,28 @@ export async function searchUsers(
   return rows
     .map(coerceUserSearchRow)
     .filter((row): row is UserSearchRow => row != null)
+}
+
+/**
+ * Accepted friends' recent activity (badge earns + pool joins), newest first.
+ */
+export async function getFriendActivity(
+  supabase: SupabaseClient,
+  limit = 30,
+): Promise<FriendActivityRow[]> {
+  const { data, error } = await supabase.rpc('get_friend_activity', {
+    p_limit: Math.max(1, Math.min(limit, 100)),
+  })
+
+  if (error) {
+    console.error('get_friend_activity failed:', error.message)
+    return []
+  }
+
+  const rows = Array.isArray(data) ? data : []
+  return rows
+    .map(coerceFriendActivityRow)
+    .filter((row): row is FriendActivityRow => row != null)
 }
 
 /** Map send_friend_request result → UI friendship status. */
