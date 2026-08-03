@@ -12,12 +12,13 @@ import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
 import { ReportIssueProvider } from '@/components/report-issue-dialog'
+import { Toaster } from '@/components/ui/sonner'
+import { FriendRequestCountProvider } from '@/hooks/use-friend-request-count'
 import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
 import { AuthProvider } from '@/src/lib/auth-context'
 import { DashboardTabProvider } from '@/src/lib/dashboard-tab-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
-import { Toaster } from '@/components/ui/sonner'
 
 const defaultTitle = 'PoolCup - World Cup 2026 Prediction Pool'
 const defaultDescription =
@@ -93,8 +94,10 @@ export default function RootLayout({
               <Suspense fallback={null}>
                 <DashboardTabProvider>
                   <UnreadChatCountProvider>
-                    {children}
-                    <AuthenticatedChrome />
+                    <FriendRequestCountProvider>
+                      {children}
+                      <AuthenticatedChrome />
+                    </FriendRequestCountProvider>
                   </UnreadChatCountProvider>
                 </DashboardTabProvider>
               </Suspense>

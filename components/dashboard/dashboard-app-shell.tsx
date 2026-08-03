@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Heart, Mail, Settings, CircleHelp } from 'lucide-react'
+import { Heart, Mail, Settings, CircleHelp, Users } from 'lucide-react'
+import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ export function DashboardAppShell({
   children,
   mainClassName,
 }: DashboardAppShellProps) {
+  const { count: friendRequestCount } = useFriendRequestCount()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
@@ -191,6 +193,19 @@ export function DashboardAppShell({
                           {email}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/friends" className="relative">
+                            <Users className="h-4 w-4" />
+                            Friends
+                            {friendRequestCount > 0 ? (
+                              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold tabular-nums text-primary-foreground">
+                                {friendRequestCount > 9
+                                  ? '9+'
+                                  : friendRequestCount}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
                           <Settings className="h-4 w-4" />
                           Settings

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Users } from 'lucide-react'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { cn } from '@/lib/utils'
+import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 
 type WebMobileProfilePopoverProps = {
@@ -25,6 +27,7 @@ export function WebMobileProfilePopover({
 }: WebMobileProfilePopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { count: friendRequestCount } = useFriendRequestCount()
 
   useEffect(() => {
     if (!open) return
@@ -86,6 +89,26 @@ export function WebMobileProfilePopover({
           className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
           Profile settings
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            onClose()
+            router.push('/friends')
+          }}
+          className="relative mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background/60 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+        >
+          <Users className="h-4 w-4 text-primary" aria-hidden />
+          Friends
+          {friendRequestCount > 0 ? (
+            <span
+              className="absolute right-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold tabular-nums text-primary-foreground"
+              aria-label={`${friendRequestCount} friend requests`}
+            >
+              {friendRequestCount > 9 ? '9+' : friendRequestCount}
+            </span>
+          ) : null}
         </button>
       </div>
     </>

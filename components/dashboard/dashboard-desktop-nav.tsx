@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { Calendar, MessageCircle, Trophy, User } from 'lucide-react'
 import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
+import { NavIconWithCountBadge } from '@/components/nav-icon-with-count-badge'
 import { TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import {
   CHAT_INBOX_HREF,
@@ -47,6 +49,7 @@ export function DashboardDesktopNav({
   linkDashboardTabs = false,
 }: DashboardDesktopNavProps) {
   const unreadChatCount = useUnreadChatCount()
+  const { count: friendRequestCount } = useFriendRequestCount()
 
   return (
     <TabsList className="mx-auto hidden h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:grid sm:grid-cols-4">
@@ -81,7 +84,12 @@ export function DashboardDesktopNav({
         href={DASHBOARD_TAB_HREFS.profile}
         linkDashboardTabs={linkDashboardTabs}
       >
-        <User className="h-4 w-4 shrink-0" />
+        <NavIconWithCountBadge
+          icon={User}
+          count={friendRequestCount}
+          iconClassName="h-4 w-4"
+          badgeLabel={`${friendRequestCount} friend requests`}
+        />
         <span className="truncate">Profile</span>
       </DashboardNavTrigger>
     </TabsList>

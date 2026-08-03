@@ -11,7 +11,9 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
+import { NavIconWithCountBadge } from '@/components/nav-icon-with-count-badge'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
+import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import {
   hasAuthenticatedBottomBar,
   isAuthenticatedAppPath,
@@ -59,6 +61,7 @@ function NavItemContent({
 }) {
   const Icon = item.icon
   const unreadChatCount = useUnreadChatCount()
+  const { count: friendRequestCount } = useFriendRequestCount()
 
   if (item.id === 'chat') {
     return (
@@ -68,6 +71,21 @@ function NavItemContent({
           count={unreadChatCount}
           variant="footer"
           iconClassName="h-6 w-6"
+        />
+        <span className="max-w-full truncate">{item.label}</span>
+      </>
+    )
+  }
+
+  if (item.id === 'profile') {
+    return (
+      <>
+        <NavIconWithCountBadge
+          icon={User}
+          count={friendRequestCount}
+          variant="footer"
+          iconClassName="h-6 w-6"
+          badgeLabel={`${friendRequestCount} friend requests`}
         />
         <span className="max-w-full truncate">{item.label}</span>
       </>

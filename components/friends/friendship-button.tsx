@@ -21,6 +21,7 @@ import {
   statusAfterSend,
   type FriendshipStatus,
 } from '@/src/lib/friendships'
+import { emitFriendRequestsChanged } from '@/hooks/use-friend-request-count'
 import { supabase } from '@/src/lib/supabase'
 
 type FriendshipButtonProps = {
@@ -120,6 +121,7 @@ export function FriendshipButton({
       return
     }
     toast.success('You are now friends')
+    emitFriendRequestsChanged()
   }
 
   async function handleRemove(successMessage: string) {

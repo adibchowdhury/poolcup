@@ -26,6 +26,10 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import {
+  emitFriendRequestsChanged,
+  useFriendRequestCount,
+} from '@/hooks/use-friend-request-count'
 
 function FriendIdentity({
   userId,
@@ -63,6 +67,7 @@ function FriendIdentity({
 
 export function FriendsPageView() {
   const { user, loading: authLoading } = useAuth()
+  const { adjustCount, refresh: refreshRequestCount } = useFriendRequestCount()
   const [friends, setFriends] = useState<FriendRow[]>([])
   const [incoming, setIncoming] = useState<IncomingFriendRequestRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,7 +88,8 @@ export function FriendsPageView() {
     setFriends(nextFriends)
     setIncoming(nextIncoming)
     setLoading(false)
-  }, [user?.id])
+    void refreshRequestCount()
+  }, [user?.id, refreshRequestCount])
 
   useEffect(() => {
     if (authLoading) return
@@ -94,14 +100,17 @@ export function FriendsPageView() {
     setBusyId(requesterId)
     const previous = incoming
     setIncoming((rows) => rows.filter((row) => row.user_id !== requesterId))
+    adjustCount(-1)
     const result = await acceptFriendRequest(supabase, requesterId)
     setBusyId(null)
     if (!result.ok || result.result !== 'accepted') {
       setIncoming(previous)
+      adjustCount(1)
       toast.error('Could not accept request')
       return
     }
     toast.success('Friend request accepted')
+    emitFriendRequestsChanged()
     void reload()
   }
 
@@ -109,14 +118,17 @@ export function FriendsPageView() {
     setBusyId(requesterId)
     const previous = incoming
     setIncoming((rows) => rows.filter((row) => row.user_id !== requesterId))
+    adjustCount(-1)
     const result = await removeFriend(supabase, requesterId)
     setBusyId(null)
     if (!result.ok) {
       setIncoming(previous)
+      adjustCount(1)
       toast.error('Could not decline request')
       return
     }
     toast.success('Request declined')
+    emitFriendRequestsChanged()
   }
 
   async function handleRemoveFriend(otherId: string) {
@@ -178,13 +190,23 @@ export function FriendsPageView() {
       <Header />
 
       {incoming.length > 0 ? (
-        <section className="mt-8 space-y-3">
-          <h2 className="font-display text-xl tracking-wide text-foreground">
-            Friend requests
-            <span className="ml-2 text-sm text-muted-foreground">
-              ({incoming.length})
-            </span>
-          </h2>
+        <section className="mt-6 space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Needs your attention
+              </p>
+              <h2 className="mt-1 font-display text-xl tracking-wide text-foreground">
+                Friend requests
+                <span className="ml-2 text-sm text-muted-foreground">
+                  ({incoming.length})
+                </span>
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Accept or decline — they&apos;ll see Friends once you accept.
+              </p>
+            </div>
+          </div>
           <ul className="space-y-2">
             {incoming.map((row) => {
               const name = row.display_name?.trim() || 'PoolCup player'
@@ -192,7 +214,7 @@ export function FriendsPageView() {
               return (
                 <li
                   key={row.user_id}
-                  className="flex items-center gap-3 rounded-xl border border-border/80 bg-card/80 px-3 py-3"
+                  className="flex items-center gap-3 rounded-xl border border-border/80 bg-background/70 px-3 py-3"
                 >
                   <div className="min-w-0 flex-1">
                     <FriendIdentity
