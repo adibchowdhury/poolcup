@@ -17,6 +17,7 @@ import { projectMatchPoints } from '@/src/lib/project-match-points'
 import { supabase } from '@/src/lib/supabase'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 type MatchRoomPicksPanelProps = {
   poolId: string
@@ -154,22 +155,30 @@ function PickStatusPill({
 }
 
 function PickAvatar({
+  userId,
   name,
   avatar,
   customAvatarUrl,
   isYou,
 }: {
+  userId: string
   name: string
   avatar: string | null
   customAvatarUrl: string | null
   isYou: boolean
 }) {
   return (
-    <UserAvatarImage
-      avatar={avatar}
-      customAvatarUrl={customAvatarUrl}
-      className={cn('h-9 w-9', isYou && 'ring-2 ring-primary/40')}
-    />
+    <UserProfileLink
+      userId={userId}
+      ariaLabel={`${name}'s profile`}
+      className="shrink-0"
+    >
+      <UserAvatarImage
+        avatar={avatar}
+        customAvatarUrl={customAvatarUrl}
+        className={cn('h-9 w-9', isYou && 'ring-2 ring-primary/40')}
+      />
+    </UserProfileLink>
   )
 }
 
@@ -255,14 +264,16 @@ function PickListItem({
         {rank}
       </span>
       <PickAvatar
+        userId={pick.userId}
         name={pick.displayName}
         avatar={avatar}
         customAvatarUrl={customAvatarUrl}
         isYou={isYou}
       />
-      <p
+      <UserProfileLink
+        userId={pick.userId}
         className={cn(
-          'min-w-0 flex-1 truncate text-sm',
+          'min-w-0 flex-1 truncate text-sm hover:underline',
           isYou ? 'font-semibold text-foreground' : 'text-foreground',
         )}
       >
@@ -270,7 +281,7 @@ function PickListItem({
         {isYou ? (
           <span className="ml-1.5 text-xs text-primary">(you)</span>
         ) : null}
-      </p>
+      </UserProfileLink>
       <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
         {pick.predTeam1}–{pick.predTeam2}
       </span>

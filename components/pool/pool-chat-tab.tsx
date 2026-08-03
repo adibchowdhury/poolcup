@@ -25,6 +25,7 @@ import {
 } from '@/src/lib/pool-chat-helpers'
 import { supabase } from '@/src/lib/supabase'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 export type PoolChatMemberProfile = {
   displayName: string
@@ -59,16 +60,24 @@ function resolveAuthor(
 }
 
 function ChatUserAvatar({
+  userId,
   profile,
 }: {
+  userId: string
   profile: PoolChatMemberProfile
 }) {
   return (
-    <UserAvatarImage
-      avatar={profile.avatar}
-      customAvatarUrl={profile.customAvatarUrl}
-      className="h-8 w-8"
-    />
+    <UserProfileLink
+      userId={userId}
+      ariaLabel={`${profile.displayName}'s profile`}
+      className="shrink-0 self-end"
+    >
+      <UserAvatarImage
+        avatar={profile.avatar}
+        customAvatarUrl={profile.customAvatarUrl}
+        className="h-8 w-8"
+      />
+    </UserProfileLink>
   )
 }
 
@@ -304,7 +313,7 @@ function ChatMessageGroup({
   return (
     <div className={cn('flex w-full min-w-0', !isYou && 'gap-2')}>
       {!isYou ? (
-        <ChatUserAvatar profile={author} />
+        <ChatUserAvatar userId={userId} profile={author} />
       ) : null}
 
       <div
@@ -319,14 +328,16 @@ function ChatMessageGroup({
             isYou ? 'flex-row-reverse' : 'flex-row',
           )}
         >
-          <span
-            className={cn(
-              'text-xs font-semibold',
-              isYou ? 'text-primary' : 'text-foreground',
-            )}
-          >
-            {isYou ? 'You' : author.displayName}
-          </span>
+          {isYou ? (
+            <span className="text-xs font-semibold text-primary">You</span>
+          ) : (
+            <UserProfileLink
+              userId={userId}
+              className="text-xs font-semibold text-foreground hover:underline"
+            >
+              {author.displayName}
+            </UserProfileLink>
+          )}
           <time
             className="text-[10px] text-muted-foreground"
             dateTime={firstMessage.created_at}

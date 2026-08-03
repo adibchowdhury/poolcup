@@ -14,6 +14,7 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 type Pool = {
   id: string
@@ -377,7 +378,13 @@ export default function JoinPoolPage() {
               {pool.name}
             </h1>
             <p className="mt-2 text-sm text-[#5a7080]">
-              Created by {creatorName}
+              Created by{' '}
+              <UserProfileLink
+                userId={pool.creator_id}
+                className="font-medium text-[#f0f4f8] hover:underline"
+              >
+                {creatorName}
+              </UserProfileLink>
               {createdDate ? ` · Started ${createdDate}` : ''}
             </p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#00e676]/10 px-3 py-1.5">
@@ -462,14 +469,23 @@ export default function JoinPoolPage() {
                         className="flex items-center justify-between rounded-lg p-3 hover:bg-[#1a2535]"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1a2535] text-sm font-semibold text-[#f0f4f8]">
-                            {member.display_name.charAt(0).toUpperCase()}
-                          </div>
+                          <UserProfileLink
+                            userId={member.user_id}
+                            ariaLabel={`${member.display_name}'s profile`}
+                            className="shrink-0"
+                          >
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1a2535] text-sm font-semibold text-[#f0f4f8]">
+                              {member.display_name.charAt(0).toUpperCase()}
+                            </div>
+                          </UserProfileLink>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-[#f0f4f8]">
+                              <UserProfileLink
+                                userId={member.user_id}
+                                className="font-medium text-[#f0f4f8] hover:underline"
+                              >
                                 {member.display_name}
-                              </span>
+                              </UserProfileLink>
                               {isCreator && <span className="text-sm">👑</span>}
                               {isYou && (
                                 <span className="text-xs text-[#00e676]">

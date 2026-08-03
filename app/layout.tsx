@@ -17,6 +17,7 @@ import { AuthProvider } from '@/src/lib/auth-context'
 import { DashboardTabProvider } from '@/src/lib/dashboard-tab-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
+import { Toaster } from '@/components/ui/sonner'
 
 const defaultTitle = 'PoolCup - World Cup 2026 Prediction Pool'
 const defaultDescription =
@@ -100,6 +101,7 @@ export default function RootLayout({
             </ReportIssueProvider>
           </MobileChatChromeProvider>
         </AuthProvider>
+        <Toaster richColors position="top-center" />
         <Analytics />
       </body>
     </html>

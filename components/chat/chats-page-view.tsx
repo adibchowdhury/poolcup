@@ -93,7 +93,9 @@ function ChatInboxRow({
                         avatar: member.avatar,
                         customAvatarUrl: member.customAvatarUrl,
                         isYou: member.isYou,
+                        userId: member.userId,
                       }}
+                      linkToProfile={false}
                       className="h-7 w-7 text-[10px] sm:h-7 sm:w-7"
                     />
                   </div>

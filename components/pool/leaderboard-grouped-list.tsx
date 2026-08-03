@@ -8,6 +8,7 @@ import type {
   LeaderboardPointBreakdownItem,
 } from '@/components/pool/leaderboard-row'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
@@ -129,15 +130,18 @@ function MemberAvatar({
   member,
   className,
   imageClassName,
+  linkToProfile = true,
 }: {
   member: Pick<
     LeaderboardMember,
-    'name' | 'avatar' | 'customAvatarUrl' | 'isYou'
+    'name' | 'avatar' | 'customAvatarUrl' | 'isYou' | 'userId'
   >
   className?: string
   imageClassName?: string
+  /** Set false when already inside another link (e.g. chat inbox row). */
+  linkToProfile?: boolean
 }) {
-  return (
+  const image = (
     <UserAvatarImage
       avatar={member.avatar}
       customAvatarUrl={member.customAvatarUrl}
@@ -149,6 +153,18 @@ function MemberAvatar({
       imgClassName={imageClassName}
     />
   )
+
+  if (!linkToProfile || !member.userId) return image
+
+  return (
+    <UserProfileLink
+      userId={member.userId}
+      ariaLabel={`${member.name}'s profile`}
+      className="shrink-0"
+    >
+      {image}
+    </UserProfileLink>
+  )
 }
 
 export { MemberAvatar as LeaderboardMemberAvatar }
@@ -157,14 +173,15 @@ function MemberNameBlock({ member }: { member: LeaderboardMember }) {
   return (
     <div className="min-w-0 flex-1">
       <div className="flex min-w-0 items-center gap-2">
-        <span
+        <UserProfileLink
+          userId={member.userId}
           className={cn(
-            'truncate font-medium',
+            'truncate font-medium hover:underline',
             member.isYou ? 'text-primary' : 'text-foreground',
           )}
         >
           {member.name}
-        </span>
+        </UserProfileLink>
         {member.isYou ? (
           <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary">
             you
@@ -236,29 +253,39 @@ function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
         member.isYou && 'bg-primary/5',
       )}
     >
-      <button
-        type="button"
-        className={cn(
-          'flex w-full items-center gap-3 px-3 py-3 text-left sm:gap-4 sm:px-4',
-          'transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-        )}
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((prev) => !prev)}
-      >
+      {/*
+        Split identity link from expand control so we never nest <a> in <button>.
+      */}
+      <div className="flex w-full items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4">
         <MemberAvatar member={member} />
         <MemberNameBlock member={member} />
-        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground sm:text-base">
-          {member.points} pts
-        </span>
-        <ChevronDown
+        <button
+          type="button"
           className={cn(
-            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-            open && 'rotate-180',
+            'ml-auto flex shrink-0 items-center gap-2 rounded-md px-1 py-1',
+            'transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           )}
-          aria-hidden
-        />
-      </button>
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={
+            open
+              ? `Hide ${member.name} points breakdown`
+              : `Show ${member.name} points breakdown`
+          }
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          <span className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
+            {member.points} pts
+          </span>
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </button>
+      </div>
 
       <div
         id={panelId}

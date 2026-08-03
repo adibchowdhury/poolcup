@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { FriendshipButton } from '@/components/friends/friendship-button'
+import { ProfileFriendsEntry } from '@/components/friends/profile-friends-entry'
 import { cn } from '@/lib/utils'
 import {
   fetchUserAchievementProgress,
@@ -29,7 +31,12 @@ import {
   type UserAchievementProgress,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
+import { fetchUserAchievementsReadOnly } from '@/src/lib/fetch-public-profile'
+import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
+import { xpToLevel } from '@/src/lib/levels'
+
+export type ProfileShowcaseMode = 'self' | 'public'
 
 type ProfileShowcaseProps = {
   userId: string
@@ -38,8 +45,21 @@ type ProfileShowcaseProps = {
   customAvatarUrl: string | null
   predictionsMade: number
   accuracy: number | null
-  active: boolean
-  onEditProfile: () => void
+  /** When false, skips client fetches (dashboard tab inactive). Default true. */
+  active?: boolean
+  /**
+   * `self` — own dashboard profile (evaluate + edit + badge unlock).
+   * `public` — any user's public page (READ-ONLY achievements, no evaluate).
+   */
+  mode?: ProfileShowcaseMode
+  /** Self-mode edit handler (pencil). Ignored in public mode. */
+  onEditProfile?: () => void
+  /**
+   * Public mode when viewing your own `/u/[id]`: show Edit → dashboard profile.
+   */
+  isOwnPublicProfile?: boolean
+  /** Optional preloaded achievements (public page server fetch). */
+  initialAchievements?: UserAchievementsData | null
 }
 
 function formatEarnedDate(value: string | null): string {
@@ -106,8 +126,12 @@ function getRarity(xpValue: number): AchievementRarity {
 function buildPreview(
   achievements: AchievementWithStatus[],
   progressById: Map<string, UserAchievementProgress>,
+  /** Public profiles only surface earned badges (no locked progress). */
+  earnedOnly: boolean,
 ): AchievementWithStatus[] {
   const earned = sortEarnedNewestFirst(achievements)
+  if (earnedOnly) return earned.slice(0, 5)
+
   const locked = achievements
     .filter((badge) => !badge.earned && badge.buildable === 'green')
     .sort(
@@ -148,10 +172,16 @@ export function ProfileShowcase({
   customAvatarUrl,
   predictionsMade,
   accuracy,
-  active,
+  active = true,
+  mode = 'self',
   onEditProfile,
+  isOwnPublicProfile = false,
+  initialAchievements = null,
 }: ProfileShowcaseProps) {
-  const [data, setData] = useState<UserAchievementsData | null>(null)
+  const isPublic = mode === 'public'
+  const [data, setData] = useState<UserAchievementsData | null>(
+    initialAchievements,
+  )
   const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>([])
   const [loading, setLoading] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
@@ -159,10 +189,27 @@ export function ProfileShowcase({
 
   useEffect(() => {
     if (!active || !userId) return
+    // Public page may pass server-preloaded achievements — still allow refresh
+    // only for self mode (evaluate path). Public never re-runs evaluate.
+    if (isPublic && initialAchievements) {
+      setData(initialAchievements)
+      return
+    }
+
     let cancelled = false
     setLoading(true)
 
     void (async () => {
+      if (isPublic) {
+        // READ-ONLY — never call evaluate_user_achievements for other users.
+        const result = await fetchUserAchievementsReadOnly(supabase, userId)
+        if (cancelled) return
+        setData(result)
+        setProgressRows([])
+        setLoading(false)
+        return
+      }
+
       const result = await fetchUserAchievements(supabase, userId)
       const progress = await fetchUserAchievementProgress(supabase, userId)
       if (cancelled) return
@@ -175,7 +222,7 @@ export function ProfileShowcase({
     return () => {
       cancelled = true
     }
-  }, [active, userId, badgeUnlock])
+  }, [active, userId, badgeUnlock, isPublic, initialAchievements])
 
   const progressById = useMemo(
     () =>
@@ -183,8 +230,8 @@ export function ProfileShowcase({
     [progressRows],
   )
   const preview = useMemo(
-    () => buildPreview(data?.achievements ?? [], progressById),
-    [data?.achievements, progressById],
+    () => buildPreview(data?.achievements ?? [], progressById, isPublic),
+    [data?.achievements, progressById, isPublic],
   )
   const earnedTimeline = useMemo(
     () => sortEarnedNewestFirst(data?.achievements ?? []),
@@ -192,7 +239,7 @@ export function ProfileShowcase({
   )
 
   const totalXp = data?.totalXp ?? 0
-  const level = data?.level
+  const level = data?.level ?? xpToLevel(totalXp)
   const stats = [
     {
       label: 'Total XP',
@@ -312,14 +359,16 @@ export function ProfileShowcase({
                   : 'object-contain object-bottom p-0.5'
               }
             />
-            <button
-              type="button"
-              onClick={onEditProfile}
-              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-[#102219] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground"
-              aria-label="Edit profile and avatar"
-            >
-              <Pencil className="h-2.5 w-2.5" aria-hidden />
-            </button>
+            {!isPublic && onEditProfile ? (
+              <button
+                type="button"
+                onClick={onEditProfile}
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-[#102219] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground"
+                aria-label="Edit profile and avatar"
+              >
+                <Pencil className="h-2.5 w-2.5" aria-hidden />
+              </button>
+            ) : null}
           </div>
           <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border border-primary/35 bg-[#102219] px-2 py-0.5 font-display text-xs text-primary shadow-[0_0_12px_rgba(0,230,118,0.28)]">
             {level?.level ?? 1}
@@ -333,6 +382,27 @@ export function ProfileShowcase({
           <p className="mt-0.5 text-[10px] tracking-wide text-muted-foreground/75">
             PoolCup player profile
           </p>
+          {isPublic && isOwnPublicProfile ? (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+                <Link href={DASHBOARD_TAB_HREFS.profile}>
+                  <Pencil className="h-3 w-3" aria-hidden />
+                  Edit profile
+                </Link>
+              </Button>
+              <ProfileFriendsEntry active={active} />
+            </div>
+          ) : null}
+          {isPublic && !isOwnPublicProfile ? (
+            <div className="mt-3 flex justify-center">
+              <FriendshipButton profileUserId={userId} />
+            </div>
+          ) : null}
+          {!isPublic ? (
+            <div className="mt-3 flex justify-center">
+              <ProfileFriendsEntry active={active} />
+            </div>
+          ) : null}
 
           <div className="mx-auto mt-4 max-w-[330px] text-left">
             <div className="flex items-center justify-between gap-3">
@@ -390,14 +460,23 @@ export function ProfileShowcase({
       <section>
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-xl tracking-wide text-foreground">
-            Your Achievements
+            {isPublic ? 'Achievements' : 'Your Achievements'}
           </h2>
-          <Button asChild variant="ghost" size="sm" className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground">
-            <Link href="/achievements">
-              View all
-              <ChevronRight className="h-3 w-3" aria-hidden />
-            </Link>
-          </Button>
+          {!isPublic ? (
+            <Button asChild variant="ghost" size="sm" className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground">
+              <Link href="/achievements">
+                View all
+                <ChevronRight className="h-3 w-3" aria-hidden />
+              </Link>
+            </Button>
+          ) : isOwnPublicProfile ? (
+            <Button asChild variant="ghost" size="sm" className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground">
+              <Link href="/achievements">
+                View all
+                <ChevronRight className="h-3 w-3" aria-hidden />
+              </Link>
+            </Button>
+          ) : null}
         </div>
 
         {loading && !data ? (
@@ -406,7 +485,9 @@ export function ProfileShowcase({
           </p>
         ) : preview.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            Your achievement collection will appear here.
+            {isPublic
+              ? 'No badges unlocked yet.'
+              : 'Your achievement collection will appear here.'}
           </p>
         ) : (
           <div className="mt-2.5 space-y-2">
@@ -515,7 +596,7 @@ export function ProfileShowcase({
         )}
       </section>
 
-      {careerHighlights.length > 0 ? (
+      {careerHighlights.length > 0 && !isPublic ? (
         <section>
           <div className="flex items-end justify-between">
             <div>
@@ -579,7 +660,9 @@ export function ProfileShowcase({
         {historyExpanded ? (
           earnedTimeline.length === 0 ? (
             <p className="border-t border-white/8 px-4 py-6 text-center text-xs text-muted-foreground">
-              Earn your first badge to start your XP history.
+              {isPublic
+                ? 'No badges unlocked yet.'
+                : 'Earn your first badge to start your XP history.'}
             </p>
           ) : (
           <ol className="max-h-72 space-y-0.5 overflow-y-auto border-t border-white/8 px-3 py-2">

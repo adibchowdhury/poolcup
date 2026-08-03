@@ -17,6 +17,7 @@ import {
   type PoolAvatarFilename,
 } from '@/src/lib/pool-avatars'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { UserProfileLink } from '@/components/user-profile-link'
 import {
   isPoolNameUnchanged,
   normalizePoolName,
@@ -341,13 +342,24 @@ export function PoolSquadTab({
                 Captain
               </p>
               <div className="mt-2 flex items-center gap-3">
-                <UserAvatarImage
-                  avatar={captain.avatar}
-                  customAvatarUrl={captain.customAvatarUrl}
-                  className="h-10 w-10"
-                />
+                <UserProfileLink
+                  userId={captain.userId}
+                  ariaLabel={`${captain.name}'s profile`}
+                  className="shrink-0"
+                >
+                  <UserAvatarImage
+                    avatar={captain.avatar}
+                    customAvatarUrl={captain.customAvatarUrl}
+                    className="h-10 w-10"
+                  />
+                </UserProfileLink>
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-foreground">{captain.name}</p>
+                  <UserProfileLink
+                    userId={captain.userId}
+                    className="truncate font-medium text-foreground hover:underline"
+                  >
+                    {captain.name}
+                  </UserProfileLink>
                   <p className="text-xs text-muted-foreground">Pool creator</p>
                 </div>
                 <Crown
@@ -436,25 +448,32 @@ export function PoolSquadTab({
                           : 'bg-muted/20',
                       )}
                     >
-                      <UserAvatarImage
-                        avatar={member.avatar}
-                        customAvatarUrl={member.customAvatarUrl}
-                        className={cn(
-                          'h-9 w-9',
-                          member.isYou && 'ring-2 ring-primary/40',
-                        )}
-                      />
+                      <UserProfileLink
+                        userId={member.userId}
+                        ariaLabel={`${member.name}'s profile`}
+                        className="shrink-0"
+                      >
+                        <UserAvatarImage
+                          avatar={member.avatar}
+                          customAvatarUrl={member.customAvatarUrl}
+                          className={cn(
+                            'h-9 w-9',
+                            member.isYou && 'ring-2 ring-primary/40',
+                          )}
+                        />
+                      </UserProfileLink>
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
-                          <span
+                          <UserProfileLink
+                            userId={member.userId}
                             className={cn(
-                              'truncate text-sm font-medium',
+                              'truncate text-sm font-medium hover:underline',
                               member.isYou ? 'text-primary' : 'text-foreground',
                             )}
                           >
                             {member.name}
                             {member.isYou ? ' (You)' : ''}
-                          </span>
+                          </UserProfileLink>
                           {memberIsCaptain ? (
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#ffb300]/30 bg-[#ffb300]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffb300]">
                               <Crown className="h-3 w-3" aria-hidden />

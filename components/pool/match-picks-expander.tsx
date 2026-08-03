@@ -21,6 +21,7 @@ import {
 } from '@/src/lib/match-pool-picks'
 import type { MatchScoringStyle } from '@/src/lib/prediction-scoring'
 import { supabase } from '@/src/lib/supabase'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 type MatchPicksExpanderProps = {
   poolId: string
@@ -80,9 +81,10 @@ function PickRow({
         isYou ? 'bg-primary/10' : 'bg-muted/40',
       )}
     >
-      <span
+      <UserProfileLink
+        userId={pick.userId}
         className={cn(
-          'min-w-0 truncate text-sm',
+          'min-w-0 truncate text-sm hover:underline',
           isYou ? 'font-medium text-foreground' : 'text-foreground',
         )}
       >
@@ -90,7 +92,7 @@ function PickRow({
         {isYou ? (
           <span className="ml-1.5 text-xs text-primary">(you)</span>
         ) : null}
-      </span>
+      </UserProfileLink>
       <div className="flex shrink-0 items-center gap-3">
         <div className="flex min-w-0 flex-col items-end gap-0.5">
           <span className="font-mono text-sm font-semibold tabular-nums text-foreground">

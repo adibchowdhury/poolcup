@@ -17,6 +17,7 @@ import {
 } from '@/src/lib/bonus-predictions'
 import { isMatchKickedOff } from '@/src/lib/match-lock'
 import { supabase } from '@/src/lib/supabase'
+import { UserProfileLink } from '@/components/user-profile-link'
 
 type MatchRoomBonusPanelProps = {
   poolId: string
@@ -145,7 +146,12 @@ function BonusCategoryChip({
                   key={pick.memberId}
                   className="truncate text-[10px] leading-tight text-muted-foreground"
                 >
-                  <span className="text-foreground/90">{pick.displayName}</span>
+                  <UserProfileLink
+                    userId={pick.userId}
+                    className="text-foreground/90 hover:underline"
+                  >
+                    {pick.displayName}
+                  </UserProfileLink>
                   {': '}
                   {formatBonusAnswerLabel(category.id, pick.answer)}
                 </li>
