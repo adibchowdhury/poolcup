@@ -26,6 +26,7 @@ import {
   hasStoredClassicMatchPrediction,
 } from '@/src/lib/merge-classic-match-predictions'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import { eventHasLiveOrRecentFinalMatch } from '@/src/lib/featured-match'
 import {
   buildPoolLeaderboardMembers,
   fetchPoolLeaderboardPointBreakdown,
@@ -34,6 +35,17 @@ import {
   verifyLeaderboardBreakdownTotals,
   type MemberAvatarRecord,
 } from '@/src/lib/pool-leaderboard'
+
+/** Soft-refresh interval while an event match is live or recently final. */
+const LEADERBOARD_LIVE_POLL_MS = 35_000
+
+type LeaderboardRefreshContext = {
+  poolId: string
+  eventId: string | null
+  scoringStyle: string
+  creatorUserId: string
+  poolMembers: PoolMember[]
+}
 
 type Pool = {
   id: string
@@ -77,12 +89,19 @@ export default function PoolPage() {
   const userId = user?.id
 
   const predictionsCompletedTrackedRef = useRef(false)
+  const leaderboardRefreshCtxRef = useRef<LeaderboardRefreshContext | null>(
+    null,
+  )
+  const avatarByMemberIdRef = useRef(new Map<string, MemberAvatarRecord>())
+  const leaderboardRefreshInFlightRef = useRef(false)
 
   const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
   const [members, setMembers] = useState<LeaderboardMember[]>([])
   const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
+  const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
+  const [leaderboardLiveSync, setLeaderboardLiveSync] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [poolId, setPoolId] = useState<string | null>(null)
   const [memberId, setMemberId] = useState<string | null>(null)
@@ -94,6 +113,8 @@ export default function PoolPage() {
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
     () => new Map<string, PoolChatMemberProfile>(),
   )
+
+  avatarByMemberIdRef.current = avatarByMemberId
 
   const handlePredictionSaved = useCallback(
     (
@@ -417,9 +438,114 @@ export default function PoolPage() {
       }
     }
 
+    leaderboardRefreshCtxRef.current = {
+      poolId: pool.id,
+      eventId: pool.event_id,
+      scoringStyle: pool.scoring_style,
+      creatorUserId: pool.creator_id,
+      poolMembers,
+    }
+
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)
   }, [inviteCode, userId])
+
+  const softRefreshLeaderboard = useCallback(async () => {
+    const ctx = leaderboardRefreshCtxRef.current
+    if (!ctx || !userId || leaderboardRefreshInFlightRef.current) return
+
+    leaderboardRefreshInFlightRef.current = true
+    setLeaderboardRefreshing(true)
+
+    try {
+      const isWinnerPool = ctx.scoringStyle === 'winner'
+      const poolEventId = ctx.eventId
+
+      const { predictionsByMember } = await fetchMemberPredictionCounts(
+        supabase,
+        ctx.poolMembers.map((member) => ({
+          memberId: member.id,
+          scoringStyle: ctx.scoringStyle,
+        })),
+      )
+
+      let matchesPlayedQuery = supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_final', true)
+      if (poolEventId) {
+        matchesPlayedQuery = matchesPlayedQuery.eq('event_id', poolEventId)
+      }
+      const { count: matchesPlayed } = await matchesPlayedQuery
+      const matchesPlayedCount = matchesPlayed ?? 0
+
+      const { data: cacheData, error: cacheError } = await supabase
+        .from('leaderboard_cache')
+        .select('rank, prev_rank, member_id, total_points, correct_winners')
+        .eq('pool_id', ctx.poolId)
+        .order('rank', { ascending: true })
+
+      if (cacheError) {
+        console.error(
+          'Failed to soft-refresh leaderboard:',
+          cacheError.message,
+        )
+        return
+      }
+
+      let breakdownByMember:
+        | Map<string, LeaderboardPointBreakdownItem[]>
+        | undefined
+
+      if (isWinnerPool) {
+        const { breakdownByMember: loadedBreakdown, error: breakdownError } =
+          await fetchWinnerPoolLeaderboardPointBreakdown(ctx.poolId)
+        if (breakdownError) {
+          console.error(
+            'Failed to soft-refresh winner breakdown:',
+            breakdownError,
+          )
+        }
+        breakdownByMember = loadedBreakdown
+      } else {
+        const { breakdownByMember: loadedBreakdown, error: breakdownError } =
+          await fetchPoolLeaderboardPointBreakdown(
+            supabase,
+            ctx.poolId,
+            'classic',
+          )
+        if (breakdownError) {
+          console.error(
+            'Failed to soft-refresh classic breakdown:',
+            breakdownError,
+          )
+        }
+        breakdownByMember = loadedBreakdown
+      }
+
+      const leaderboardMembers = buildPoolLeaderboardMembers({
+        poolMembers: ctx.poolMembers,
+        creatorUserId: ctx.creatorUserId,
+        cacheRows: cacheData ?? null,
+        matchesPlayedCount,
+        currentUserId: userId,
+        predictionsByMember,
+        isWinnerPool,
+        avatarsByMemberId: avatarByMemberIdRef.current,
+        breakdownByMember,
+      })
+
+      setMembers(leaderboardMembers)
+      setPoolMeta((previous) =>
+        previous
+          ? { ...previous, matchesPlayed: matchesPlayedCount }
+          : previous,
+      )
+    } finally {
+      leaderboardRefreshInFlightRef.current = false
+      setLeaderboardRefreshing(false)
+    }
+  }, [userId])
 
   useEffect(() => {
     if (authLoading) return
@@ -431,6 +557,50 @@ export default function PoolPage() {
 
     loadPoolData()
   }, [authLoading, userId, router, loadPoolData])
+
+  // Gated live refresh: cheap activity check every 35s; full soft-refetch only
+  // when the event has a live or recently-finalized match.
+  useEffect(() => {
+    if (pageLoading || notFound || !poolId) return
+
+    let cancelled = false
+
+    const tick = async () => {
+      const ctx = leaderboardRefreshCtxRef.current
+      if (!ctx || cancelled) return
+
+      const shouldRefresh = await eventHasLiveOrRecentFinalMatch(
+        supabase,
+        ctx.eventId,
+      )
+      if (cancelled) return
+
+      setLeaderboardLiveSync(shouldRefresh)
+      if (!shouldRefresh) return
+
+      await softRefreshLeaderboard()
+    }
+
+    const intervalId = window.setInterval(() => {
+      void tick()
+    }, LEADERBOARD_LIVE_POLL_MS)
+
+    // Show Live badge promptly without re-fetching (initial load just completed).
+    void (async () => {
+      const ctx = leaderboardRefreshCtxRef.current
+      if (!ctx || cancelled) return
+      const shouldRefresh = await eventHasLiveOrRecentFinalMatch(
+        supabase,
+        ctx.eventId,
+      )
+      if (!cancelled) setLeaderboardLiveSync(shouldRefresh)
+    })()
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [pageLoading, notFound, poolId, softRefreshLeaderboard])
 
   if (authLoading || (!user && !notFound)) {
     return <PoolPageSkeleton />
@@ -466,6 +636,8 @@ export default function PoolPage() {
       userPredictions={userPredictions}
       currentUserId={user!.id}
       leaderboardLoading={leaderboardLoading}
+      leaderboardRefreshing={leaderboardRefreshing}
+      leaderboardLiveSync={leaderboardLiveSync}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}

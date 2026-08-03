@@ -33,8 +33,37 @@ export type IncomingFriendRequestRow = {
   requested_at: string
 }
 
+/** You + accepted friends, ranked by live badge XP (not pool points). */
+export type FriendsLeaderboardRow = {
+  user_id: string
+  display_name: string | null
+  avatar: string | null
+  custom_avatar_url: string | null
+  total_xp: number
+  rank: number
+  is_me: boolean
+}
+
+/** Public user search hit (never includes email). */
+export type UserSearchRow = {
+  user_id: string
+  display_name: string | null
+  avatar: string | null
+  custom_avatar_url: string | null
+  friendship_status: Exclude<FriendshipStatus, 'self'>
+}
+
 function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
 }
 
 function coerceFriendshipStatus(raw: unknown): FriendshipStatus {
@@ -76,6 +105,47 @@ function coerceIncomingRow(raw: unknown): IncomingFriendRequestRow | null {
     avatar: asString(row.avatar),
     custom_avatar_url: asString(row.custom_avatar_url),
     requested_at: asString(row.requested_at) ?? '',
+  }
+}
+
+function coerceFriendsLeaderboardRow(raw: unknown): FriendsLeaderboardRow | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const userId = asString(row.user_id)
+  if (!userId) return null
+  const rank = asNumber(row.rank)
+  if (rank == null || rank <= 0) return null
+  return {
+    user_id: userId,
+    display_name: asString(row.display_name),
+    avatar: asString(row.avatar),
+    custom_avatar_url: asString(row.custom_avatar_url),
+    total_xp: Math.max(0, asNumber(row.total_xp) ?? 0),
+    rank: Math.floor(rank),
+    is_me: Boolean(row.is_me),
+  }
+}
+
+function coerceUserSearchRow(raw: unknown): UserSearchRow | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const userId = asString(row.user_id)
+  if (!userId) return null
+  const status = asString(row.friendship_status)
+  if (
+    status !== 'none' &&
+    status !== 'friends' &&
+    status !== 'request_sent' &&
+    status !== 'request_received'
+  ) {
+    return null
+  }
+  return {
+    user_id: userId,
+    display_name: asString(row.display_name),
+    avatar: asString(row.avatar),
+    custom_avatar_url: asString(row.custom_avatar_url),
+    friendship_status: status,
   }
 }
 
@@ -178,6 +248,53 @@ export async function getIncomingFriendRequests(
   return rows
     .map(coerceIncomingRow)
     .filter((row): row is IncomingFriendRequestRow => row != null)
+}
+
+/**
+ * Current user + accepted friends, ranked by live badge XP.
+ * Distinct from in-pool points leaderboards.
+ */
+export async function getFriendsLeaderboard(
+  supabase: SupabaseClient,
+): Promise<FriendsLeaderboardRow[]> {
+  const { data, error } = await supabase.rpc('get_friends_leaderboard')
+  if (error) {
+    console.error('get_friends_leaderboard failed:', error.message)
+    return []
+  }
+  const rows = Array.isArray(data) ? data : []
+  return rows
+    .map(coerceFriendsLeaderboardRow)
+    .filter((row): row is FriendsLeaderboardRow => row != null)
+    .sort((a, b) => a.rank - b.rank)
+}
+
+/**
+ * Find users by display name. Requires >= 2 chars; excludes current user.
+ * Returns only public fields + friendship_status — never email.
+ */
+export async function searchUsers(
+  supabase: SupabaseClient,
+  query: string,
+  limit = 20,
+): Promise<UserSearchRow[]> {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) return []
+
+  const { data, error } = await supabase.rpc('search_users', {
+    p_query: trimmed,
+    p_limit: Math.max(1, Math.min(limit, 50)),
+  })
+
+  if (error) {
+    console.error('search_users failed:', error.message)
+    return []
+  }
+
+  const rows = Array.isArray(data) ? data : []
+  return rows
+    .map(coerceUserSearchRow)
+    .filter((row): row is UserSearchRow => row != null)
 }
 
 /** Map send_friend_request result → UI friendship status. */

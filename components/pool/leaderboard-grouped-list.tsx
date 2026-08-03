@@ -228,7 +228,7 @@ function GroupedMemberRowStatic({ member }: { member: LeaderboardMember }) {
     >
       <MemberAvatar member={member} />
       <MemberNameBlock member={member} />
-      <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground sm:text-base">
+      <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground transition-[color] duration-300 sm:text-base">
         {member.points} pts
       </span>
     </div>
@@ -274,7 +274,7 @@ function GroupedMemberRowExpandable({ member }: { member: LeaderboardMember }) {
           }
           onClick={() => setOpen((prev) => !prev)}
         >
-          <span className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
+          <span className="text-sm font-semibold tabular-nums text-foreground transition-[color] duration-300 sm:text-base">
             {member.points} pts
           </span>
           <ChevronDown

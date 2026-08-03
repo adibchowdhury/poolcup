@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
   Loader2,
+  Search,
   UserMinus,
   UserPlus,
   Users,
@@ -13,14 +14,21 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
+import {
+  FriendsFindSearch,
+  type FriendsFindSearchHandle,
+} from '@/components/friends/friends-find-search'
+import { FriendsXpLeaderboard } from '@/components/friends/friends-xp-leaderboard'
 import { useAuth } from '@/src/lib/auth-context'
 import { resolveAvatarFilename } from '@/src/lib/avatars'
 import {
   acceptFriendRequest,
+  getFriendsLeaderboard,
   getIncomingFriendRequests,
   getMyFriends,
   removeFriend,
   type FriendRow,
+  type FriendsLeaderboardRow,
   type IncomingFriendRequestRow,
 } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
@@ -68,8 +76,10 @@ function FriendIdentity({
 export function FriendsPageView() {
   const { user, loading: authLoading } = useAuth()
   const { adjustCount, refresh: refreshRequestCount } = useFriendRequestCount()
+  const findSearchRef = useRef<FriendsFindSearchHandle>(null)
   const [friends, setFriends] = useState<FriendRow[]>([])
   const [incoming, setIncoming] = useState<IncomingFriendRequestRow[]>([])
+  const [leaderboard, setLeaderboard] = useState<FriendsLeaderboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -77,16 +87,19 @@ export function FriendsPageView() {
     if (!user?.id) {
       setFriends([])
       setIncoming([])
+      setLeaderboard([])
       setLoading(false)
       return
     }
     setLoading(true)
-    const [nextFriends, nextIncoming] = await Promise.all([
+    const [nextFriends, nextIncoming, nextBoard] = await Promise.all([
       getMyFriends(supabase),
       getIncomingFriendRequests(supabase),
+      getFriendsLeaderboard(supabase),
     ])
     setFriends(nextFriends)
     setIncoming(nextIncoming)
+    setLeaderboard(nextBoard)
     setLoading(false)
     void refreshRequestCount()
   }, [user?.id, refreshRequestCount])
@@ -95,6 +108,21 @@ export function FriendsPageView() {
     if (authLoading) return
     void reload()
   }, [authLoading, reload])
+
+  // Deep-link /friends#find (or header Find friends) focuses the search input.
+  useEffect(() => {
+    if (loading || !user) return
+    if (typeof window === 'undefined') return
+    if (window.location.hash !== '#find') return
+    findSearchRef.current?.focus()
+  }, [loading, user])
+
+  function focusFindSearch() {
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', '#find')
+    }
+    findSearchRef.current?.focus()
+  }
 
   async function handleAccept(requesterId: string) {
     setBusyId(requesterId)
@@ -134,15 +162,19 @@ export function FriendsPageView() {
   async function handleRemoveFriend(otherId: string) {
     setBusyId(otherId)
     const previous = friends
+    const previousBoard = leaderboard
     setFriends((rows) => rows.filter((row) => row.user_id !== otherId))
+    setLeaderboard((rows) => rows.filter((row) => row.user_id !== otherId))
     const result = await removeFriend(supabase, otherId)
     setBusyId(null)
     if (!result.ok) {
       setFriends(previous)
+      setLeaderboard(previousBoard)
       toast.error('Could not remove friend')
       return
     }
     toast.success('Friend removed')
+    void getFriendsLeaderboard(supabase).then(setLeaderboard)
   }
 
   if (authLoading || (user && loading)) {
@@ -187,7 +219,12 @@ export function FriendsPageView() {
         MOBILE_BOTTOM_NAV_PAD_CLASS,
       )}
     >
-      <Header />
+      <Header onFindFriends={focusFindSearch} />
+
+      <FriendsFindSearch
+        ref={findSearchRef}
+        onFriendshipChanged={() => void reload()}
+      />
 
       {incoming.length > 0 ? (
         <section className="mt-6 space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]">
@@ -257,6 +294,8 @@ export function FriendsPageView() {
         </section>
       ) : null}
 
+      <FriendsXpLeaderboard rows={leaderboard} solo={friends.length === 0} />
+
       <section className="mt-8 space-y-3">
         <h2 className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground">
           <Users className="h-5 w-5 text-primary" aria-hidden />
@@ -269,10 +308,18 @@ export function FriendsPageView() {
         {friends.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/80 bg-card/40 px-4 py-10 text-center">
             <p className="text-sm text-muted-foreground">
-              No friends yet — add friends from their profile.
+              No friends yet — search above or open a player&apos;s profile and
+              tap Add friend.
             </p>
-            <Button asChild variant="outline" size="sm" className="mt-4">
-              <Link href="/dashboard">Back to dashboard</Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-4 gap-1.5"
+              onClick={focusFindSearch}
+            >
+              <Search className="h-3.5 w-3.5" aria-hidden />
+              Find friends
             </Button>
           </div>
         ) : (
@@ -318,7 +365,7 @@ export function FriendsPageView() {
   )
 }
 
-function Header() {
+function Header({ onFindFriends }: { onFindFriends?: () => void }) {
   return (
     <div className="flex items-center gap-2">
       <Link
@@ -328,9 +375,21 @@ function Header() {
       >
         <ArrowLeft className="h-5 w-5" aria-hidden />
       </Link>
-      <h1 className="font-display text-3xl tracking-wide text-foreground">
+      <h1 className="min-w-0 flex-1 font-display text-3xl tracking-wide text-foreground">
         Friends
       </h1>
+      {onFindFriends ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 shrink-0 gap-1.5"
+          onClick={onFindFriends}
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          Find friends
+        </Button>
+      ) : null}
     </div>
   )
 }

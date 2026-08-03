@@ -32,6 +32,10 @@ import {
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { fetchUserAchievementsReadOnly } from '@/src/lib/fetch-public-profile'
+import {
+  fetchUserGlobalRank,
+  type UserGlobalRank,
+} from '@/src/lib/global-rank'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
 import { xpToLevel } from '@/src/lib/levels'
@@ -185,7 +189,27 @@ export function ProfileShowcase({
   const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>([])
   const [loading, setLoading] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
+  const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(null)
+  const [globalRankLoaded, setGlobalRankLoaded] = useState(false)
   const badgeUnlock = useBadgeUnlockOptional()
+
+  useEffect(() => {
+    if (!active || !userId) return
+
+    let cancelled = false
+    setGlobalRankLoaded(false)
+
+    void (async () => {
+      const rank = await fetchUserGlobalRank(supabase, userId)
+      if (cancelled) return
+      setGlobalRank(rank)
+      setGlobalRankLoaded(true)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [active, userId])
 
   useEffect(() => {
     if (!active || !userId) return
@@ -379,9 +403,6 @@ export function ProfileShowcase({
           <h1 className="truncate font-display text-[25px] tracking-wide text-foreground">
             {displayName}
           </h1>
-          <p className="mt-0.5 text-[10px] tracking-wide text-muted-foreground/75">
-            PoolCup player profile
-          </p>
           {isPublic && isOwnPublicProfile ? (
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
               <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
@@ -401,6 +422,44 @@ export function ProfileShowcase({
           {!isPublic ? (
             <div className="mt-3 flex justify-center">
               <ProfileFriendsEntry active={active} />
+            </div>
+          ) : null}
+
+          {globalRankLoaded ? (
+            <div className="mt-3 flex justify-center">
+              {globalRank?.global_rank != null ? (
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-[linear-gradient(135deg,rgba(251,191,36,0.22),rgba(15,18,12,0.92))] px-3 py-1 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
+                  aria-label={`Global rank ${globalRank.global_rank}${
+                    globalRank.total_ranked > 0
+                      ? ` of ${globalRank.total_ranked}`
+                      : ''
+                  }`}
+                >
+                  <Crown
+                    className="h-3.5 w-3.5 text-amber-300"
+                    aria-hidden
+                  />
+                  <span className="font-display text-sm tracking-wide text-amber-200">
+                    Global Rank #{globalRank.global_rank}
+                  </span>
+                  {globalRank.total_ranked > 0 ? (
+                    <span className="text-[10px] tabular-nums text-amber-200/65">
+                      of {globalRank.total_ranked.toLocaleString()}
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/35 px-3 py-1 text-muted-foreground"
+                  aria-label="Unranked globally"
+                >
+                  <Medal className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                  <span className="font-display text-sm tracking-wide">
+                    Unranked
+                  </span>
+                </div>
+              )}
             </div>
           ) : null}
 

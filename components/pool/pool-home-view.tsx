@@ -61,6 +61,10 @@ interface PoolHomeViewProps {
   userPredictions: UserPoolPrediction[]
   currentUserId: string
   leaderboardLoading?: boolean
+  /** Soft in-place refresh while live/recent finals — no skeleton flash. */
+  leaderboardRefreshing?: boolean
+  /** Event currently in the live / recent-final polling window. */
+  leaderboardLiveSync?: boolean
   canDelete?: boolean
   poolId?: string
   memberId?: string
@@ -85,6 +89,8 @@ export function PoolHomeView({
   userPredictions,
   currentUserId,
   leaderboardLoading = false,
+  leaderboardRefreshing = false,
+  leaderboardLiveSync = false,
   canDelete,
   poolId,
   memberId,
@@ -444,6 +450,25 @@ export function PoolHomeView({
                     <h2 className="font-display text-2xl tracking-wide text-foreground">
                       LEADERBOARD
                     </h2>
+                    {leaderboardRefreshing ? (
+                      <span
+                        className="shrink-0 animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
+                        aria-live="polite"
+                      >
+                        Updating…
+                      </span>
+                    ) : leaderboardLiveSync ? (
+                      <span
+                        className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
+                        aria-label="Live standings sync on"
+                      >
+                        <span
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_rgba(0,230,118,0.7)]"
+                          aria-hidden
+                        />
+                        Live
+                      </span>
+                    ) : null}
                     <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
                   </div>
 

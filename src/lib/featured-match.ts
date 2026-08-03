@@ -195,6 +195,85 @@ export async function fetchFeaturedMatch(
   return { match: null, mode: null }
 }
 
+/** How long after a match finalizes we keep refreshing pool leaderboards. */
+export const LEADERBOARD_RECENT_FINAL_MS = 2 * 60 * 60 * 1000
+
+/**
+ * True when this event has a LIVE match (or recently kicked-off unfinished)
+ * or a match finalized within the last ~2 hours — used to gate leaderboard polling.
+ */
+export async function eventHasLiveOrRecentFinalMatch(
+  supabase: SupabaseClient,
+  eventId: string | null | undefined,
+): Promise<boolean> {
+  if (!eventId) return false
+
+  const now = Date.now()
+  const nowIso = new Date(now).toISOString()
+  const liveKickoffCutoff = new Date(
+    now - LIVE_MAX_AGE_MINUTES * 60_000,
+  ).toISOString()
+  const recentFinalCutoff = new Date(
+    now - LEADERBOARD_RECENT_FINAL_MS,
+  ).toISOString()
+
+  const liveByStatusQuery = supabase
+    .from('matches')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId)
+    .eq('is_final', false)
+    .in('status_short', [...FEATURED_LIVE_STATUS_SHORTS])
+    .gt('kickoff_at', liveKickoffCutoff)
+
+  const liveByKickoffQuery = supabase
+    .from('matches')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId)
+    .eq('is_final', false)
+    .lte('kickoff_at', nowIso)
+    .gt('kickoff_at', liveKickoffCutoff)
+
+  const recentFinalQuery = supabase
+    .from('matches')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId)
+    .eq('is_final', true)
+    .or(
+      `updated_at.gte.${recentFinalCutoff},kickoff_at.gte.${recentFinalCutoff}`,
+    )
+
+  const [liveByStatus, liveByKickoff, recentFinal] = await Promise.all([
+    liveByStatusQuery,
+    liveByKickoffQuery,
+    recentFinalQuery,
+  ])
+
+  if (liveByStatus.error) {
+    console.error(
+      'eventHasLiveOrRecentFinalMatch live-status check failed:',
+      liveByStatus.error.message,
+    )
+  }
+  if (liveByKickoff.error) {
+    console.error(
+      'eventHasLiveOrRecentFinalMatch live-kickoff check failed:',
+      liveByKickoff.error.message,
+    )
+  }
+  if (recentFinal.error) {
+    console.error(
+      'eventHasLiveOrRecentFinalMatch recent-final check failed:',
+      recentFinal.error.message,
+    )
+  }
+
+  return (
+    (liveByStatus.count ?? 0) > 0 ||
+    (liveByKickoff.count ?? 0) > 0 ||
+    (recentFinal.count ?? 0) > 0
+  )
+}
+
 /**
  * All matches currently live by status (featured live set).
  * Status-filtered only — no kickoff fallback — so stalled NS rows are excluded.
