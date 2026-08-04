@@ -9,6 +9,8 @@ type PoolAvatarImageProps = {
   /** Custom uploaded emblem URL — takes precedence when set. */
   emblemUrl?: string | null
   size?: 'sm' | 'md' | 'lg'
+  /** Override pixel size (defaults from `size`). */
+  pixelSize?: number
   className?: string
   imgClassName?: string
 }
@@ -27,10 +29,11 @@ export function PoolAvatarImage({
   avatar,
   emblemUrl,
   size = 'md',
+  pixelSize,
   className,
   imgClassName,
 }: PoolAvatarImageProps) {
-  const px = SIZE_PX[size]
+  const px = pixelSize ?? SIZE_PX[size]
   const trimmedEmblem = emblemUrl?.trim() || null
   const presetSrc = getPoolAvatarSrc(avatar)
   const remoteEmblem = trimmedEmblem && isRemoteUrl(trimmedEmblem)

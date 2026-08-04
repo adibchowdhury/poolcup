@@ -21,6 +21,10 @@ export type PoolChatMemberPreview = {
 
 export type PoolChatInboxItem = UserPoolChatRow & {
   inviteCode: string
+  /** Preset filename under /pool_avatars. */
+  poolAvatar: string | null
+  /** Custom uploaded emblem URL. */
+  poolEmblemUrl: string | null
   members: PoolChatMemberPreview[]
 }
 
@@ -136,24 +140,37 @@ async function fetchLastMessageUserIdByPoolId(
   return senderByPoolId
 }
 
-async function fetchInviteCodesByPoolId(
+type PoolInboxMeta = {
+  inviteCode: string
+  avatar: string | null
+  emblemUrl: string | null
+}
+
+async function fetchPoolInboxMetaByPoolId(
   supabase: SupabaseClient,
   poolIds: string[],
-): Promise<Map<string, string>> {
+): Promise<Map<string, PoolInboxMeta>> {
   if (poolIds.length === 0) return new Map()
 
   const { data, error } = await supabase
     .from('pools')
-    .select('id, invite_code')
+    .select('id, invite_code, avatar, emblem_url')
     .in('id', poolIds)
 
   if (error) {
-    console.error('Failed to load pool invite codes:', error.message)
+    console.error('Failed to load pool inbox meta:', error.message)
     return new Map()
   }
 
   return new Map(
-    (data ?? []).map((pool) => [pool.id as string, pool.invite_code as string]),
+    (data ?? []).map((pool) => [
+      pool.id as string,
+      {
+        inviteCode: pool.invite_code as string,
+        avatar: (pool.avatar as string | null) ?? null,
+        emblemUrl: (pool.emblem_url as string | null) ?? null,
+      },
+    ]),
   )
 }
 
@@ -225,19 +242,24 @@ export async function fetchPoolChatInbox(
   if (rows.length === 0) return []
 
   const poolIds = rows.map((row) => row.pool_id)
-  const [inviteByPoolId, membersByPoolId, lastMessageSenderByPoolId] =
+  const [poolMetaById, membersByPoolId, lastMessageSenderByPoolId] =
     await Promise.all([
-      fetchInviteCodesByPoolId(supabase, poolIds),
+      fetchPoolInboxMetaByPoolId(supabase, poolIds),
       fetchMemberPreviewsByPoolId(supabase, poolIds, userId),
       fetchLastMessageUserIdByPoolId(supabase, poolIds),
     ])
 
   return rows
-    .map((row) => ({
-      ...row,
-      last_message_user_id: lastMessageSenderByPoolId.get(row.pool_id) ?? null,
-      inviteCode: inviteByPoolId.get(row.pool_id) ?? '',
-      members: membersByPoolId.get(row.pool_id) ?? [],
-    }))
+    .map((row) => {
+      const meta = poolMetaById.get(row.pool_id)
+      return {
+        ...row,
+        last_message_user_id: lastMessageSenderByPoolId.get(row.pool_id) ?? null,
+        inviteCode: meta?.inviteCode ?? '',
+        poolAvatar: meta?.avatar ?? null,
+        poolEmblemUrl: meta?.emblemUrl ?? null,
+        members: membersByPoolId.get(row.pool_id) ?? [],
+      }
+    })
     .filter((row) => row.inviteCode !== '')
 }

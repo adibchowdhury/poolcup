@@ -86,7 +86,7 @@ export function resolveMobileBottomNavActive(
   pathname: string,
   tabParam: string | null,
 ): MobileBottomNavId | null {
-  if (pathname === '/chat') return 'chat'
+  if (pathname === '/chat' || pathname.startsWith('/chat/')) return 'chat'
   if (pathname === '/friends') return 'friends'
 
   if (pathname === '/dashboard') {

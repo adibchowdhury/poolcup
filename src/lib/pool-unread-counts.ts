@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fetchDmUnreadCount } from '@/src/lib/dm-chats'
 
 export const POOL_MARKED_READ_EVENT = 'pool-marked-read'
 
@@ -30,7 +31,7 @@ export function getPoolLeaderboardHref(inviteCode: string): string {
   return `/pool/${inviteCode}?tab=leaderboard`
 }
 
-export async function fetchUnreadChatCount(
+export async function fetchPoolUnreadChatCount(
   supabase: SupabaseClient,
 ): Promise<number> {
   const { data, error } = await supabase.rpc('get_unread_chat_count')
@@ -45,6 +46,17 @@ export async function fetchUnreadChatCount(
   }
 
   return 0
+}
+
+/** Total unread across pool chats + DMs (for the chat nav badge). */
+export async function fetchUnreadChatCount(
+  supabase: SupabaseClient,
+): Promise<number> {
+  const [poolUnread, dmUnread] = await Promise.all([
+    fetchPoolUnreadChatCount(supabase),
+    fetchDmUnreadCount(supabase),
+  ])
+  return poolUnread + dmUnread
 }
 
 export async function fetchPoolUnreadCounts(
