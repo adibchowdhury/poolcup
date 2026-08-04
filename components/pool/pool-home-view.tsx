@@ -7,16 +7,9 @@ import {
   ArrowLeft,
   Check,
   Copy,
-  Flame,
-  Trophy,
-  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
-import {
-  buildLeaderboardPlaceGroups,
-  LeaderboardGroupedList,
-} from '@/components/pool/leaderboard-grouped-list'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
@@ -27,6 +20,11 @@ import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
 import { PoolSquadTab } from '@/components/pool/pool-squad-tab'
+import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
+import {
+  USE_MOCK_LEADERBOARD,
+  buildMockLeaderboardMembers,
+} from '@/components/pool/mock-leaderboard-preview'
 import {
   PoolChatTab,
   type PoolChatMemberProfile,
@@ -163,18 +161,36 @@ export function PoolHomeView({
     window.setTimeout(() => setCopied(false), 2000)
   }
 
-  const yourData = members.find((m) => m.isYou)
+  const inviteFromLeaderboard = () => {
+    if (!pool.acceptingMembers) return
+    const joinUrl = buildJoinInviteUrl(
+      window.location.origin,
+      pool.inviteCode,
+      currentUserId,
+    )
+    navigator.clipboard.writeText(joinUrl)
+    trackEvent('invite_link_copied', {
+      poolId: poolId ?? null,
+      metadata: { source: 'pool_leaderboard' },
+    })
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+
+  // TEMPORARY — mock standings for design preview; flip USE_MOCK_LEADERBOARD off to restore.
+  const leaderboardMembers = USE_MOCK_LEADERBOARD
+    ? buildMockLeaderboardMembers(currentUserId)
+    : members
+  const leaderboardTabLoading = USE_MOCK_LEADERBOARD
+    ? false
+    : leaderboardLoading
+
   const isWinnerPool = pool.scoringStyle === 'winner'
   const hasResults =
     pool.matchesPlayed > 0 ||
     (isWinnerPool && members.some((member) => member.points > 0))
-  const showPreMatchLeaderboardNote = !hasResults && members.length > 0
-  const yourPlaceGroup = yourData
-    ? buildLeaderboardPlaceGroups(members).find((group) =>
-        group.members.some((member) => member.id === yourData.id),
-      )
-    : undefined
-  const yourRank = yourPlaceGroup?.place ?? 0
+  const showPreMatchLeaderboardNote =
+    !USE_MOCK_LEADERBOARD && !hasResults && members.length > 0
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
   const isChatView = activeTab === 'chat' && showChatTab
   const isMobileChatShell = isChatView
@@ -215,6 +231,7 @@ export function PoolHomeView({
 
   const isWinnerPredictionsTab = isWinnerPool && activeTab === 'predictions'
   const isClassicPredictionsTab = !isWinnerPool && activeTab === 'predictions'
+  const isLeaderboardTab = activeTab === 'leaderboard'
 
   const handleBackClick = () => {
     console.log('back clicked', DASHBOARD_TAB_HREFS.pools)
@@ -225,7 +242,8 @@ export function PoolHomeView({
     <PoolThemeScope
       themeColor={pool.themeColor}
       className={cn(
-        'min-h-screen bg-background',
+        'min-h-screen',
+        isLeaderboardTab ? 'flex flex-col bg-[#0A0E0E]' : 'bg-background',
         !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
@@ -234,6 +252,7 @@ export function PoolHomeView({
       <div
         className={cn(
           'relative',
+          isLeaderboardTab && 'flex min-h-0 flex-1 flex-col',
           isMobileChatShell &&
             'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
         )}
@@ -241,6 +260,7 @@ export function PoolHomeView({
         <header
           className={cn(
             'sticky top-0 z-[100] isolate border-b border-border bg-background/80 backdrop-blur-xl',
+            isLeaderboardTab && 'shrink-0',
             isMobileChatShell && 'max-sm:shrink-0',
           )}
         >
@@ -318,8 +338,12 @@ export function PoolHomeView({
 
         <main
           className={cn(
-            'relative z-0 mx-auto w-full min-w-0 max-w-4xl px-4 py-8',
+            'relative z-0 mx-auto w-full min-w-0 py-8',
             'max-sm:pt-0 max-sm:pb-8',
+            // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
+            isLeaderboardTab
+              ? 'flex max-w-none flex-1 flex-col bg-[#0A0E0E] px-0 pb-0'
+              : 'max-w-4xl px-4',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
@@ -328,6 +352,7 @@ export function PoolHomeView({
             <div
               className={cn(
                 'mb-4',
+                isLeaderboardTab && 'mx-auto max-w-4xl px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
                 !isMobileChatShell && 'max-sm:mt-3',
               )}
@@ -344,6 +369,7 @@ export function PoolHomeView({
             onValueChange={setActiveTab}
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
+              isLeaderboardTab && 'mb-0 flex min-h-0 flex-1 flex-col gap-4',
               isMobileChatShell &&
                 'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
               isMobileChatShell && isChatView && 'max-sm:gap-0',
@@ -352,64 +378,60 @@ export function PoolHomeView({
             <div
               className={cn(
                 'max-sm:mt-3',
+                isLeaderboardTab && 'mx-auto w-full max-w-4xl shrink-0 px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
                 isChatView && 'max-sm:mt-0',
               )}
             >
               {!isChatView ? (
-                <TabsList
-                  className={cn(
-                    'grid h-auto w-full max-w-2xl grid-cols-3 p-1',
-                    isMobileChatShell && 'max-sm:max-w-none max-sm:shrink-0',
-                  )}
-                >
-                  <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
-                    Predictions
-                  </TabsTrigger>
-                  <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
-                    Leaderboard
-                  </TabsTrigger>
-                  <TabsTrigger value="squad" className="px-2 py-2 text-xs sm:text-sm">
-                    My Squad
-                  </TabsTrigger>
-                </TabsList>
+                <div className="flex flex-wrap items-center gap-2">
+                  <TabsList
+                    className={cn(
+                      'grid h-auto w-full max-w-2xl grid-cols-3 p-1',
+                      isMobileChatShell && 'max-sm:max-w-none max-sm:shrink-0',
+                    )}
+                  >
+                    <TabsTrigger value="predictions" className="px-2 py-2 text-xs sm:text-sm">
+                      Predictions
+                    </TabsTrigger>
+                    <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
+                      Leaderboard
+                    </TabsTrigger>
+                    <TabsTrigger value="squad" className="px-2 py-2 text-xs sm:text-sm">
+                      My Squad
+                    </TabsTrigger>
+                  </TabsList>
+                  {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
+                    <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                      Mock preview
+                    </span>
+                  ) : null}
+                  {isLeaderboardTab && !USE_MOCK_LEADERBOARD && leaderboardRefreshing ? (
+                    <span
+                      className="shrink-0 animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      Updating…
+                    </span>
+                  ) : null}
+                  {isLeaderboardTab &&
+                  !USE_MOCK_LEADERBOARD &&
+                  !leaderboardRefreshing &&
+                  leaderboardLiveSync ? (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
+                      aria-label="Live standings sync on"
+                    >
+                      <span
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
+                        aria-hidden
+                      />
+                      Live
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
             </div>
-
-            {activeTab === 'leaderboard' && yourData && yourData.points > 0 ? (
-              <div className="hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-[#ffb300]/10 p-6 sm:block">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="mb-1 text-sm text-muted-foreground">Your Position</div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-display text-5xl text-primary">
-                        #{yourRank}
-                      </span>
-                      <div>
-                        <div className="font-display text-2xl text-foreground">
-                          {yourData.points} pts
-                        </div>
-                        {!isWinnerPool ? (
-                          <div className="text-sm text-muted-foreground">
-                            {yourData.correctPredictions}/{yourData.totalPredictions}{' '}
-                            correct
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                  {yourData.streak >= 2 && (
-                    <div className="rounded-xl border border-[#ffb300]/30 bg-[#ffb300]/20 p-4 text-center">
-                      <Flame className="mx-auto mb-1 h-8 w-8 text-[#ffb300]" />
-                      <div className="font-display text-xl text-[#ffb300]">
-                        {yourData.streak}
-                      </div>
-                      <div className="text-xs text-[#ffb300]/80">streak</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
 
             <TabsContent
               value="predictions"
@@ -490,70 +512,23 @@ export function PoolHomeView({
               />
             </TabsContent>
 
-            <TabsContent value="leaderboard" className="mt-0 w-full min-w-0">
-              {leaderboardLoading ? (
-                <LeaderboardSkeleton />
+            <TabsContent
+              value="leaderboard"
+              className="mt-0 flex min-h-0 w-full min-w-0 flex-1 flex-col"
+            >
+              {leaderboardTabLoading ? (
+                <div className="mx-auto max-w-4xl px-4">
+                  <LeaderboardSkeleton />
+                </div>
               ) : (
-                <>
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-primary opacity-30 blur-lg" />
-                      <Trophy className="relative h-6 w-6 text-primary" />
-                    </div>
-                    <h2 className="font-display text-2xl tracking-wide text-foreground">
-                      LEADERBOARD
-                    </h2>
-                    {leaderboardRefreshing ? (
-                      <span
-                        className="shrink-0 animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
-                        aria-live="polite"
-                      >
-                        Updating…
-                      </span>
-                    ) : leaderboardLiveSync ? (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
-                        aria-label="Live standings sync on"
-                      >
-                        <span
-                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
-                          aria-hidden
-                        />
-                        Live
-                      </span>
-                    ) : null}
-                    <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
-                  </div>
-
-                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                    <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
-
-                    <div className="p-2">
-                      {members.length === 0 ? (
-                        <div className="py-12 text-center">
-                          <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
-                          <p className="text-muted-foreground">No members yet</p>
-                          <p className="text-sm text-muted-foreground/60">
-                            Share the invite code to get started!
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <LeaderboardGroupedList
-                            members={members}
-                            expandableBreakdown
-                          />
-
-                          {showPreMatchLeaderboardNote && (
-                            <p className="mt-4 px-2 pb-2 text-center text-sm text-muted-foreground">
-                              Scores will update automatically after each match.
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </>
+                <PoolLeaderboardStandings
+                  members={leaderboardMembers}
+                  acceptingMembers={pool.acceptingMembers}
+                  copied={copied}
+                  onInvite={inviteFromLeaderboard}
+                  showPreMatchNote={showPreMatchLeaderboardNote}
+                  className="min-h-0 flex-1"
+                />
               )}
             </TabsContent>
 

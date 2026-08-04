@@ -52,6 +52,8 @@ export type LeaderboardCacheRow = {
   member_id: string
   total_points: number | null
   correct_winners?: number | null
+  exact_scores?: number | null
+  climb_streak?: number | null
 }
 
 type BuildPoolLeaderboardParams = {
@@ -127,6 +129,11 @@ function getMovement(
   if (delta > 0) return 'up'
   if (delta < 0) return 'down'
   return 'none'
+}
+
+function getRankDelta(rank: number, prevRank: number | null): number {
+  if (prevRank == null || prevRank <= 0) return 0
+  return Math.abs(prevRank - rank)
 }
 
 function hasLeaderboardCacheData(
@@ -446,6 +453,7 @@ export function buildPoolLeaderboardMembers({
     correct_predictions: number
     rank: number
     prev_rank: number | null
+    climb_streak: number
   }>
 
   if (!useCache && matchesPlayedCount === 0) {
@@ -458,6 +466,7 @@ export function buildPoolLeaderboardMembers({
       display_name: member.display_name,
       points: 0,
       correct_predictions: 0,
+      climb_streak: 0,
     }))
   } else if (useCache) {
     entries = poolMembers.map((member) => {
@@ -471,6 +480,10 @@ export function buildPoolLeaderboardMembers({
         display_name: member.display_name,
         points: row?.total_points ?? 0,
         correct_predictions: isWinnerPool ? 0 : (row?.correct_winners ?? 0),
+        climb_streak:
+          typeof row?.climb_streak === 'number' && row.climb_streak > 0
+            ? row.climb_streak
+            : 0,
       }
     })
   } else {
@@ -482,6 +495,7 @@ export function buildPoolLeaderboardMembers({
       display_name: member.display_name,
       points: 0,
       correct_predictions: 0,
+      climb_streak: 0,
     }))
   }
 
@@ -489,6 +503,8 @@ export function buildPoolLeaderboardMembers({
     const avatarFields = normalizeMemberAvatarRecord(
       avatarsByMemberId.get(entry.member_id),
     )
+    const movement = getMovement(entry.rank, entry.prev_rank)
+    const rankDelta = getRankDelta(entry.rank, entry.prev_rank)
     return {
       id: entry.member_id,
       userId: entry.user_id,
@@ -499,8 +515,12 @@ export function buildPoolLeaderboardMembers({
       points: entry.points,
       correctPredictions: entry.correct_predictions,
       totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
-      movement: getMovement(entry.rank, entry.prev_rank),
-      streak: 0,
+      rank: entry.rank,
+      prevRank: entry.prev_rank,
+      rankDelta,
+      movement,
+      climbStreak: entry.climb_streak,
+      streak: entry.climb_streak,
       pointBreakdown: breakdownByMember?.get(entry.member_id) ?? [],
     }
   })

@@ -483,7 +483,9 @@ export default function PoolPage() {
 
     const { data: cacheData, error: cacheError } = await supabase
       .from('leaderboard_cache')
-      .select('rank, prev_rank, member_id, total_points, correct_winners')
+      .select(
+        'rank, prev_rank, member_id, total_points, correct_winners, exact_scores, climb_streak',
+      )
       .eq('pool_id', pool.id)
       .order('rank', { ascending: true })
 
@@ -592,7 +594,9 @@ export default function PoolPage() {
 
       const { data: cacheData, error: cacheError } = await supabase
         .from('leaderboard_cache')
-        .select('rank, prev_rank, member_id, total_points, correct_winners')
+        .select(
+        'rank, prev_rank, member_id, total_points, correct_winners, exact_scores, climb_streak',
+      )
         .eq('pool_id', ctx.poolId)
         .order('rank', { ascending: true })
 

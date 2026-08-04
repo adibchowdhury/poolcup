@@ -33,7 +33,15 @@ export type LeaderboardMember = {
   points: number
   correctPredictions: number
   totalPredictions: number
+  /** Cache rank (1-based); used with prevRank for movement. */
+  rank: number
+  prevRank: number | null
+  /** Absolute places moved vs prev_rank; 0 if unchanged/new. */
+  rankDelta: number
   movement: 'up' | 'down' | 'none'
+  /** Climb momentum from leaderboard_cache.climb_streak. */
+  climbStreak: number
+  /** @deprecated Prefer climbStreak; kept for older UI that keyed off streak. */
   streak: number
   /** Classic + winner pools: per-line points when expandable breakdown is enabled. */
   pointBreakdown?: LeaderboardPointBreakdownItem[]
