@@ -20,8 +20,10 @@ import {
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
+import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
+import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
 import { PoolSquadTab } from '@/components/pool/pool-squad-tab'
@@ -39,6 +41,7 @@ import { trackEvent } from '@/src/lib/track'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
+import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -52,7 +55,18 @@ export type PoolHomeMeta = {
   nextMatchKickoffAt: string | null
   acceptingMembers: boolean
   avatar: string | null
+  /** Custom uploaded emblem URL (nullable). */
+  emblemUrl: string | null
+  /** Hex accent e.g. #00e676; null = default green. */
+  themeColor: string | null
   eventId: string | null
+  /** Classic custom scoring; null field → engine default. */
+  scoreExactPoints: number | null
+  scoreWinnerPoints: number | null
+  scoreDrawPoints: number | null
+  scoringLockedAt: string | null
+  /** True when scoring_locked_at set or scoring has started for this pool. */
+  scoringLocked: boolean
 }
 
 interface PoolHomeViewProps {
@@ -81,6 +95,17 @@ interface PoolHomeViewProps {
   onPoolNameChange?: (name: string) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
   onPoolAvatarChange?: (avatar: string) => void
+  onPoolThemeColorChange?: (themeColor: string | null) => void
+  onPoolEmblemUrlChange?: (emblemUrl: string | null) => void
+  onPoolScoringChange?: (scoring: {
+    scoreExactPoints: number | null
+    scoreWinnerPoints: number | null
+    scoreDrawPoints: number | null
+  }) => void
+  onMemberRemoved?: (memberId: string) => void
+  activeAnnouncement?: PoolAnnouncement | null
+  onAnnouncementDismissed?: (announcementId: string) => void
+  onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
 }
 
 export function PoolHomeView({
@@ -102,6 +127,13 @@ export function PoolHomeView({
   onPoolNameChange,
   onAcceptingMembersChange,
   onPoolAvatarChange,
+  onPoolThemeColorChange,
+  onPoolEmblemUrlChange,
+  onPoolScoringChange,
+  onMemberRemoved,
+  activeAnnouncement = null,
+  onAnnouncementDismissed,
+  onManagedAnnouncementChange,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const router = useRouter()
@@ -190,7 +222,8 @@ export function PoolHomeView({
   }
 
   return (
-    <div
+    <PoolThemeScope
+      themeColor={pool.themeColor}
       className={cn(
         'min-h-screen bg-background',
         !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
@@ -221,7 +254,12 @@ export function PoolHomeView({
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </button>
-              <PoolAvatarImage avatar={pool.avatar} size="sm" className="shrink-0 rounded-xl" />
+              <PoolAvatarImage
+                avatar={pool.avatar}
+                emblemUrl={pool.emblemUrl}
+                size="sm"
+                className="shrink-0 rounded-xl"
+              />
               <div className="min-w-0 flex-1">
                 <div className="hidden sm:block">
                   <div className="flex flex-wrap items-center gap-2">
@@ -286,6 +324,21 @@ export function PoolHomeView({
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
         >
+          {!isChatView && activeAnnouncement ? (
+            <div
+              className={cn(
+                'mb-4',
+                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
+                !isMobileChatShell && 'max-sm:mt-3',
+              )}
+            >
+              <PoolAnnouncementBanner
+                announcement={activeAnnouncement}
+                onDismissed={(id) => onAnnouncementDismissed?.(id)}
+              />
+            </div>
+          ) : null}
+
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -463,7 +516,7 @@ export function PoolHomeView({
                         aria-label="Live standings sync on"
                       >
                         <span
-                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_rgba(0,230,118,0.7)]"
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
                           aria-hidden
                         />
                         Live
@@ -509,13 +562,25 @@ export function PoolHomeView({
                 poolId={poolId}
                 squadName={pool.name}
                 poolAvatar={pool.avatar}
+                poolEmblemUrl={pool.emblemUrl}
+                poolThemeColor={pool.themeColor}
+                scoringStyle={pool.scoringStyle}
+                scoreExactPoints={pool.scoreExactPoints}
+                scoreWinnerPoints={pool.scoreWinnerPoints}
+                scoreDrawPoints={pool.scoreDrawPoints}
+                scoringLocked={pool.scoringLocked}
                 acceptingMembers={pool.acceptingMembers}
                 members={members}
                 poolCreatorUserId={poolCreatorUserId}
                 currentUserId={currentUserId}
                 onPoolNameChange={onPoolNameChange}
                 onPoolAvatarChange={onPoolAvatarChange}
+                onPoolThemeColorChange={onPoolThemeColorChange}
+                onPoolEmblemUrlChange={onPoolEmblemUrlChange}
+                onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}
+                onMemberRemoved={onMemberRemoved}
+                onManagedAnnouncementChange={onManagedAnnouncementChange}
               />
             </TabsContent>
 
@@ -545,6 +610,6 @@ export function PoolHomeView({
           </Tabs>
         </main>
       </div>
-    </div>
+    </PoolThemeScope>
   )
 }

@@ -35,6 +35,10 @@ import {
   verifyLeaderboardBreakdownTotals,
   type MemberAvatarRecord,
 } from '@/src/lib/pool-leaderboard'
+import {
+  getActiveAnnouncement,
+  type PoolAnnouncement,
+} from '@/src/lib/pool-announcements'
 
 /** Soft-refresh interval while an event match is live or recently final. */
 const LEADERBOARD_LIVE_POLL_MS = 35_000
@@ -55,7 +59,13 @@ type Pool = {
   scoring_style: string
   accepting_members: boolean | null
   avatar: string | null
+  emblem_url: string | null
+  theme_color: string | null
   event_id: string | null
+  score_exact_points: number | null
+  score_winner_points: number | null
+  score_draw_points: number | null
+  scoring_locked_at: string | null
 }
 
 type PoolMember = {
@@ -113,6 +123,8 @@ export default function PoolPage() {
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
     () => new Map<string, PoolChatMemberProfile>(),
   )
+  const [activeAnnouncement, setActiveAnnouncement] =
+    useState<PoolAnnouncement | null>(null)
 
   avatarByMemberIdRef.current = avatarByMemberId
 
@@ -177,9 +189,66 @@ export default function PoolPage() {
     )
   }, [])
 
+  const handleMemberRemoved = useCallback((removedMemberId: string) => {
+    setMembers((previous) => previous.filter((m) => m.id !== removedMemberId))
+    setPoolMeta((previous) =>
+      previous
+        ? {
+            ...previous,
+            memberCount: Math.max(0, previous.memberCount - 1),
+          }
+        : previous,
+    )
+  }, [])
+
+  const handleAnnouncementDismissed = useCallback((announcementId: string) => {
+    setActiveAnnouncement((previous) =>
+      previous?.id === announcementId ? null : previous,
+    )
+  }, [])
+
+  const handleManagedAnnouncementChange = useCallback(
+    (announcement: PoolAnnouncement | null) => {
+      setActiveAnnouncement(announcement)
+    },
+    [],
+  )
+
   const handlePoolAvatarChange = useCallback((avatar: string) => {
     setPoolMeta((previous) => (previous ? { ...previous, avatar } : previous))
   }, [])
+
+  const handlePoolThemeColorChange = useCallback((themeColor: string | null) => {
+    setPoolMeta((previous) =>
+      previous ? { ...previous, themeColor } : previous,
+    )
+  }, [])
+
+  const handlePoolEmblemUrlChange = useCallback((emblemUrl: string | null) => {
+    setPoolMeta((previous) =>
+      previous ? { ...previous, emblemUrl } : previous,
+    )
+  }, [])
+
+  const handlePoolScoringChange = useCallback(
+    (scoring: {
+      scoreExactPoints: number | null
+      scoreWinnerPoints: number | null
+      scoreDrawPoints: number | null
+    }) => {
+      setPoolMeta((previous) =>
+        previous
+          ? {
+              ...previous,
+              scoreExactPoints: scoring.scoreExactPoints,
+              scoreWinnerPoints: scoring.scoreWinnerPoints,
+              scoreDrawPoints: scoring.scoreDrawPoints,
+            }
+          : previous,
+      )
+    },
+    [],
+  )
 
   const loadPoolData = useCallback(async () => {
     if (!userId) return
@@ -191,7 +260,7 @@ export default function PoolPage() {
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
       .select(
-        'id, name, invite_code, creator_id, scoring_style, accepting_members, avatar, event_id',
+        'id, name, invite_code, creator_id, scoring_style, accepting_members, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
       )
       .eq('invite_code', inviteCode)
       .maybeSingle()
@@ -200,6 +269,7 @@ export default function PoolPage() {
       setPoolMeta(null)
       setMembers([])
       setAvatarByMemberId(new Map())
+      setActiveAnnouncement(null)
       setNotFound(true)
       setPageLoading(false)
       setLeaderboardLoading(false)
@@ -210,6 +280,8 @@ export default function PoolPage() {
     setPoolId(pool.id)
     setPoolCreatorUserId(pool.creator_id)
     setCanDelete(pool.creator_id === userId)
+
+    const activeAnnouncementPromise = getActiveAnnouncement(supabase, pool.id)
 
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
@@ -279,6 +351,37 @@ export default function PoolPage() {
     const { count: matchesPlayed } = await matchesPlayedQuery
 
     const matchesPlayedCount = matchesPlayed ?? 0
+
+    const { count: awardedPredictionCount } = await supabase
+      .from('predictions')
+      .select('*', { count: 'exact', head: true })
+      .eq('pool_id', pool.id)
+      .neq('points_awarded', 0)
+
+    const hasAwardedPoints = (awardedPredictionCount ?? 0) > 0
+    let scoringLockedAt = pool.scoring_locked_at ?? null
+    const scoringLocked =
+      Boolean(scoringLockedAt) ||
+      hasAwardedPoints ||
+      matchesPlayedCount > 0
+
+    // Persist lock once scoring has started (creator RLS); computed check remains the safety net.
+    if (
+      scoringLocked &&
+      !scoringLockedAt &&
+      pool.creator_id === userId
+    ) {
+      const lockedAt = new Date().toISOString()
+      const { error: lockError } = await supabase
+        .from('pools')
+        .update({ scoring_locked_at: lockedAt })
+        .eq('id', pool.id)
+      if (lockError) {
+        console.error('Failed to stamp scoring_locked_at:', lockError.message)
+      } else {
+        scoringLockedAt = lockedAt
+      }
+    }
 
     let stageMatchQuery = supabase
       .from('matches')
@@ -365,8 +468,16 @@ export default function PoolPage() {
       nextMatchKickoffAt,
       acceptingMembers: pool.accepting_members ?? true,
       avatar: pool.avatar ?? null,
+      emblemUrl: pool.emblem_url ?? null,
+      themeColor: pool.theme_color ?? null,
       eventId: pool.event_id,
+      scoreExactPoints: pool.score_exact_points ?? null,
+      scoreWinnerPoints: pool.score_winner_points ?? null,
+      scoreDrawPoints: pool.score_draw_points ?? null,
+      scoringLockedAt,
+      scoringLocked,
     })
+    setActiveAnnouncement(await activeAnnouncementPromise)
     setUserPredictions(loadedUserPredictions)
     setPageLoading(false)
 
@@ -649,6 +760,13 @@ export default function PoolPage() {
       onPoolNameChange={handlePoolNameChange}
       onAcceptingMembersChange={handleAcceptingMembersChange}
       onPoolAvatarChange={handlePoolAvatarChange}
+      onPoolThemeColorChange={handlePoolThemeColorChange}
+      onPoolEmblemUrlChange={handlePoolEmblemUrlChange}
+      onPoolScoringChange={handlePoolScoringChange}
+      onMemberRemoved={handleMemberRemoved}
+      activeAnnouncement={activeAnnouncement}
+      onAnnouncementDismissed={handleAnnouncementDismissed}
+      onManagedAnnouncementChange={handleManagedAnnouncementChange}
     />
   )
 }

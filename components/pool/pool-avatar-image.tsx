@@ -4,7 +4,10 @@ import { cn } from '@/lib/utils'
 import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
 
 type PoolAvatarImageProps = {
+  /** Preset filename under /pool_avatars (legacy squad photo). */
   avatar: string | null | undefined
+  /** Custom uploaded emblem URL — takes precedence when set. */
+  emblemUrl?: string | null
   size?: 'sm' | 'md' | 'lg'
   className?: string
   imgClassName?: string
@@ -16,14 +19,21 @@ const SIZE_PX = {
   lg: 112,
 } as const
 
+function isRemoteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value) || value.startsWith('//')
+}
+
 export function PoolAvatarImage({
   avatar,
+  emblemUrl,
   size = 'md',
   className,
   imgClassName,
 }: PoolAvatarImageProps) {
   const px = SIZE_PX[size]
-  const src = getPoolAvatarSrc(avatar)
+  const trimmedEmblem = emblemUrl?.trim() || null
+  const presetSrc = getPoolAvatarSrc(avatar)
+  const remoteEmblem = trimmedEmblem && isRemoteUrl(trimmedEmblem)
 
   return (
     <div
@@ -33,9 +43,18 @@ export function PoolAvatarImage({
       )}
       style={{ width: px, height: px }}
     >
-      {src ? (
+      {remoteEmblem ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Supabase public emblem URL
+        <img
+          src={trimmedEmblem}
+          alt=""
+          width={px}
+          height={px}
+          className={cn('size-full object-cover', imgClassName)}
+        />
+      ) : presetSrc ? (
         <Image
-          src={src}
+          src={presetSrc}
           alt=""
           width={px}
           height={px}
@@ -43,7 +62,12 @@ export function PoolAvatarImage({
         />
       ) : (
         <div className="flex size-full items-center justify-center bg-muted/60 text-muted-foreground">
-          <Shield className={cn(size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-8 w-8' : 'h-12 w-12')} aria-hidden />
+          <Shield
+            className={cn(
+              size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-8 w-8' : 'h-12 w-12',
+            )}
+            aria-hidden
+          />
         </div>
       )}
     </div>
