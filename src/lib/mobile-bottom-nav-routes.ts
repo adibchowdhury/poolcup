@@ -1,16 +1,20 @@
 export type MobileBottomNavId =
   | 'profile'
-  | 'pools'
+  | 'dashboard'
   | 'upcoming'
   | 'how-it-works'
   | 'chat'
+  | 'friends'
 
-/** Dashboard footer tabs only (excludes Chat). */
-export type DashboardBottomNavId = Exclude<MobileBottomNavId, 'chat'>
+/** Dashboard footer tabs only (excludes Chat + Friends hub routes). */
+export type DashboardBottomNavId = Exclude<
+  MobileBottomNavId,
+  'chat' | 'friends'
+>
 
 export const DASHBOARD_NAV_ID_TO_TAB_VALUE: Record<DashboardBottomNavId, string> =
   {
-    pools: 'pools',
+    dashboard: 'dashboard',
     upcoming: 'games',
     profile: 'profile',
     'how-it-works': 'how-it-works',
@@ -18,7 +22,9 @@ export const DASHBOARD_NAV_ID_TO_TAB_VALUE: Record<DashboardBottomNavId, string>
 
 export const DASHBOARD_TAB_VALUE_TO_NAV_ID: Record<string, DashboardBottomNavId> =
   {
-    pools: 'pools',
+    dashboard: 'dashboard',
+    /** Legacy alias from when the home tab was labeled "Pools". */
+    pools: 'dashboard',
     games: 'upcoming',
     profile: 'profile',
     'how-it-works': 'how-it-works',
@@ -27,25 +33,25 @@ export const DASHBOARD_TAB_VALUE_TO_NAV_ID: Record<string, DashboardBottomNavId>
 export function isDashboardBottomNavId(
   id: MobileBottomNavId,
 ): id is DashboardBottomNavId {
-  return id !== 'chat'
+  return id !== 'chat' && id !== 'friends'
 }
 
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
-  'max-sm:pb-[calc(3.875rem+env(safe-area-inset-bottom,0px))]'
+  'max-sm:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
 
 /**
- * MobileBottomNav total height: pt-1.5 + h-12 + pb-0.5 + safe-area (matches
- * components/mobile-bottom-nav.tsx).
+ * Full-width bottom nav footprint: bar (~3.6rem) + elevated home overhang +
+ * safe-area (matches components/mobile-bottom-nav.tsx).
  */
 export const MOBILE_BOTTOM_NAV_HEIGHT_CSS =
-  'calc(3.875rem + env(safe-area-inset-bottom, 0px))'
+  'calc(4.75rem + env(safe-area-inset-bottom, 0px))'
 
 /** SaveBar content height: py-3 + min-h-44 button + py-3 (no extra safe-area when above nav). */
 export const SAVE_BAR_HEIGHT_CSS = '4.25rem'
 
 /** Combined scroll inset when a fixed save bar sits above the mobile bottom nav. */
 export const MOBILE_SAVE_BAR_WITH_NAV_SCROLL_PAD_CLASS =
-  'max-sm:pb-[calc(4.25rem+3.875rem+env(safe-area-inset-bottom,0px))] sm:pb-20'
+  'max-sm:pb-[calc(4.25rem+4.75rem+env(safe-area-inset-bottom,0px))] sm:pb-20'
 
 /**
  * Extra scroll inset for the save bar when an ancestor already applies
@@ -62,37 +68,42 @@ export const SAVE_BAR_SOLO_SCROLL_PAD_CLASS = 'pb-20'
 
 /** Tailwind `bottom` offset for SaveBar when stacked above MobileBottomNav. */
 export const SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS =
-  'max-sm:bottom-[calc(3.875rem+env(safe-area-inset-bottom,0px))]'
+  'max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
 
 export const DASHBOARD_TAB_HREFS = {
   profile: '/dashboard?tab=profile',
-  pools: '/dashboard?tab=pools',
+  dashboard: '/dashboard?tab=dashboard',
+  /** @deprecated Use DASHBOARD_TAB_HREFS.dashboard — kept for older call sites. */
+  pools: '/dashboard?tab=dashboard',
   upcoming: '/dashboard?tab=upcoming',
   'how-it-works': '/dashboard?tab=how-it-works',
 } as const
 
 export const CHAT_INBOX_HREF = '/chat'
+export const FRIENDS_HREF = '/friends'
 
 export function resolveMobileBottomNavActive(
   pathname: string,
   tabParam: string | null,
 ): MobileBottomNavId | null {
   if (pathname === '/chat') return 'chat'
+  if (pathname === '/friends') return 'friends'
 
   if (pathname === '/dashboard') {
     if (tabParam === 'profile') return 'profile'
     if (tabParam === 'upcoming') return 'upcoming'
     if (tabParam === 'how-it-works') return 'how-it-works'
-    return 'pools'
+    // Default home + legacy ?tab=pools
+    return 'dashboard'
   }
 
   if (pathname.startsWith('/pool/')) {
     if (tabParam === 'chat') return 'chat'
-    return 'pools'
+    return 'dashboard'
   }
 
   if (pathname === '/create' || pathname.startsWith('/join/')) {
-    return 'pools'
+    return 'dashboard'
   }
 
   if (pathname.startsWith('/match/')) {

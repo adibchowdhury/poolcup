@@ -275,7 +275,7 @@ export function ChatsPageView({
                 Join or create a pool to start chatting with your group.
               </p>
               <Link
-                href="/dashboard?tab=pools"
+                href="/dashboard?tab=dashboard"
                 className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 View pools

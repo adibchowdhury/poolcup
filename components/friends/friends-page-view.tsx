@@ -369,9 +369,9 @@ function Header({ onFindFriends }: { onFindFriends?: () => void }) {
   return (
     <div className="flex items-center gap-2">
       <Link
-        href="/dashboard?tab=profile"
+        href="/dashboard?tab=dashboard"
         className="inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Back to profile"
+        aria-label="Back to dashboard"
       >
         <ArrowLeft className="h-5 w-5" aria-hidden />
       </Link>

@@ -234,8 +234,8 @@ export function PoolHomeView({
   const isLeaderboardTab = activeTab === 'leaderboard'
 
   const handleBackClick = () => {
-    console.log('back clicked', DASHBOARD_TAB_HREFS.pools)
-    router.push(isChatView ? CHAT_INBOX_HREF : DASHBOARD_TAB_HREFS.pools)
+    console.log('back clicked', DASHBOARD_TAB_HREFS.dashboard)
+    router.push(isChatView ? CHAT_INBOX_HREF : DASHBOARD_TAB_HREFS.dashboard)
   }
 
   return (

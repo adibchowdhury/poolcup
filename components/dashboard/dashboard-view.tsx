@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
-import { AchievementsSection } from '@/components/dashboard/feed/achievements-section'
 import { ActivitySection } from '@/components/dashboard/feed/activity-section'
 import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
@@ -84,18 +83,20 @@ interface DashboardViewProps {
   errorMessage?: string | null
 }
 
-const DEFAULT_DASHBOARD_TAB = 'pools'
+const DEFAULT_DASHBOARD_TAB = 'dashboard'
 
 const DASHBOARD_TAB_PARAM_TO_VALUE: Record<string, string> = {
   profile: 'profile',
-  pools: 'pools',
+  dashboard: 'dashboard',
+  /** Legacy: home tab was labeled "Pools". */
+  pools: 'dashboard',
   upcoming: 'games',
   'how-it-works': 'how-it-works',
 }
 
 const DASHBOARD_TAB_VALUE_TO_PARAM: Record<string, string> = {
   profile: 'profile',
-  pools: 'pools',
+  dashboard: 'dashboard',
   games: 'upcoming',
   'how-it-works': 'how-it-works',
 }
@@ -590,7 +591,7 @@ function DashboardViewContent({
             </TabsContent>
 
             <TabsContent
-              value="pools"
+              value="dashboard"
               className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
             >
               <SportBubblesRow className="-mt-6 mb-6 sm:-mt-8" />
@@ -614,7 +615,6 @@ function DashboardViewContent({
                 <ActivitySection />
                 <GlobalActivitySection userId={userId} />
                 <FriendsActivitySection />
-                <AchievementsSection userId={userId} />
                 <NewsSection />
               </DashboardFeed>
             </TabsContent>

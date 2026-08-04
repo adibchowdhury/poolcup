@@ -1,77 +1,60 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
-import {
-  ArrowRight,
-  Award,
-  Flame,
-  LockKeyholeOpen,
-  Loader2,
-  Sparkles,
-  Trophy,
-} from 'lucide-react'
-import {
-  DashboardFeedSection,
-} from '@/components/dashboard/feed/dashboard-feed'
-import { Button } from '@/components/ui/button'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { supabase } from '@/src/lib/supabase'
 import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
+  fetchUserAchievementProgress,
   fetchUserAchievements,
+  type UserAchievementProgress,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
 
-type AchievementsSectionProps = {
+type AchievementsFeedContentProps = {
   userId: string
+  /** Real prediction streak from Your Progress (not engagement-streak placeholder). */
+  predictionStreak?: number
 }
 
-/**
- * PLACEHOLDER: No streak tracker yet. Replace when engagement streaks ship.
- */
-const PLACEHOLDER_STREAK_DAYS = 7
+const SURFACE = 'rounded-xl border border-border/90 bg-card/90'
 
-/**
- * PLACEHOLDER: Closest next GREEN badge needs live metric progress (not just
- * catalogue thresholds). Keep until a progress RPC / client stats helper lands.
- */
-const PLACEHOLDER_NEXT_ACHIEVEMENT = {
-  name: 'Next badge',
-  message: 'Progress toward your next achievement coming soon.',
-} as const
-
-function CompactStat({
-  icon: Icon,
-  value,
-  label,
-}: {
-  icon: typeof Award
-  value: string | number
-  label: string
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-background/45 px-2.5 py-3 text-center shadow-[0_8px_24px_rgba(0,0,0,0.18),0_1px_0_rgba(255,255,255,0.04)_inset] sm:px-3">
-      <Icon className="mx-auto h-4 w-4 text-primary" aria-hidden />
-      <p className="mt-1.5 font-display text-2xl leading-none tracking-wide tabular-nums text-foreground">
-        {value}
-      </p>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-        {label}
-      </p>
-    </div>
+function pickNextAchievement(
+  rows: UserAchievementProgress[],
+): UserAchievementProgress | null {
+  const candidates = rows.filter(
+    (row) => !row.earned && row.threshold > 0 && row.progress_pct < 100,
   )
+  if (candidates.length === 0) return null
+
+  return [...candidates].sort((a, b) => {
+    if (b.progress_pct !== a.progress_pct) return b.progress_pct - a.progress_pct
+    const aRemain = Math.max(0, a.threshold - a.current_value)
+    const bRemain = Math.max(0, b.threshold - b.current_value)
+    return aRemain - bRemain
+  })[0]!
 }
 
-export function AchievementsSection({ userId }: AchievementsSectionProps) {
+/** Achievements body for the dashboard feed (no section chrome — embed under Your Progress). */
+export function AchievementsFeedContent({
+  userId,
+  predictionStreak = 0,
+}: AchievementsFeedContentProps) {
   const [data, setData] = useState<UserAchievementsData | null>(null)
+  const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>(
+    [],
+  )
   const [loading, setLoading] = useState(true)
   const badgeUnlock = useBadgeUnlockOptional()
 
   useEffect(() => {
     if (!userId) {
       setData(null)
+      setProgressRows([])
       setLoading(false)
       return
     }
@@ -79,10 +62,14 @@ export function AchievementsSection({ userId }: AchievementsSectionProps) {
     let cancelled = false
     setLoading(true)
 
-    void fetchUserAchievements(supabase, userId).then((result) => {
+    void Promise.all([
+      fetchUserAchievements(supabase, userId),
+      fetchUserAchievementProgress(supabase, userId),
+    ]).then(([achievements, progress]) => {
       if (cancelled) return
-      setData(result)
-      badgeUnlock?.enqueueFromAchievementsData(result)
+      setData(achievements)
+      setProgressRows(progress)
+      badgeUnlock?.enqueueFromAchievementsData(achievements)
       setLoading(false)
     })
 
@@ -94,165 +81,191 @@ export function AchievementsSection({ userId }: AchievementsSectionProps) {
   const level = data?.level ?? xpToLevel(0)
   const totalXp = data?.totalXp ?? 0
   const earnedCount = data?.earnedCount ?? 0
-  const recent = data?.recentlyUnlocked ?? []
+
+  const recentBadges = useMemo(() => {
+    if (!data) return []
+    const earned = data.achievements.filter((badge) => badge.earned)
+    return [...earned]
+      .sort((a, b) => {
+        const aTime = a.earned_at ? Date.parse(a.earned_at) : 0
+        const bTime = b.earned_at ? Date.parse(b.earned_at) : 0
+        return bTime - aTime
+      })
+      .slice(0, 12)
+  }, [data])
+
+  const nextAchievement = useMemo(
+    () => pickNextAchievement(progressRows),
+    [progressRows],
+  )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2
+          className="h-5 w-5 animate-spin text-primary"
+          aria-label="Loading achievements"
+        />
+      </div>
+    )
+  }
 
   return (
-    <DashboardFeedSection id="achievements" title="Achievements">
-      <div className="space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2
-              className="h-6 w-6 animate-spin text-primary"
-              aria-label="Loading achievements"
-            />
+    <div className="flex flex-col gap-2.5">
+      {/* Unified progression: level + XP bar + streak/badges */}
+      <div className={cn(SURFACE, 'px-3.5 py-3 sm:px-4')}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Level
+            </p>
+            <p className="mt-0.5 font-display text-3xl leading-none tracking-tight tabular-nums text-foreground sm:text-4xl">
+              {level.level}
+            </p>
           </div>
-        ) : (
-          <>
-            <p className="text-sm font-semibold text-foreground">
-              Level {level.level}
-              <span className="mx-2 text-border">•</span>
-              {PLACEHOLDER_STREAK_DAYS}-Day Streak
-              <span className="text-[10px] font-normal text-muted-foreground">
-                {' '}
-                (placeholder)
+          <div className="text-right">
+            <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+              {totalXp.toLocaleString()}
+              <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                XP
               </span>
-              <span className="mx-2 text-border">•</span>
-              {earnedCount} Badges
             </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {level.nextLevelThreshold == null
+                ? 'Max level'
+                : `${level.xpToNext.toLocaleString()} to next`}
+            </p>
+          </div>
+        </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-[radial-gradient(circle_at_15%_15%,rgba(0,230,118,0.2),transparent_38%),linear-gradient(135deg,rgba(17,26,39,0.98),rgba(8,11,15,0.97))] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.32),0_1px_0_rgba(255,255,255,0.06)_inset] sm:p-5">
+        <div
+          className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-label={
+            level.nextLevelThreshold == null
+              ? `Level ${level.level} complete`
+              : `Progress to Level ${level.level + 1}`
+          }
+          aria-valuenow={level.progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${level.progressPct}%` }}
+          />
+        </div>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <span>
+            Streak{' '}
+            <span className="font-mono tabular-nums text-foreground">
+              {predictionStreak}
+            </span>
+          </span>
+          <span className="text-border" aria-hidden>
+            ·
+          </span>
+          <span>
+            Badges{' '}
+            <span className="font-mono tabular-nums text-foreground">
+              {earnedCount}
+            </span>
+            {data?.totalCount != null ? (
+              <span className="text-muted-foreground">
+                /{data.totalCount}
+              </span>
+            ) : null}
+          </span>
+          <Link
+            href="/achievements"
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+          >
+            Collection
+            <ArrowRight className="h-3 w-3" aria-hidden />
+          </Link>
+        </div>
+      </div>
+
+      {/* Recently unlocked — horizontal badge row */}
+      <div className={cn(SURFACE, 'px-3 py-2.5')}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Recently unlocked
+          </p>
+        </div>
+        {recentBadges.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No badges yet — earn XP by completing achievements.
+          </p>
+        ) : (
+          <div className="-mx-0.5 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+            {recentBadges.map((badge) => (
+              <Link
+                key={badge.id}
+                href="/achievements"
+                title={`${badge.name} (+${badge.xp_value} XP)`}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/50 p-1.5 transition-colors hover:border-primary/40"
+              >
+                <AchievementBadgeArt
+                  achievementId={badge.id}
+                  alt={badge.name}
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Next achievement — compact row */}
+      <div
+        className={cn(
+          SURFACE,
+          'flex min-w-0 items-center gap-3 px-3 py-2 sm:px-3.5',
+        )}
+      >
+        {nextAchievement ? (
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Next
+              </p>
+              <p className="truncate text-sm font-medium text-foreground">
+                {nextAchievement.name}
+              </p>
+              <p className="mt-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
+                {nextAchievement.current_value}/{nextAchievement.threshold}
+              </p>
+            </div>
+            <div className="w-[5.5rem] shrink-0 sm:w-28">
               <div
-                className="absolute -bottom-14 -right-10 h-36 w-36 rounded-full border border-primary/10 bg-primary/5"
-                aria-hidden
-              />
-              <div className="relative flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Current level
-                  </p>
-                  <p className="mt-1 font-display text-6xl leading-none tracking-tight tabular-nums text-foreground">
-                    {level.level}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-2xl tracking-wide tabular-nums text-foreground sm:text-3xl">
-                    {totalXp.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">total XP</p>
-                </div>
-              </div>
-
-              <div className="relative mt-5">
-                <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                  <span className="font-semibold text-foreground">
-                    {level.nextLevelThreshold == null
-                      ? 'Top level reached'
-                      : `${level.xpToNext.toLocaleString()} XP to Level ${level.level + 1}`}
-                  </span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {level.progressPct}%
-                  </span>
-                </div>
+                className="h-1.5 overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-label={`Progress on ${nextAchievement.name}`}
+                aria-valuenow={nextAchievement.progress_pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
                 <div
-                  className="h-3 overflow-hidden rounded-full border border-white/10 bg-black/35"
-                  role="progressbar"
-                  aria-label={
-                    level.nextLevelThreshold == null
-                      ? `Level ${level.level} complete`
-                      : `Progress to Level ${level.level + 1}`
-                  }
-                  aria-valuenow={level.progressPct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,#00b85f,#00e676)] shadow-[0_0_16px_rgba(0,230,118,0.45)]"
-                    style={{ width: `${level.progressPct}%` }}
-                  />
-                </div>
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${nextAchievement.progress_pct}%` }}
+                />
               </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <CompactStat icon={Trophy} value={level.level} label="Level" />
-              <CompactStat
-                icon={Flame}
-                value={`${PLACEHOLDER_STREAK_DAYS}d`}
-                label="Streak*"
-              />
-              <CompactStat
-                icon={Award}
-                value={earnedCount}
-                label="Badges"
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              * Streak is a placeholder — no streak system yet.
-            </p>
-
-            <div className="rounded-2xl border border-white/10 bg-card/85 p-3.5 shadow-[0_12px_32px_rgba(0,0,0,0.22),0_1px_0_rgba(255,255,255,0.04)_inset] sm:p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  <LockKeyholeOpen
-                    className="h-3.5 w-3.5 text-primary"
-                    aria-hidden
-                  />
-                  Recently unlocked
-                </p>
-                <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
-                  <Link href="/achievements">
-                    View collection
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                  </Link>
-                </Button>
-              </div>
-
-              {recent.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  No badges unlocked yet — earn XP by completing achievements.
-                </p>
-              ) : (
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  {recent.map((badge) => (
-                    <div
-                      key={badge.id}
-                      className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-background/40 p-2.5"
-                    >
-                      <div className="h-10 w-10 shrink-0">
-                        <AchievementBadgeArt achievementId={badge.id} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {badge.name}
-                        </p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          +{badge.xp_value} XP
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(115deg,rgba(0,230,118,0.1),rgba(17,26,39,0.92)_45%,rgba(17,26,39,0.98))] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-              <Sparkles className="h-5 w-5 text-primary" aria-hidden />
-              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                Next achievement
-                <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground">
-                  (placeholder)
-                </span>
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {PLACEHOLDER_NEXT_ACHIEVEMENT.name}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {PLACEHOLDER_NEXT_ACHIEVEMENT.message}
+              <p className="mt-1 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                {nextAchievement.progress_pct}%
               </p>
             </div>
           </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Next achievement progress will show as you play.
+          </p>
         )}
       </div>
-    </DashboardFeedSection>
+
+      {data?.error ? (
+        <p className="text-[11px] text-muted-foreground">{data.error}</p>
+      ) : null}
+    </div>
   )
 }

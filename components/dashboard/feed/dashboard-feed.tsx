@@ -7,12 +7,11 @@ import { cn } from '@/lib/utils'
  * 1. Live Now
  * 2. Your Pools
  * 3. Discover Pools (OfficialPoolsSection)
- * 4. Your Progress (RecentResultsSection)
+ * 4. Your Progress (stats + achievements stacked)
  * 5. Activity
  * 6. Global PoolCup Activity
  * 7. Friends Activity
- * 8. Achievements
- * 9. News & Highlights (RSS link-out teasers)
+ * 8. News & Highlights (RSS link-out teasers)
  */
 type DashboardFeedProps = {
   children: ReactNode

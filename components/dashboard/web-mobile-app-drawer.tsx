@@ -37,7 +37,7 @@ type DrawerItem = {
 
 /**
  * Website destinations (real pages only):
- * - Join a pool → /dashboard?tab=pools (join/create card)
+ * - Join a pool → /dashboard?tab=dashboard (join/create card)
  * - Support us → Stripe donate
  * - Settings / Account & security → settings dialog
  * - Help → /dashboard?tab=how-it-works
@@ -76,7 +76,7 @@ export function WebMobileAppDrawer({
       label: 'Join a pool',
       icon: UserPlus,
       action: () => {
-        router.push(DASHBOARD_TAB_HREFS.pools)
+        router.push(DASHBOARD_TAB_HREFS.dashboard)
       },
     },
     {

@@ -13,7 +13,7 @@ export const KNOCKOUT_BANNER_EXPIRES_AT = new Date('2026-07-03T19:00:00Z')
 export const KNOCKOUT_BANNER_DISMISS_STORAGE_KEY =
   'poolcup_banner_knockout_set_dismissed'
 
-const POOLS_TAB_HREF = DASHBOARD_TAB_HREFS.pools
+const POOLS_TAB_HREF = DASHBOARD_TAB_HREFS.dashboard
 
 type KnockoutBracketSetBannerProps = {
   userId: string
