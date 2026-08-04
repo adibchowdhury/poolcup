@@ -77,7 +77,7 @@ function SideTabIcon({
   const unreadChatCount = useUnreadChatCount()
   const { count: friendRequestCount } = useFriendRequestCount()
   const iconClass = cn(
-    'h-[22px] w-[22px]',
+    'h-7 w-7',
     isActive ? 'text-primary' : 'text-muted-foreground',
   )
 
@@ -105,25 +105,6 @@ function SideTabIcon({
   }
 
   return <Icon className={cn('shrink-0', iconClass)} aria-hidden />
-}
-
-function SideTabLabel({
-  label,
-  isActive,
-}: {
-  label: string
-  isActive: boolean
-}) {
-  return (
-    <span
-      className={cn(
-        'max-w-full truncate text-[9px] font-medium leading-none tracking-wide transition-opacity',
-        isActive ? 'text-primary opacity-100' : 'text-muted-foreground/70 opacity-80',
-      )}
-    >
-      {label}
-    </span>
-  )
 }
 
 function HomeAnchorButton({
@@ -187,7 +168,7 @@ function MobileBottomNavContent() {
           const isHome = Boolean(item.homeAnchor)
 
           const sideClassName = cn(
-            'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 py-1.5 transition-colors',
+            'flex min-w-0 flex-1 items-center justify-center px-0.5 transition-colors',
             isActive
               ? 'text-primary'
               : 'text-muted-foreground hover:text-foreground',
@@ -199,7 +180,7 @@ function MobileBottomNavContent() {
           if (isHome) {
             const homeInner = (
               <HomeAnchorButton isActive={isActive}>
-                <Home className="h-6 w-6 text-white" strokeWidth={2.25} aria-hidden />
+                <Home className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden />
               </HomeAnchorButton>
             )
 
@@ -232,12 +213,7 @@ function MobileBottomNavContent() {
             )
           }
 
-          const sideInner = (
-            <>
-              <SideTabIcon item={item} isActive={isActive} />
-              <SideTabLabel label={item.label} isActive={isActive} />
-            </>
-          )
+          const sideInner = <SideTabIcon item={item} isActive={isActive} />
 
           if (isOnDashboard && isDashboardBottomNavId(item.id)) {
             const dashboardTabId = item.id
@@ -247,6 +223,7 @@ function MobileBottomNavContent() {
                 type="button"
                 onClick={() => switchDashboardTab(dashboardTabId)}
                 className={sideClassName}
+                aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {sideInner}
@@ -259,6 +236,7 @@ function MobileBottomNavContent() {
               key={item.id}
               href={item.href}
               className={sideClassName}
+              aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
             >
               {sideInner}
