@@ -38,7 +38,7 @@ function ScoreboardUnit({
       <span
         className="text-[clamp(2.2rem,10vw,4.5rem)] leading-[0.78] tracking-[0.04em] tabular-nums text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.85),0_0_22px_rgba(0,230,118,0.35)]"
         style={{
-          fontFamily: '"VT323", "Share Tech Mono", "Space Mono", monospace',
+          fontFamily: '"VT323", "Space Mono", monospace',
         }}
       >
         {value == null ? '--' : String(value).padStart(2, '0')}
@@ -55,7 +55,7 @@ function ScoreboardColon() {
     <span
       className="mb-4 shrink-0 text-[clamp(1.9rem,7vw,3.75rem)] leading-none text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.8)]"
       style={{
-        fontFamily: '"VT323", "Share Tech Mono", "Space Mono", monospace',
+        fontFamily: '"VT323", "Space Mono", monospace',
       }}
       aria-hidden
     >

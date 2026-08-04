@@ -17,7 +17,7 @@ export const FEATURED_LIVE_STATUS_SHORTS = [
 const LIVE_MAX_AGE_MINUTES = 210
 
 const FEATURED_MATCH_COLUMNS =
-  'id, team1_name, team2_name, team1_flag, team2_flag, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
+  'id, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
 
 export type FeaturedMatch = {
   id: string
@@ -25,6 +25,8 @@ export type FeaturedMatch = {
   team2_name: string
   team1_flag: string | null
   team2_flag: string | null
+  team1_logo?: string | null
+  team2_logo?: string | null
   result_team1: number | null
   result_team2: number | null
   status_short: string | null

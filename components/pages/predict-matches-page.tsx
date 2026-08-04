@@ -88,7 +88,7 @@ export default function PredictMatchesPage() {
                             placeholder="–"
                             value={predictions[match.id]?.score1 || match.score1}
                             onChange={(e) => updatePrediction(match.id, "score1", e.target.value)}
-                            className={`w-12 h-11 rounded-md text-center font-display text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] transition-all placeholder:text-[#5a7080] placeholder:font-sans placeholder:text-base ${
+                            className={`w-12 h-11 rounded-md text-center font-mono text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] transition-all placeholder:text-[#5a7080] placeholder:font-sans placeholder:text-base ${
                               match.completed
                                 ? "bg-[#00e676]/15 border-2 border-[#00e676] text-[#00e676]"
                                 : "bg-[#0d1318] border border-[rgba(255,255,255,0.15)] text-[#f0f4f8] hover:border-[rgba(255,255,255,0.25)]"
@@ -102,7 +102,7 @@ export default function PredictMatchesPage() {
                             placeholder="–"
                             value={predictions[match.id]?.score2 || match.score2}
                             onChange={(e) => updatePrediction(match.id, "score2", e.target.value)}
-                            className={`w-12 h-11 rounded-md text-center font-display text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] transition-all placeholder:text-[#5a7080] placeholder:font-sans placeholder:text-base ${
+                            className={`w-12 h-11 rounded-md text-center font-mono text-xl focus:outline-none focus:ring-2 focus:ring-[#00e676] transition-all placeholder:text-[#5a7080] placeholder:font-sans placeholder:text-base ${
                               match.completed
                                 ? "bg-[#00e676]/15 border-2 border-[#00e676] text-[#00e676]"
                                 : "bg-[#0d1318] border border-[rgba(255,255,255,0.15)] text-[#f0f4f8] hover:border-[rgba(255,255,255,0.25)]"

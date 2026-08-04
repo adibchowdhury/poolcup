@@ -1,15 +1,18 @@
 'use client'
 
-import { useId } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { Clock3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeaturedMatchMode } from '@/src/lib/featured-match'
+import { isTeamLogoUrl } from '@/src/lib/team-logos'
 
 export type PremiumMatchCardMatch = {
   id: string
   team1_name: string
   team2_name: string
+  team1_logo?: string | null
+  team2_logo?: string | null
   result_team1: number | null
   result_team2: number | null
   status_short: string | null
@@ -38,7 +41,7 @@ const SCULPTED_CARD_PATH =
   'M20 1 H340 Q359 1 359 20 V185 Q359 198 346 198 H202 L180 208 L158 198 H14 Q1 198 1 185 V20 Q1 1 20 1 Z'
 const SCULPTED_BOTTOM_EDGE_PATH = 'M14 198 H158 L180 208 L202 198 H346'
 
-/** Text-only team mark: no club crest/logo assets are used. */
+/** Monogram fallback when a club crest URL is missing or fails to load. */
 export function getTeamInitials(teamName: string): string {
   const normalized = teamName
     .normalize('NFD')
@@ -121,18 +124,45 @@ function StatusNotch({
   )
 }
 
-function TeamMark({ name }: { name: string }) {
+function TeamMark({
+  name,
+  logoUrl = null,
+}: {
+  name: string
+  logoUrl?: string | null
+}) {
+  const crestSrc = isTeamLogoUrl(logoUrl) ? logoUrl!.trim() : null
+  const [crestFailed, setCrestFailed] = useState(false)
+
+  useEffect(() => {
+    setCrestFailed(false)
+  }, [crestSrc])
+
+  const showCrest = crestSrc != null && !crestFailed
+
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center">
-      <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(145deg,#202124,#0a0a0b)] p-1 shadow-[0_9px_18px_rgba(0,0,0,0.38),0_1px_0_rgba(255,255,255,0.07)_inset] sm:h-16 sm:w-16">
-        <div
-          className="absolute inset-1 rounded-full border border-white/[0.07] bg-[radial-gradient(circle_at_35%_28%,rgba(255,255,255,0.08),transparent_45%),linear-gradient(155deg,#171719,#070708)]"
-          aria-hidden
-        />
-        <span className="relative font-display text-xl tracking-[0.09em] text-white/85 sm:text-2xl">
-          {getTeamInitials(name)}
-        </span>
-      </div>
+      {showCrest ? (
+        <div className="flex h-14 w-14 items-center justify-center sm:h-16 sm:w-16">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={crestSrc}
+            alt=""
+            className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+            onError={() => setCrestFailed(true)}
+          />
+        </div>
+      ) : (
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(145deg,#202124,#0a0a0b)] p-1 shadow-[0_9px_18px_rgba(0,0,0,0.38),0_1px_0_rgba(255,255,255,0.07)_inset] sm:h-16 sm:w-16">
+          <div
+            className="absolute inset-1 rounded-full border border-white/[0.07] bg-[radial-gradient(circle_at_35%_28%,rgba(255,255,255,0.08),transparent_45%),linear-gradient(155deg,#171719,#070708)]"
+            aria-hidden
+          />
+          <span className="relative font-display text-xl tracking-[0.09em] text-white/85 sm:text-2xl">
+            {getTeamInitials(name)}
+          </span>
+        </div>
+      )}
       <p className="mt-1.5 line-clamp-2 min-h-8 w-full text-center text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
         {name}
       </p>
@@ -240,7 +270,7 @@ export function PremiumMatchCard({
       </p>
 
       <div className="relative mt-2.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-1.5">
-        <TeamMark name={match.team1_name} />
+        <TeamMark name={match.team1_name} logoUrl={match.team1_logo} />
 
         <div className="flex min-h-16 min-w-[5rem] items-center justify-center self-start sm:min-w-[6rem]">
           {showScore ? (
@@ -256,7 +286,7 @@ export function PremiumMatchCard({
           )}
         </div>
 
-        <TeamMark name={match.team2_name} />
+        <TeamMark name={match.team2_name} logoUrl={match.team2_logo} />
       </div>
 
       <div className="relative mt-auto flex items-center justify-center gap-1.5 border-t border-white/[0.055] pt-2 text-[10px] font-medium text-muted-foreground">

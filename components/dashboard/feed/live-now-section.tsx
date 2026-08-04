@@ -142,7 +142,8 @@ function LiveMatchCard({ item }: { item: LiveNowMatchItem }) {
           <TeamFlagImage
             countryName={match.team1_name}
             dbFlag={match.team1_flag}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-cover"
+            logoUrl={match.team1_logo}
+            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
             emojiClassName="text-sm leading-none"
           />
         </div>
@@ -153,7 +154,8 @@ function LiveMatchCard({ item }: { item: LiveNowMatchItem }) {
           <TeamFlagImage
             countryName={match.team2_name}
             dbFlag={match.team2_flag}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-cover"
+            logoUrl={match.team2_logo}
+            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
             emojiClassName="text-sm leading-none"
           />
           <span className="truncate text-sm font-semibold text-foreground">

@@ -85,6 +85,7 @@ function TodayMatchRow({ match }: { match: DashboardTodayMatch }) {
           <TeamFlagImage
             countryName={match.team1_name}
             dbFlag={match.team1_flag}
+            logoUrl={match.team1_logo}
             imgClassName="h-5 w-5 shrink-0 object-contain"
             emojiClassName="text-base"
           />
@@ -95,6 +96,7 @@ function TodayMatchRow({ match }: { match: DashboardTodayMatch }) {
           <TeamFlagImage
             countryName={match.team2_name}
             dbFlag={match.team2_flag}
+            logoUrl={match.team2_logo}
             imgClassName="h-5 w-5 shrink-0 object-contain"
             emojiClassName="text-base"
           />

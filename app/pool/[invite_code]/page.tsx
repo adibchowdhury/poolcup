@@ -421,7 +421,7 @@ export default function PoolPage() {
       let classicMatchesQuery = supabase
         .from('matches')
         .select(
-          'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team',
+          'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round, result_team1, result_team2, is_final, advancing_team',
         )
         .order('kickoff_at', { ascending: true })
       if (poolEventId) {

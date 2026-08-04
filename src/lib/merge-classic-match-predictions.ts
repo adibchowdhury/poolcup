@@ -13,6 +13,8 @@ export type ClassicMatchRow = {
   team2_name: string
   team1_flag: string | null
   team2_flag: string | null
+  team1_logo?: string | null
+  team2_logo?: string | null
   result_team1: number | null
   result_team2: number | null
   is_final: boolean
@@ -75,6 +77,8 @@ export function mergeMatchesWithPredictions(
       team2Name: match.team2_name,
       team1Flag: match.team1_flag,
       team2Flag: match.team2_flag,
+      team1Logo: match.team1_logo ?? null,
+      team2Logo: match.team2_logo ?? null,
       predTeam1: prediction?.pred_team1 ?? null,
       predTeam2: prediction?.pred_team2 ?? null,
       advancePick: prediction?.advance_pick ?? null,

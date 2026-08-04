@@ -58,8 +58,8 @@ type ApiFixture = {
     status: { short: string | null; elapsed: number | null }
   }
   teams: {
-    home: { name: string }
-    away: { name: string }
+    home: { name: string; logo: string | null }
+    away: { name: string; logo: string | null }
   }
   goals: {
     home: number | null
@@ -76,6 +76,8 @@ type MatchInsert = {
   team2_name: string
   team1_flag: null
   team2_flag: null
+  team1_logo: string | null
+  team2_logo: string | null
   round: typeof ROUND
   group_name: null
   result_team1: number | null
@@ -90,16 +92,29 @@ type MatchInsert = {
 function mapFixture(fixture: ApiFixture, eventId: string): MatchInsert {
   const statusShort = fixture.fixture.status.short?.trim() || null
   const isFinal = statusShort != null && isFinalStatus(statusShort)
+  const homeLogo =
+    typeof fixture.teams.home.logo === 'string' &&
+    fixture.teams.home.logo.trim()
+      ? fixture.teams.home.logo.trim()
+      : null
+  const awayLogo =
+    typeof fixture.teams.away.logo === 'string' &&
+    fixture.teams.away.logo.trim()
+      ? fixture.teams.away.logo.trim()
+      : null
 
   return {
     fixture_id: String(fixture.fixture.id),
     event_id: eventId,
     kickoff_at: fixture.fixture.date,
     locked_at: fixture.fixture.date,
+    // Convention: home → team1, away → team2 (same as goals).
     team1_name: fixture.teams.home.name,
     team2_name: fixture.teams.away.name,
     team1_flag: null,
     team2_flag: null,
+    team1_logo: homeLogo,
+    team2_logo: awayLogo,
     round: ROUND,
     group_name: null,
     result_team1: fixture.goals.home,

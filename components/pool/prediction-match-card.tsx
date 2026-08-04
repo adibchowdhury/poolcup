@@ -64,6 +64,8 @@ export type UserPoolPrediction = {
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo?: string | null
+  team2Logo?: string | null
   predTeam1: number | null
   predTeam2: number | null
   advancePick: number | null
@@ -111,12 +113,14 @@ function PreviewTbdTeamSide() {
 function AdvanceTeamChip({
   teamName,
   dbFlag,
+  logoUrl = null,
   selected,
   disabled,
   onClick,
 }: {
   teamName: string
   dbFlag: string | null
+  logoUrl?: string | null
   selected: boolean
   disabled: boolean
   onClick?: () => void
@@ -137,7 +141,8 @@ function AdvanceTeamChip({
       <TeamFlagImage
         countryName={teamName}
         dbFlag={dbFlag}
-        imgClassName="h-4 w-auto shrink-0 object-cover"
+        logoUrl={logoUrl}
+        imgClassName="h-4 w-auto shrink-0 object-contain"
         emojiClassName="text-sm leading-none"
       />
       <span className="truncate">{teamName}</span>
@@ -150,6 +155,8 @@ export function KnockoutAdvancePicker({
   team2Name,
   team1Flag,
   team2Flag,
+  team1Logo = null,
+  team2Logo = null,
   predTeam1,
   predTeam2,
   userAdvancePick,
@@ -162,6 +169,8 @@ export function KnockoutAdvancePicker({
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo?: string | null
+  team2Logo?: string | null
   predTeam1: number | null
   predTeam2: number | null
   userAdvancePick: number | null
@@ -208,6 +217,7 @@ export function KnockoutAdvancePicker({
             <AdvanceTeamChip
               teamName={team1Name}
               dbFlag={team1Flag}
+              logoUrl={team1Logo}
               selected={userAdvancePick === 1}
               disabled={false}
               onClick={() => onAdvancePick?.(1)}
@@ -215,6 +225,7 @@ export function KnockoutAdvancePicker({
             <AdvanceTeamChip
               teamName={team2Name}
               dbFlag={team2Flag}
+              logoUrl={team2Logo}
               selected={userAdvancePick === 2}
               disabled={false}
               onClick={() => onAdvancePick?.(2)}
@@ -227,6 +238,7 @@ export function KnockoutAdvancePicker({
                 effectivePick === 1 ? team1Name : team2Name
               }
               dbFlag={effectivePick === 1 ? team1Flag : team2Flag}
+              logoUrl={effectivePick === 1 ? team1Logo : team2Logo}
               selected
               disabled
             />
@@ -931,6 +943,7 @@ export function PredictionMatchCard({
             <CompactMatchRowTeamHome
               name={prediction.team1Name}
               dbFlag={prediction.team1Flag}
+              logoUrl={prediction.team1Logo}
             />
           )}
 
@@ -1027,6 +1040,7 @@ export function PredictionMatchCard({
             <CompactMatchRowTeamAway
               name={prediction.team2Name}
               dbFlag={prediction.team2Flag}
+              logoUrl={prediction.team2Logo}
             />
           )}
         </div>
@@ -1050,6 +1064,8 @@ export function PredictionMatchCard({
               team2Name={prediction.team2Name}
               team1Flag={prediction.team1Flag}
               team2Flag={prediction.team2Flag}
+              team1Logo={prediction.team1Logo}
+              team2Logo={prediction.team2Logo}
               predTeam1={inputPredTeam1}
               predTeam2={inputPredTeam2}
               userAdvancePick={advancePick}
@@ -1093,6 +1109,8 @@ export function PredictionMatchCard({
                 team2Name={prediction.team2Name}
                 team1Flag={prediction.team1Flag}
                 team2Flag={prediction.team2Flag}
+                team1Logo={prediction.team1Logo}
+                team2Logo={prediction.team2Logo}
               />
             ) : null}
           </div>

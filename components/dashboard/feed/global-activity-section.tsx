@@ -48,7 +48,8 @@ function CompactMatchHeader({
           <TeamFlagImage
             countryName={match.team1Name}
             dbFlag={match.team1Flag}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-cover"
+            logoUrl={match.team1Logo}
+            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
             emojiClassName="text-sm"
           />
           <p className="truncate text-sm font-semibold text-foreground">
@@ -59,7 +60,8 @@ function CompactMatchHeader({
           <TeamFlagImage
             countryName={match.team2Name}
             dbFlag={match.team2Flag}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-cover"
+            logoUrl={match.team2Logo}
+            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
             emojiClassName="text-sm"
           />
         </div>

@@ -18,6 +18,8 @@ function toPreviewPrediction(entry: (typeof ROUND_OF_32_PREVIEW)[number]): UserP
     team2Name: 'TBD',
     team1Flag: null,
     team2Flag: null,
+    team1Logo: null,
+    team2Logo: null,
     predTeam1: null,
     predTeam2: null,
     advancePick: null,

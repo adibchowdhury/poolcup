@@ -66,6 +66,7 @@ export function CompactMatchRow({
         <CompactMatchRowTeamHome
           name={homeTeam.name}
           dbFlag={homeTeam.dbFlag}
+          logoUrl={homeTeam.logoUrl}
           variant={variant}
         />
 
@@ -96,6 +97,7 @@ export function CompactMatchRow({
         <CompactMatchRowTeamAway
           name={awayTeam.name}
           dbFlag={awayTeam.dbFlag}
+          logoUrl={awayTeam.logoUrl}
           variant={variant}
         />
       </div>

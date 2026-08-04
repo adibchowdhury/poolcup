@@ -22,6 +22,8 @@ export type GlobalActivityMatch = {
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo: string | null
+  team2Logo: string | null
   resultTeam1: number | null
   resultTeam2: number | null
   kickoffAt: string
@@ -71,6 +73,8 @@ type MatchRow = {
   team2_name: string
   team1_flag: string | null
   team2_flag: string | null
+  team1_logo: string | null
+  team2_logo: string | null
   result_team1: number | null
   result_team2: number | null
   kickoff_at: string
@@ -93,7 +97,7 @@ type BiggestClimbRpcRow = {
 }
 
 const MATCH_COLUMNS =
-  'id, team1_name, team2_name, team1_flag, team2_flag, result_team1, result_team2, kickoff_at, locked_at, round, group_name, is_final'
+  'id, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, result_team1, result_team2, kickoff_at, locked_at, round, group_name, is_final'
 
 function toActivityMatch(
   row: MatchRow,
@@ -122,6 +126,8 @@ function toActivityMatch(
     team2Name: row.team2_name,
     team1Flag: row.team1_flag,
     team2Flag: row.team2_flag,
+    team1Logo: row.team1_logo ?? null,
+    team2Logo: row.team2_logo ?? null,
     resultTeam1: row.result_team1,
     resultTeam2: row.result_team2,
     kickoffAt: row.kickoff_at,

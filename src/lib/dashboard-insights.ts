@@ -6,6 +6,8 @@ export type DashboardTodayMatch = {
   team2_name: string
   team1_flag: string | null
   team2_flag: string | null
+  team1_logo?: string | null
+  team2_logo?: string | null
   kickoff_at: string
   status_short: string | null
   elapsed_minute: number | null

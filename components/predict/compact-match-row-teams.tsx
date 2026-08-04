@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils'
 export function CompactMatchRowTeamHome({
   name,
   dbFlag,
+  logoUrl,
   variant = 'compact',
 }: {
   name: string
   dbFlag?: string | null
+  logoUrl?: string | null
   variant?: 'compact' | 'prominent'
 }) {
   const prominent = variant === 'prominent'
@@ -24,11 +26,15 @@ export function CompactMatchRowTeamHome({
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
+        logoUrl={logoUrl}
         imgClassName={cn(
-          'w-auto shrink-0 object-cover',
+          'w-auto shrink-0 object-contain',
           prominent ? 'h-6 sm:h-7' : 'h-5 sm:h-6',
         )}
-        emojiClassName={cn('leading-none', prominent ? 'text-lg sm:text-xl' : 'text-base sm:text-lg')}
+        emojiClassName={cn(
+          'leading-none',
+          prominent ? 'text-lg sm:text-xl' : 'text-base sm:text-lg',
+        )}
       />
       <span
         className={cn(
@@ -46,10 +52,12 @@ export function CompactMatchRowTeamHome({
 export function CompactMatchRowTeamAway({
   name,
   dbFlag,
+  logoUrl,
   variant = 'compact',
 }: {
   name: string
   dbFlag?: string | null
+  logoUrl?: string | null
   variant?: 'compact' | 'prominent'
 }) {
   const prominent = variant === 'prominent'
@@ -64,11 +72,15 @@ export function CompactMatchRowTeamAway({
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
+        logoUrl={logoUrl}
         imgClassName={cn(
-          'w-auto shrink-0 object-cover sm:order-2',
+          'w-auto shrink-0 object-contain sm:order-2',
           prominent ? 'h-6 sm:h-7' : 'h-5 sm:h-6',
         )}
-        emojiClassName={cn('leading-none', prominent ? 'text-lg sm:text-xl' : 'text-base sm:text-lg')}
+        emojiClassName={cn(
+          'leading-none',
+          prominent ? 'text-lg sm:text-xl' : 'text-base sm:text-lg',
+        )}
       />
       <span
         className={cn(

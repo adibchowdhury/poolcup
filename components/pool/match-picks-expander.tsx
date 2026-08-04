@@ -38,6 +38,8 @@ type MatchPicksExpanderProps = {
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo?: string | null
+  team2Logo?: string | null
 }
 
 function PickRow({
@@ -49,6 +51,8 @@ function PickRow({
   team2Name,
   team1Flag,
   team2Flag,
+  team1Logo = null,
+  team2Logo = null,
 }: {
   pick: MatchPoolPick
   isFinal: boolean
@@ -58,6 +62,8 @@ function PickRow({
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo?: string | null
+  team2Logo?: string | null
 }) {
   const showAdvancePick = round != null && isKnockoutRound(round)
   const effectivePick = showAdvancePick
@@ -73,6 +79,8 @@ function PickRow({
       : null
   const advanceFlag =
     effectivePick === 1 ? team1Flag : effectivePick === 2 ? team2Flag : null
+  const advanceLogo =
+    effectivePick === 1 ? team1Logo : effectivePick === 2 ? team2Logo : null
 
   return (
     <li
@@ -104,7 +112,8 @@ function PickRow({
                 <TeamFlagImage
                   countryName={advanceName}
                   dbFlag={advanceFlag}
-                  imgClassName="h-3 w-auto shrink-0 object-cover"
+                  logoUrl={advanceLogo}
+                  imgClassName="h-3 w-auto shrink-0 object-contain"
                   emojiClassName="text-[10px] leading-none"
                 />
                 <span className="truncate">{advanceName}</span>
@@ -144,6 +153,8 @@ export function MatchPicksExpander({
   team2Name,
   team1Flag,
   team2Flag,
+  team1Logo = null,
+  team2Logo = null,
 }: MatchPicksExpanderProps) {
   const { mounted, nowMs } = useClientNow(30_000)
   const [open, setOpen] = useState(false)
@@ -233,6 +244,8 @@ export function MatchPicksExpander({
                   team2Name={team2Name}
                   team1Flag={team1Flag}
                   team2Flag={team2Flag}
+                  team1Logo={team1Logo}
+                  team2Logo={team2Logo}
                 />
               ))}
             </ul>

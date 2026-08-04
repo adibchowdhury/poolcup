@@ -4,4 +4,5 @@ export interface CompactTeam {
   name: string
   flag: ResolvedTeamFlag
   dbFlag?: string | null
+  logoUrl?: string | null
 }

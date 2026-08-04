@@ -24,7 +24,7 @@ import {
 } from '@/src/lib/my-match-predictions'
 
 const MATCH_COLUMNS =
-  'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round, result_team1, result_team2, is_final, advancing_team, status_short, elapsed_minute'
+  'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round, result_team1, result_team2, is_final, advancing_team, status_short, elapsed_minute'
 
 const LIVE_REFETCH_MS = 30_000
 
@@ -51,6 +51,8 @@ function toGlobalMatchDisplay(match: ClassicMatchRow): GlobalMatchDisplay {
     team2Name: match.team2_name,
     team1Flag: match.team1_flag,
     team2Flag: match.team2_flag,
+    team1Logo: match.team1_logo ?? null,
+    team2Logo: match.team2_logo ?? null,
     kickoffAt: match.kickoff_at,
     round: match.round,
     groupName: match.group_name,

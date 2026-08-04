@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS public.matches (
     team2_name text NOT NULL,
     team1_flag text,
     team2_flag text,
+    team1_logo text,
+    team2_logo text,
     round text NOT NULL,
     group_name text,
     result_team1 integer,

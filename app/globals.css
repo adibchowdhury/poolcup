@@ -127,7 +127,7 @@
 
 /* Score input styling */
 .score-input {
-  @apply bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-lg text-center font-display text-2xl text-foreground w-12 h-12 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+  @apply bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-lg text-center font-mono text-2xl text-foreground w-12 h-12 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
 }
 
 .score-input-filled {

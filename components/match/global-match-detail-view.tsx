@@ -51,12 +51,14 @@ function getFavoriteTeamDisplay(
   team2Name: string,
   team1Flag: string | null,
   team2Flag: string | null,
-): { name: string; flag: string | null } | null {
+  team1Logo: string | null,
+  team2Logo: string | null,
+): { name: string; flag: string | null; logo: string | null } | null {
   if (favoriteKey === 'team1_win') {
-    return { name: team1Name, flag: team1Flag }
+    return { name: team1Name, flag: team1Flag, logo: team1Logo }
   }
   if (favoriteKey === 'team2_win') {
-    return { name: team2Name, flag: team2Flag }
+    return { name: team2Name, flag: team2Flag, logo: team2Logo }
   }
   return null
 }
@@ -97,6 +99,8 @@ export type GlobalMatchDisplay = {
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo: string | null
+  team2Logo: string | null
   kickoffAt: string
   round: string
   groupName: string | null
@@ -425,12 +429,16 @@ function PoolCupConsensusSection({
   team2Name,
   team1Flag,
   team2Flag,
+  team1Logo,
+  team2Logo,
 }: {
   distribution: MatchPredictionDistribution | null
   team1Name: string
   team2Name: string
   team1Flag: string | null
   team2Flag: string | null
+  team1Logo: string | null
+  team2Logo: string | null
 }) {
   const [barsReady, setBarsReady] = useState(false)
   const total = distribution?.total ?? 0
@@ -452,6 +460,8 @@ function PoolCupConsensusSection({
         team2Name,
         team1Flag,
         team2Flag,
+        team1Logo,
+        team2Logo,
       )
     : null
 
@@ -498,7 +508,8 @@ function PoolCupConsensusSection({
                 <TeamFlagImage
                   countryName={favoriteTeam.name}
                   dbFlag={favoriteTeam.flag}
-                  imgClassName="h-6 w-auto shrink-0"
+                  logoUrl={favoriteTeam.logo}
+                  imgClassName="h-6 w-auto shrink-0 object-contain"
                   emojiClassName="text-2xl leading-none"
                 />
               ) : null}
@@ -703,7 +714,8 @@ export function GlobalMatchDetailView({
                 <TeamFlagImage
                   countryName={match.team1Name}
                   dbFlag={match.team1Flag}
-                  imgClassName="h-[3.25rem] w-auto max-w-full sm:h-[4.75rem]"
+                  logoUrl={match.team1Logo}
+                  imgClassName="h-[3.25rem] w-auto max-w-full object-contain sm:h-[4.75rem]"
                   emojiClassName="text-5xl sm:text-6xl"
                 />
                 <p className="w-full truncate text-center text-lg font-bold text-foreground sm:text-xl">
@@ -740,7 +752,8 @@ export function GlobalMatchDetailView({
                 <TeamFlagImage
                   countryName={match.team2Name}
                   dbFlag={match.team2Flag}
-                  imgClassName="h-[3.25rem] w-auto max-w-full sm:h-[4.75rem]"
+                  logoUrl={match.team2Logo}
+                  imgClassName="h-[3.25rem] w-auto max-w-full object-contain sm:h-[4.75rem]"
                   emojiClassName="text-5xl sm:text-6xl"
                 />
                 <p className="w-full truncate text-center text-lg font-bold text-foreground sm:text-xl">
@@ -778,6 +791,8 @@ export function GlobalMatchDetailView({
               team2Name={match.team2Name}
               team1Flag={match.team1Flag}
               team2Flag={match.team2Flag}
+              team1Logo={match.team1Logo}
+              team2Logo={match.team2Logo}
             />
           ) : (
             <section className={FLOW_SECTION_CLASS}>

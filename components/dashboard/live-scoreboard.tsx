@@ -273,15 +273,18 @@ export function LiveScoreboardSkeleton({ compact = false }: { compact?: boolean 
 function ScoreboardTeam({
   name,
   dbFlag,
+  logoUrl,
 }: {
   name: string
   dbFlag: string | null
+  logoUrl?: string | null
 }) {
   return (
     <div className="mx-auto flex w-max min-w-0 max-w-full flex-col items-center justify-center gap-0 sm:mx-0 sm:w-full sm:max-w-none sm:flex-1 sm:gap-1">
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
+        logoUrl={logoUrl}
         imgClassName="h-[7.3125rem] w-[7.3125rem] shrink-0 object-contain sm:h-[6.5rem] sm:w-full sm:max-w-[9.5rem]"
         emojiClassName="text-8xl sm:text-7xl"
       />
@@ -295,10 +298,12 @@ function ScoreboardTeam({
 function CompactScoreboardTeam({
   name,
   dbFlag,
+  logoUrl,
   align,
 }: {
   name: string
   dbFlag: string | null
+  logoUrl?: string | null
   align: 'left' | 'right'
 }) {
   return (
@@ -311,6 +316,7 @@ function CompactScoreboardTeam({
       <TeamFlagImage
         countryName={name}
         dbFlag={dbFlag}
+        logoUrl={logoUrl}
         imgClassName="h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8"
         emojiClassName="text-lg sm:text-xl"
       />
@@ -359,6 +365,7 @@ function CompactLiveScoreboardCard({
           <CompactScoreboardTeam
             name={match.team1_name}
             dbFlag={match.team1_flag}
+            logoUrl={match.team1_logo}
             align="left"
           />
 
@@ -384,6 +391,7 @@ function CompactLiveScoreboardCard({
           <CompactScoreboardTeam
             name={match.team2_name}
             dbFlag={match.team2_flag}
+            logoUrl={match.team2_logo}
             align="right"
           />
 
@@ -532,6 +540,7 @@ export function LiveScoreboardCard({
           <ScoreboardTeam
             name={match.team1_name}
             dbFlag={match.team1_flag}
+            logoUrl={match.team1_logo}
           />
 
           <div
@@ -557,6 +566,7 @@ export function LiveScoreboardCard({
           <ScoreboardTeam
             name={match.team2_name}
             dbFlag={match.team2_flag}
+            logoUrl={match.team2_logo}
           />
         </div>
       </div>
@@ -599,6 +609,7 @@ export function LiveScoreboardCard({
         <ScoreboardTeam
           name={match.team1_name}
           dbFlag={match.team1_flag}
+          logoUrl={match.team1_logo}
         />
 
         <div
@@ -636,6 +647,7 @@ export function LiveScoreboardCard({
         <ScoreboardTeam
           name={match.team2_name}
           dbFlag={match.team2_flag}
+          logoUrl={match.team2_logo}
         />
       </div>
 

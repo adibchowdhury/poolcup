@@ -11,7 +11,7 @@ import {
 } from '@/src/lib/upcoming-match-horizon'
 
 const FEATURED_MATCH_COLUMNS =
-  'id, team1_name, team2_name, team1_flag, team2_flag, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
+  'id, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, result_team1, result_team2, status_short, elapsed_minute, kickoff_at, group_name, round, is_final'
 
 /** Max cards in the dashboard event-pill match slider (per event). */
 export const EVENT_SLIDER_MATCH_LIMIT = 20

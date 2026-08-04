@@ -63,6 +63,8 @@ type Match = {
   team2_name: string
   team1_flag: string
   team2_flag: string
+  team1_logo: string | null
+  team2_logo: string | null
   group_name: string | null
   round: string
 }
@@ -230,11 +232,13 @@ function toSectionMatch(
       name: match.team1_name,
       flag: resolveTeamFlag(match.team1_name, match.team1_flag),
       dbFlag: match.team1_flag,
+      logoUrl: match.team1_logo,
     },
     awayTeam: {
       name: match.team2_name,
       flag: resolveTeamFlag(match.team2_name, match.team2_flag),
       dbFlag: match.team2_flag,
+      logoUrl: match.team2_logo,
     },
     homeScore: entry.score1,
     awayScore: entry.score2,
@@ -309,6 +313,8 @@ function ClassicKnockoutPredictCard({
           team2Name={match.team2_name}
           team1Flag={match.team1_flag}
           team2Flag={match.team2_flag}
+          team1Logo={match.team1_logo}
+          team2Logo={match.team2_logo}
           predTeam1={predTeam1}
           predTeam2={predTeam2}
           userAdvancePick={advancePick}
@@ -407,7 +413,7 @@ export default function PredictPage() {
     let matchesQuery = supabase
       .from('matches')
       .select(
-        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, group_name, round',
+        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round',
       )
       .order('kickoff_at', { ascending: true })
     if (poolData.event_id) {
