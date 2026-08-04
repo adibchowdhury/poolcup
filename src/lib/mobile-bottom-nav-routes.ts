@@ -37,21 +37,21 @@ export function isDashboardBottomNavId(
 }
 
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
-  'max-sm:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
+  'max-sm:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
 
 /**
- * Full-width bottom nav footprint: bar (~3.6rem) + elevated home overhang +
+ * Full-width bottom nav footprint: bar (~4.25rem) + elevated home overhang +
  * safe-area (matches components/mobile-bottom-nav.tsx).
  */
 export const MOBILE_BOTTOM_NAV_HEIGHT_CSS =
-  'calc(4.75rem + env(safe-area-inset-bottom, 0px))'
+  'calc(5.5rem + env(safe-area-inset-bottom, 0px))'
 
 /** SaveBar content height: py-3 + min-h-44 button + py-3 (no extra safe-area when above nav). */
 export const SAVE_BAR_HEIGHT_CSS = '4.25rem'
 
 /** Combined scroll inset when a fixed save bar sits above the mobile bottom nav. */
 export const MOBILE_SAVE_BAR_WITH_NAV_SCROLL_PAD_CLASS =
-  'max-sm:pb-[calc(4.25rem+4.75rem+env(safe-area-inset-bottom,0px))] sm:pb-20'
+  'max-sm:pb-[calc(4.25rem+5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-20'
 
 /**
  * Extra scroll inset for the save bar when an ancestor already applies
@@ -68,7 +68,7 @@ export const SAVE_BAR_SOLO_SCROLL_PAD_CLASS = 'pb-20'
 
 /** Tailwind `bottom` offset for SaveBar when stacked above MobileBottomNav. */
 export const SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS =
-  'max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
+  'max-sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
 
 export const DASHBOARD_TAB_HREFS = {
   profile: '/dashboard?tab=profile',

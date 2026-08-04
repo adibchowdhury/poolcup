@@ -136,7 +136,7 @@ function HomeAnchorButton({
   return (
     <span
       className={cn(
-        'relative -top-3.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white',
+        'relative -top-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white',
         'shadow-[0_10px_28px_rgba(0,0,0,0.55),0_0_22px_rgba(0,230,118,0.28)]',
         isActive && 'scale-[1.02]',
       )}
@@ -176,7 +176,7 @@ function MobileBottomNavContent() {
     >
       <div
         className={cn(
-          'pointer-events-auto relative flex h-[calc(3.6rem+env(safe-area-inset-bottom,0px))] w-full items-center justify-between gap-0.5',
+          'pointer-events-auto relative flex h-[calc(4.25rem+env(safe-area-inset-bottom,0px))] w-full items-center justify-between gap-0.5',
           'rounded-t-3xl border-t border-white/[0.08] bg-[#0A0E0E] px-2.5',
           'pb-[env(safe-area-inset-bottom,0px)]',
           'shadow-[0_-8px_32px_rgba(0,0,0,0.45),0_1px_0_rgba(255,255,255,0.06)_inset]',
@@ -187,7 +187,7 @@ function MobileBottomNavContent() {
           const isHome = Boolean(item.homeAnchor)
 
           const sideClassName = cn(
-            'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 transition-colors',
+            'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 py-1.5 transition-colors',
             isActive
               ? 'text-primary'
               : 'text-muted-foreground hover:text-foreground',
