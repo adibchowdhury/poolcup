@@ -16,6 +16,8 @@ const CLIMB_STREAK_FIRE_MIN = 3
 
 /** Brand vivid green (matches reference accents). */
 const ACCENT_GREEN = '#00e676'
+const RING_SILVER = '#c0c6d0'
+const RING_BRONZE = '#c47a3d'
 
 type OrderedStanding = {
   place: number
@@ -38,17 +40,7 @@ function RankMovementBadge({
   className?: string
 }) {
   if (movement === 'none' || rankDelta <= 0) {
-    return (
-      <span
-        className={cn(
-          'inline-flex min-w-[1.75rem] justify-center font-mono text-xs text-muted-foreground/70',
-          className,
-        )}
-        aria-label="Rank unchanged"
-      >
-        —
-      </span>
-    )
+    return null
   }
 
   if (movement === 'up') {
@@ -124,10 +116,15 @@ function PodiumPedestal({
 
   const placeLabel = place === 1 ? '1ST' : place === 2 ? '2ND' : '3RD'
 
-  // Thin GREEN ring on all three; 1st also keeps the green glow. Rank badges stay gold/silver/bronze.
-  const greenRingShadow = isFirst
-    ? `0 0 22px rgba(0,230,118,0.65), 0 0 6px rgba(0,230,118,0.9)`
-    : undefined
+  // 1st green (+ glow), 2nd silver, 3rd bronze.
+  const ringColor =
+    place === 1 ? ACCENT_GREEN : place === 2 ? RING_SILVER : RING_BRONZE
+  const ringShadow =
+    place === 1
+      ? `0 0 22px rgba(0,230,118,0.65), 0 0 6px rgba(0,230,118,0.9)`
+      : place === 2
+        ? `0 0 10px rgba(192,198,208,0.3)`
+        : `0 0 10px rgba(196,122,61,0.3)`
 
   return (
     <div
@@ -155,8 +152,8 @@ function PodiumPedestal({
           <div
             className="rounded-full p-[2px] transition-transform hover:scale-[1.03]"
             style={{
-              backgroundColor: ACCENT_GREEN,
-              boxShadow: greenRingShadow,
+              backgroundColor: ringColor,
+              boxShadow: ringShadow,
             }}
           >
             <UserAvatarImage
@@ -172,10 +169,7 @@ function PodiumPedestal({
         <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
           <UserProfileLink
             userId={member.userId}
-            className={cn(
-              'max-w-full text-center text-[13px] font-semibold leading-snug break-words hover:underline sm:text-sm',
-              member.isYou ? 'text-primary' : 'text-foreground',
-            )}
+            className="max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white hover:underline sm:text-sm"
           >
             {member.name}
           </UserProfileLink>
@@ -194,11 +188,6 @@ function PodiumPedestal({
             pts
           </span>
         </p>
-        <RankMovementBadge
-          movement={member.movement}
-          rankDelta={member.rankDelta}
-          className="mt-0.5"
-        />
       </div>
 
       {/* Tiered podium base — sits on #0A0E0E; slightly lighter face + thin green top edge */}
@@ -223,7 +212,7 @@ function PodiumPedestal({
         />
         <span
           className={cn(
-            'mt-2 font-display tracking-[0.14em] text-[#00e676]/55',
+            'mt-2 font-display tracking-[0.14em] text-white/90',
             isFirst ? 'text-[11px] sm:text-xs' : 'text-[10px] sm:text-[11px]',
           )}
         >
@@ -284,10 +273,7 @@ function StandingListRow({
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <UserProfileLink
             userId={member.userId}
-            className={cn(
-              'text-sm font-medium leading-snug break-words hover:underline',
-              member.isYou ? 'text-primary' : 'text-foreground',
-            )}
+            className="text-sm font-medium leading-snug break-words text-white hover:underline"
           >
             {member.name}
           </UserProfileLink>
@@ -296,15 +282,16 @@ function StandingListRow({
               You
             </span>
           ) : null}
-          <ClimbFireBadge climbStreak={member.climbStreak} />
         </div>
       </div>
 
-      <RankMovementBadge
-        movement={member.movement}
-        rankDelta={member.rankDelta}
-        className="shrink-0"
-      />
+      <div className="flex shrink-0 items-center gap-1.5">
+        <RankMovementBadge
+          movement={member.movement}
+          rankDelta={member.rankDelta}
+        />
+        <ClimbFireBadge climbStreak={member.climbStreak} />
+      </div>
 
       <div className="w-14 shrink-0 text-right sm:w-16">
         <span
