@@ -5,7 +5,7 @@
  *
  *   npx ts-node --project tsconfig.json scripts/league-ingest.ts
  *
- * Does NOT touch World Cup, CL, scoring, schema, or /mobile.
+ * Does NOT touch World Cup, CL, scoring, or schema.
  */
 import * as dotenv from 'dotenv'
 import path from 'path'

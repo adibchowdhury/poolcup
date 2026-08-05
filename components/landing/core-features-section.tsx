@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
+import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
 import {
   RevealItem,
   ScrollRevealGroup,
@@ -12,6 +14,9 @@ type CoreFeature = {
   title: string
   description: string
   bullets: string[]
+  /** Section accent (card glow + number box + underline + checkmarks). */
+  cardGlow: string
+  cardGlowRgb: string
 }
 
 const CORE_FEATURES: CoreFeature[] = [
@@ -27,6 +32,8 @@ const CORE_FEATURES: CoreFeature[] = [
       'Public pools or private squads',
       'Works across every league',
     ],
+    cardGlow: '#00e676',
+    cardGlowRgb: '0,230,118',
   },
   {
     number: '02',
@@ -40,6 +47,8 @@ const CORE_FEATURES: CoreFeature[] = [
       'Fire streaks for hot runs',
       'Shareable with the whole group',
     ],
+    cardGlow: '#F5A623',
+    cardGlowRgb: '245,166,35',
   },
   {
     number: '03',
@@ -53,6 +62,8 @@ const CORE_FEATURES: CoreFeature[] = [
       'Commissioner admin tools',
       'Announcements & team branding',
     ],
+    cardGlow: '#8B5CF6',
+    cardGlowRgb: '139,92,246',
   },
   {
     number: '04',
@@ -66,6 +77,8 @@ const CORE_FEATURES: CoreFeature[] = [
       'Full prediction history & stats',
       'Your identity follows you everywhere',
     ],
+    cardGlow: '#3B82F6',
+    cardGlowRgb: '59,130,246',
   },
   {
     number: '05',
@@ -79,23 +92,81 @@ const CORE_FEATURES: CoreFeature[] = [
       'Direct messages with friends',
       "See your friends' activity",
     ],
+    cardGlow: '#EC4899',
+    cardGlowRgb: '236,72,153',
   },
 ]
 
-function FeaturePlaceholderCard() {
+function FeatureCardShell({
+  glowRgb,
+  children,
+}: {
+  glow: string
+  glowRgb: string
+  children?: ReactNode
+}) {
+  const hasContent = Boolean(children)
+
   return (
+    // Soft accent glow sits behind the whole layered card
     <div
-      className={cn(
-        'relative flex min-h-[20rem] w-full items-center justify-center overflow-hidden rounded-2xl sm:min-h-[24rem]',
-        'border border-[#00e676]/30 bg-[#0a0e12]',
-        'shadow-[0_0_0_1px_rgba(0,230,118,0.08),0_0_40px_rgba(0,230,118,0.18),0_0_80px_rgba(0,230,118,0.08)]',
-      )}
-      aria-hidden
+      className="relative w-full"
+      style={{
+        filter: [
+          `drop-shadow(0 0 40px rgba(${glowRgb},0.22))`,
+          `drop-shadow(0 0 90px rgba(${glowRgb},0.14))`,
+          `drop-shadow(0 0 160px rgba(${glowRgb},0.08))`,
+        ].join(' '),
+      }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_40%,rgba(0,230,118,0.07)_0%,transparent_70%)]" />
-      <span className="relative text-[11px] font-medium uppercase tracking-[0.2em] text-[#5a7080]/70">
-        Preview coming soon
-      </span>
+      {/* Outer translucent glass frame / bezel */}
+      <div
+        className="rounded-[1.35rem] p-[5px] sm:p-1.5"
+        style={{
+          border: '1px solid rgba(255,255,255,0.28)',
+          background:
+            'linear-gradient(160deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.025) 100%)',
+          boxShadow: [
+            'inset 0 1px 0 rgba(255,255,255,0.18)',
+            'inset 0 0 0 1px rgba(255,255,255,0.06)',
+            '0 12px 40px rgba(0,0,0,0.35)',
+          ].join(', '),
+          backdropFilter: 'blur(14px) saturate(1.15)',
+          WebkitBackdropFilter: 'blur(14px) saturate(1.15)',
+        }}
+      >
+        {/* Inner dark card — gap from outer frame via parent padding */}
+        <div
+          className={cn(
+            'relative w-full overflow-hidden rounded-[1.05rem] bg-[#151c26]',
+            !hasContent &&
+              'flex min-h-[20rem] items-center justify-center sm:min-h-[24rem]',
+          )}
+          style={{
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}
+        >
+          {!hasContent ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: `radial-gradient(ellipse 70% 55% at 50% 40%, rgba(${glowRgb},0.08) 0%, transparent 70%)`,
+                }}
+              />
+              <span
+                className="relative text-[11px] font-medium uppercase tracking-[0.2em] text-[#5a7080]/70"
+                aria-hidden
+              >
+                Preview coming soon
+              </span>
+            </>
+          ) : (
+            <div className="relative z-[1] w-full">{children}</div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -103,20 +174,16 @@ function FeaturePlaceholderCard() {
 function FeatureBlock({
   feature,
   reverse,
-  tone,
 }: {
   feature: CoreFeature
   reverse: boolean
-  tone: 'dark' | 'base'
 }) {
   const headingId = `core-feature-${feature.number}`
+  const { cardGlow: accent, cardGlowRgb: accentRgb } = feature
 
   return (
     <section
-      className={cn(
-        'py-20 md:py-28',
-        tone === 'dark' ? 'bg-[#0d1520]' : 'bg-background',
-      )}
+      className="bg-[#090f18] py-20 md:py-28"
       aria-labelledby={headingId}
     >
       <div className="mx-auto max-w-7xl px-6">
@@ -130,11 +197,11 @@ function FeatureBlock({
             <RevealItem index={0}>
               <div className="flex items-start gap-4">
                 <span
-                  className={cn(
-                    'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
-                    'border border-[#00e676]/55 bg-transparent',
-                    'font-display text-base tracking-[0.08em] text-[#00e676] sm:h-12 sm:w-12 sm:text-lg',
-                  )}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-transparent font-display text-base tracking-[0.08em] sm:h-12 sm:w-12 sm:text-lg"
+                  style={{
+                    color: accent,
+                    border: `1px solid color-mix(in srgb, ${accent} 55%, transparent)`,
+                  }}
                   aria-hidden
                 >
                   {feature.number}
@@ -145,7 +212,10 @@ function FeatureBlock({
                     Feature · {feature.category}
                   </p>
                   <span
-                    className="mt-1.5 block h-px w-10 bg-[#00e676]/70"
+                    className="mt-1.5 block h-px w-10"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${accent} 70%, transparent)`,
+                    }}
                     aria-hidden
                   />
                 </div>
@@ -173,12 +243,15 @@ function FeatureBlock({
                   key={bullet}
                   className="flex items-start gap-3.5 text-[#f0f4f8]"
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#00e676]/45 bg-[#00e676]/12">
-                    <Check
-                      className="h-3 w-3 text-[#00e676]"
-                      strokeWidth={3}
-                      aria-hidden
-                    />
+                  <span
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      border: `1px solid rgba(${accentRgb},0.45)`,
+                      backgroundColor: `rgba(${accentRgb},0.12)`,
+                      color: accent,
+                    }}
+                  >
+                    <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
                   </span>
                   <span className="text-[15px] leading-snug text-[#f0f4f8]/95 md:text-base">
                     {bullet}
@@ -189,7 +262,11 @@ function FeatureBlock({
           </div>
 
           <RevealItem index={4}>
-            <FeaturePlaceholderCard />
+            <FeatureCardShell glow={accent} glowRgb={accentRgb}>
+              {feature.number === '02' ? (
+                <LandingLeaderboardPreview embedded />
+              ) : null}
+            </FeatureCardShell>
           </RevealItem>
         </ScrollRevealGroup>
       </div>
@@ -209,7 +286,6 @@ export function CoreFeaturesSection() {
           key={feature.number}
           feature={feature}
           reverse={index % 2 === 1}
-          tone={index % 2 === 0 ? 'base' : 'dark'}
         />
       ))}
     </div>

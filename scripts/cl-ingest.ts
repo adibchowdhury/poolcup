@@ -5,7 +5,7 @@
  *
  *   npx ts-node --project tsconfig.json scripts/cl-ingest.ts
  *
- * Does NOT touch World Cup matches, scoring, or /mobile.
+ * Does NOT touch World Cup matches or scoring.
  */
 import * as dotenv from 'dotenv'
 import path from 'path'

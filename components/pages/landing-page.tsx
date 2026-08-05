@@ -9,7 +9,6 @@ import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { CoreFeaturesSection } from "@/components/landing/core-features-section"
-import { LandingPricingSection } from "@/components/landing/landing-pricing-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
 import {
   RevealItem,
@@ -257,9 +256,7 @@ export default function LandingPage() {
 
       <CoreFeaturesSection />
 
-      <LandingPricingSection />
-
-      <SiteFooter backgroundClass="bg-background" />
+      <SiteFooter backgroundClass="bg-[#0d1520]" />
     </div>
   )
 }

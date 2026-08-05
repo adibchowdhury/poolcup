@@ -1,11 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { FormEvent, useState } from 'react'
-import { ArrowLeft, Mail, MapPin, Phone, Trophy } from 'lucide-react'
+import { Mail, MapPin, Phone, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PoolCupLogo } from '@/components/poolcup-logo'
-import { SiteFooter } from '@/components/site-footer'
+import { PublicPageShell } from '@/components/public-page-shell'
 
 const inputClassName =
   'w-full rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30'
@@ -77,20 +75,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
-          <Link
-            href="/"
-            className="group rounded-lg p-2 transition-colors hover:bg-muted"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-          </Link>
-          <PoolCupLogo />
-        </div>
-      </header>
-
+    <PublicPageShell>
       <div className="px-6 py-16 md:py-24">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
@@ -253,8 +238,6 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-
-      <SiteFooter />
-    </div>
+    </PublicPageShell>
   )
 }

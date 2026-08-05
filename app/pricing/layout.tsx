@@ -3,10 +3,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Pricing — PoolCup',
   description:
-    'PoolCup is completely free — no subscriptions, no fees. User-supported World Cup prediction pools.',
+    'Free forever. Upgrade to PoolCup Pro ($4.99/mo) or Pool Commissioner ($9.99/mo) when you want more.',
   openGraph: {
     title: 'Pricing — PoolCup',
-    description: 'PoolCup is completely free. No subscriptions, no fees.',
+    description:
+      'Free forever. Upgrade to Pro or Commissioner when you want more.',
   },
 }
 

@@ -1,25 +1,10 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { PoolCupLogo } from '@/components/poolcup-logo'
-import { SiteFooter } from '@/components/site-footer'
+import { PublicPageShell } from '@/components/public-page-shell'
 
 export default function CookiesPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-4">
-          <Link
-            href="/"
-            className="group rounded-lg p-2 transition-colors hover:bg-muted"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-          </Link>
-          <PoolCupLogo />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicPageShell>
+      <div className="mx-auto max-w-3xl px-6 py-16">
         <p className="text-sm font-medium uppercase tracking-wider text-primary">
           Legal
         </p>
@@ -157,9 +142,7 @@ export default function CookiesPage() {
             </p>
           </section>
         </div>
-      </main>
-
-      <SiteFooter />
-    </div>
+      </div>
+    </PublicPageShell>
   )
 }

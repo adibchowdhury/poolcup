@@ -2,6 +2,7 @@
 
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
+import { cn } from '@/lib/utils'
 
 /**
  * Static example standings for the landing "Watch the standings shake" preview.
@@ -116,9 +117,22 @@ function noopInvite() {
   // Landing preview — invite CTA hidden via acceptingMembers={false}.
 }
 
-export function LandingLeaderboardPreview() {
+type LandingLeaderboardPreviewProps = {
+  /** Nest inside a feature card — drop outer border/shadow (parent provides chrome). */
+  embedded?: boolean
+}
+
+export function LandingLeaderboardPreview({
+  embedded = false,
+}: LandingLeaderboardPreviewProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
+    <div
+      className={cn(
+        'overflow-hidden',
+        !embedded &&
+          'rounded-2xl border border-[rgba(255,255,255,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.35)]',
+      )}
+    >
       <PoolLeaderboardStandings
         members={LANDING_EXAMPLE_STANDINGS}
         acceptingMembers={false}
@@ -126,7 +140,7 @@ export function LandingLeaderboardPreview() {
         onInvite={noopInvite}
         disableProfileLinks
         firstPlaceFigureSrc="/mascot/pucky_trophy.png"
-        className="rounded-2xl pb-3 pt-0"
+        className={cn('pb-3 pt-0', embedded ? 'rounded-none' : 'rounded-2xl')}
       />
     </div>
   )
