@@ -2,22 +2,19 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { X } from "lucide-react"
-import { useClientNow } from "@/hooks/use-client-now"
 import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
-import { TeamFlagImage } from "@/components/predict/team-flag-image"
+import { JoinTheActionSection } from "@/components/landing/join-the-action-section"
+import { LandingLeaderboardPreview } from "@/components/landing/landing-leaderboard-preview"
+import { LandingMatchPredictionPreview } from "@/components/landing/landing-match-prediction-preview"
+import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
-
-const DEMO_FLAG_CLASS = {
-  imgClassName: "h-5 w-auto shrink-0 object-cover",
-  emojiClassName: "text-xl leading-none",
-} as const
 
 function heroReveal(isVisible: boolean) {
   return cn(
@@ -25,43 +22,6 @@ function heroReveal(isVisible: boolean) {
     isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
   )
 }
-
-const WORLD_CUP_KICKOFF_UTC_MS = Date.UTC(2026, 5, 11)
-
-function getHeroDaysStat(mounted: boolean, nowMs: number) {
-  if (!mounted || nowMs <= 0) {
-    return { value: "—", accent: false }
-  }
-
-  const now = new Date(nowMs)
-  const todayStartUtc = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  )
-
-  if (todayStartUtc >= WORLD_CUP_KICKOFF_UTC_MS) {
-    return { value: "LIVE", accent: true }
-  }
-
-  const daysRemaining = Math.ceil(
-    (WORLD_CUP_KICKOFF_UTC_MS - todayStartUtc) / (24 * 60 * 60 * 1000),
-  )
-
-  return { value: String(daysRemaining), accent: false }
-}
-
-const matchesData = [
-  { id: 1, team1: "Mexico", team2: "S.Africa", score1: "2", score2: "1", completed: true },
-  { id: 2, team1: "Brazil", team2: "Argentina", score1: "", score2: "", completed: false },
-  { id: 3, team1: "England", team2: "France", score1: "", score2: "", completed: false },
-]
-
-const leaderboardData = [
-  { rank: 4, name: "Alex", points: 112, correct: "19/32", change: 2, isYou: true },
-  { rank: 5, name: "Chris", points: 98, correct: "16/32", change: -1 },
-  { rank: 6, name: "Priya", points: 91, correct: "15/32", change: 0 },
-]
 
 const ACCOUNT_DELETED_QUERY_PARAM = 'accountDeleted'
 const ACCOUNT_DELETED_SESSION_KEY = 'poolcup_account_deleted'
@@ -72,18 +32,12 @@ const HERO_SPORT_IMAGES = [
   '/sports/basketball.png',
   '/sports/baseball.png',
   '/sports/football.png',
-  '/sports/hockey.png',
+  '/sports/cricket.png',
 ] as const
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [accountDeletedMessage, setAccountDeletedMessage] = useState(false)
-  const { mounted, nowMs } = useClientNow(null)
-
-  const daysStat = useMemo(
-    () => getHeroDaysStat(mounted, nowMs),
-    [mounted, nowMs],
-  )
 
   useEffect(() => {
     setIsVisible(true)
@@ -157,19 +111,9 @@ export default function LandingPage() {
         {/* Hero Content */}
         <main
           id="main-content"
-          className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-20"
+          className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-28 md:pb-32"
         >
           <div className="text-center">
-            <p
-              className={cn(
-                'mb-4 text-balance text-xs font-semibold uppercase tracking-[0.14em] text-white md:mb-6 md:tracking-[0.2em]',
-                heroReveal(isVisible),
-              )}
-              style={{ transitionDelay: '0ms' }}
-            >
-              World Cup 2026 · June 11 — July 19
-            </p>
-
             <h1 className="font-display text-5xl leading-[0.95] tracking-wide md:text-7xl lg:text-8xl">
               <span
                 className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
@@ -263,43 +207,16 @@ export default function LandingPage() {
               </a>
             </div>
           </div>
-
-          {/* Stats row */}
-          <div className="mt-16 border-t border-[rgba(255,255,255,0.08)] pt-8 md:mt-24">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 md:gap-8">
-              {[
-                { value: "104", label: "Matches", accent: false, delay: 500 },
-                { value: "48", label: "Nations", accent: false, delay: 600 },
-                {
-                  value: daysStat.value,
-                  label: "Days",
-                  accent: daysStat.accent,
-                  delay: 700,
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className={cn("text-center", heroReveal(isVisible))}
-                  style={{ transitionDelay: `${stat.delay}ms` }}
-                >
-                  <div
-                    className={cn(
-                      "font-display text-4xl md:text-5xl",
-                      stat.accent ? "text-[#00e676]" : "text-[#f0f4f8]",
-                    )}
-                  >
-                    {stat.value}
-                  </div>
-                  <div className="mt-1 text-sm text-[#f0f4f8]">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
         </main>
       </section>
 
-      {/* ===== SECTION 2: HOW IT WORKS ===== */}
-      <section id="how-it-works" className="py-16 md:py-20 bg-[#0d1520]">
+      <PlatformTrustBar />
+
+      {/* ===== SECTION 2: JOIN THE ACTION (experience preview) ===== */}
+      <JoinTheActionSection />
+
+      {/* ===== SECTION 3: HOW IT WORKS ===== */}
+      <section id="how-it-works" className="bg-[#0d1520] py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-10 lg:gap-12">
             <div className="text-center md:text-left">
@@ -358,73 +275,9 @@ export default function LandingPage() {
       <section className="py-24 md:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* UI Preview - Left */}
-            <div className="bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6">
-              {/* Lock warning */}
-              <div className="flex items-center justify-center gap-2 bg-[#ffb300]/10 text-[#ffb300] px-4 py-2 rounded-lg text-sm font-medium mb-4">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Matches lock in 2h
-              </div>
-              
-              {/* Match Cards */}
-              <div className="space-y-3 mb-4">
-                {matchesData.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-[#1a2535] border border-[rgba(255,255,255,0.08)] rounded-xl p-4"
-                  >
-                    <div className="flex min-w-0 items-center justify-between gap-2">
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <TeamFlagImage
-                          countryName={match.team1}
-                          {...DEMO_FLAG_CLASS}
-                        />
-                        <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team1}</span>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2">
-                        <div className={`w-12 h-11 rounded-md flex items-center justify-center font-display text-xl ${
-                          match.completed
-                            ? "bg-[#00e676]/15 border-2 border-[#00e676] text-[#00e676]"
-                            : "bg-[#0d1318] border border-[rgba(255,255,255,0.15)] text-[#5a7080]"
-                        }`}>
-                          {match.score1 || "–"}
-                        </div>
-                        <span className="text-[#5a7080] text-lg">:</span>
-                        <div className={`w-12 h-11 rounded-md flex items-center justify-center font-display text-xl ${
-                          match.completed
-                            ? "bg-[#00e676]/15 border-2 border-[#00e676] text-[#00e676]"
-                            : "bg-[#0d1318] border border-[rgba(255,255,255,0.15)] text-[#5a7080]"
-                        }`}>
-                          {match.score2 || "–"}
-                        </div>
-                        {match.completed && (
-                          <div className="w-6 h-6 rounded-full bg-[#00e676] flex items-center justify-center ml-1">
-                            <svg className="w-3.5 h-3.5 text-[#080b0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                        <span className="truncate text-sm font-medium text-[#f0f4f8]">{match.team2}</span>
-                        <TeamFlagImage
-                          countryName={match.team2}
-                          {...DEMO_FLAG_CLASS}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Save Button */}
-              <button className="w-full bg-[#00e676] text-[#080b0f] py-3 rounded-lg font-semibold">
-                Save Predictions
-              </button>
+            {/* Real prediction card preview (static — local score state only) */}
+            <div>
+              <LandingMatchPredictionPreview />
             </div>
 
             {/* Text - Right */}
@@ -496,73 +349,9 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* UI Preview - Right */}
-            <div className="order-1 lg:order-2 bg-[#111a27] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6">
-              {/* Podium */}
-              <div className="flex items-end justify-center gap-3 mb-4 pb-4 border-b border-[rgba(255,255,255,0.08)]">
-                {/* 2nd Place */}
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-[#1a2535] flex items-center justify-center font-semibold text-[#f0f4f8] mb-1">S</div>
-                  <div className="text-[#f0f4f8] font-medium text-sm">Sarah</div>
-                  <div className="font-display text-lg text-[#f0f4f8]">142</div>
-                  <div className="w-12 h-14 bg-gradient-to-t from-[#C0C0C0]/20 to-[#C0C0C0]/5 rounded-t-lg mt-1 flex items-start justify-center pt-1">
-                    <span className="bg-[#C0C0C0] text-[#080b0f] text-xs font-bold px-1.5 py-0.5 rounded">2</span>
-                  </div>
-                </div>
-
-                {/* 1st Place */}
-                <div className="flex flex-col items-center -mt-4">
-                  <div className="w-14 h-14 rounded-full bg-[#1a2535] border-2 border-[#00e676] flex items-center justify-center font-semibold text-[#f0f4f8] mb-1">J</div>
-                  <div className="text-[#f0f4f8] font-medium">Jordan</div>
-                  <div className="font-display text-xl text-[#00e676]">167</div>
-                  <div className="w-14 h-20 bg-gradient-to-t from-[#00e676]/20 to-[#00e676]/5 border-2 border-[#00e676] rounded-t-lg mt-1 flex items-start justify-center pt-1">
-                    <span className="bg-[#00e676] text-[#080b0f] text-xs font-bold px-1.5 py-0.5 rounded">1</span>
-                  </div>
-                </div>
-
-                {/* 3rd Place */}
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-[#1a2535] flex items-center justify-center font-semibold text-[#f0f4f8] mb-1">T</div>
-                  <div className="text-[#f0f4f8] font-medium text-sm">Tyler</div>
-                  <div className="font-display text-lg text-[#f0f4f8]">128</div>
-                  <div className="w-12 h-10 bg-gradient-to-t from-[#5a7080]/20 to-[#5a7080]/5 rounded-t-lg mt-1 flex items-start justify-center pt-1">
-                    <span className="bg-[#5a7080] text-[#080b0f] text-xs font-bold px-1.5 py-0.5 rounded">3</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rankings List */}
-              <div className="space-y-2">
-                {leaderboardData.map((player, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      player.isYou ? "bg-[#00e676]/10 border border-[#00e676]/30" : "bg-[#1a2535]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-[#5a7080] w-4 text-sm">{player.rank}</span>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs ${
-                        player.isYou ? "bg-[#00e676] text-[#080b0f]" : "bg-[#0d1520] text-[#f0f4f8]"
-                      }`}>
-                        {player.name.charAt(0)}
-                      </div>
-                      <span className={`font-medium text-sm ${player.isYou ? "text-[#00e676]" : "text-[#f0f4f8]"}`}>
-                        {player.name}
-                      </span>
-                      {player.isYou && <span className="text-[#00e676] text-xs">(you)</span>}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`text-xs font-mono ${
-                        player.change > 0 ? "text-[#00e676]" : player.change < 0 ? "text-[#ff4444]" : "text-[#5a7080]"
-                      }`}>
-                        {player.change > 0 ? `↑${player.change}` : player.change < 0 ? `↓${Math.abs(player.change)}` : "—"}
-                      </div>
-                      <div className="font-display text-base text-[#f0f4f8]">{player.points}<span className="text-[#5a7080] text-xs font-sans ml-0.5">pts</span></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Real redesigned leaderboard preview (static example — no polling) */}
+            <div className="order-1 lg:order-2">
+              <LandingLeaderboardPreview />
             </div>
           </div>
         </div>

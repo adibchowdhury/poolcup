@@ -126,6 +126,11 @@ interface PoolCardProps {
    * (dashboard vibe). `default` = flat bg-card (pre-restyle; use to revert).
    */
   surface?: 'default' | 'dashboard'
+  /**
+   * Marketing / landing preview: all CTAs navigate here instead of in-app pool
+   * routes. Hides delete + invite-copy side effects (safe on logged-out pages).
+   */
+  previewActionHref?: string
 }
 
 const POOL_CARD_SURFACE_CLASS = {
@@ -139,7 +144,9 @@ export function PoolCard({
   pool,
   onPoolDeleted,
   surface = 'dashboard',
+  previewActionHref,
 }: PoolCardProps) {
+  const isPreview = Boolean(previewActionHref)
   const { user } = useAuth()
   const [copied, setCopied] = useState(false)
   const deleteTriggerRef = useRef<HTMLDivElement>(null)
@@ -155,20 +162,28 @@ export function PoolCard({
   const nextKickoffMs = pool.nextMatchKickoffAt
     ? new Date(pool.nextMatchKickoffAt).getTime()
     : null
-  const showPredictButton =
-    mounted &&
-    !pool.predictionsLocked &&
-    nextKickoffMs != null &&
-    nextKickoffMs > nowMs
-  const predictButtonHref =
-    pool.scoringStyle === 'winner'
+  const showPredictButton = isPreview
+    ? !pool.predictionsLocked && nextKickoffMs != null
+    : mounted &&
+      !pool.predictionsLocked &&
+      nextKickoffMs != null &&
+      nextKickoffMs > nowMs
+  const poolHref = `/pool/${pool.inviteCode}`
+  const predictButtonHref = isPreview
+    ? previewActionHref!
+    : pool.scoringStyle === 'winner'
       ? `/pool/${pool.inviteCode}?tab=predictions`
-      : `/pool/${pool.inviteCode}`
+      : poolHref
+  const nameHref = isPreview ? previewActionHref! : poolHref
+  const leaderboardHref = isPreview
+    ? previewActionHref!
+    : getPoolLeaderboardHref(pool.inviteCode)
   const visibleAvatars = pool.memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
   const overflowCount = Math.max(0, pool.members - MAX_VISIBLE_MEMBER_AVATARS)
   const playersLabel = `${pool.members} ${pool.members === 1 ? 'player' : 'players'}`
 
   const copyCode = () => {
+    if (isPreview) return
     const joinUrl = buildJoinInviteUrl(
       window.location.origin,
       pool.inviteCode,
@@ -217,7 +232,7 @@ export function PoolCard({
             </p>
           </div>
 
-          {pool.canDelete ? (
+          {!isPreview && pool.canDelete ? (
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -256,7 +271,7 @@ export function PoolCard({
       </div>
 
       <div className="px-[15px] pt-[14px]">
-        <Link href={`/pool/${pool.inviteCode}`} className="block">
+        <Link href={nameHref} className="block">
           <h3 className="font-display text-2xl tracking-wide text-foreground transition-colors hover:text-primary">
             {pool.name}
           </h3>
@@ -321,7 +336,7 @@ export function PoolCard({
             </Link>
           ) : null}
           <Link
-            href={getPoolLeaderboardHref(pool.inviteCode)}
+            href={leaderboardHref}
             className={cn(
               'inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border bg-transparent px-2.5 py-[11px] text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-3',
               showPredictButton ? undefined : 'w-full',
@@ -332,27 +347,44 @@ export function PoolCard({
           </Link>
         </div>
 
-        <button
-          type="button"
-          onClick={copyCode}
-          className="mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted"
-        >
-          <UserPlus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-          <span className="flex-1 text-sm font-medium text-primary">
-            Invite friends
-          </span>
-          <code className="font-mono text-sm text-foreground">{pool.inviteCode}</code>
-          <span
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground"
-            aria-hidden
+        {isPreview ? (
+          <Link
+            href={previewActionHref!}
+            className="relative mt-2 flex w-full items-center gap-2 overflow-hidden rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            {copied ? (
-              <Check className="h-4 w-4 text-primary" />
-            ) : (
-              <Copy className="h-4 w-4 hover:text-foreground" />
-            )}
-          </span>
-        </button>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent animate-join-cta-shimmer motion-reduce:hidden"
+            />
+            <UserPlus className="relative h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="relative flex-1 text-sm font-medium text-primary">
+              Get started
+            </span>
+            <ArrowRight className="relative h-4 w-4 shrink-0 text-primary" aria-hidden />
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={copyCode}
+            className="mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted"
+          >
+            <UserPlus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="flex-1 text-sm font-medium text-primary">
+              Invite friends
+            </span>
+            <code className="font-mono text-sm text-foreground">{pool.inviteCode}</code>
+            <span
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-muted-foreground"
+              aria-hidden
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-primary" />
+              ) : (
+                <Copy className="h-4 w-4 hover:text-foreground" />
+              )}
+            </span>
+          </button>
+        )}
       </div>
       </div>
     </div>

@@ -450,6 +450,75 @@
   transition: text-shadow 1s ease-out 0.4s;
 }
 
+/* ===== Join the Action (landing showcase) ===== */
+@keyframes join-cta-shimmer {
+  0%,
+  78% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(380%);
+    opacity: 0;
+  }
+}
+
+@keyframes join-ball-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes join-chat-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-join-cta-shimmer {
+  animation: join-cta-shimmer 9s ease-in-out infinite;
+}
+
+.animate-join-ball-spin {
+  animation: join-ball-spin 14s linear infinite;
+}
+
+.animate-join-chat-bounce {
+  animation: join-chat-bounce 2.8s ease-in-out infinite;
+}
+
+@keyframes how-it-works-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes how-it-works-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-pulse-subtle,
@@ -457,10 +526,18 @@
   .match-hero-score-live,
   .match-hero-live-pill,
   .match-hero-score-emphasis,
-  .match-crowd-favorite-chip {
+  .match-crowd-favorite-chip,
+  .animate-join-cta-shimmer,
+  .animate-join-ball-spin,
+  .animate-join-chat-bounce {
     animation: none;
     opacity: 1;
     box-shadow: none;
+  }
+
+  [class*='how-it-works-step-in'],
+  [class*='how-it-works-caret'] {
+    animation: none !important;
   }
 
   .match-hero-score-live,

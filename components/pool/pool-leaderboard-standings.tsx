@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import type { ReactNode } from 'react'
 import { Check, Copy, Crown, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
@@ -94,12 +95,46 @@ function ClimbFireBadge({ climbStreak }: { climbStreak: number }) {
   )
 }
 
+function MemberIdentity({
+  userId,
+  disableLinks,
+  className,
+  ariaLabel,
+  children,
+}: {
+  userId: string
+  disableLinks?: boolean
+  className?: string
+  ariaLabel?: string
+  children: ReactNode
+}) {
+  if (disableLinks) {
+    return (
+      <span className={className} aria-label={ariaLabel}>
+        {children}
+      </span>
+    )
+  }
+
+  return (
+    <UserProfileLink
+      userId={userId}
+      className={className}
+      ariaLabel={ariaLabel}
+    >
+      {children}
+    </UserProfileLink>
+  )
+}
+
 function PodiumPedestal({
   place,
   member,
+  disableProfileLinks,
 }: {
   place: 1 | 2 | 3
   member: LeaderboardMember
+  disableProfileLinks?: boolean
 }) {
   const isFirst = place === 1
   const avatarSize = isFirst
@@ -144,13 +179,17 @@ function PodiumPedestal({
         ) : (
           <div className="mb-1 h-6 sm:h-7" aria-hidden />
         )}
-        <UserProfileLink
+        <MemberIdentity
           userId={member.userId}
+          disableLinks={disableProfileLinks}
           ariaLabel={`${member.name}'s profile`}
           className="relative shrink-0"
         >
           <div
-            className="rounded-full p-[2px] transition-transform hover:scale-[1.03]"
+            className={cn(
+              'rounded-full p-[2px]',
+              !disableProfileLinks && 'transition-transform hover:scale-[1.03]',
+            )}
             style={{
               backgroundColor: ringColor,
               boxShadow: ringShadow,
@@ -162,17 +201,21 @@ function PodiumPedestal({
               className={avatarSize}
             />
           </div>
-        </UserProfileLink>
+        </MemberIdentity>
       </div>
 
       <div className="mb-2.5 w-full px-0.5 text-center sm:mb-3">
         <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
-          <UserProfileLink
+          <MemberIdentity
             userId={member.userId}
-            className="max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white hover:underline sm:text-sm"
+            disableLinks={disableProfileLinks}
+            className={cn(
+              'max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white sm:text-sm',
+              !disableProfileLinks && 'hover:underline',
+            )}
           >
             {member.name}
-          </UserProfileLink>
+          </MemberIdentity>
         </div>
         {member.isYou ? (
           <span className="mt-1 inline-block rounded-full bg-primary/20 px-2 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
@@ -226,9 +269,11 @@ function PodiumPedestal({
 function StandingListRow({
   place,
   member,
+  disableProfileLinks,
 }: {
   place: number
   member: LeaderboardMember
+  disableProfileLinks?: boolean
 }) {
   return (
     <li
@@ -236,7 +281,7 @@ function StandingListRow({
         'relative flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
         member.isYou
           ? 'bg-[color-mix(in_srgb,#00e676_18%,#0A0E0E)]'
-          : 'hover:bg-white/[0.04]',
+          : !disableProfileLinks && 'hover:bg-white/[0.04]',
       )}
     >
       {member.isYou ? (
@@ -254,8 +299,9 @@ function StandingListRow({
         {place}
       </span>
 
-      <UserProfileLink
+      <MemberIdentity
         userId={member.userId}
+        disableLinks={disableProfileLinks}
         ariaLabel={`${member.name}'s profile`}
         className="shrink-0"
       >
@@ -267,16 +313,20 @@ function StandingListRow({
             member.isYou && 'ring-2 ring-[#00e676]/60',
           )}
         />
-      </UserProfileLink>
+      </MemberIdentity>
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <UserProfileLink
+          <MemberIdentity
             userId={member.userId}
-            className="text-sm font-medium leading-snug break-words text-white hover:underline"
+            disableLinks={disableProfileLinks}
+            className={cn(
+              'text-sm font-medium leading-snug break-words text-white',
+              !disableProfileLinks && 'hover:underline',
+            )}
           >
             {member.name}
-          </UserProfileLink>
+          </MemberIdentity>
           {member.isYou ? (
             <span className="shrink-0 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
               You
@@ -313,6 +363,11 @@ export type PoolLeaderboardStandingsProps = {
   onInvite: () => void
   showPreMatchNote?: boolean
   className?: string
+  /**
+   * Marketing / landing preview: render names & avatars as static chrome
+   * (no `/u/[id]` links). Does not fetch or poll — data still comes from props.
+   */
+  disableProfileLinks?: boolean
 }
 
 /**
@@ -326,6 +381,7 @@ export function PoolLeaderboardStandings({
   onInvite,
   showPreMatchNote = false,
   className,
+  disableProfileLinks = false,
 }: PoolLeaderboardStandingsProps) {
   if (members.length === 0) {
     return (
@@ -380,13 +436,25 @@ export function PoolLeaderboardStandings({
       >
         <div className="flex items-end justify-center">
           {second ? (
-            <PodiumPedestal place={2} member={second.member} />
+            <PodiumPedestal
+              place={2}
+              member={second.member}
+              disableProfileLinks={disableProfileLinks}
+            />
           ) : null}
           {first ? (
-            <PodiumPedestal place={1} member={first.member} />
+            <PodiumPedestal
+              place={1}
+              member={first.member}
+              disableProfileLinks={disableProfileLinks}
+            />
           ) : null}
           {third ? (
-            <PodiumPedestal place={3} member={third.member} />
+            <PodiumPedestal
+              place={3}
+              member={third.member}
+              disableProfileLinks={disableProfileLinks}
+            />
           ) : null}
         </div>
       </section>
@@ -405,6 +473,7 @@ export function PoolLeaderboardStandings({
                 key={member.id}
                 place={place}
                 member={member}
+                disableProfileLinks={disableProfileLinks}
               />
             ))}
           </ul>
