@@ -8,6 +8,10 @@ import {
   type TrustBarStat,
 } from '@/src/lib/platform-stats'
 import { supabase } from '@/src/lib/supabase'
+import {
+  RevealItem,
+  ScrollRevealGroup,
+} from '@/components/landing/scroll-reveal'
 
 function isLeaguesStat(id: string): boolean {
   return id === 'competitions' || id === 'leagues'
@@ -128,9 +132,21 @@ export function PlatformTrustBar() {
   if (status === 'loading' || !stats) return <TrustBarSkeleton />
 
   return (
-    <div className={BRIDGE_WRAPPER_CLASS} aria-label="Platform stats" role="region">
-      <div className={CARD_CLASS}>
-        <div className="flex flex-row items-start justify-between gap-2 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-0">
+    <ScrollRevealGroup
+      className={BRIDGE_WRAPPER_CLASS}
+      threshold={0.2}
+      as="div"
+    >
+      <RevealItem
+        index={0}
+        className={CARD_CLASS}
+        as="div"
+      >
+        <div
+          className="flex flex-row items-start justify-between gap-2 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-0"
+          aria-label="Platform stats"
+          role="region"
+        >
           {stats.map((stat, index) => (
             <TrustBarStatItem
               key={stat.id}
@@ -139,7 +155,7 @@ export function PlatformTrustBar() {
             />
           ))}
         </div>
-      </div>
-    </div>
+      </RevealItem>
+    </ScrollRevealGroup>
   )
 }

@@ -618,6 +618,40 @@
   }
 }
 
+/* ===== Landing scroll reveals (IntersectionObserver + CSS) ===== */
+.landing-reveal-item {
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition:
+    opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--reveal-i, 0) * 130ms);
+  will-change: opacity, transform;
+}
+
+.landing-reveal-group.is-visible .landing-reveal-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto;
+  }
+}
+
+/* No-JS: keep content visible without IntersectionObserver */
+@media (scripting: none) {
+  .landing-reveal-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-pulse-subtle,

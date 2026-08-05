@@ -8,11 +8,13 @@ import { HeroBackgroundCarousel } from "@/components/landing/hero-background-car
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
-import { JoinTheActionSection } from "@/components/landing/join-the-action-section"
-import { LandingLeaderboardPreview } from "@/components/landing/landing-leaderboard-preview"
-import { LandingMatchPredictionPreview } from "@/components/landing/landing-match-prediction-preview"
+import { CoreFeaturesSection } from "@/components/landing/core-features-section"
 import { LandingPricingSection } from "@/components/landing/landing-pricing-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
+import {
+  RevealItem,
+  ScrollRevealGroup,
+} from "@/components/landing/scroll-reveal"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 
@@ -212,154 +214,52 @@ export default function LandingPage() {
 
       <PlatformTrustBar />
 
-      {/* ===== SECTION 2: JOIN THE ACTION (experience preview) ===== */}
-      <JoinTheActionSection />
-
-      {/* ===== SECTION 3: HOW IT WORKS ===== */}
-      <section id="how-it-works" className="bg-[#0d1520] py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-10 lg:gap-12">
+      {/* ===== POST-HERO HOOK (walkthrough demo kept as-is) ===== */}
+      <section
+        id="how-it-works"
+        className="bg-[#0d1520] pt-28 pb-20 md:pt-36 md:pb-28"
+        aria-labelledby="hook-heading"
+      >
+        <div className="mx-auto max-w-7xl px-6">
+          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
             <div className="text-center md:text-left">
-              <h2 className="font-display text-5xl md:text-6xl text-[#f0f4f8]">
-                HOW IT WORKS
-              </h2>
-              <p className="mt-3 text-base text-[#728d9c] leading-relaxed md:text-xl">
-                Spin up a pool in three steps. Try it right here.
-              </p>
-              <ol className="mt-6 space-y-4 text-left">
-                {[
-                  {
-                    title: 'Create your pool',
-                    description:
-                      'Name your pool, pick a scoring style, and get a shareable invite link in seconds.',
-                  },
-                  {
-                    title: 'Invite your squad',
-                    description:
-                      'Share the link. Friends sign up free in seconds, no app to download.',
-                  },
-                  {
-                    title: 'Predict and compete',
-                    description:
-                      'Everyone predicts match scores. The app tracks points and updates the leaderboard automatically.',
-                  },
-                ].map((item, index) => (
-                  <li key={item.title} className="flex gap-4">
-                    <span
-                      className="font-display shrink-0 text-3xl leading-none tracking-[0.1em] text-[#00e676]"
-                      aria-hidden
-                    >
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <div>
-                      <h3 className="font-display text-2xl tracking-[0.06em] text-[#f0f4f8]">
-                        {item.title}
-                      </h3>
-                      <p className="mt-1 text-base text-[#728d9c] leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <RevealItem index={0}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
+                  One place for everything
+                </p>
+              </RevealItem>
+              <RevealItem index={1}>
+                <h2
+                  id="hook-heading"
+                  className="mt-4 font-display text-3xl leading-[1.15] tracking-wide text-[#f0f4f8] sm:text-4xl md:text-[2.6rem] md:leading-[1.12]"
+                >
+                  Every pick, score, and standing — in one place.
+                </h2>
+              </RevealItem>
+              <RevealItem index={2}>
+                <p className="mt-5 text-base leading-relaxed text-[#728d9c] md:text-lg">
+                  Predict matches with your friends and let PoolCup handle the
+                  rest — live scoring, instant leaderboards, and the bragging
+                  rights to back it up.
+                </p>
+              </RevealItem>
             </div>
 
-            <div className="w-full max-w-lg mx-auto md:mx-0 md:ml-auto">
+            <RevealItem
+              index={3}
+              className="mx-auto w-full max-w-lg md:mx-0 md:ml-auto"
+            >
               <HowItWorksDemo />
-            </div>
-          </div>
+            </RevealItem>
+          </ScrollRevealGroup>
         </div>
       </section>
 
-      {/* ===== PREDICT EVERY MATCH ===== */}
-      <section className="py-24 md:py-32 bg-background">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Real prediction card preview (static — local score state only) */}
-            <div>
-              <LandingMatchPredictionPreview />
-            </div>
-
-            {/* Text - Right */}
-            <div>
-              <h3 className="font-display text-3xl md:text-4xl text-[#f0f4f8] mb-4">Predict scores before kickoff.</h3>
-              <p className="text-[#5a7080] text-lg leading-relaxed mb-8">
-                Everyone in your pool predicts the score for each match. Predictions lock automatically when the match kicks off — no cheating, no manual management.
-              </p>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Scores lock at kickoff automatically
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Predict winner or exact score
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Knockout matches worth more points
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Works on mobile
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== LIVE LEADERBOARD ===== */}
-      <section className="py-24 md:py-32 bg-[#0d1520]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Text - Left */}
-            <div className="order-2 lg:order-1">
-              <h3 className="font-display text-3xl md:text-4xl text-[#f0f4f8] mb-4">Watch the standings shake after every match.</h3>
-              <p className="text-[#5a7080] text-lg leading-relaxed mb-8">
-                The leaderboard updates the moment a final whistle blows. No spreadsheets, no manual calculation, no arguments about who got what right.
-              </p>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Updates automatically after each match
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Movement arrows show who&apos;s climbing
-                </li>
-                <li className="flex items-center gap-3 text-[#f0f4f8]">
-                  <svg className="w-5 h-5 text-[#00e676] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Shareable link for the whole group
-                </li>
-              </ul>
-            </div>
-
-            {/* Real redesigned leaderboard preview (static example — no polling) */}
-            <div className="order-1 lg:order-2">
-              <LandingLeaderboardPreview />
-            </div>
-          </div>
-        </div>
-      </section>
+      <CoreFeaturesSection />
 
       <LandingPricingSection />
 
-      <SiteFooter backgroundClass="bg-[#0d1520]" />
+      <SiteFooter backgroundClass="bg-background" />
     </div>
   )
 }

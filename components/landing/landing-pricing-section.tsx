@@ -3,6 +3,10 @@
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronDown, Minus } from 'lucide-react'
+import {
+  RevealItem,
+  ScrollRevealGroup,
+} from '@/components/landing/scroll-reveal'
 import { cn } from '@/lib/utils'
 
 const SIGNUP_HREF = '/login?next=/create'
@@ -303,196 +307,205 @@ export function LandingPricingSection() {
   return (
     <section
       id="pricing"
-      className="bg-background py-20 md:py-28"
+      className="bg-[#0d1520] py-20 md:py-28"
       aria-labelledby="pricing-heading"
     >
       <div className="mx-auto max-w-4xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2
-            id="pricing-heading"
-            className="font-display text-4xl tracking-wide text-[#f0f4f8] md:text-5xl"
-          >
-            Free Forever. Upgrade When You&apos;re Ready.
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-[#728d9c] md:text-lg">
-            Predict matches, compete with friends, and join public pools at no
-            cost.
-          </p>
-        </div>
+        <ScrollRevealGroup>
+          <div className="mx-auto max-w-2xl text-center">
+            <RevealItem index={0}>
+              <h2
+                id="pricing-heading"
+                className="font-display text-4xl tracking-wide text-[#f0f4f8] md:text-5xl"
+              >
+                Free Forever. Upgrade When You&apos;re Ready.
+              </h2>
+            </RevealItem>
+            <RevealItem index={1}>
+              <p className="mt-3 text-base leading-relaxed text-[#728d9c] md:text-lg">
+                Predict matches, compete with friends, and join public pools at
+                no cost.
+              </p>
+            </RevealItem>
+          </div>
 
-        {/* Vertical flow: Free → level up → Pro/Commissioner → comparison */}
-        <div className="mx-auto mt-10 max-w-xl sm:mt-12">
-          <article className="overflow-hidden rounded-2xl border border-[#00e676]/20 bg-gradient-to-br from-[#0c1410] via-[#121c28] to-[#0a0f14] p-6 shadow-[0_8px_24px_rgba(0,230,118,0.03)] sm:p-8">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl" aria-hidden>
-                ⚽
-              </span>
-              <h3 className="font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl">
-                Free
-              </h3>
-            </div>
-            <p className="mt-1 font-display text-4xl tracking-wide text-[#00e676] md:text-5xl">
-              $0
-            </p>
-            <p className="mt-2 text-sm text-[#728d9c] md:text-base">
-              Everything you need to play.
-            </p>
+          {/* Vertical flow: Free → level up → Pro/Commissioner → comparison */}
+          <RevealItem index={2} className="mx-auto mt-10 max-w-xl sm:mt-12">
+            <article className="overflow-hidden rounded-2xl border border-[#00e676]/20 bg-gradient-to-br from-[#0c1410] via-[#121c28] to-[#0a0f14] p-6 shadow-[0_8px_24px_rgba(0,230,118,0.03)] sm:p-8">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl" aria-hidden>
+                  ⚽
+                </span>
+                <h3 className="font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl">
+                  Free
+                </h3>
+              </div>
+              <p className="mt-1 font-display text-4xl tracking-wide text-[#00e676] md:text-5xl">
+                $0
+              </p>
+              <p className="mt-2 text-sm text-[#728d9c] md:text-base">
+                Everything you need to play.
+              </p>
 
-            <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {FREE_HIGHLIGHTS.map((item) => (
-                <li key={item.label}>
-                  <button
-                    type="button"
-                    className={cn(
-                      'group flex w-full items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.25)] px-3 py-2.5 text-left text-sm font-medium text-[#f0f4f8]',
-                      'transition-colors hover:border-[#00e676]/25 hover:bg-[rgba(0,230,118,0.06)]',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
-                    )}
-                  >
-                    <span
+              <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {FREE_HIGHLIGHTS.map((item) => (
+                  <li key={item.label}>
+                    <button
+                      type="button"
                       className={cn(
-                        'inline-flex text-base leading-none',
-                        !reducedMotion && PILL_MOTION_CLASS[item.motion],
+                        'group flex w-full items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(0,0,0,0.25)] px-3 py-2.5 text-left text-sm font-medium text-[#f0f4f8]',
+                        'transition-colors hover:border-[#00e676]/25 hover:bg-[rgba(0,230,118,0.06)]',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
                       )}
-                      aria-hidden
                     >
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      <span
+                        className={cn(
+                          'inline-flex text-base leading-none',
+                          !reducedMotion && PILL_MOTION_CLASS[item.motion],
+                        )}
+                        aria-hidden
+                      >
+                        {item.icon}
+                      </span>
+                      <span>{item.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
 
-            <div
-              className="my-6 h-px w-full bg-[rgba(255,255,255,0.08)]"
-              aria-hidden
-            />
+              <div
+                className="my-6 h-px w-full bg-[rgba(255,255,255,0.08)]"
+                aria-hidden
+              />
 
-            <div className="space-y-1.5 text-center">
-              <p className="flex items-center justify-center gap-1.5 text-sm text-[#f0f4f8]/85">
-                <Check
-                  className="h-3.5 w-3.5 shrink-0 text-[#00e676]"
-                  aria-hidden
-                  strokeWidth={2.5}
-                />
-                <span>No credit card required</span>
+              <div className="space-y-1.5 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-sm text-[#f0f4f8]/85">
+                  <Check
+                    className="h-3.5 w-3.5 shrink-0 text-[#00e676]"
+                    aria-hidden
+                    strokeWidth={2.5}
+                  />
+                  <span>No credit card required</span>
+                </p>
+                <p className="text-sm text-[#728d9c]">
+                  1,700+ players joined during the World Cup
+                </p>
+              </div>
+
+              <Link
+                href={SIGNUP_HREF}
+                className={cn(
+                  'mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[#00e676] px-6 text-base font-semibold text-[#080b0f]',
+                  'shadow-[0_0_28px_rgba(0,230,118,0.35)] transition-[background-color,box-shadow] hover:bg-[#00e676]/90',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#121c28]',
+                  !reducedMotion &&
+                    'hover:shadow-[0_0_40px_rgba(0,230,118,0.5)]',
+                  reducedMotion && 'shadow-[0_0_16px_rgba(0,230,118,0.22)]',
+                )}
+              >
+                Start Playing
+              </Link>
+              <p className="mt-2.5 text-center text-xs text-[#5a7080]">
+                Most players start here.
               </p>
-              <p className="text-sm text-[#728d9c]">
-                1,700+ players joined during the World Cup
-              </p>
-            </div>
+            </article>
+          </RevealItem>
 
-            <Link
-              href={SIGNUP_HREF}
+          <RevealItem index={3} className="mt-14 text-center sm:mt-16">
+            <h3 className="font-display text-2xl tracking-wide text-[#f0f4f8] sm:text-3xl">
+              Ready to level up?
+            </h3>
+            <p className="mt-2 text-sm text-[#5a7080]">
+              Optional upgrades — expand a plan to see what&apos;s included.
+            </p>
+          </RevealItem>
+
+          <RevealItem
+            index={4}
+            className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5"
+          >
+            {UPGRADES.map((tier) => (
+              <UpgradeCard
+                key={tier.id}
+                tier={tier}
+                open={openUpgrade === tier.id}
+                reducedMotion={reducedMotion}
+                onToggle={() =>
+                  setOpenUpgrade((current) =>
+                    current === tier.id ? null : tier.id,
+                  )
+                }
+              />
+            ))}
+          </RevealItem>
+
+          {/* —— Optional comparison —— */}
+          <RevealItem index={5} className="mt-12 text-center sm:mt-14">
+            <button
+              type="button"
+              id={comparisonTriggerId}
+              aria-expanded={comparisonOpen}
+              aria-controls={comparisonId}
+              onClick={() => setComparisonOpen((open) => !open)}
               className={cn(
-                'mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[#00e676] px-6 text-base font-semibold text-[#080b0f]',
-                'shadow-[0_0_28px_rgba(0,230,118,0.35)] transition-[background-color,box-shadow] hover:bg-[#00e676]/90',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#121c28]',
-                !reducedMotion &&
-                  'hover:shadow-[0_0_40px_rgba(0,230,118,0.5)]',
-                reducedMotion && 'shadow-[0_0_16px_rgba(0,230,118,0.22)]',
+                'inline-flex items-center gap-1.5 text-sm font-medium text-[#728d9c] transition-colors hover:text-[#00e676]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               )}
             >
-              Start Playing
-            </Link>
-            <p className="mt-2.5 text-center text-xs text-[#5a7080]">
-              Most players start here.
-            </p>
-          </article>
-        </div>
+              View full comparison
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 transition-transform duration-200',
+                  comparisonOpen && 'rotate-180',
+                  reducedMotion && 'transition-none',
+                )}
+                aria-hidden
+              />
+            </button>
 
-        <div className="mt-14 text-center sm:mt-16">
-          <h3 className="font-display text-2xl tracking-wide text-[#f0f4f8] sm:text-3xl">
-            Ready to level up?
-          </h3>
-          <p className="mt-2 text-sm text-[#5a7080]">
-            Optional upgrades — expand a plan to see what&apos;s included.
-          </p>
-        </div>
-
-        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5">
-          {UPGRADES.map((tier) => (
-            <UpgradeCard
-              key={tier.id}
-              tier={tier}
-              open={openUpgrade === tier.id}
-              reducedMotion={reducedMotion}
-              onToggle={() =>
-                setOpenUpgrade((current) =>
-                  current === tier.id ? null : tier.id,
-                )
-              }
-            />
-          ))}
-        </div>
-
-        {/* —— Optional comparison —— */}
-        <div className="mt-12 text-center sm:mt-14">
-          <button
-            type="button"
-            id={comparisonTriggerId}
-            aria-expanded={comparisonOpen}
-            aria-controls={comparisonId}
-            onClick={() => setComparisonOpen((open) => !open)}
-            className={cn(
-              'inline-flex items-center gap-1.5 text-sm font-medium text-[#728d9c] transition-colors hover:text-[#00e676]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            )}
-          >
-            View full comparison
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 transition-transform duration-200',
-                comparisonOpen && 'rotate-180',
-                reducedMotion && 'transition-none',
-              )}
-              aria-hidden
-            />
-          </button>
-
-          <div
-            id={comparisonId}
-            role="region"
-            aria-labelledby={comparisonTriggerId}
-            hidden={!comparisonOpen}
-            className="mt-5 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#121c28] text-left"
-          >
-            <table className="w-full min-w-[28rem] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[rgba(255,255,255,0.08)] text-[#728d9c]">
-                  <th className="px-4 py-3 text-left font-medium">Feature</th>
-                  <th className="px-3 py-3 text-center font-medium">Free</th>
-                  <th className="px-3 py-3 text-center font-medium">Pro</th>
-                  <th className="px-3 py-3 text-center font-medium">
-                    Commissioner
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON_ROWS.map((row) => (
-                  <tr
-                    key={row.feature}
-                    className="border-b border-[rgba(255,255,255,0.05)] last:border-0"
-                  >
-                    <td className="px-4 py-2.5 text-[#f0f4f8]/90">
-                      {row.feature}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <ComparisonCell included={row.free} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <ComparisonCell included={row.pro} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <ComparisonCell included={row.commissioner} />
-                    </td>
+            <div
+              id={comparisonId}
+              role="region"
+              aria-labelledby={comparisonTriggerId}
+              hidden={!comparisonOpen}
+              className="mt-5 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#121c28] text-left"
+            >
+              <table className="w-full min-w-[28rem] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-[rgba(255,255,255,0.08)] text-[#728d9c]">
+                    <th className="px-4 py-3 text-left font-medium">Feature</th>
+                    <th className="px-3 py-3 text-center font-medium">Free</th>
+                    <th className="px-3 py-3 text-center font-medium">Pro</th>
+                    <th className="px-3 py-3 text-center font-medium">
+                      Commissioner
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </thead>
+                <tbody>
+                  {COMPARISON_ROWS.map((row) => (
+                    <tr
+                      key={row.feature}
+                      className="border-b border-[rgba(255,255,255,0.05)] last:border-0"
+                    >
+                      <td className="px-4 py-2.5 text-[#f0f4f8]/90">
+                        {row.feature}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <ComparisonCell included={row.free} />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <ComparisonCell included={row.pro} />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <ComparisonCell included={row.commissioner} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </RevealItem>
+        </ScrollRevealGroup>
       </div>
     </section>
   )
