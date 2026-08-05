@@ -131,20 +131,30 @@ function PodiumPedestal({
   place,
   member,
   disableProfileLinks,
+  firstPlaceFigureSrc,
+  omitCrownSpacer = false,
 }: {
   place: 1 | 2 | 3
   member: LeaderboardMember
   disableProfileLinks?: boolean
+  /** Landing-only: show a free-standing mascot figure instead of the 1st avatar ring. */
+  firstPlaceFigureSrc?: string
+  /** Landing mascot podium: drop 2nd/3rd crown-alignment spacer so winners sit higher. */
+  omitCrownSpacer?: boolean
 }) {
   const isFirst = place === 1
+  const useMascotFigure = isFirst && Boolean(firstPlaceFigureSrc)
   const avatarSize = isFirst
     ? 'h-[5.5rem] w-[5.5rem] sm:h-24 sm:w-24'
     : 'h-[4.25rem] w-[4.25rem] sm:h-[4.75rem] sm:w-[4.75rem]'
 
   // Classic tier heights — 1st tallest, 2nd medium, 3rd shortest.
+  // Landing Pucky podium: extra-tall 1st pedestal for more elevation.
   const pedestalH =
     place === 1
-      ? 'h-[4.75rem] sm:h-[5.75rem]'
+      ? useMascotFigure
+        ? 'h-[6.75rem] sm:h-[8.25rem]'
+        : 'h-[4.75rem] sm:h-[5.75rem]'
       : place === 2
         ? 'h-[3.25rem] sm:h-[4rem]'
         : 'h-[2.25rem] sm:h-[2.75rem]'
@@ -165,73 +175,132 @@ function PodiumPedestal({
     <div
       className={cn(
         'flex flex-col items-center px-1 sm:px-1.5',
-        isFirst ? 'order-2 w-[36%] max-w-[10.5rem] sm:max-w-[12rem]' : null,
+        isFirst
+          ? useMascotFigure
+            ? 'order-2 w-[42%] max-w-[14rem] sm:max-w-[16rem]'
+            : 'order-2 w-[36%] max-w-[10.5rem] sm:max-w-[12rem]'
+          : null,
         place === 2 ? 'order-1 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]' : null,
         place === 3 ? 'order-3 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]' : null,
       )}
     >
-      <div className="relative mb-2.5 flex w-full flex-col items-center sm:mb-3">
-        {isFirst ? (
-          <Crown
-            className="mb-1 h-6 w-6 text-[#ffb300] drop-shadow-[0_0_8px_rgba(255,179,0,0.55)] sm:h-7 sm:w-7"
-            aria-hidden
-          />
-        ) : (
-          <div className="mb-1 h-6 sm:h-7" aria-hidden />
-        )}
-        <MemberIdentity
-          userId={member.userId}
-          disableLinks={disableProfileLinks}
-          ariaLabel={`${member.name}'s profile`}
-          className="relative shrink-0"
-        >
+      {useMascotFigure ? (
+        <>
+          {/*
+            No fixed-height box — a tall clamp + object-contain/object-bottom
+            was letterboxing empty space above Pucky at the top of the card.
+            Size via max-height so the figure is still large but hugs content.
+          */}
           <div
-            className={cn(
-              'rounded-full p-[2px]',
-              !disableProfileLinks && 'transition-transform hover:scale-[1.03]',
-            )}
-            style={{
-              backgroundColor: ringColor,
-              boxShadow: ringShadow,
-            }}
+            className="relative flex w-[min(100%,11.5rem)] justify-center sm:w-[min(100%,13.5rem)]"
+            aria-hidden
           >
-            <UserAvatarImage
-              avatar={member.avatar}
-              customAvatarUrl={member.customAvatarUrl}
-              className={avatarSize}
+            <Image
+              src={firstPlaceFigureSrc!}
+              alt=""
+              width={240}
+              height={240}
+              className="h-auto w-full max-h-[10.5rem] object-contain drop-shadow-[0_10px_22px_rgba(0,0,0,0.5)] sm:max-h-[12rem]"
+              priority={false}
             />
           </div>
-        </MemberIdentity>
-      </div>
 
-      <div className="mb-2.5 w-full px-0.5 text-center sm:mb-3">
-        <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
-          <MemberIdentity
-            userId={member.userId}
-            disableLinks={disableProfileLinks}
-            className={cn(
-              'max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white sm:text-sm',
-              !disableProfileLinks && 'hover:underline',
+          <div className="mb-1 mt-0.5 w-full px-0.5 text-center sm:mb-1.5">
+            <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
+              <MemberIdentity
+                userId={member.userId}
+                disableLinks={disableProfileLinks}
+                className={cn(
+                  'max-w-full text-center text-[13px] font-semibold leading-tight break-words text-white sm:text-sm',
+                  !disableProfileLinks && 'hover:underline',
+                )}
+              >
+                {member.name}
+              </MemberIdentity>
+            </div>
+            {member.isYou ? (
+              <span className="mt-0.5 inline-block rounded-full bg-primary/20 px-2 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
+                You
+              </span>
+            ) : null}
+            <p
+              className="mt-0.5 font-display text-xl tabular-nums leading-tight tracking-wide sm:text-2xl"
+              style={{ color: ACCENT_GREEN }}
+            >
+              {member.points}
+              <span className="ml-1 text-[11px] font-sans font-normal text-muted-foreground">
+                pts
+              </span>
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="relative mb-2.5 flex w-full flex-col items-center sm:mb-3">
+            {isFirst ? (
+              <Crown
+                className="mb-1 h-6 w-6 text-[#ffb300] drop-shadow-[0_0_8px_rgba(255,179,0,0.55)] sm:h-7 sm:w-7"
+                aria-hidden
+              />
+            ) : omitCrownSpacer ? null : (
+              <div className="mb-1 h-6 sm:h-7" aria-hidden />
             )}
-          >
-            {member.name}
-          </MemberIdentity>
-        </div>
-        {member.isYou ? (
-          <span className="mt-1 inline-block rounded-full bg-primary/20 px-2 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
-            You
-          </span>
-        ) : null}
-        <p
-          className="mt-1.5 font-display text-xl tabular-nums tracking-wide sm:text-2xl"
-          style={{ color: ACCENT_GREEN }}
-        >
-          {member.points}
-          <span className="ml-1 text-[11px] font-sans font-normal text-muted-foreground">
-            pts
-          </span>
-        </p>
-      </div>
+            <MemberIdentity
+              userId={member.userId}
+              disableLinks={disableProfileLinks}
+              ariaLabel={`${member.name}'s profile`}
+              className="relative shrink-0"
+            >
+              <div
+                className={cn(
+                  'rounded-full p-[2px]',
+                  !disableProfileLinks &&
+                    'transition-transform hover:scale-[1.03]',
+                )}
+                style={{
+                  backgroundColor: ringColor,
+                  boxShadow: ringShadow,
+                }}
+              >
+                <UserAvatarImage
+                  avatar={member.avatar}
+                  customAvatarUrl={member.customAvatarUrl}
+                  className={avatarSize}
+                />
+              </div>
+            </MemberIdentity>
+          </div>
+
+          <div className="mb-2.5 w-full px-0.5 text-center sm:mb-3">
+            <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
+              <MemberIdentity
+                userId={member.userId}
+                disableLinks={disableProfileLinks}
+                className={cn(
+                  'max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white sm:text-sm',
+                  !disableProfileLinks && 'hover:underline',
+                )}
+              >
+                {member.name}
+              </MemberIdentity>
+            </div>
+            {member.isYou ? (
+              <span className="mt-1 inline-block rounded-full bg-primary/20 px-2 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
+                You
+              </span>
+            ) : null}
+            <p
+              className="mt-1.5 font-display text-xl tabular-nums tracking-wide sm:text-2xl"
+              style={{ color: ACCENT_GREEN }}
+            >
+              {member.points}
+              <span className="ml-1 text-[11px] font-sans font-normal text-muted-foreground">
+                pts
+              </span>
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Tiered podium base — sits on #0A0E0E; slightly lighter face + thin green top edge */}
       <div
@@ -368,6 +437,11 @@ export type PoolLeaderboardStandingsProps = {
    * (no `/u/[id]` links). Does not fetch or poll — data still comes from props.
    */
   disableProfileLinks?: boolean
+  /**
+   * Landing-only: replace the 1st-place podium avatar (no ring/crown) with this
+   * free-standing figure (e.g. `/mascot/pucky_trophy.png`). In-app unused.
+   */
+  firstPlaceFigureSrc?: string
 }
 
 /**
@@ -382,6 +456,7 @@ export function PoolLeaderboardStandings({
   showPreMatchNote = false,
   className,
   disableProfileLinks = false,
+  firstPlaceFigureSrc,
 }: PoolLeaderboardStandingsProps) {
   if (members.length === 0) {
     return (
@@ -432,7 +507,10 @@ export function PoolLeaderboardStandings({
     >
       <section
         aria-label="Top standings podium"
-        className="mx-auto w-full max-w-4xl shrink-0 px-4 pt-2"
+        className={cn(
+          'mx-auto w-full max-w-4xl shrink-0 px-4',
+          firstPlaceFigureSrc ? 'pt-3' : 'pt-2',
+        )}
       >
         <div className="flex items-end justify-center">
           {second ? (
@@ -440,6 +518,7 @@ export function PoolLeaderboardStandings({
               place={2}
               member={second.member}
               disableProfileLinks={disableProfileLinks}
+              omitCrownSpacer={Boolean(firstPlaceFigureSrc)}
             />
           ) : null}
           {first ? (
@@ -447,6 +526,7 @@ export function PoolLeaderboardStandings({
               place={1}
               member={first.member}
               disableProfileLinks={disableProfileLinks}
+              firstPlaceFigureSrc={firstPlaceFigureSrc}
             />
           ) : null}
           {third ? (
@@ -454,6 +534,7 @@ export function PoolLeaderboardStandings({
               place={3}
               member={third.member}
               disableProfileLinks={disableProfileLinks}
+              omitCrownSpacer={Boolean(firstPlaceFigureSrc)}
             />
           ) : null}
         </div>

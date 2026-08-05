@@ -519,6 +519,105 @@
   }
 }
 
+/* ===== Landing pricing polish ===== */
+@keyframes pricing-ball-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pricing-trophy-shine {
+  0% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  40% {
+    filter: brightness(1.35) drop-shadow(0 0 6px rgba(255, 193, 7, 0.7));
+    transform: scale(1.08);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+@keyframes pricing-chat-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  70% {
+    transform: translateY(1px);
+  }
+}
+
+@keyframes pricing-badge-pop {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  40% {
+    transform: scale(1.15) rotate(-8deg);
+  }
+  70% {
+    transform: scale(1.05) rotate(4deg);
+  }
+}
+
+@keyframes pricing-friends-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes pricing-pools-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.9;
+  }
+}
+
+@keyframes pricing-chevron-nudge {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  80% {
+    transform: translateY(3px);
+  }
+  90% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pricing-sparkle {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(12deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-pulse-subtle,
@@ -537,6 +636,17 @@
 
   [class*='how-it-works-step-in'],
   [class*='how-it-works-caret'] {
+    animation: none !important;
+  }
+
+  [class*='pricing-ball-spin'],
+  [class*='pricing-trophy-shine'],
+  [class*='pricing-chat-bounce'],
+  [class*='pricing-badge-pop'],
+  [class*='pricing-friends-nudge'],
+  [class*='pricing-pools-pulse'],
+  [class*='pricing-chevron-nudge'],
+  [class*='pricing-sparkle'] {
     animation: none !important;
   }
 

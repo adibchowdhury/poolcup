@@ -23,8 +23,8 @@ type FooterLink =
 
 const siteMap: FooterLink[] = [
   { label: 'How it works', hash: '#how-it-works' },
-  { label: 'Features', hash: '#features' },
-  { label: 'Pricing', href: '/pricing' },
+  { label: 'Join the action', hash: '#join-the-action' },
+  { label: 'Pricing', hash: '#pricing' },
   { label: 'Contact Support', href: '/contact' },
   { label: 'Sign in', href: '/login' },
 ]

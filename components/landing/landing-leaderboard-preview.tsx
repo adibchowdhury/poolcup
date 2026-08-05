@@ -11,7 +11,7 @@ const LANDING_EXAMPLE_STANDINGS: LeaderboardMember[] = [
   {
     id: 'landing-lb-1',
     userId: '',
-    name: 'Maya Okonkwo',
+    name: 'Pucky',
     isYou: false,
     avatar: 'goal_keeper.png',
     customAvatarUrl: null,
@@ -125,7 +125,8 @@ export function LandingLeaderboardPreview() {
         copied={false}
         onInvite={noopInvite}
         disableProfileLinks
-        className="rounded-2xl pb-3 pt-4"
+        firstPlaceFigureSrc="/mascot/pucky_trophy.png"
+        className="rounded-2xl pb-3 pt-0"
       />
     </div>
   )

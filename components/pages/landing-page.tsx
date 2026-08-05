@@ -4,7 +4,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
-import { FeatureTabsSection } from "@/components/landing/feature-tabs-section"
 import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
@@ -12,6 +11,7 @@ import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { JoinTheActionSection } from "@/components/landing/join-the-action-section"
 import { LandingLeaderboardPreview } from "@/components/landing/landing-leaderboard-preview"
 import { LandingMatchPredictionPreview } from "@/components/landing/landing-match-prediction-preview"
+import { LandingPricingSection } from "@/components/landing/landing-pricing-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
@@ -357,43 +357,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <FeatureTabsSection />
+      <LandingPricingSection />
 
-      {/* ===== FINAL CTA ===== */}
-      <section id="cta" className="relative overflow-hidden bg-[#0d1520] py-24 md:py-32">
-        {/* Background glow */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0,230,118,0.08) 0%, transparent 60%)"
-          }}
-        />
-
-        <Image
-          src="/cheerleader.png"
-          alt=""
-          width={280}
-          height={420}
-          className="pointer-events-none absolute left-[calc(50%-38.5rem)] top-1/2 z-[1] hidden h-[280px] w-auto -translate-y-1/2 lg:block"
-          aria-hidden
-        />
-        
-        <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#f0f4f8] mb-4">THE TOURNAMENT STARTS JUNE 11.</h2>
-          <p className="text-[#5a7080] text-xl mb-10">Your pool won&apos;t create itself.</p>
-          
-          <Link href="/login?next=/create" className="bg-[#00e676] text-[#080b0f] px-10 py-5 rounded-xl font-semibold text-lg hover:bg-[#00e676]/90 transition-all hover:scale-[1.02] inline-flex items-center gap-2">
-            Create a Pool
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
-          
-          <p className="mt-6 text-[#5a7080] text-sm">Takes 60 seconds · Free to use · No subscription</p>
-        </div>
-      </section>
-
-      <SiteFooter backgroundClass="bg-background" />
+      <SiteFooter backgroundClass="bg-[#0d1520]" />
     </div>
   )
 }
