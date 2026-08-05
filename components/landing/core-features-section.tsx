@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
+import { HowItWorksDemo } from '@/components/home/how-it-works-demo'
 import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
 import {
   RevealItem,
@@ -263,7 +264,9 @@ function FeatureBlock({
 
           <RevealItem index={4}>
             <FeatureCardShell glow={accent} glowRgb={accentRgb}>
-              {feature.number === '02' ? (
+              {feature.number === '01' ? (
+                <HowItWorksDemo embedded />
+              ) : feature.number === '02' ? (
                 <LandingLeaderboardPreview embedded />
               ) : null}
             </FeatureCardShell>
@@ -276,7 +279,7 @@ function FeatureBlock({
 
 /**
  * Five core product feature blocks for the logged-out landing page.
- * Cards are empty glowing placeholders for now.
+ * Section 01: pool-creation walkthrough · Section 02: leaderboard preview.
  */
 export function CoreFeaturesSection() {
   return (

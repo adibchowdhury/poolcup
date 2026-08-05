@@ -6,7 +6,6 @@ import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel"
 import { HeroConfetti } from "@/components/landing/hero-confetti"
-import { HowItWorksDemo } from "@/components/home/how-it-works-demo"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { CoreFeaturesSection } from "@/components/landing/core-features-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
@@ -213,7 +212,7 @@ export default function LandingPage() {
 
       <PlatformTrustBar />
 
-      {/* ===== POST-HERO HOOK (walkthrough demo kept as-is) ===== */}
+      {/* ===== POST-HERO HOOK ===== */}
       <section
         id="how-it-works"
         className="bg-[#0d1520] pt-28 pb-20 md:pt-36 md:pb-28"
@@ -246,9 +245,17 @@ export default function LandingPage() {
 
             <RevealItem
               index={3}
-              className="mx-auto w-full max-w-lg md:mx-0 md:ml-auto"
+              className="mx-auto flex w-full max-w-md items-center justify-center md:mx-0 md:ml-auto md:max-w-lg"
             >
-              <HowItWorksDemo />
+              <Image
+                src="/mascot/pucky_trophy.png"
+                alt="Pucky, the PoolCup mascot holding a trophy"
+                width={640}
+                height={640}
+                className="h-auto w-full max-h-[22rem] object-contain object-center drop-shadow-[0_12px_40px_rgba(0,0,0,0.45)] sm:max-h-[26rem] md:max-h-[28rem]"
+                sizes="(max-width: 768px) 80vw, 28rem"
+                priority={false}
+              />
             </RevealItem>
           </ScrollRevealGroup>
         </div>
