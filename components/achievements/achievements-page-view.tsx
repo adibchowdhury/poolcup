@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Lock, Loader2 } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Loader2 } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import {
   BadgeUnlockProvider,
@@ -12,17 +12,36 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
 import {
+  formatAchievementEarnedDate,
+  getAchievementUiState,
+  groupAchievementsForDisplay,
+} from '@/src/lib/achievement-catalogue-layout'
+import {
+  fetchUserAchievementProgress,
   fetchUserAchievements,
   type AchievementWithStatus,
+  type UserAchievementProgress,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
 
-function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
+function BadgeCard({
+  badge,
+  progress,
+}: {
+  badge: AchievementWithStatus
+  progress: UserAchievementProgress | null
+}) {
+  const state = getAchievementUiState(badge)
+  const progressPct =
+    state === 'locked' && progress
+      ? Math.min(100, Math.max(0, progress.progress_pct))
+      : null
+
   const xpLabel =
-    badge.buildable === 'yellow'
+    state === 'coming_soon'
       ? 'Soon'
-      : badge.earned
+      : state === 'earned'
         ? `+${badge.xp_value} XP`
         : `${badge.xp_value} XP`
 
@@ -32,11 +51,13 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
         <div
           className={cn(
             'absolute inset-0',
-            !badge.earned && 'opacity-40 grayscale',
+            state !== 'earned' && 'opacity-40 grayscale',
           )}
         >
           <AchievementBadgeArt
             achievementId={badge.id}
+            artFilename={badge.art_filename}
+            src={badge.imageUrl}
             className="h-full w-full"
           />
         </div>
@@ -44,9 +65,9 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
         <span
           className={cn(
             'absolute -right-2 -top-1 z-10 max-w-[5.5rem] truncate rounded-full px-2 py-0.5 text-[10px] font-bold leading-none tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:-right-2.5 sm:text-[11px]',
-            badge.earned
+            state === 'earned'
               ? 'bg-primary text-primary-foreground'
-              : badge.buildable === 'yellow'
+              : state === 'coming_soon'
                 ? 'border border-white/10 bg-background/90 text-muted-foreground/70'
                 : 'border border-primary/30 bg-primary/15 text-primary/80',
           )}
@@ -54,12 +75,21 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
           {xpLabel}
         </span>
 
-        {!badge.earned ? (
+        {state === 'locked' ? (
           <span
             className="absolute -bottom-0.5 -left-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-background/85 text-muted-foreground sm:h-6 sm:w-6"
             aria-label="Locked"
           >
             <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" aria-hidden />
+          </span>
+        ) : null}
+
+        {state === 'coming_soon' ? (
+          <span
+            className="absolute -bottom-0.5 -left-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-background/85 text-muted-foreground sm:h-6 sm:w-6"
+            aria-label="Coming soon"
+          >
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" aria-hidden />
           </span>
         ) : null}
       </div>
@@ -68,7 +98,7 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
         <h3
           className={cn(
             'line-clamp-2 min-h-[1.75rem] w-full max-w-full break-words text-xs font-semibold leading-tight',
-            badge.earned ? 'text-foreground' : 'text-muted-foreground',
+            state === 'earned' ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
           {badge.name}
@@ -76,11 +106,42 @@ function BadgeCard({ badge }: { badge: AchievementWithStatus }) {
         <p
           className={cn(
             'mt-0 line-clamp-3 min-h-[2.4rem] w-full max-w-full break-words text-[10px] leading-snug',
-            badge.earned ? 'text-muted-foreground' : 'text-muted-foreground/70',
+            state === 'earned'
+              ? 'text-muted-foreground'
+              : 'text-muted-foreground/70',
           )}
         >
           {badge.description}
         </p>
+
+        {state === 'earned' ? (
+          <p className="mt-0.5 text-[10px] font-medium text-primary">
+            Unlocked {formatAchievementEarnedDate(badge.earned_at)}
+          </p>
+        ) : null}
+
+        {state === 'coming_soon' ? (
+          <p className="mt-0.5 text-[10px] font-medium text-muted-foreground/70">
+            Coming soon
+          </p>
+        ) : null}
+
+        {state === 'locked' && progressPct != null ? (
+          <div className="mt-1 w-full space-y-0.5 px-0.5">
+            <div className="flex items-center justify-between gap-1 text-[9px] tabular-nums text-muted-foreground">
+              <span>
+                {progress!.current_value}/{progress!.threshold}
+              </span>
+              <span>{Math.round(progressPct)}%</span>
+            </div>
+            <div className="h-1 overflow-hidden rounded-full bg-muted/50">
+              <div
+                className="h-full rounded-full bg-primary/80 transition-all"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
     </article>
   )
@@ -98,12 +159,16 @@ function AchievementsPageContent() {
   const { user, loading: authLoading } = useAuth()
   const { enqueueFromAchievementsData } = useBadgeUnlock()
   const [data, setData] = useState<UserAchievementsData | null>(null)
+  const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>(
+    [],
+  )
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (authLoading) return
     if (!user?.id) {
       setData(null)
+      setProgressRows([])
       setLoading(false)
       return
     }
@@ -111,17 +176,33 @@ function AchievementsPageContent() {
     let cancelled = false
     setLoading(true)
 
-    void fetchUserAchievements(supabase, user.id).then((result) => {
+    void (async () => {
+      const [result, progress] = await Promise.all([
+        fetchUserAchievements(supabase, user.id),
+        fetchUserAchievementProgress(supabase, user.id),
+      ])
       if (cancelled) return
       setData(result)
+      setProgressRows(progress)
       enqueueFromAchievementsData(result)
       setLoading(false)
-    })
+    })()
 
     return () => {
       cancelled = true
     }
   }, [authLoading, user?.id, enqueueFromAchievementsData])
+
+  const progressById = useMemo(
+    () =>
+      new Map(progressRows.map((row) => [row.achievement_id, row] as const)),
+    [progressRows],
+  )
+
+  const groups = useMemo(
+    () => groupAchievementsForDisplay(data?.achievements ?? []),
+    [data?.achievements],
+  )
 
   if (authLoading || loading) {
     return (
@@ -160,7 +241,7 @@ function AchievementsPageContent() {
   const total = data?.totalCount ?? 0
   const totalXp = data?.totalXp ?? 0
   const level = data?.level ?? xpToLevel(0)
-  const groups = data?.groups ?? []
+  const overallPct = total > 0 ? Math.round((earned / total) * 100) : 0
 
   return (
     <main className="mx-auto min-h-[70vh] w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -197,7 +278,7 @@ function AchievementsPageContent() {
             <span className="text-muted-foreground"> / {total}</span>
           </p>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
-            Earned
+            Earned · {overallPct}%
           </p>
         </div>
       </div>
@@ -209,28 +290,35 @@ function AchievementsPageContent() {
       ) : (
         <div className="space-y-2">
           {groups.map((group) => (
-            <section key={group.category} className="space-y-0.5">
+            <section key={group.id} className="space-y-0.5">
               <div className="flex items-baseline justify-between gap-3 border-b border-white/8 pb-0.5">
                 <h2 className="font-display text-2xl tracking-wide text-foreground">
-                  {group.category}
+                  {group.label}
                 </h2>
                 <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {group.badges.filter((badge) => badge.earned).length}/
-                  {group.badges.length}
+                  {group.earnedCount}/{group.totalCount}
                 </p>
               </div>
+
               <div
                 className={cn(
                   '-mx-4 overflow-x-auto overscroll-x-contain px-4 sm:-mx-6 sm:px-6',
                   'scrollbar-none',
                 )}
                 role="list"
-                aria-label={`${group.category} badges`}
+                aria-label={`${group.label} badges`}
               >
                 <div className="flex w-max items-start gap-1 pr-8 sm:gap-1.5 sm:pr-12">
                   {group.badges.map((badge) => (
-                    <div key={badge.id} role="listitem" className="w-28 shrink-0 sm:w-32">
-                      <BadgeCard badge={badge} />
+                    <div
+                      key={badge.id}
+                      role="listitem"
+                      className="w-28 shrink-0 sm:w-32"
+                    >
+                      <BadgeCard
+                        badge={badge}
+                        progress={progressById.get(badge.id) ?? null}
+                      />
                     </div>
                   ))}
                 </div>

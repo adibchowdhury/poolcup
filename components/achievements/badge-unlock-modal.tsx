@@ -12,6 +12,10 @@ export type BadgeUnlockItem = {
   id: string
   name: string
   xp_value: number
+  /** DB art_filename when present (e.g. 01_welcome_badge.png). */
+  art_filename: string | null
+  /** Precomputed /badges/... URL from fetch helpers. */
+  imageUrl: string | null
 }
 
 type BadgeUnlockModalProps = {
@@ -238,7 +242,11 @@ export function BadgeUnlockModal({
               aria-hidden
             />
             <div className="relative h-full w-full drop-shadow-[0_0_28px_rgba(0,230,118,0.35)]">
-              <AchievementBadgeArt achievementId={badge.id} />
+              <AchievementBadgeArt
+                achievementId={badge.id}
+                artFilename={badge.art_filename}
+                src={badge.imageUrl}
+              />
             </div>
           </div>
 

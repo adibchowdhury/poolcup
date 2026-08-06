@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { achievementBadgeImageSrc } from '@/src/lib/achievement-badge-art'
 import {
+  ACHIEVEMENT_SELECT,
+  buildAchievementsData,
   type AchievementCatalogueRow,
-  type AchievementWithStatus,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
@@ -37,30 +37,6 @@ function emptyAchievements(error: string | null = null): UserAchievementsData {
     newlyAwardedIds: [],
     error,
   }
-}
-
-function normalizeTierLabel(tier: string | null | undefined): string {
-  const value = (tier ?? '').trim()
-  if (!value || value === '—' || value === '-') return ''
-  return value
-}
-
-function groupByCategory(achievements: AchievementWithStatus[]) {
-  const order: string[] = []
-  const map = new Map<string, AchievementWithStatus[]>()
-
-  for (const badge of achievements) {
-    if (!map.has(badge.category)) {
-      order.push(badge.category)
-      map.set(badge.category, [])
-    }
-    map.get(badge.category)!.push(badge)
-  }
-
-  return order.map((category) => ({
-    category,
-    badges: map.get(category)!,
-  }))
 }
 
 function coercePublicProfile(raw: unknown): PublicProfile | null {
@@ -133,9 +109,7 @@ export async function fetchUserAchievementsReadOnly(
   const [catalogueRes, earnedRes] = await Promise.all([
     supabase
       .from('achievements')
-      .select(
-        'id, name, description, category, condition_metric, threshold, tier, xp_value, buildable, sort_order',
-      )
+      .select(ACHIEVEMENT_SELECT)
       .order('sort_order', { ascending: true }),
     supabase
       .from('user_achievements')
@@ -150,44 +124,10 @@ export async function fetchUserAchievementsReadOnly(
     return emptyAchievements(earnedRes.error.message)
   }
 
-  const catalogue = (catalogueRes.data ?? []) as AchievementCatalogueRow[]
-  const earnedRows = (earnedRes.data ?? []) as UserAchievementRow[]
-  const earnedAtById = new Map(
-    earnedRows.map((row) => [row.achievement_id, row.earned_at] as const),
+  return buildAchievementsData(
+    (catalogueRes.data ?? []) as AchievementCatalogueRow[],
+    (earnedRes.data ?? []) as UserAchievementRow[],
+    [],
+    null,
   )
-
-  const achievements: AchievementWithStatus[] = catalogue.map((row) => {
-    const earned_at = earnedAtById.get(row.id) ?? null
-    return {
-      ...row,
-      tier: normalizeTierLabel(row.tier),
-      buildable: row.buildable === 'yellow' ? 'yellow' : 'green',
-      earned: earned_at != null,
-      earned_at,
-      imageUrl: achievementBadgeImageSrc(row.id),
-    }
-  })
-
-  const earned = achievements.filter((badge) => badge.earned)
-  const totalXp = earned.reduce((sum, badge) => sum + (badge.xp_value ?? 0), 0)
-
-  const recentlyUnlocked = [...earned]
-    .sort((a, b) => {
-      const aTime = a.earned_at ? Date.parse(a.earned_at) : 0
-      const bTime = b.earned_at ? Date.parse(b.earned_at) : 0
-      return bTime - aTime
-    })
-    .slice(0, 2)
-
-  return {
-    achievements,
-    groups: groupByCategory(achievements),
-    totalXp,
-    earnedCount: earned.length,
-    totalCount: achievements.length,
-    level: xpToLevel(totalXp),
-    recentlyUnlocked,
-    newlyAwardedIds: [],
-    error: null,
-  }
 }

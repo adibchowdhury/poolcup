@@ -17,6 +17,9 @@ export type AchievementCatalogueRow = {
   xp_value: number
   buildable: AchievementBuildable
   sort_order: number
+  list_order: number | null
+  art_filename: string | null
+  is_active: boolean
 }
 
 export type AchievementWithStatus = AchievementCatalogueRow & {
@@ -47,9 +50,11 @@ export type UserAchievementProgress = {
 
 export type UserAchievementsData = {
   achievements: AchievementWithStatus[]
+  /** Catalogue browse: active 60 + any retired badges this user earned. */
   groups: AchievementCategoryGroup[]
   totalXp: number
   earnedCount: number
+  /** Active catalogue size (canonical 60), not including retired-only rows. */
   totalCount: number
   level: XpLevel
   recentlyUnlocked: AchievementWithStatus[]
@@ -61,6 +66,9 @@ type UserAchievementRow = {
   achievement_id: string
   earned_at: string
 }
+
+const ACHIEVEMENT_SELECT =
+  'id, name, description, category, condition_metric, threshold, tier, xp_value, buildable, sort_order, list_order, art_filename, is_active'
 
 function emptyData(error: string | null = null): UserAchievementsData {
   return {
@@ -82,6 +90,11 @@ function normalizeTierLabel(tier: string | null | undefined): string {
   return value
 }
 
+function displayOrder(badge: AchievementWithStatus): number {
+  if (badge.list_order != null) return badge.list_order
+  return badge.sort_order + 10_000
+}
+
 function groupByCategory(
   achievements: AchievementWithStatus[],
 ): AchievementCategoryGroup[] {
@@ -98,8 +111,80 @@ function groupByCategory(
 
   return order.map((category) => ({
     category,
-    badges: map.get(category)!,
+    badges: [...(map.get(category) ?? [])].sort(
+      (a, b) => displayOrder(a) - displayOrder(b),
+    ),
   }))
+}
+
+function mapCatalogueRows(
+  catalogue: AchievementCatalogueRow[],
+  earnedAtById: Map<string, string>,
+): AchievementWithStatus[] {
+  return catalogue.map((row) => {
+    const earned_at = earnedAtById.get(row.id) ?? null
+    return {
+      ...row,
+      tier: normalizeTierLabel(row.tier),
+      buildable: row.buildable === 'yellow' ? 'yellow' : 'green',
+      is_active: row.is_active !== false,
+      list_order: row.list_order ?? null,
+      art_filename: row.art_filename ?? null,
+      earned: earned_at != null,
+      earned_at,
+      imageUrl: achievementBadgeImageSrc(row.id, row.art_filename),
+    }
+  })
+}
+
+/**
+ * Catalogue + earned shelf:
+ * - Active badges always included (the canonical 60).
+ * - Retired (is_active=false) included only if this user earned them.
+ */
+export function visibleAchievementsForUser(
+  all: AchievementWithStatus[],
+): AchievementWithStatus[] {
+  return all
+    .filter((badge) => badge.is_active || badge.earned)
+    .sort((a, b) => displayOrder(a) - displayOrder(b))
+}
+
+function buildAchievementsData(
+  catalogue: AchievementCatalogueRow[],
+  earnedRows: UserAchievementRow[],
+  newlyAwardedIds: string[],
+  evalError: string | null,
+): UserAchievementsData {
+  const earnedAtById = new Map(
+    earnedRows.map((row) => [row.achievement_id, row.earned_at] as const),
+  )
+
+  const all = mapCatalogueRows(catalogue, earnedAtById)
+  const visible = visibleAchievementsForUser(all)
+  const earned = all.filter((badge) => badge.earned)
+  const totalXp = earned.reduce((sum, badge) => sum + (badge.xp_value ?? 0), 0)
+  const activeCount = all.filter((badge) => badge.is_active).length
+
+  const recentlyUnlocked = [...earned]
+    .sort((a, b) => {
+      const aTime = a.earned_at ? Date.parse(a.earned_at) : 0
+      const bTime = b.earned_at ? Date.parse(b.earned_at) : 0
+      return bTime - aTime
+    })
+    .slice(0, 2)
+
+  return {
+    achievements: visible,
+    groups: groupByCategory(visible),
+    totalXp,
+    earnedCount: earned.length,
+    totalCount: activeCount,
+    level: xpToLevel(totalXp),
+    recentlyUnlocked,
+    newlyAwardedIds,
+    error: evalError,
+  }
 }
 
 /**
@@ -128,9 +213,7 @@ export async function fetchUserAchievements(
   const [catalogueRes, earnedRes] = await Promise.all([
     supabase
       .from('achievements')
-      .select(
-        'id, name, description, category, condition_metric, threshold, tier, xp_value, buildable, sort_order',
-      )
+      .select(ACHIEVEMENT_SELECT)
       .order('sort_order', { ascending: true }),
     supabase
       .from('user_achievements')
@@ -145,48 +228,12 @@ export async function fetchUserAchievements(
     return emptyData(earnedRes.error.message)
   }
 
-  const catalogue = (catalogueRes.data ?? []) as AchievementCatalogueRow[]
-  const earnedRows = (earnedRes.data ?? []) as UserAchievementRow[]
-  const earnedAtById = new Map(
-    earnedRows.map((row) => [row.achievement_id, row.earned_at] as const),
-  )
-
-  const achievements: AchievementWithStatus[] = catalogue.map((row) => {
-    const earned_at = earnedAtById.get(row.id) ?? null
-    return {
-      ...row,
-      tier: normalizeTierLabel(row.tier),
-      buildable: row.buildable === 'yellow' ? 'yellow' : 'green',
-      earned: earned_at != null,
-      earned_at,
-      imageUrl: achievementBadgeImageSrc(row.id),
-    }
-  })
-
-  const earned = achievements.filter((badge) => badge.earned)
-  const totalXp = earned.reduce((sum, badge) => sum + (badge.xp_value ?? 0), 0)
-
-  const recentlyUnlocked = [...earned]
-    .sort((a, b) => {
-      const aTime = a.earned_at ? Date.parse(a.earned_at) : 0
-      const bTime = b.earned_at ? Date.parse(b.earned_at) : 0
-      return bTime - aTime
-    })
-    .slice(0, 2)
-
-  return {
-    achievements,
-    groups: groupByCategory(achievements),
-    totalXp,
-    earnedCount: earned.length,
-    totalCount: achievements.length,
-    level: xpToLevel(totalXp),
-    recentlyUnlocked,
+  return buildAchievementsData(
+    (catalogueRes.data ?? []) as AchievementCatalogueRow[],
+    (earnedRes.data ?? []) as UserAchievementRow[],
     newlyAwardedIds,
-    error: evalError
-      ? `Could not refresh awards: ${evalError.message}`
-      : null,
-  }
+    evalError ? `Could not refresh awards: ${evalError.message}` : null,
+  )
 }
 
 /** Real metric progress for profile achievement cards and career highlights. */
@@ -213,3 +260,5 @@ export async function fetchUserAchievementProgress(
     progress_pct: Math.min(100, Math.max(0, Number(row.progress_pct) || 0)),
   }))
 }
+
+export { buildAchievementsData, mapCatalogueRows, ACHIEVEMENT_SELECT }

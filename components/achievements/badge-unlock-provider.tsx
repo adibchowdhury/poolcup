@@ -32,17 +32,19 @@ function resolveNewlyAwardedBadges(
     data.achievements.map((badge) => [badge.id, badge] as const),
   )
 
-  return data.newlyAwardedIds
-    .map((id) => {
-      const badge = byId.get(id)
-      if (!badge) return null
-      return {
-        id: badge.id,
-        name: badge.name,
-        xp_value: badge.xp_value ?? 0,
-      } satisfies BadgeUnlockItem
+  const items: BadgeUnlockItem[] = []
+  for (const id of data.newlyAwardedIds) {
+    const badge = byId.get(id)
+    if (!badge) continue
+    items.push({
+      id: badge.id,
+      name: badge.name,
+      xp_value: badge.xp_value ?? 0,
+      art_filename: badge.art_filename ?? null,
+      imageUrl: badge.imageUrl ?? null,
     })
-    .filter((badge): badge is BadgeUnlockItem => badge != null)
+  }
+  return items
 }
 
 export function BadgeUnlockProvider({ children }: { children: ReactNode }) {

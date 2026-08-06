@@ -9,24 +9,33 @@ import {
 
 type AchievementBadgeArtProps = {
   achievementId: string
+  /** DB art_filename when present (e.g. 01_welcome_badge.png). */
+  artFilename?: string | null
+  /** Precomputed URL from fetch helpers; preferred when set. */
+  src?: string | null
   alt?: string
   className?: string
 }
 
 /**
- * Loads /badges/badge_<id>.png; on missing/failed load, falls back to the
- * placeholder shield. Adding new files under public/badges auto-picks them up.
+ * Loads badge art from art_filename / badge_<id>.png; on missing/failed load,
+ * falls back to the placeholder shield.
  */
 export function AchievementBadgeArt({
   achievementId,
+  artFilename = null,
+  src: srcProp = null,
   alt = '',
   className,
 }: AchievementBadgeArtProps) {
-  const [src, setSrc] = useState(() => achievementBadgeImageSrc(achievementId))
+  const preferred =
+    srcProp?.trim() ||
+    achievementBadgeImageSrc(achievementId, artFilename)
+  const [src, setSrc] = useState(preferred)
 
   useEffect(() => {
-    setSrc(achievementBadgeImageSrc(achievementId))
-  }, [achievementId])
+    setSrc(preferred)
+  }, [preferred])
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- local public assets with onError fallback

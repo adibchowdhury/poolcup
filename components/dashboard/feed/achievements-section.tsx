@@ -194,6 +194,8 @@ export function AchievementsFeedContent({
               >
                 <AchievementBadgeArt
                   achievementId={badge.id}
+                  artFilename={badge.art_filename}
+                  src={badge.imageUrl}
                   alt={badge.name}
                 />
               </Link>

@@ -468,7 +468,11 @@ function BadgeDetailList({
                   !badge.earned && 'opacity-55 grayscale',
                 )}
               >
-                <AchievementBadgeArt achievementId={badge.id} />
+                <AchievementBadgeArt
+                  achievementId={badge.id}
+                  artFilename={badge.art_filename}
+                  src={badge.imageUrl}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -667,7 +671,10 @@ export function ProfileShowcase({
   const lockedNearComplete = useMemo(() => {
     if (isPublic) return []
     return (data?.achievements ?? [])
-      .filter((badge) => !badge.earned && badge.buildable === 'green')
+      .filter(
+        (badge) =>
+          !badge.earned && badge.is_active && badge.buildable === 'green',
+      )
       .sort(
         (a, b) =>
           (progressById.get(b.id)?.progress_pct ?? 0) -
@@ -1022,7 +1029,11 @@ export function ProfileShowcase({
                       className="flex min-w-0 flex-col items-center text-center"
                     >
                       <div className="flex h-12 w-12 items-center justify-center overflow-hidden sm:h-14 sm:w-14">
-                        <AchievementBadgeArt achievementId={badge.id} />
+                        <AchievementBadgeArt
+                          achievementId={badge.id}
+                          artFilename={badge.art_filename}
+                          src={badge.imageUrl}
+                        />
                       </div>
                       <p className="mt-2 line-clamp-2 text-[9px] font-semibold leading-tight text-foreground sm:text-[10px]">
                         {badge.name}
