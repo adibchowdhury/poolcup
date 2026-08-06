@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { HowItWorksDemo } from '@/components/home/how-it-works-demo'
 import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
+import { LandingProfilePreview } from '@/components/landing/landing-profile-preview'
 import {
   RevealItem,
   ScrollRevealGroup,
@@ -75,7 +76,7 @@ const CORE_FEATURES: CoreFeature[] = [
     bullets: [
       'XP, levels & a global rank',
       'Unlockable badges & achievements',
-      'Full prediction history & stats',
+      'Accuracy, stats & career highlights',
       'Your identity follows you everywhere',
     ],
     cardGlow: '#3B82F6',
@@ -273,6 +274,8 @@ function FeatureBlock({
                 <HowItWorksDemo embedded />
               ) : feature.number === '02' ? (
                 <LandingLeaderboardPreview embedded />
+              ) : feature.number === '04' ? (
+                <LandingProfilePreview embedded />
               ) : null}
             </FeatureCardShell>
           </RevealItem>
@@ -284,7 +287,7 @@ function FeatureBlock({
 
 /**
  * Five core product feature blocks for the logged-out landing page.
- * Section 01: pool-creation walkthrough · Section 02: leaderboard preview.
+ * Section 01: pool walkthrough · 02: leaderboard · 04: profile identity preview.
  */
 export function CoreFeaturesSection() {
   return (

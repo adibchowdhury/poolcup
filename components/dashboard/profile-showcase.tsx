@@ -1,28 +1,28 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
   Award,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Crown,
   Flame,
   Lock,
   Medal,
   Pencil,
+  Sparkles,
   Target,
-  TrendingUp,
   Trophy,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FriendshipButton } from '@/components/friends/friendship-button'
-import { ProfileFriendsEntry } from '@/components/friends/profile-friends-entry'
 import { cn } from '@/lib/utils'
 import {
   fetchUserAchievementProgress,
@@ -33,12 +33,21 @@ import {
 } from '@/src/lib/fetch-user-achievements'
 import { fetchUserAchievementsReadOnly } from '@/src/lib/fetch-public-profile'
 import {
+  fetchProfilePools,
+  type ProfilePoolSummary,
+  type ProfileSportSummary,
+} from '@/src/lib/fetch-profile-pools'
+import {
   fetchUserGlobalRank,
   type UserGlobalRank,
 } from '@/src/lib/global-rank'
+import { pickNextAchievement } from '@/src/lib/pick-next-achievement'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
+import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
+import { sportDisplayLabel, sportIconPng } from '@/src/lib/sport-display'
 import { supabase } from '@/src/lib/supabase'
 import { xpToLevel } from '@/src/lib/levels'
+import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 
 export type ProfileShowcaseMode = 'self' | 'public'
 
@@ -49,6 +58,19 @@ type ProfileShowcaseProps = {
   customAvatarUrl: string | null
   predictionsMade: number
   accuracy: number | null
+  /** Pool points (`users.points`) — career highlights (self). */
+  totalPoints?: number | null
+  /** Account created date — “Member since”. */
+  createdAt?: string | null
+  /**
+   * Stage-2 profile title (e.g. “Bracket Architect”).
+   * Slot is always rendered; chip only shows when non-empty.
+   */
+  profileTitle?: string | null
+  /**
+   * Stage-2 season label. Slot always rendered; chip only when non-empty.
+   */
+  seasonLabel?: string | null
   /** When false, skips client fetches (dashboard tab inactive). Default true. */
   active?: boolean
   /**
@@ -66,29 +88,16 @@ type ProfileShowcaseProps = {
   initialAchievements?: UserAchievementsData | null
 }
 
-function formatEarnedDate(value: string | null): string {
-  if (!value) return 'Date unavailable'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Date unavailable'
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-function sortEarnedNewestFirst(
-  badges: AchievementWithStatus[],
-): AchievementWithStatus[] {
-  return [...badges]
-    .filter((badge) => badge.earned)
-    .sort(
-      (a, b) =>
-        Date.parse(b.earned_at ?? '') - Date.parse(a.earned_at ?? ''),
-    )
-}
+type ProfileTab = 'overview' | 'progress' | 'achievements' | 'stats'
 
 type AchievementRarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
+
+type CareerItem = {
+  label: string
+  value: string
+  icon: typeof Trophy
+  accent: string
+}
 
 const RARITY_STYLES: Record<
   AchievementRarity,
@@ -127,46 +136,412 @@ function getRarity(xpValue: number): AchievementRarity {
   return 'Legendary'
 }
 
-function buildPreview(
-  achievements: AchievementWithStatus[],
-  progressById: Map<string, UserAchievementProgress>,
-  /** Public profiles only surface earned badges (no locked progress). */
-  earnedOnly: boolean,
-): AchievementWithStatus[] {
-  const earned = sortEarnedNewestFirst(achievements)
-  if (earnedOnly) return earned.slice(0, 5)
+function formatMemberSince(value: string | null | undefined): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
-  const locked = achievements
-    .filter((badge) => !badge.earned && badge.buildable === 'green')
+function formatEarnedDate(value: string | null): string {
+  if (!value) return 'Date unavailable'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date unavailable'
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function sortEarnedNewestFirst(
+  badges: AchievementWithStatus[],
+): AchievementWithStatus[] {
+  return [...badges]
+    .filter((badge) => badge.earned)
     .sort(
       (a, b) =>
-        (progressById.get(b.id)?.progress_pct ?? 0) -
-        (progressById.get(a.id)?.progress_pct ?? 0),
+        Date.parse(b.earned_at ?? '') - Date.parse(a.earned_at ?? ''),
     )
-  const preview = [...earned.slice(0, 2), ...locked.slice(0, 3)]
-
-  if (preview.length < 5) {
-    const used = new Set(preview.map((badge) => badge.id))
-    preview.push(
-      ...achievements
-        .filter((badge) => !used.has(badge.id))
-        .slice(0, 5 - preview.length),
-    )
-  }
-
-  return preview.slice(0, 5)
 }
 
 function metricUnit(metric: string, value: number): string {
-  if (metric === 'predictions_made') return value === 1 ? 'prediction' : 'predictions'
-  if (metric === 'correct_predictions') return value === 1 ? 'correct pick' : 'correct picks'
-  if (metric === 'exact_scores') return value === 1 ? 'exact score' : 'exact scores'
+  if (metric === 'predictions_made')
+    return value === 1 ? 'prediction' : 'predictions'
+  if (metric === 'correct_predictions')
+    return value === 1 ? 'correct pick' : 'correct picks'
+  if (metric === 'exact_scores')
+    return value === 1 ? 'exact score' : 'exact scores'
   if (metric === 'pools_joined') return value === 1 ? 'pool' : 'pools'
-  if (metric === 'pools_created') return value === 1 ? 'pool created' : 'pools created'
+  if (metric === 'pools_created')
+    return value === 1 ? 'pool created' : 'pools created'
   if (metric === 'first_place_finishes') return value === 1 ? 'win' : 'wins'
   if (metric === 'top3_finishes') return value === 1 ? 'podium' : 'podiums'
-  if (metric === 'consecutive_correct') return value === 1 ? 'correct in a row' : 'correct in a row'
+  if (metric === 'consecutive_correct')
+    return value === 1 ? 'correct in a row' : 'correct in a row'
   return ''
+}
+
+/** Top X% from global rank (rank ÷ total), never fabricated. */
+function topPercentFromRank(
+  rank: number | null | undefined,
+  total: number | null | undefined,
+): number | null {
+  if (rank == null || total == null || total <= 0 || rank <= 0) return null
+  return Math.max(1, Math.min(100, Math.ceil((rank / total) * 100)))
+}
+
+function CareerHighlightsGrid({ items }: { items: CareerItem[] }) {
+  if (items.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Career milestones will appear as you compete.
+      </p>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {items.map((highlight) => (
+        <article
+          key={highlight.label}
+          className={cn(
+            'rounded-2xl border p-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]',
+            highlight.accent,
+          )}
+        >
+          <highlight.icon className="h-4 w-4 opacity-90" aria-hidden />
+          <p className="mt-2 font-display text-2xl leading-none tabular-nums text-foreground">
+            {highlight.value}
+          </p>
+          <p className="mt-1.5 text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            {highlight.label}
+          </p>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
+  const TypeIcon = pool.scoringStyle === 'winner' ? Trophy : Target
+  const typeLabel = formatScoringStyleLabel(pool.scoringStyle)
+  const href = pool.inviteCode ? `/pool/${pool.inviteCode}` : null
+  const inner = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            'inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
+            pool.scoringStyle === 'winner'
+              ? 'border-amber-500/35 bg-amber-500/10 text-amber-400'
+              : 'border-primary/35 bg-primary/10 text-primary',
+          )}
+        >
+          <TypeIcon className="h-3 w-3 shrink-0" aria-hidden />
+          {typeLabel}
+        </span>
+        {pool.standingRank != null ? (
+          <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+            {ordinalPlace(pool.standingRank)}
+          </span>
+        ) : null}
+      </div>
+      <p
+        className={cn(
+          'mt-2 font-display text-xl tracking-wide text-foreground',
+          href && 'transition-colors group-hover:text-primary',
+        )}
+      >
+        {pool.name}
+      </p>
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Trophy className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+        <span className="truncate">{pool.eventName}</span>
+      </p>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        {pool.memberCount} {pool.memberCount === 1 ? 'member' : 'members'}
+      </p>
+    </>
+  )
+
+  const surfaceClass =
+    'group block rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] px-3.5 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]'
+
+  if (href) {
+    return (
+      <Link href={href} className={surfaceClass}>
+        {inner}
+      </Link>
+    )
+  }
+
+  return <div className={surfaceClass}>{inner}</div>
+}
+
+function YourPoolsSection({
+  pools,
+  loading,
+  isPublic,
+}: {
+  pools: ProfilePoolSummary[]
+  loading: boolean
+  isPublic: boolean
+}) {
+  const [showAll, setShowAll] = useState(false)
+  const PREVIEW_COUNT = 4
+  const hasMore = pools.length > PREVIEW_COUNT
+  const visiblePools =
+    showAll || !hasMore ? pools : pools.slice(0, PREVIEW_COUNT)
+
+  return (
+    <section>
+      <h2 className="mb-2.5 font-display text-xl tracking-wide text-foreground">
+        {isPublic ? 'Pools' : 'Your Pools'}
+      </h2>
+      {loading && pools.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Loading pools…
+        </p>
+      ) : pools.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
+          {isPublic
+            ? 'Not in any pools yet.'
+            : 'Join or create a pool to see it here.'}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visiblePools.map((pool) => (
+              <ProfilePoolCard key={pool.id} pool={pool} />
+            ))}
+          </div>
+          {hasMore ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-2 h-8 w-full text-[11px] text-muted-foreground"
+              onClick={() => setShowAll((open) => !open)}
+            >
+              {showAll
+                ? 'Show fewer'
+                : `View all ${pools.length} pools`}
+              <ChevronRight
+                className={cn(
+                  'ml-0.5 h-3 w-3 transition-transform',
+                  showAll && 'rotate-90',
+                )}
+                aria-hidden
+              />
+            </Button>
+          ) : null}
+        </>
+      )}
+    </section>
+  )
+}
+
+function SportsYouFollowSection({
+  sports,
+  loading,
+  hasPools,
+  isPublic,
+}: {
+  sports: ProfileSportSummary[]
+  loading: boolean
+  hasPools: boolean
+  isPublic: boolean
+}) {
+  return (
+    <section>
+      <div className="mb-2.5">
+        <h2 className="font-display text-xl tracking-wide text-foreground">
+          {isPublic ? 'Sports' : 'Sports You Follow'}
+        </h2>
+        <p className="text-[10px] text-muted-foreground">
+          From the events in {isPublic ? 'their' : 'your'} pools
+        </p>
+      </div>
+      {loading && !hasPools ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Loading sports…
+        </p>
+      ) : sports.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
+          {isPublic
+            ? 'No sports to show yet.'
+            : 'Sports appear when you join pools.'}
+        </p>
+      ) : (
+        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {sports.map((item) => {
+            const icon = sportIconPng(item.sport)
+            const label = sportDisplayLabel(item.sport)
+            return (
+              <div
+                key={item.key}
+                className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1"
+              >
+                {icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/sports/${icon}`}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="h-14 w-14 object-contain"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-card/70">
+                    <Target className="h-6 w-6 text-foreground" aria-hidden />
+                  </div>
+                )}
+                <span className="w-full truncate text-center text-[10px] font-medium leading-none text-foreground">
+                  {label}
+                </span>
+                <span className="text-[9px] tabular-nums text-muted-foreground">
+                  {item.poolCount} {item.poolCount === 1 ? 'pool' : 'pools'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function BadgeDetailList({
+  badges,
+  progressById,
+  showLockedProgress,
+  emptyMessage,
+}: {
+  badges: AchievementWithStatus[]
+  progressById: Map<string, UserAchievementProgress>
+  showLockedProgress: boolean
+  emptyMessage: string
+}) {
+  if (badges.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        {emptyMessage}
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {badges.map((badge) => {
+        const rarity = getRarity(badge.xp_value)
+        const rarityStyle = RARITY_STYLES[rarity]
+        const progress = progressById.get(badge.id)
+        const currentValue = Math.min(
+          progress?.current_value ?? 0,
+          progress?.threshold ?? badge.threshold,
+        )
+        const threshold = progress?.threshold ?? badge.threshold
+        const progressPct = progress?.progress_pct ?? 0
+        const remaining = Math.max(0, threshold - currentValue)
+        const unit = metricUnit(badge.condition_metric, remaining)
+
+        return (
+          <article
+            key={badge.id}
+            className={cn(
+              'rounded-[14px] border border-border/90 bg-card/90 px-2.5 py-2.5',
+              rarityStyle.border,
+              rarityStyle.glow,
+              badge.earned && 'bg-primary/[0.04]',
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[11px] border bg-black/25 p-0.5',
+                  rarityStyle.border,
+                  !badge.earned && 'opacity-55 grayscale',
+                )}
+              >
+                <AchievementBadgeArt achievementId={badge.id} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-xs font-semibold text-foreground">
+                    {badge.name}
+                  </p>
+                  <span
+                    className={cn(
+                      'shrink-0 text-[8px] font-bold uppercase tracking-[0.08em]',
+                      rarityStyle.text,
+                    )}
+                  >
+                    {rarity}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-[9px] text-muted-foreground/80">
+                  {badge.description}
+                </p>
+              </div>
+              {badge.earned ? (
+                <CheckCircle2
+                  className="h-4 w-4 shrink-0 text-primary"
+                  aria-label="Unlocked"
+                />
+              ) : (
+                <Lock
+                  className="h-4 w-4 shrink-0 text-muted-foreground/50"
+                  aria-label="Locked"
+                />
+              )}
+            </div>
+
+            {badge.earned ? (
+              <div className="mt-2 flex items-center justify-between border-t border-border pt-1.5 text-[9px]">
+                <span className="text-muted-foreground">
+                  Unlocked {formatEarnedDate(badge.earned_at)}
+                </span>
+                <span className="font-semibold tabular-nums text-primary">
+                  +{badge.xp_value} XP
+                </span>
+              </div>
+            ) : showLockedProgress && progress ? (
+              <div className="mt-2 border-t border-white/6 pt-1.5">
+                <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground">
+                  <span className="truncate">
+                    {currentValue.toLocaleString()}/
+                    {threshold.toLocaleString()}
+                    {metricUnit(badge.condition_metric, threshold)
+                      ? ` ${metricUnit(badge.condition_metric, threshold)}`
+                      : ''}
+                  </span>
+                  <span className="shrink-0">
+                    {remaining > 0
+                      ? `${remaining.toLocaleString()}${unit ? ` ${unit}` : ''} more`
+                      : 'Ready to unlock'}
+                  </span>
+                </div>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/55">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-[width] duration-700',
+                      rarityStyle.bar,
+                    )}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </article>
+        )
+      })}
+    </div>
+  )
 }
 
 export function ProfileShowcase({
@@ -174,8 +549,12 @@ export function ProfileShowcase({
   displayName,
   avatar,
   customAvatarUrl,
-  predictionsMade,
+  predictionsMade: _predictionsMade,
   accuracy,
+  totalPoints = null,
+  createdAt = null,
+  profileTitle = null,
+  seasonLabel = null,
   active = true,
   mode = 'self',
   onEditProfile,
@@ -186,12 +565,21 @@ export function ProfileShowcase({
   const [data, setData] = useState<UserAchievementsData | null>(
     initialAchievements,
   )
-  const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>([])
+  const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>(
+    [],
+  )
   const [loading, setLoading] = useState(false)
-  const [historyExpanded, setHistoryExpanded] = useState(false)
   const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(null)
   const [globalRankLoaded, setGlobalRankLoaded] = useState(false)
+  const [profileTab, setProfileTab] = useState<ProfileTab>('overview')
+  const [profilePools, setProfilePools] = useState<ProfilePoolSummary[]>([])
+  const [profileSports, setProfileSports] = useState<ProfileSportSummary[]>([])
+  const [poolsLoading, setPoolsLoading] = useState(false)
   const badgeUnlock = useBadgeUnlockOptional()
+
+  const titleText = profileTitle?.trim() || ''
+  const seasonText = seasonLabel?.trim() || ''
+  const memberSince = formatMemberSince(createdAt)
 
   useEffect(() => {
     if (!active || !userId) return
@@ -213,8 +601,26 @@ export function ProfileShowcase({
 
   useEffect(() => {
     if (!active || !userId) return
-    // Public page may pass server-preloaded achievements — still allow refresh
-    // only for self mode (evaluate path). Public never re-runs evaluate.
+
+    let cancelled = false
+    setPoolsLoading(true)
+
+    void fetchProfilePools(supabase, userId, {
+      includeInviteCodes: !isPublic,
+    }).then((result) => {
+      if (cancelled) return
+      setProfilePools(result.pools)
+      setProfileSports(result.sports)
+      setPoolsLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [active, userId, isPublic])
+
+  useEffect(() => {
+    if (!active || !userId) return
     if (isPublic && initialAchievements) {
       setData(initialAchievements)
       return
@@ -225,7 +631,6 @@ export function ProfileShowcase({
 
     void (async () => {
       if (isPublic) {
-        // READ-ONLY — never call evaluate_user_achievements for other users.
         const result = await fetchUserAchievementsReadOnly(supabase, userId)
         if (cancelled) return
         setData(result)
@@ -253,47 +658,26 @@ export function ProfileShowcase({
       new Map(progressRows.map((row) => [row.achievement_id, row] as const)),
     [progressRows],
   )
-  const preview = useMemo(
-    () => buildPreview(data?.achievements ?? [], progressById, isPublic),
-    [data?.achievements, progressById, isPublic],
-  )
-  const earnedTimeline = useMemo(
+  const earnedBadges = useMemo(
     () => sortEarnedNewestFirst(data?.achievements ?? []),
     [data?.achievements],
   )
+  const featuredBadges = earnedBadges.slice(0, 4)
+
+  const lockedNearComplete = useMemo(() => {
+    if (isPublic) return []
+    return (data?.achievements ?? [])
+      .filter((badge) => !badge.earned && badge.buildable === 'green')
+      .sort(
+        (a, b) =>
+          (progressById.get(b.id)?.progress_pct ?? 0) -
+          (progressById.get(a.id)?.progress_pct ?? 0),
+      )
+      .slice(0, 5)
+  }, [data?.achievements, progressById, isPublic])
 
   const totalXp = data?.totalXp ?? 0
   const level = data?.level ?? xpToLevel(totalXp)
-  const stats = [
-    {
-      label: 'Total XP',
-      value: totalXp.toLocaleString(),
-      icon: Zap,
-      accent:
-        'border-amber-400/25 bg-[linear-gradient(145deg,rgba(251,191,36,0.16),rgba(15,18,15,0.88))] text-amber-300',
-    },
-    {
-      label: 'Accuracy',
-      value: accuracy == null ? '—' : `${accuracy}%`,
-      icon: TrendingUp,
-      accent:
-        'border-sky-400/25 bg-[linear-gradient(145deg,rgba(56,189,248,0.15),rgba(11,18,22,0.9))] text-sky-300',
-    },
-    {
-      label: 'Badges',
-      value: (data?.earnedCount ?? 0).toLocaleString(),
-      icon: Award,
-      accent:
-        'border-purple-400/25 bg-[linear-gradient(145deg,rgba(192,132,252,0.15),rgba(17,13,22,0.9))] text-purple-300',
-    },
-    {
-      label: 'Predictions Made',
-      value: predictionsMade.toLocaleString(),
-      icon: Target,
-      accent:
-        'border-primary/25 bg-[linear-gradient(145deg,rgba(0,230,118,0.15),rgba(9,20,14,0.9))] text-primary',
-    },
-  ] as const
 
   const metricValues = useMemo(() => {
     const values = new Map<string, number>()
@@ -306,176 +690,244 @@ export function ProfileShowcase({
     return values
   }, [progressRows])
 
-  const careerHighlights = [
-    {
-      label: 'Highest Pool Finish',
-      value: metricValues.get('best_finish_rank_at_or_below')
-        ? `#${metricValues.get('best_finish_rank_at_or_below')}`
-        : null,
-      icon: Trophy,
-      accent: 'text-amber-300 border-amber-400/25 bg-amber-400/[0.07]',
-    },
-    {
-      label: 'Longest Correct Streak',
-      value: metricValues.get('consecutive_correct')
-        ? `${metricValues.get('consecutive_correct')} straight`
-        : null,
-      icon: Flame,
-      accent: 'text-orange-300 border-orange-400/25 bg-orange-400/[0.07]',
-    },
-    {
-      label: 'Pools Won',
-      value: metricValues.get('first_place_finishes')
-        ? metricValues.get('first_place_finishes')!.toLocaleString()
-        : null,
-      icon: Crown,
-      accent: 'text-purple-300 border-purple-400/25 bg-purple-400/[0.07]',
-    },
-    {
-      label: 'Podium Finishes',
-      value: metricValues.get('top3_finishes')
-        ? metricValues.get('top3_finishes')!.toLocaleString()
-        : null,
-      icon: Medal,
-      accent: 'text-sky-300 border-sky-400/25 bg-sky-400/[0.07]',
-    },
-  ].filter((item) => item.value != null)
+  const predictionStreak = metricValues.get('consecutive_correct')
+  const nextAchievement = useMemo(
+    () => (isPublic ? null : pickNextAchievement(progressRows)),
+    [isPublic, progressRows],
+  )
+
+  const topPct = topPercentFromRank(
+    globalRank?.global_rank,
+    globalRank?.total_ranked,
+  )
+
+  const careerHighlights = useMemo(() => {
+    if (isPublic) return [] as CareerItem[]
+
+    const items: CareerItem[] = []
+
+    const poolsWon = metricValues.get('first_place_finishes')
+    if (poolsWon != null && poolsWon > 0) {
+      items.push({
+        label: 'Pools Won',
+        value: poolsWon.toLocaleString(),
+        icon: Crown,
+        accent: 'text-primary border-primary/20 bg-primary/[0.06]',
+      })
+    }
+
+    if (accuracy != null) {
+      items.push({
+        label: 'Prediction Accuracy',
+        value: `${accuracy}%`,
+        icon: Target,
+        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
+      })
+    }
+
+    const exactScores = metricValues.get('exact_scores')
+    if (exactScores != null && exactScores > 0) {
+      items.push({
+        label: 'Exact Scores',
+        value: exactScores.toLocaleString(),
+        icon: Award,
+        accent: 'text-foreground border-border bg-card/80',
+      })
+    }
+
+    const bestFinish = metricValues.get('best_finish_rank_at_or_below')
+    if (bestFinish != null && bestFinish > 0) {
+      items.push({
+        label: 'Best Finish',
+        value: `#${bestFinish}`,
+        icon: Trophy,
+        accent: 'text-primary border-primary/20 bg-primary/[0.06]',
+      })
+    }
+
+    if (predictionStreak != null && predictionStreak > 0) {
+      items.push({
+        label: 'Longest Streak',
+        value: `${predictionStreak}`,
+        icon: Flame,
+        accent: 'text-orange-300 border-orange-400/20 bg-orange-400/[0.06]',
+      })
+    }
+
+    if (totalPoints != null) {
+      items.push({
+        label: 'Total Points',
+        value: totalPoints.toLocaleString(),
+        icon: Zap,
+        accent: 'text-foreground border-border bg-card/80',
+      })
+    }
+
+    const podiums = metricValues.get('top3_finishes')
+    if (podiums != null && podiums > 0) {
+      items.push({
+        label: 'Podium',
+        value: podiums.toLocaleString(),
+        icon: Medal,
+        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
+      })
+    }
+
+    return items
+  }, [accuracy, isPublic, metricValues, predictionStreak, totalPoints])
+
+  const showViewAllAchievements = !isPublic || isOwnPublicProfile
+
+  const rankOf =
+    globalRankLoaded &&
+    globalRank?.global_rank != null &&
+    globalRank.total_ranked > 0
+      ? `of ${globalRank.total_ranked.toLocaleString()}`
+      : null
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-5 pb-6 pt-10">
-      <section className="relative rounded-[22px] border border-primary/18 bg-[radial-gradient(circle_at_50%_0%,rgba(0,230,118,0.16),transparent_48%),linear-gradient(155deg,rgba(20,38,29,0.97),rgba(8,17,13,0.99))] px-3 pb-3 pt-[78px] shadow-[0_18px_45px_rgba(0,0,0,0.34),0_1px_0_rgba(255,255,255,0.055)_inset]">
-        <div className="absolute left-1/2 top-0 h-32 w-32 -translate-x-1/2 -translate-y-[38%]">
-          <svg
-            className="-rotate-90"
-            viewBox="0 0 128 128"
-            aria-hidden
-          >
-            <circle
-              cx="64"
-              cy="64"
-              r="58"
-              fill="rgba(8,17,13,0.98)"
-              stroke="rgba(255,255,255,0.08)"
-              strokeWidth="5"
-            />
-            <circle
-              cx="64"
-              cy="64"
-              r="58"
-              fill="none"
-              stroke="rgb(0,230,118)"
-              strokeWidth="5"
-              strokeLinecap="round"
-              pathLength="100"
-              strokeDasharray="100"
-              strokeDashoffset={100 - (level?.progressPct ?? 0)}
-              className="drop-shadow-[0_0_7px_rgba(0,230,118,0.65)] transition-[stroke-dashoffset] duration-1000 ease-out"
-            />
-          </svg>
-          <div className="absolute inset-[13px] rounded-[19px] border border-primary/30 bg-[#0b1711] p-1 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
-            <UserAvatarImage
-              avatar={avatar}
-              customAvatarUrl={customAvatarUrl}
-              className="h-full w-full rounded-[15px] border border-white/10"
-              imgClassName={
-                customAvatarUrl
-                  ? 'object-cover'
-                  : 'object-contain object-bottom p-0.5'
-              }
-            />
-            {!isPublic && onEditProfile ? (
-              <button
-                type="button"
-                onClick={onEditProfile}
-                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-[#102219] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground"
-                aria-label="Edit profile and avatar"
-              >
-                <Pencil className="h-2.5 w-2.5" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border border-primary/35 bg-[#102219] px-2 py-0.5 font-display text-xs text-primary shadow-[0_0_12px_rgba(0,230,118,0.28)]">
-            {level?.level ?? 1}
-          </span>
-        </div>
+    <div className="mx-auto w-full max-w-lg space-y-3 pb-8">
+      {/* ── Hero: avatar|name left, rank top-right, XP below ── */}
+      <section className="relative overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+        <div className="relative h-[104px] w-full sm:h-[120px]">
+          <Image
+            src="/background_01.png"
+            alt=""
+            fill
+            priority
+            className="object-cover object-[center_35%]"
+            sizes="(max-width: 512px) 100vw, 512px"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.12),transparent_55%)]" />
 
-        <div className="text-center">
-          <h1 className="truncate font-display text-[25px] tracking-wide text-foreground">
-            {displayName}
-          </h1>
-          {isPublic && isOwnPublicProfile ? (
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
-                <Link href={DASHBOARD_TAB_HREFS.profile}>
-                  <Pencil className="h-3 w-3" aria-hidden />
-                  Edit profile
-                </Link>
-              </Button>
-              <ProfileFriendsEntry active={active} />
-            </div>
-          ) : null}
-          {isPublic && !isOwnPublicProfile ? (
-            <div className="mt-3 flex justify-center">
-              <FriendshipButton profileUserId={userId} />
-            </div>
-          ) : null}
-          {!isPublic ? (
-            <div className="mt-3 flex justify-center">
-              <ProfileFriendsEntry active={active} />
-            </div>
-          ) : null}
-
-          {globalRankLoaded ? (
-            <div className="mt-3 flex justify-center">
-              {globalRank?.global_rank != null ? (
+          {/* Global rank — top-right corner of hero */}
+          <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,15rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[18rem]">
+            {globalRankLoaded ? (
+              globalRank?.global_rank != null ? (
                 <div
-                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-[linear-gradient(135deg,rgba(251,191,36,0.22),rgba(15,18,12,0.92))] px-3 py-1 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:gap-1.5 sm:px-2.5"
                   aria-label={`Global rank ${globalRank.global_rank}${
                     globalRank.total_ranked > 0
                       ? ` of ${globalRank.total_ranked}`
                       : ''
-                  }`}
+                  }${topPct != null ? `, top ${topPct}%` : ''}`}
                 >
                   <Crown
-                    className="h-3.5 w-3.5 text-amber-300"
+                    className="h-2.5 w-2.5 shrink-0 text-primary sm:h-3 sm:w-3"
                     aria-hidden
                   />
-                  <span className="font-display text-sm tracking-wide text-amber-200">
-                    Global Rank #{globalRank.global_rank}
+                  <span className="truncate font-display text-[10px] tracking-wide text-foreground sm:text-xs">
+                    <span className="sm:hidden">
+                      #{globalRank.global_rank.toLocaleString()}
+                    </span>
+                    <span className="hidden sm:inline">
+                      Global Rank #{globalRank.global_rank.toLocaleString()}
+                    </span>
                   </span>
-                  {globalRank.total_ranked > 0 ? (
-                    <span className="text-[10px] tabular-nums text-amber-200/65">
-                      of {globalRank.total_ranked.toLocaleString()}
+                  {topPct != null ? (
+                    <span className="shrink-0 text-[8px] font-semibold tabular-nums text-primary sm:text-[9px]">
+                      Top {topPct}%
                     </span>
                   ) : null}
                 </div>
               ) : (
-                <div
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/35 px-3 py-1 text-muted-foreground"
-                  aria-label="Unranked globally"
-                >
-                  <Medal className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                  <span className="font-display text-sm tracking-wide">
+                <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-2 py-1 text-muted-foreground backdrop-blur-sm sm:px-2.5">
+                  <Medal className="h-2.5 w-2.5 opacity-70" aria-hidden />
+                  <span className="font-display text-[10px] tracking-wide sm:text-xs">
                     Unranked
                   </span>
                 </div>
-              )}
-            </div>
-          ) : null}
+              )
+            ) : null}
+            {seasonText ? (
+              <span className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground backdrop-blur-sm">
+                {seasonText}
+              </span>
+            ) : null}
+          </div>
+        </div>
 
-          <div className="mx-auto mt-4 max-w-[330px] text-left">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-display text-lg tracking-wide text-foreground">
+        <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6">
+          {/* Identity row: avatar + name / member since (rank is top-right) */}
+          <div className="relative z-10 -mt-11 flex items-end gap-4 sm:-mt-12 sm:gap-5">
+            <div className="relative h-[88px] w-[88px] shrink-0 sm:h-[96px] sm:w-[96px]">
+              <div className="h-full w-full overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
+                <UserAvatarImage
+                  avatar={avatar}
+                  customAvatarUrl={customAvatarUrl}
+                  className="h-full w-full rounded-full"
+                  imgClassName={
+                    customAvatarUrl
+                      ? 'object-cover'
+                      : 'object-contain object-bottom p-1'
+                  }
+                />
+              </div>
+              {!isPublic && onEditProfile ? (
+                <button
+                  type="button"
+                  onClick={onEditProfile}
+                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground"
+                  aria-label="Edit profile and avatar"
+                >
+                  <Pencil className="h-3 w-3" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="min-w-0 flex-1 pb-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
+                  {displayName}
+                </h1>
+                {isPublic && isOwnPublicProfile ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-7 shrink-0 gap-1 px-2 text-[10px]"
+                  >
+                    <Link href={DASHBOARD_TAB_HREFS.profile}>
+                      <Pencil className="h-3 w-3" aria-hidden />
+                      Edit
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+
+              {titleText ? (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-semibold text-primary">
+                  <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                  {titleText}
+                </span>
+              ) : null}
+
+              {memberSince ? (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Member since {memberSince}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Level + XP */}
+          <div className="mt-5 sm:mt-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-display text-base tracking-wide text-foreground sm:text-lg">
                 Level {level?.level ?? 1}
               </span>
-              <span className="text-[10px] tabular-nums text-muted-foreground">
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground sm:text-[11px]">
                 {level?.nextLevelThreshold == null
-                  ? `${totalXp.toLocaleString()} XP · Max level`
-                  : `${totalXp.toLocaleString()} / ${level.nextLevelThreshold.toLocaleString()} XP`}
+                  ? `${totalXp.toLocaleString()} XP`
+                  : `${totalXp.toLocaleString()}/${level.nextLevelThreshold.toLocaleString()} XP`}
+                {level?.nextLevelThreshold != null
+                  ? ` · ${(level?.xpToNext ?? 0).toLocaleString()} to next`
+                  : ' · Max'}
               </span>
             </div>
             <div
-              className="mt-1.5 h-2 overflow-hidden rounded-full border border-white/5 bg-black/55"
+              className="mt-2.5 h-2.5 overflow-hidden rounded-full border border-border bg-muted"
               role="progressbar"
               aria-label={`XP progress for Level ${level?.level ?? 1}`}
               aria-valuemin={0}
@@ -483,273 +935,366 @@ export function ProfileShowcase({
               aria-valuenow={level?.progressPct ?? 0}
             >
               <div
-                className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.5)] transition-[width] duration-500"
+                className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.4)] transition-[width] duration-500"
                 style={{ width: `${level?.progressPct ?? 0}%` }}
               />
             </div>
-            <p className="mt-1.5 text-center text-[10px] font-medium text-primary/85">
-              {level?.nextLevelThreshold == null
-                ? 'Highest level reached'
-                : `${level?.xpToNext.toLocaleString() ?? '100'} XP to Level ${(level?.level ?? 1) + 1}`}
-            </p>
           </div>
-        </div>
 
-        <div className="mt-5 grid grid-cols-4 gap-1.5">
-          {stats.map((stat) => (
-            <article
-              key={stat.label}
-              className={cn(
-                'min-w-0 rounded-xl border px-1 py-2.5 text-center shadow-[0_8px_20px_rgba(0,0,0,0.16)]',
-                stat.accent,
-              )}
-            >
-              <stat.icon className="mx-auto h-3.5 w-3.5" aria-hidden />
-              <p className="mt-1 truncate font-display text-base leading-none tabular-nums text-foreground sm:text-lg">
-                {stat.value}
-              </p>
-              <p className="mt-1 truncate text-[7px] font-medium uppercase tracking-[0.04em] text-muted-foreground sm:text-[8px]">
-                {stat.label}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-xl tracking-wide text-foreground">
-            {isPublic ? 'Achievements' : 'Your Achievements'}
-          </h2>
-          {!isPublic ? (
-            <Button asChild variant="ghost" size="sm" className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground">
-              <Link href="/achievements">
-                View all
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </Button>
-          ) : isOwnPublicProfile ? (
-            <Button asChild variant="ghost" size="sm" className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground">
-              <Link href="/achievements">
-                View all
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </Button>
+          {isPublic && !isOwnPublicProfile ? (
+            <div className="mt-5">
+              <FriendshipButton profileUserId={userId} />
+            </div>
           ) : null}
         </div>
+      </section>
 
-        {loading && !data ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            Loading achievements…
-          </p>
-        ) : preview.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            {isPublic
-              ? 'No badges unlocked yet.'
-              : 'Your achievement collection will appear here.'}
-          </p>
-        ) : (
-          <div className="mt-2.5 space-y-2">
-            {preview.map((badge) => {
-              const rarity = getRarity(badge.xp_value)
-              const rarityStyle = RARITY_STYLES[rarity]
-              const progress = progressById.get(badge.id)
-              const currentValue = Math.min(
-                progress?.current_value ?? 0,
-                progress?.threshold ?? badge.threshold,
-              )
-              const threshold = progress?.threshold ?? badge.threshold
-              const progressPct = progress?.progress_pct ?? 0
-              const remaining = Math.max(0, threshold - currentValue)
-              const unit = metricUnit(badge.condition_metric, remaining)
+      {/* ── Tabs: Overview · Progress · Achievements · Stats ── */}
+      <Tabs
+        value={profileTab}
+        onValueChange={(value) => setProfileTab(value as ProfileTab)}
+        className="gap-3"
+      >
+        <TabsList className="grid h-auto w-full grid-cols-4 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1">
+          {(
+            [
+              ['overview', 'Overview'],
+              ['progress', 'Progress'],
+              ['achievements', 'Achievements'],
+              ['stats', 'Stats'],
+            ] as const
+          ).map(([value, label]) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="min-w-0 rounded-lg px-1 py-2 text-[10px] leading-tight sm:px-2 sm:text-[11px] data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              <span className="truncate">{label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-              return (
-                <article
-                  key={badge.id}
-                  className={cn(
-                    'rounded-[14px] border bg-[#0c1712]/85 px-2.5 py-2.5',
-                    rarityStyle.border,
-                    rarityStyle.glow,
-                    badge.earned &&
-                      'bg-[linear-gradient(105deg,rgba(0,230,118,0.07),rgba(12,23,18,0.92))]',
-                  )}
+        {/* OVERVIEW */}
+        <TabsContent value="overview" className="mt-1 space-y-5">
+          <section>
+            <div className="mb-2.5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl tracking-wide text-foreground">
+                  Featured Badges
+                </h2>
+                <p className="text-[10px] text-muted-foreground">
+                  Recent unlocks · rarity by XP
+                </p>
+              </div>
+              {showViewAllAchievements ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={cn(
-                        'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[11px] border bg-black/25 p-0.5',
-                        rarityStyle.border,
-                        !badge.earned && 'opacity-55 grayscale',
-                      )}
-                    >
-                      <AchievementBadgeArt achievementId={badge.id} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-xs font-semibold text-foreground">
-                          {badge.name}
-                        </p>
-                        <span
-                          className={cn(
-                            'shrink-0 text-[8px] font-bold uppercase tracking-[0.08em]',
-                            rarityStyle.text,
-                          )}
-                        >
-                          {rarity}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 truncate text-[9px] text-muted-foreground/80">
-                        {badge.description}
-                      </p>
-                    </div>
-                    {badge.earned ? (
-                      <CheckCircle2
-                        className="h-4 w-4 shrink-0 text-primary drop-shadow-[0_0_5px_rgba(0,230,118,0.5)]"
-                        aria-label="Unlocked"
-                      />
-                    ) : (
-                      <Lock
-                        className="h-4 w-4 shrink-0 text-muted-foreground/50"
-                        aria-label="Locked"
-                      />
-                    )}
-                  </div>
+                  <Link href="/achievements">
+                    View all
+                    <ChevronRight className="h-3 w-3" aria-hidden />
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
 
-                  {badge.earned ? (
-                    <div className="mt-2 flex items-center justify-between border-t border-white/6 pt-1.5 text-[9px]">
-                      <span className={rarityStyle.text}>Unlocked</span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        +{badge.xp_value} XP
+            {loading && featuredBadges.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Loading badges…
+              </p>
+            ) : featuredBadges.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {isPublic
+                  ? 'No badges unlocked yet.'
+                  : 'Earn badges to feature them here.'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                {featuredBadges.map((badge) => {
+                  const rarity = getRarity(badge.xp_value)
+                  const rarityStyle = RARITY_STYLES[rarity]
+                  return (
+                    <div
+                      key={badge.id}
+                      className="flex min-w-0 flex-col items-center text-center"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden sm:h-14 sm:w-14">
+                        <AchievementBadgeArt achievementId={badge.id} />
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-[9px] font-semibold leading-tight text-foreground sm:text-[10px]">
+                        {badge.name}
+                      </p>
+                      <span
+                        className={cn(
+                          'mt-1 text-[7px] font-bold uppercase tracking-[0.08em]',
+                          rarityStyle.text,
+                        )}
+                      >
+                        {rarity}
                       </span>
                     </div>
-                  ) : progress ? (
-                    <div className="mt-2 border-t border-white/6 pt-1.5">
-                      <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground">
-                        <span className="truncate">
-                          {currentValue.toLocaleString()}/{threshold.toLocaleString()}
-                          {metricUnit(badge.condition_metric, threshold)
-                            ? ` ${metricUnit(badge.condition_metric, threshold)}`
-                            : ''}
-                        </span>
-                        <span className="shrink-0">
-                          {remaining > 0
-                            ? `${remaining.toLocaleString()}${unit ? ` ${unit}` : ''} more`
-                            : 'Ready to unlock'}
-                        </span>
-                      </div>
-                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/55">
-                        <div
-                          className={cn(
-                            'h-full rounded-full transition-[width] duration-700',
-                            rarityStyle.bar,
-                          )}
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </article>
-              )
-            })}
-          </div>
-        )}
-      </section>
+                  )
+                })}
+              </div>
+            )}
+          </section>
 
-      {careerHighlights.length > 0 && !isPublic ? (
-        <section>
-          <div className="flex items-end justify-between">
+          <YourPoolsSection
+            pools={profilePools}
+            loading={poolsLoading}
+            isPublic={isPublic}
+          />
+
+          <SportsYouFollowSection
+            sports={profileSports}
+            loading={poolsLoading}
+            hasPools={profilePools.length > 0}
+            isPublic={isPublic}
+          />
+        </TabsContent>
+
+        {/* PROGRESS — XP, levels, global rank, next unlock */}
+        <TabsContent value="progress" className="mt-1 space-y-5">
+          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Level & XP
+            </h2>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Level
+                </p>
+                <p className="mt-0.5 font-display text-4xl leading-none tabular-nums text-foreground">
+                  {level?.level ?? 1}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                  {totalXp.toLocaleString()}
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                    XP
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {level?.nextLevelThreshold == null
+                    ? 'Max level'
+                    : `${(level?.xpToNext ?? 0).toLocaleString()} to next`}
+                </p>
+              </div>
+            </div>
+            <div
+              className="mt-3 h-2.5 overflow-hidden rounded-full border border-border bg-muted"
+              role="progressbar"
+              aria-label={`XP progress for Level ${level?.level ?? 1}`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={level?.progressPct ?? 0}
+            >
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${level?.progressPct ?? 0}%` }}
+              />
+            </div>
+            <p className="mt-2 font-mono text-[11px] tabular-nums text-muted-foreground">
+              {level?.nextLevelThreshold == null
+                ? `${totalXp.toLocaleString()} XP · Highest level`
+                : `${totalXp.toLocaleString()} / ${level.nextLevelThreshold.toLocaleString()} XP`}
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Global Rank
+            </h2>
+            {globalRankLoaded ? (
+              globalRank?.global_rank != null ? (
+                <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-2">
+                  <p className="font-display text-4xl leading-none tabular-nums text-foreground">
+                    #{globalRank.global_rank.toLocaleString()}
+                  </p>
+                  <div className="pb-1">
+                    {rankOf ? (
+                      <p className="text-sm text-muted-foreground">{rankOf}</p>
+                    ) : null}
+                    {topPct != null ? (
+                      <p className="text-sm font-semibold text-primary">
+                        Top {topPct}%
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">Unranked</p>
+              )
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">Loading rank…</p>
+            )}
+          </section>
+
+          {!isPublic ? (
+            <section className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Next Unlock
+                </p>
+                {nextAchievement ? (
+                  <span className="font-mono text-[11px] tabular-nums text-primary">
+                    {nextAchievement.progress_pct}%
+                  </span>
+                ) : null}
+              </div>
+              {nextAchievement ? (
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background/50 p-1">
+                    <AchievementBadgeArt
+                      achievementId={nextAchievement.achievement_id}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-lg tracking-wide text-foreground">
+                      {nextAchievement.name}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {nextAchievement.description}
+                    </p>
+                    <p className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+                      {nextAchievement.current_value.toLocaleString()}/
+                      {nextAchievement.threshold.toLocaleString()}
+                    </p>
+                    <div
+                      className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      aria-label={`Progress on ${nextAchievement.name}`}
+                      aria-valuenow={nextAchievement.progress_pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{
+                          width: `${nextAchievement.progress_pct}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Next achievement progress will show as you play.
+                </p>
+              )}
+            </section>
+          ) : null}
+        </TabsContent>
+
+        {/* ACHIEVEMENTS */}
+        <TabsContent value="achievements" className="mt-1 space-y-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl tracking-wide text-foreground">
-                Career Highlights
+                Achievements
               </h2>
-              <p className="text-[9px] text-muted-foreground">
-                Real milestones from your PoolCup career
+              <p className="text-[10px] text-muted-foreground">
+                {earnedBadges.length} unlocked
+                {data?.totalCount
+                  ? ` · ${data.totalCount} in catalogue`
+                  : ''}
               </p>
             </div>
-          </div>
-          <div className="mt-2.5 grid grid-cols-2 gap-2">
-            {careerHighlights.map((highlight) => (
-              <article
-                key={highlight.label}
-                className={cn(
-                  'rounded-[13px] border p-3',
-                  highlight.accent,
-                )}
+            {showViewAllAchievements ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-[11px]"
               >
-                <highlight.icon className="h-4 w-4" aria-hidden />
-                <p className="mt-2 font-display text-xl leading-none text-foreground">
-                  {highlight.value}
-                </p>
-                <p className="mt-1 text-[9px] uppercase tracking-[0.06em] text-muted-foreground">
-                  {highlight.label}
-                </p>
-              </article>
-            ))}
+                <Link href="/achievements">
+                  Full page
+                  <ChevronRight className="h-3 w-3" aria-hidden />
+                </Link>
+              </Button>
+            ) : null}
           </div>
-        </section>
-      ) : null}
 
-      <section className="overflow-hidden rounded-[13px] border border-white/8 bg-[#0c1712]/65">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.025]"
-          onClick={() => setHistoryExpanded((expanded) => !expanded)}
-          aria-expanded={historyExpanded}
-        >
-          <div>
-            <h2 className="font-display text-base tracking-wide text-foreground">
-              Achievements Earned
-              <span className="ml-2 text-sm text-muted-foreground">
-                ({earnedTimeline.length})
-              </span>
-            </h2>
-            <p className="text-[9px] text-muted-foreground">
-              XP history · most recent first
-            </p>
-          </div>
-          <ChevronDown
-            className={cn(
-              'h-4 w-4 text-muted-foreground transition-transform',
-              historyExpanded && 'rotate-180',
-            )}
-            aria-hidden
-          />
-        </button>
-
-        {historyExpanded ? (
-          earnedTimeline.length === 0 ? (
-            <p className="border-t border-white/8 px-4 py-6 text-center text-xs text-muted-foreground">
-              {isPublic
-                ? 'No badges unlocked yet.'
-                : 'Earn your first badge to start your XP history.'}
+          {loading && !data ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Loading achievements…
             </p>
           ) : (
-          <ol className="max-h-72 space-y-0.5 overflow-y-auto border-t border-white/8 px-3 py-2">
-            {earnedTimeline.map((badge) => (
-              <li
-                key={badge.id}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.025]"
-              >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/[0.06]">
-                  <Award className="h-3 w-3 text-primary" aria-hidden />
+            <>
+              <BadgeDetailList
+                badges={earnedBadges}
+                progressById={progressById}
+                showLockedProgress={false}
+                emptyMessage={
+                  isPublic
+                    ? 'No badges unlocked yet.'
+                    : 'Your achievement collection will appear here.'
+                }
+              />
+              {!isPublic && lockedNearComplete.length > 0 ? (
+                <div className="pt-2">
+                  <h3 className="mb-2 font-display text-base tracking-wide text-muted-foreground">
+                    In progress
+                  </h3>
+                  <BadgeDetailList
+                    badges={lockedNearComplete}
+                    progressById={progressById}
+                    showLockedProgress
+                    emptyMessage=""
+                  />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-foreground">
-                    {badge.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatEarnedDate(badge.earned_at)}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[10px] font-semibold tabular-nums text-primary">
-                  +{badge.xp_value} XP
-                </span>
-              </li>
-            ))}
-          </ol>
-          )
-        ) : null}
-      </section>
+              ) : null}
+            </>
+          )}
+        </TabsContent>
+
+        {/* STATS — accuracy & career highlights */}
+        <TabsContent value="stats" className="mt-1 space-y-5">
+          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Prediction Accuracy
+            </h2>
+            <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
+              {accuracy == null ? '—' : `${accuracy}%`}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Correct winner picks across classic match predictions
+            </p>
+            {!isPublic && predictionStreak != null && predictionStreak > 0 ? (
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Flame className="h-4 w-4 text-orange-300" aria-hidden />
+                Longest streak:{' '}
+                <span className="font-mono tabular-nums text-foreground">
+                  {predictionStreak}
+                </span>{' '}
+                correct
+              </p>
+            ) : null}
+          </section>
+
+          {isPublic ? (
+            <p className="rounded-2xl border border-border/90 bg-card/80 px-4 py-10 text-center text-sm text-muted-foreground">
+              Career highlights are only visible on your own profile.
+            </p>
+          ) : (
+            <section>
+              <div className="mb-2.5">
+                <h2 className="font-display text-xl tracking-wide text-foreground">
+                  Career Highlights
+                </h2>
+                <p className="text-[10px] text-muted-foreground">
+                  From your real pool finishes and prediction stats
+                </p>
+              </div>
+              <CareerHighlightsGrid items={careerHighlights} />
+            </section>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -66,6 +66,7 @@ export default async function PublicProfilePage({
         customAvatarUrl={profile.custom_avatar_url}
         predictionsMade={profile.predictions_made}
         accuracy={profile.accuracy}
+        createdAt={profile.created_at || null}
         isOwnPublicProfile={isOwnPublicProfile}
         initialAchievements={achievements}
       />

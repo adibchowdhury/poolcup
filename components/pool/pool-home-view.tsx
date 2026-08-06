@@ -19,7 +19,7 @@ import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
-import { PoolSquadTab } from '@/components/pool/pool-squad-tab'
+import { PoolSettingsTab } from '@/components/pool/pool-settings-tab'
 import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
 import {
   USE_MOCK_LEADERBOARD,
@@ -137,13 +137,22 @@ export function PoolHomeView({
   const router = useRouter()
   const [shareOpen, setShareOpen] = useState(false)
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState(() => {
-    const tab = searchParams.get('tab')
-    if (tab === 'chat' || tab === 'leaderboard' || tab === 'predictions' || tab === 'squad') {
+  const normalizeTab = (tab: string | null) => {
+    if (tab === 'squad') return 'settings'
+    if (
+      tab === 'chat' ||
+      tab === 'leaderboard' ||
+      tab === 'predictions' ||
+      tab === 'settings'
+    ) {
       return tab
     }
     return 'predictions'
-  })
+  }
+
+  const [activeTab, setActiveTab] = useState(() =>
+    normalizeTab(searchParams.get('tab')),
+  )
 
   const copyInviteLink = () => {
     if (!pool.acceptingMembers) return
@@ -208,8 +217,13 @@ export function PoolHomeView({
       setActiveTab(showChatTab ? 'chat' : 'predictions')
       return
     }
-    if (tab === 'leaderboard' || tab === 'predictions' || tab === 'squad') {
-      setActiveTab(tab)
+    if (
+      tab === 'leaderboard' ||
+      tab === 'predictions' ||
+      tab === 'squad' ||
+      tab === 'settings'
+    ) {
+      setActiveTab(normalizeTab(tab))
     }
   }, [searchParams, showChatTab])
 
@@ -397,8 +411,9 @@ export function PoolHomeView({
                     <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
                       Leaderboard
                     </TabsTrigger>
-                    <TabsTrigger value="squad" className="px-2 py-2 text-xs sm:text-sm">
-                      My Squad
+                    <TabsTrigger value="settings" className="px-2 py-2 text-xs sm:text-sm">
+                      <span className="sm:hidden">Settings</span>
+                      <span className="hidden sm:inline">Pool Settings</span>
                     </TabsTrigger>
                   </TabsList>
                   {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
@@ -504,7 +519,7 @@ export function PoolHomeView({
                       <p className="font-medium text-foreground">Invites closed</p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         New members cannot join while invites are closed. Turn accepting
-                        new members back on in My Squad to share your invite link again.
+                        new members back on in Pool Settings to share your invite link again.
                       </p>
                     </div>
                   )
@@ -532,12 +547,10 @@ export function PoolHomeView({
               )}
             </TabsContent>
 
-            <TabsContent value="squad" className="mt-0 w-full min-w-0">
-              <PoolSquadTab
+            <TabsContent value="settings" className="mt-0 w-full min-w-0">
+              <PoolSettingsTab
                 poolId={poolId}
-                squadName={pool.name}
-                poolAvatar={pool.avatar}
-                poolEmblemUrl={pool.emblemUrl}
+                poolName={pool.name}
                 poolThemeColor={pool.themeColor}
                 scoringStyle={pool.scoringStyle}
                 scoreExactPoints={pool.scoreExactPoints}
@@ -549,9 +562,7 @@ export function PoolHomeView({
                 poolCreatorUserId={poolCreatorUserId}
                 currentUserId={currentUserId}
                 onPoolNameChange={onPoolNameChange}
-                onPoolAvatarChange={onPoolAvatarChange}
                 onPoolThemeColorChange={onPoolThemeColorChange}
-                onPoolEmblemUrlChange={onPoolEmblemUrlChange}
                 onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}
                 onMemberRemoved={onMemberRemoved}

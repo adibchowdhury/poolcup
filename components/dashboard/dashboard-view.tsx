@@ -77,6 +77,7 @@ interface DashboardViewProps {
   displayName?: string | null
   avatar?: string | null
   customAvatarUrl?: string | null
+  createdAt?: string | null
   supportPromptLastShownAt?: string | null
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
@@ -112,6 +113,7 @@ function DashboardViewContent({
   displayName,
   avatar,
   customAvatarUrl: initialCustomAvatarUrl = null,
+  createdAt = null,
   supportPromptLastShownAt = null,
   quickStats,
   passwordResetSuccess,
@@ -405,8 +407,11 @@ function DashboardViewContent({
       displayName={headerName}
       avatar={selectedAvatar}
       customAvatarUrl={customAvatarUrl}
+      mainClassName={
+        activeTab === 'profile' ? 'pt-3 pb-8 sm:pt-4' : undefined
+      }
     >
-      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:gap-4">
+      <div className="mb-4 flex flex-col gap-3 empty:mb-0 empty:hidden sm:mb-6 sm:gap-4 sm:empty:mb-0">
         <KnockoutBracketSetBanner userId={userId} />
       </div>
       <ScoringUpdateNoticeBanner />
@@ -426,11 +431,11 @@ function DashboardViewContent({
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className="gap-10"
+            className={activeTab === 'profile' ? 'gap-3' : 'gap-10'}
           >
             <DashboardDesktopNav />
 
-            <TabsContent value="profile" className="mt-4">
+            <TabsContent value="profile" className="mt-0">
               <ProfileShowcase
                 userId={userId}
                 displayName={shownName}
@@ -438,6 +443,8 @@ function DashboardViewContent({
                 customAvatarUrl={customAvatarUrl}
                 predictionsMade={quickStats.predictionsMade}
                 accuracy={quickStats.winRate}
+                totalPoints={liveTotalPoints}
+                createdAt={createdAt}
                 active={activeTab === 'profile'}
                 onEditProfile={openEditProfile}
               />

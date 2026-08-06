@@ -261,12 +261,11 @@
 }
 
 /*
-  Dashboard logo/menu breathing room ABOVE the painted header chrome.
-  Must not be padding inside the header (that only grows the blurred bar and
-  blends into the page). Height: 2rem (32px) + notch/status safe-area.
+  Dashboard header: notch/status safe-area only (no extra breathing room).
+  Spacer sits ABOVE the painted header chrome so the inset is visible.
 */
 .dashboard-header-top-gap {
-  height: calc(2rem + env(safe-area-inset-top, 0px));
+  height: env(safe-area-inset-top, 0px);
 }
 
 .predict-score-input::-webkit-outer-spin-button,

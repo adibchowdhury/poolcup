@@ -13,6 +13,7 @@ import {
   type UserAchievementProgress,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
+import { pickNextAchievement } from '@/src/lib/pick-next-achievement'
 import { xpToLevel } from '@/src/lib/levels'
 
 type AchievementsFeedContentProps = {
@@ -22,22 +23,6 @@ type AchievementsFeedContentProps = {
 }
 
 const SURFACE = 'rounded-xl border border-border/90 bg-card/90'
-
-function pickNextAchievement(
-  rows: UserAchievementProgress[],
-): UserAchievementProgress | null {
-  const candidates = rows.filter(
-    (row) => !row.earned && row.threshold > 0 && row.progress_pct < 100,
-  )
-  if (candidates.length === 0) return null
-
-  return [...candidates].sort((a, b) => {
-    if (b.progress_pct !== a.progress_pct) return b.progress_pct - a.progress_pct
-    const aRemain = Math.max(0, a.threshold - a.current_value)
-    const bRemain = Math.max(0, b.threshold - b.current_value)
-    return aRemain - bRemain
-  })[0]!
-}
 
 /** Achievements body for the dashboard feed (no section chrome — embed under Your Progress). */
 export function AchievementsFeedContent({

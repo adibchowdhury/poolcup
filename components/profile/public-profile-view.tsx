@@ -10,6 +10,7 @@ type PublicProfileViewProps = {
   customAvatarUrl: string | null
   predictionsMade: number
   accuracy: number | null
+  createdAt: string | null
   isOwnPublicProfile: boolean
   initialAchievements: UserAchievementsData
 }
@@ -25,6 +26,7 @@ export function PublicProfileView({
   customAvatarUrl,
   predictionsMade,
   accuracy,
+  createdAt,
   isOwnPublicProfile,
   initialAchievements,
 }: PublicProfileViewProps) {
@@ -37,6 +39,7 @@ export function PublicProfileView({
       customAvatarUrl={customAvatarUrl}
       predictionsMade={predictionsMade}
       accuracy={accuracy}
+      createdAt={createdAt}
       active
       isOwnPublicProfile={isOwnPublicProfile}
       initialAchievements={initialAchievements}

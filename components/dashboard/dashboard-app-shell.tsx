@@ -144,10 +144,8 @@ export function DashboardAppShell({
       <div className="relative">
         <div className="z-50 bg-background md:sticky md:top-0">
           {/*
-            Spacer ABOVE the painted header chrome — not padding inside it.
-            Padding on the header only grew the blurred header block (same color as
-            the page), so increases looked invisible. This dedicated gap sits
-            between the viewport top and the logo/menu bar (~32px + safe-area).
+            Safe-area spacer only (notch/status bar). Extra breathing room
+            above the logo/menu was removed — height is env(safe-area-inset-top).
           */}
           <div
             aria-hidden

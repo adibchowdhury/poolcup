@@ -23,23 +23,12 @@ import {
   groupScheduleItemsByDay,
 } from '@/src/lib/upcoming-match-display'
 import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
+import { sportIconPng } from '@/src/lib/sport-display'
 
 const MATCH_CARD_GRID =
   'grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3'
 
 const ALL_EVENT_ID = 'all'
-
-function sportIconPng(sport: string): string | null {
-  const normalized = sport.trim().toLowerCase()
-  if (normalized === 'soccer' || normalized === 'football') return 'soccer.png'
-  if (normalized === 'basketball') return 'basketball.png'
-  if (normalized === 'american_football' || normalized === 'nfl') {
-    return 'football.png'
-  }
-  if (normalized === 'hockey' || normalized === 'nhl') return 'hockey.png'
-  if (normalized === 'baseball' || normalized === 'mlb') return 'baseball.png'
-  return null
-}
 
 function toSelectorItems(events: SportingEvent[]): EventSelectorItem[] {
   return [
