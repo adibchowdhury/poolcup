@@ -147,7 +147,7 @@ export function DashboardAppShell({
             Spacer ABOVE the painted header chrome — not padding inside it.
             Padding on the header only grew the blurred header block (same color as
             the page), so increases looked invisible. This dedicated gap sits
-            between the viewport top and the logo/menu bar (~56px + safe-area).
+            between the viewport top and the logo/menu bar (~32px + safe-area).
           */}
           <div
             aria-hidden
