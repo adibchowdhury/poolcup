@@ -99,6 +99,7 @@ export async function POST(request: Request) {
   }
 
   // Best-effort count + ntfy — never fail the signup if these blow up.
+  // Await before returning so serverless doesn't kill the fetch mid-flight.
   try {
     let count: number | null = null
     const { count: waitlistCount, error: countError } = await supabase
@@ -111,9 +112,13 @@ export async function POST(request: Request) {
       count = waitlistCount
     }
 
+    console.log('join-waitlist: signup ok, notifying ntfy', {
+      hasRef: Boolean(p_ref),
+      count,
+    })
     await sendWaitlistNtfy({ email, ref: p_ref, count })
   } catch (notifyError) {
-    console.error('join-waitlist: ntfy failed', notifyError)
+    console.error('join-waitlist: ntfy failed (signup still ok)', notifyError)
   }
 
   return NextResponse.json({ ok: true })

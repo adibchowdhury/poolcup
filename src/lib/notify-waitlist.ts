@@ -1,17 +1,31 @@
-const NTFY_WAITLIST_TOPIC =
-  process.env.NTFY_WAITLIST_TOPIC?.trim() ||
-  process.env.NTFY_OPS_TOPIC?.trim() ||
-  'poolcup-ops'
-const NTFY_SERVER = (process.env.NTFY_SERVER ?? 'https://ntfy.sh').replace(
-  /\/$/,
-  '',
-)
-
 export type WaitlistNtfyPayload = {
   email: string
   ref: string | null
   /** 1-based signup ordinal when countable; omit if unknown. */
   count?: number | null
+}
+
+function resolveWaitlistNtfyConfig(): {
+  server: string
+  topic: string
+  url: string
+  hasAuthToken: boolean
+} {
+  // Read at call time (not module load) so .env.local / Vercel env is current.
+  const topic =
+    process.env.NTFY_WAITLIST_TOPIC?.trim() ||
+    process.env.NTFY_OPS_TOPIC?.trim() ||
+    'poolcup-ops'
+  const server = (process.env.NTFY_SERVER ?? 'https://ntfy.sh').replace(
+    /\/$/,
+    '',
+  )
+  return {
+    server,
+    topic,
+    url: `${server}/${topic}`,
+    hasAuthToken: Boolean(process.env.NTFY_AUTH_TOKEN?.trim()),
+  }
 }
 
 function buildNtfyBody({ email, ref, count }: WaitlistNtfyPayload): string {
@@ -27,16 +41,22 @@ function buildNtfyBody({ email, ref, count }: WaitlistNtfyPayload): string {
   return lines.join('\n')
 }
 
-/** Posts to the waitlist ntfy topic using header-based publish format. */
+/**
+ * Posts to the waitlist ntfy topic using header-based publish format.
+ * Title/Tags must be ASCII ByteStrings — do NOT put emoji in headers
+ * (undici/fetch throws; ntfy shows 🎉 via the `tada` tag instead).
+ */
 export async function sendWaitlistNtfy(
   payload: WaitlistNtfyPayload,
 ): Promise<void> {
+  const { topic, url, hasAuthToken } = resolveWaitlistNtfyConfig()
+
   const title =
     typeof payload.count === 'number' &&
     Number.isFinite(payload.count) &&
     payload.count > 0
-      ? `New PoolCup waitlist signup #${payload.count} 🎉`
-      : 'New PoolCup waitlist signup 🎉'
+      ? `New PoolCup waitlist signup #${payload.count}`
+      : 'New PoolCup waitlist signup'
 
   const headers: Record<string, string> = {
     Title: title,
@@ -48,7 +68,14 @@ export async function sendWaitlistNtfy(
     headers.Authorization = `Bearer ${authToken}`
   }
 
-  const response = await fetch(`${NTFY_SERVER}/${NTFY_WAITLIST_TOPIC}`, {
+  console.log('join-waitlist ntfy: sending', {
+    url,
+    topic,
+    hasAuthToken,
+    title,
+  })
+
+  const response = await fetch(url, {
     method: 'POST',
     headers,
     body: buildNtfyBody(payload),
@@ -56,8 +83,20 @@ export async function sendWaitlistNtfy(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
+    console.error('join-waitlist ntfy: publish failed', {
+      status: response.status,
+      detail: detail.slice(0, 500),
+      url,
+      topic,
+    })
     throw new Error(
       `ntfy waitlist publish failed (${response.status})${detail ? `: ${detail}` : ''}`,
     )
   }
+
+  console.log('join-waitlist ntfy: ok', {
+    status: response.status,
+    url,
+    topic,
+  })
 }
