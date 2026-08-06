@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { HeroBackgroundCarousel } from "@/components/landing/hero-background-carousel"
@@ -10,6 +9,7 @@ import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { CoreFeaturesSection } from "@/components/landing/core-features-section"
 import { LandingHookVisual } from "@/components/landing/landing-hook-visual"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
+import { WaitlistForm } from "@/components/landing/waitlist-form"
 import {
   RevealItem,
   ScrollRevealGroup,
@@ -180,32 +180,12 @@ export default function LandingPage() {
 
             <div
               className={cn(
-                "mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row md:mt-10",
+                "mx-auto mt-8 w-full max-w-xl md:mt-10",
                 heroReveal(isVisible),
               )}
               style={{ transitionDelay: "400ms" }}
             >
-              <Link
-                href="/login?next=/create"
-                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-[#00e676] px-8 py-4 text-lg font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95 sm:w-auto"
-              >
-                Create a Pool
-                <svg
-                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-              <a
-                href="#how-it-works"
-                className="w-full rounded-lg border-[1.5px] border-[rgba(255,255,255,0.6)] px-8 py-4 text-lg font-semibold text-white transition-all hover:scale-[1.03] hover:border-[rgba(0,230,118,0.3)] hover:bg-[rgba(255,255,255,0.05)] hover:shadow-[0_0_24px_rgba(255,255,255,0.06)] active:scale-95 sm:w-auto"
-              >
-                See how it works
-              </a>
+              <WaitlistForm id="waitlist" variant="hero" />
             </div>
           </div>
         </main>

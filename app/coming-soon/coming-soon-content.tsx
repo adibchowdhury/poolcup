@@ -2,6 +2,7 @@
 
 import '@fontsource/vt323/400.css'
 import { useEffect, useState } from 'react'
+import { WaitlistForm } from '@/components/landing/waitlist-form'
 
 /** Official launch target: August 24, 2026 (00:00 UTC). */
 const LAUNCH_AT_MS = Date.UTC(2026, 7, 24, 0, 0, 0)
@@ -154,6 +155,10 @@ export function ComingSoonContent() {
 
         <div className="mt-10 w-full max-w-md">
           <LaunchCountdown />
+        </div>
+
+        <div className="mt-10 w-full max-w-md">
+          <WaitlistForm variant="coming-soon" />
         </div>
 
         <p className="mt-10 text-sm text-muted-foreground">

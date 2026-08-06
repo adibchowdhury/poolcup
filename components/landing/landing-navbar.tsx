@@ -45,17 +45,17 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-4 md:flex">
             <Link
-              href="/login"
+              href="/pricing"
               className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
             >
-              Login
+              Pricing
             </Link>
-            <Link
-              href="/login?next=/create"
+            <a
+              href="#waitlist"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95"
             >
-              Create a Pool
-            </Link>
+              Join Waitlist
+            </a>
           </div>
 
           <button
@@ -120,19 +120,19 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           )}
         >
           <nav className="flex w-full min-w-0 flex-col gap-4">
-            <Link
-              href="/login?next=/create"
+            <a
+              href="#waitlist"
               onClick={closeMenu}
               className="box-border w-full max-w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
             >
-              Create a Pool
-            </Link>
+              Join Waitlist
+            </a>
             <Link
-              href="/login"
+              href="/pricing"
               onClick={closeMenu}
               className="py-1 text-center text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
             >
-              Login
+              Pricing
             </Link>
           </nav>
         </div>

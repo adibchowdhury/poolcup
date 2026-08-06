@@ -21,6 +21,7 @@ function hasValidBypassCookie(request: NextRequest, token: string): boolean {
   return request.cookies.get(COOKIE_NAME)?.value === token
 }
 
+/** Always open when the gate is on (holding page, APIs, assets). */
 function isPassthroughPath(pathname: string): boolean {
   if (pathname === '/coming-soon') return true
   if (pathname.startsWith('/api/')) return true
@@ -29,7 +30,6 @@ function isPassthroughPath(pathname: string): boolean {
   if (pathname === '/icon.svg') return true
   if (pathname === '/robots.txt') return true
   if (pathname === '/sitemap.xml') return true
-  // Static files in /public
   if (
     /\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|woff2?|ttf|eot)$/i.test(
       pathname,
@@ -38,6 +38,23 @@ function isPassthroughPath(pathname: string): boolean {
     return true
   }
   return false
+}
+
+/**
+ * Public marketing pages stay reachable when COMING_SOON_MODE=on.
+ * Auth + app routes are rewritten to /coming-soon (product closed).
+ */
+function isMarketingPath(pathname: string): boolean {
+  if (pathname === '/') return true
+  const marketing = new Set([
+    '/pricing',
+    '/terms',
+    '/privacy',
+    '/security',
+    '/cookies',
+    '/contact',
+  ])
+  return marketing.has(pathname)
 }
 
 /**
@@ -74,7 +91,8 @@ function applyRefCookie(
 
 /**
  * Next.js 16 network boundary (formerly middleware.ts).
- * Always captures ?ref= (first-touch). Coming-soon gate is unchanged otherwise.
+ * Always captures ?ref= (first-touch). When COMING_SOON_MODE=on: marketing
+ * pages stay public; auth + app rewrite to /coming-soon (unless bypass).
  */
 export function proxy(request: NextRequest) {
   const refToSet = getFirstTouchRefToSet(request)
@@ -116,8 +134,12 @@ export function proxy(request: NextRequest) {
     return applyRefCookie(NextResponse.next(), refToSet)
   }
 
-  // Gate active: serve the coming-soon page for all user-facing routes.
-  // Preserve referral cookie even though the rewrite drops the query string.
+  // Soft launch: landing + legal/marketing pages stay public.
+  if (isMarketingPath(pathname)) {
+    return applyRefCookie(NextResponse.next(), refToSet)
+  }
+
+  // Everything else (auth + app) → coming-soon holding page.
   const comingSoonUrl = request.nextUrl.clone()
   comingSoonUrl.pathname = '/coming-soon'
   comingSoonUrl.search = ''
