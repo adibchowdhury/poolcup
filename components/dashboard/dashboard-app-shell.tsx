@@ -140,9 +140,9 @@ export function DashboardAppShell({
 
   return (
     <BadgeUnlockProvider>
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app-background">
       <div className="relative">
-        <div className="z-50 bg-background md:sticky md:top-0">
+        <div className="z-50 bg-app-background md:sticky md:top-0">
           {/*
             Safe-area spacer only (notch/status bar). Extra breathing room
             above the logo/menu was removed — height is env(safe-area-inset-top).
@@ -151,7 +151,7 @@ export function DashboardAppShell({
             aria-hidden
             className="dashboard-header-top-gap w-full shrink-0"
           />
-          <header className="border-b border-border bg-background/80 backdrop-blur-xl">
+          <header className="border-b border-border bg-app-background/80 backdrop-blur-xl">
             <div className="mx-auto max-w-6xl px-4">
               {/* Mobile-only header (app layout): hamburger | logo | profile */}
               <WebMobileTopBar

@@ -146,7 +146,7 @@ function FeatureCardShell({
         {/* Inner dark card — gap from outer frame via parent padding */}
         <div
           className={cn(
-            'relative w-full overflow-hidden rounded-[1.05rem] bg-[#151c26]',
+            'relative w-full overflow-hidden rounded-[1.05rem] bg-app-background',
             !hasContent &&
               'flex min-h-[20rem] items-center justify-center sm:min-h-[24rem]',
           )}

@@ -128,7 +128,7 @@ export function LandingLeaderboardPreview({
   return (
     <div
       className={cn(
-        'overflow-hidden',
+        'overflow-hidden bg-app-background',
         !embedded &&
           'rounded-2xl border border-[rgba(255,255,255,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.35)]',
       )}

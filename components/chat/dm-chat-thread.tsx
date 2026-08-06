@@ -366,8 +366,8 @@ export function DmChatThread({
   const canSend = stillFriends && trimmedDraft.length > 0 && !sending
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col bg-[#131313] max-sm:min-h-[calc(100dvh-5.5rem)] sm:gap-4">
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/[0.08] bg-[#131313] px-1 pb-3 sm:border-0 sm:px-0 sm:pb-0">
+    <div className="mx-auto flex w-full max-w-2xl flex-col bg-app-background max-sm:min-h-[calc(100dvh-5.5rem)] sm:gap-4">
+      <header className="flex shrink-0 items-center gap-3 border-b border-white/[0.08] bg-app-background px-1 pb-3 sm:border-0 sm:px-0 sm:pb-0">
         <Link
           href={CHAT_INBOX_HREF}
           className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
@@ -413,14 +413,14 @@ export function DmChatThread({
 
       <div
         className={cn(
-          'flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-[#131313]',
+          'flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-app-background',
           'max-sm:rounded-none max-sm:border-0',
           'sm:h-[min(36rem,calc(100dvh-14rem))] sm:rounded-2xl sm:border',
         )}
       >
         <div className="hidden h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary sm:block" />
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-[#131313]">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-app-background">
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}

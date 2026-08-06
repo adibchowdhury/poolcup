@@ -823,7 +823,7 @@ export function PoolChatTab({
 
       <div
         className={cn(
-          'flex flex-col overflow-hidden rounded-2xl border border-border bg-[#131313]',
+          'flex flex-col overflow-hidden rounded-2xl border border-border bg-app-background',
           fullBleedMobile
             ? 'max-sm:min-h-0 max-sm:flex-1 max-sm:rounded-none max-sm:border-x-0 sm:h-[min(32rem,calc(100dvh-16rem))]'
             : 'h-[min(32rem,calc(100dvh-16rem))]',
@@ -831,7 +831,7 @@ export function PoolChatTab({
       >
         <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-[#131313]">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-app-background">
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}

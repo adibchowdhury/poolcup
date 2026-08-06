@@ -23,7 +23,7 @@ const BRIDGE_WRAPPER_CLASS =
 
 const CARD_CLASS = cn(
   'mx-auto max-w-5xl rounded-3xl border border-[rgba(255,255,255,0.12)]',
-  'bg-[#131313] px-3 py-4 sm:px-6 sm:py-7 md:px-4',
+  'bg-app-background px-3 py-4 sm:px-6 sm:py-7 md:px-4',
   'shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)]',
 )
 

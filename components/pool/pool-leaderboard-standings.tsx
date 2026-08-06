@@ -302,7 +302,7 @@ function PodiumPedestal({
         </>
       )}
 
-      {/* Tiered podium base — sits on #0A0E0E; slightly lighter face + thin green top edge */}
+      {/* Tiered podium base — sits on app canvas; slightly lighter face + thin green top edge */}
       <div
         className={cn(
           'relative flex w-full flex-col items-center overflow-hidden rounded-t-md',
@@ -349,7 +349,7 @@ function StandingListRow({
       className={cn(
         'relative flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
         member.isYou
-          ? 'bg-[color-mix(in_srgb,#00e676_18%,#0A0E0E)]'
+          ? 'bg-[color-mix(in_srgb,#00e676_18%,var(--app-background))]'
           : !disableProfileLinks && 'hover:bg-white/[0.04]',
       )}
     >
@@ -501,7 +501,7 @@ export function PoolLeaderboardStandings({
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-1 flex-col bg-[#0A0E0E]',
+        'flex min-h-0 flex-1 flex-col bg-app-background',
         className,
       )}
     >
@@ -545,7 +545,7 @@ export function PoolLeaderboardStandings({
           aria-label="Full standings"
           className={cn(
             'mt-5 flex min-h-0 w-full flex-1 flex-col',
-            'rounded-t-[2rem] bg-[#0A0E0E] sm:rounded-t-[2.5rem]',
+            'rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
           )}
         >
           <ul className="w-full shrink-0 divide-y divide-white/[0.06]">
@@ -559,7 +559,7 @@ export function PoolLeaderboardStandings({
             ))}
           </ul>
           {/* Fills leftover viewport below the last row with the same list color */}
-          <div className="min-h-0 flex-1 bg-[#0A0E0E]" aria-hidden />
+          <div className="min-h-0 flex-1 bg-app-background" aria-hidden />
 
           {showPreMatchNote ? (
             <p className="shrink-0 px-4 pb-2 text-center text-sm text-muted-foreground">

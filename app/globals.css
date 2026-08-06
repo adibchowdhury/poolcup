@@ -6,7 +6,13 @@
 /* PoolCup Design System - Dark Stadium Theme */
 :root {
   /* Core colors */
-  --background: #131313;
+  /*
+   * App canvas — page shells, chat, top bar / nav.
+   * Change --app-background to recolor shells app-wide; --background aliases it
+   * so Tailwind `bg-background` / `bg-app-background` stay in sync.
+   */
+  --app-background: #131313;
+  --background: var(--app-background);
   --foreground: #f0f4f8;
   --card: #111a27;
   --card-foreground: #f0f4f8;
@@ -60,6 +66,7 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-mono: 'Space Mono', monospace;
   --font-display: 'Bebas Neue', sans-serif;
+  --color-app-background: var(--app-background);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

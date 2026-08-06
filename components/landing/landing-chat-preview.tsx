@@ -287,15 +287,15 @@ export function LandingChatPreview({
   return (
     <div
       className={cn(
-        'overflow-hidden',
+        'overflow-hidden bg-app-background',
         !embedded &&
           'rounded-2xl border border-[rgba(255,255,255,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.35)]',
       )}
       aria-hidden
     >
-      <div className="mx-auto w-full max-w-md bg-[#131313]">
-        {/* Header — title left, settings kebab right (top-bar / --background blackish) */}
-        <div className="border-b border-white/[0.08] bg-[#131313] px-3 py-2.5 sm:px-3.5 sm:py-3">
+      <div className="mx-auto w-full max-w-md bg-app-background">
+        {/* Header — title left, settings kebab right (top-bar / app canvas) */}
+        <div className="border-b border-white/[0.08] bg-app-background px-3 py-2.5 sm:px-3.5 sm:py-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground">
               <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -313,12 +313,12 @@ export function LandingChatPreview({
         </div>
 
         {/* Live scoreboard — keeps its own glass background */}
-        <div className="border-b border-white/[0.08] bg-[#131313] px-2.5 py-2 sm:px-3">
+        <div className="border-b border-white/[0.08] bg-app-background px-2.5 py-2 sm:px-3">
           <LandingLiveScoreboard />
         </div>
 
         {/* Thread — same blackish as header / top bar */}
-        <div className="flex flex-col bg-[#131313]">
+        <div className="flex flex-col bg-app-background">
           <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
           <div className="space-y-1.5 px-2.5 py-2.5 sm:space-y-2 sm:px-3 sm:py-3">
             {FEED.map((item, index) => {
@@ -342,7 +342,7 @@ export function LandingChatPreview({
             })}
           </div>
 
-          <div className="flex items-center gap-2 border-t border-white/[0.08] bg-[#131313] px-2.5 py-2 sm:px-3">
+          <div className="flex items-center gap-2 border-t border-white/[0.08] bg-app-background px-2.5 py-2 sm:px-3">
             <div className="min-h-8 min-w-0 flex-1 rounded-md border border-border/70 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground/70">
               Message your pool…
             </div>

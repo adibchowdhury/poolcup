@@ -263,12 +263,8 @@ export function PoolHomeView({
     <PoolThemeScope
       themeColor={pool.themeColor}
       className={cn(
-        'min-h-screen',
-        isLeaderboardTab
-          ? 'flex flex-col bg-[#0A0E0E]'
-          : isChatView
-            ? 'bg-[#131313]'
-            : 'bg-background',
+        'min-h-screen bg-app-background',
+        isLeaderboardTab && 'flex flex-col',
         !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
@@ -286,8 +282,8 @@ export function PoolHomeView({
           className={cn(
             'sticky top-0 z-[100] isolate border-b',
             isChatView
-              ? 'border-white/[0.08] bg-[#131313]'
-              : 'border-border bg-background/80 backdrop-blur-xl',
+              ? 'border-white/[0.08] bg-app-background'
+              : 'border-border bg-app-background/80 backdrop-blur-xl',
             isLeaderboardTab && 'shrink-0',
             isMobileChatShell && 'max-sm:shrink-0',
           )}
@@ -413,10 +409,8 @@ export function PoolHomeView({
             'max-sm:pt-0 max-sm:pb-8',
             // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
             isLeaderboardTab
-              ? 'flex max-w-none flex-1 flex-col bg-[#0A0E0E] px-0 pb-0'
-              : isChatView
-                ? 'max-w-4xl bg-[#131313] px-4'
-                : 'max-w-4xl px-4',
+              ? 'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0'
+              : 'max-w-4xl bg-app-background px-4',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
