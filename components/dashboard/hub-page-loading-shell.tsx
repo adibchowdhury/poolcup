@@ -4,18 +4,21 @@ import { cn } from '@/lib/utils'
 
 function HubPageHeaderSkeleton() {
   return (
-    <header className="border-b border-border bg-background/80 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] backdrop-blur-xl">
-      <div className="mx-auto max-w-6xl px-4 py-4">
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <ShimmerBlock className="h-8 w-28 shrink-0 rounded-md sm:h-9 sm:w-32" />
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <ShimmerBlock className="h-9 w-9 shrink-0 rounded-lg" />
-            <ShimmerBlock className="h-9 w-9 shrink-0 rounded-lg sm:hidden" />
-            <ShimmerBlock className="hidden h-9 w-28 shrink-0 rounded-lg sm:block" />
+    <>
+      <div aria-hidden className="dashboard-header-top-gap w-full shrink-0" />
+      <header className="border-b border-border bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <ShimmerBlock className="h-8 w-28 shrink-0 rounded-md sm:h-9 sm:w-32" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <ShimmerBlock className="h-9 w-9 shrink-0 rounded-lg" />
+              <ShimmerBlock className="h-9 w-9 shrink-0 rounded-lg sm:hidden" />
+              <ShimmerBlock className="hidden h-9 w-28 shrink-0 rounded-lg sm:block" />
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   )
 }
 
@@ -52,7 +55,7 @@ export function HubPageLoadingShell({
       aria-label={label}
     >
       <div className="relative">
-        <div className="z-50 md:sticky md:top-0">
+        <div className="z-50 bg-background md:sticky md:top-0">
           <HubPageHeaderSkeleton />
         </div>
 

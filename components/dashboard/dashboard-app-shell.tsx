@@ -142,8 +142,18 @@ export function DashboardAppShell({
     <BadgeUnlockProvider>
     <div className="min-h-screen bg-background">
       <div className="relative">
-        <div className="z-50 md:sticky md:top-0">
-          <header className="border-b border-border bg-background/80 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] backdrop-blur-xl">
+        <div className="z-50 bg-background md:sticky md:top-0">
+          {/*
+            Spacer ABOVE the painted header chrome — not padding inside it.
+            Padding on the header only grew the blurred header block (same color as
+            the page), so increases looked invisible. This dedicated gap sits
+            between the viewport top and the logo/menu bar (~56px + safe-area).
+          */}
+          <div
+            aria-hidden
+            className="dashboard-header-top-gap w-full shrink-0"
+          />
+          <header className="border-b border-border bg-background/80 backdrop-blur-xl">
             <div className="mx-auto max-w-6xl px-4">
               {/* Mobile-only header (app layout): hamburger | logo | profile */}
               <WebMobileTopBar
