@@ -60,6 +60,10 @@ function resolveAuthor(
   )
 }
 
+/** Avatar gutter width — keep stacked bubbles lined up when identity is hidden. */
+const AVATAR_GUTTER_CLASS = 'w-8 shrink-0'
+const REACTION_INDENT_OTHER = 'ml-10' // w-8 + gap-2
+
 function ChatUserAvatar({
   userId,
   profile,
@@ -71,7 +75,7 @@ function ChatUserAvatar({
     <UserProfileLink
       userId={userId}
       ariaLabel={`${profile.displayName}'s profile`}
-      className="shrink-0 self-end"
+      className="mb-0.5 shrink-0"
     >
       <UserAvatarImage
         avatar={profile.avatar}
@@ -132,6 +136,9 @@ function ChatMessageBubble({
   onDelete,
   onReport,
   onToggleReaction,
+  showAvatar = false,
+  authorUserId,
+  author,
 }: {
   message: PoolChatMessage
   isYou: boolean
@@ -145,10 +152,15 @@ function ChatMessageBubble({
   onDelete: () => void
   onReport: () => void
   onToggleReaction: (emoji: string) => void
+  /** When true, render member avatar beside the bubble (others only). */
+  showAvatar?: boolean
+  authorUserId?: string
+  author?: PoolChatMemberProfile
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showActions = canDelete || canReport
+  const reserveOtherGutter = !isYou
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -169,8 +181,8 @@ function ChatMessageBubble({
   return (
     <div
       className={cn(
-        'group/message relative flex w-full min-w-0 max-w-full',
-        isYou ? 'justify-end' : 'justify-start',
+        'group/message relative flex w-full min-w-0 max-w-full flex-col',
+        isYou ? 'items-end' : 'items-start',
         stacked ? 'mt-0.5' : 'mt-1',
       )}
       onTouchStart={showActions ? startLongPress : undefined}
@@ -178,104 +190,121 @@ function ChatMessageBubble({
       onTouchMove={clearLongPress}
       onTouchCancel={clearLongPress}
     >
+      {/* Avatar + bubble only — reactions sit below so they never shift alignment */}
       <div
         className={cn(
-          'relative max-w-[min(100%,18rem)] sm:max-w-[min(100%,22rem)]',
-          isYou ? 'items-end' : 'items-start',
+          'flex w-full min-w-0 items-end gap-2',
+          isYou && 'flex-row-reverse',
         )}
       >
-        <div className={cn('flex items-start gap-1', isYou && 'flex-row-reverse')}>
-          <div
-            className={cn(
-              'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
-              isYou
-                ? 'rounded-tr-md bg-primary/20 text-foreground ring-1 ring-primary/35'
-                : 'rounded-tl-md bg-muted/60 text-foreground',
-            )}
-          >
-            {message.content}
-          </div>
+        {reserveOtherGutter ? (
+          showAvatar && authorUserId && author ? (
+            <ChatUserAvatar userId={authorUserId} profile={author} />
+          ) : (
+            <div className={AVATAR_GUTTER_CLASS} aria-hidden />
+          )
+        ) : null}
 
-          {showActions ? (
-            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:bg-muted/60 hover:text-foreground',
-                    'opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100',
-                    menuOpen && 'opacity-100',
-                  )}
-                  aria-label="Message actions"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align={isYou ? 'end' : 'start'} className="w-52">
-                <div className="flex flex-wrap gap-1 border-b border-border/60 p-2">
-                  {ALLOWED_CHAT_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-lg hover:bg-muted"
-                      onClick={() => {
-                        onToggleReaction(emoji)
+        <div
+          className={cn(
+            'relative max-w-[min(100%,18rem)] sm:max-w-[min(100%,22rem)]',
+            isYou ? 'items-end' : 'items-start',
+          )}
+        >
+          <div className={cn('flex items-start gap-1', isYou && 'flex-row-reverse')}>
+            <div
+              className={cn(
+                'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
+                isYou
+                  ? 'rounded-tr-md bg-primary/20 text-foreground ring-1 ring-primary/35'
+                  : 'rounded-tl-md bg-muted/60 text-foreground',
+              )}
+            >
+              {message.content}
+            </div>
+
+            {showActions ? (
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:bg-muted/60 hover:text-foreground',
+                      'opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100',
+                      menuOpen && 'opacity-100',
+                    )}
+                    aria-label="Message actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align={isYou ? 'end' : 'start'} className="w-52">
+                  <div className="flex flex-wrap gap-1 border-b border-border/60 p-2">
+                    {ALLOWED_CHAT_REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-lg hover:bg-muted"
+                        onClick={() => {
+                          onToggleReaction(emoji)
+                          setMenuOpen(false)
+                        }}
+                        aria-label={`React with ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  {canReport ? (
+                    <DropdownMenuItem
+                      disabled={reporting || reported}
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        onReport()
                         setMenuOpen(false)
                       }}
-                      aria-label={`React with ${emoji}`}
                     >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-                {canReport ? (
-                  <DropdownMenuItem
-                    disabled={reporting || reported}
-                    onSelect={(event) => {
-                      event.preventDefault()
-                      onReport()
-                      setMenuOpen(false)
-                    }}
-                  >
-                    <Flag className="h-4 w-4" />
-                    {reported ? 'Reported' : 'Report'}
-                  </DropdownMenuItem>
-                ) : null}
-                {canDelete ? (
-                  <DropdownMenuItem
-                    disabled={deleting}
-                    className="text-destructive focus:text-destructive"
-                    onSelect={(event) => {
-                      event.preventDefault()
-                      onDelete()
-                      setMenuOpen(false)
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </div>
-
-        {reactions.length > 0 ? (
-          <div
-            className={cn(
-              'mt-1 flex flex-wrap gap-1',
-              isYou ? 'justify-end' : 'justify-start',
-            )}
-          >
-            {reactions.map((reaction) => (
-              <ReactionChip
-                key={`${message.id}-${reaction.emoji}`}
-                reaction={reaction}
-                onToggle={() => onToggleReaction(reaction.emoji)}
-              />
-            ))}
+                      <Flag className="h-4 w-4" />
+                      {reported ? 'Reported' : 'Report'}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canDelete ? (
+                    <DropdownMenuItem
+                      disabled={deleting}
+                      className="text-destructive focus:text-destructive"
+                      onSelect={(event) => {
+                        event.preventDefault()
+                        onDelete()
+                        setMenuOpen(false)
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
+
+      {reactions.length > 0 ? (
+        <div
+          className={cn(
+            'mt-1 flex flex-wrap gap-1',
+            reserveOtherGutter && REACTION_INDENT_OTHER,
+            isYou ? 'justify-end' : 'justify-start',
+          )}
+        >
+          {reactions.map((reaction) => (
+            <ReactionChip
+              key={`${message.id}-${reaction.emoji}`}
+              reaction={reaction}
+              onToggle={() => onToggleReaction(reaction.emoji)}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -312,65 +341,64 @@ function ChatMessageGroup({
   const firstMessage = messages[0]!
 
   return (
-    <div className={cn('flex w-full min-w-0', !isYou && 'gap-2')}>
-      {!isYou ? (
-        <ChatUserAvatar userId={userId} profile={author} />
-      ) : null}
-
+    <div
+      className={cn(
+        'flex w-full min-w-0 flex-col',
+        isYou ? 'items-end' : 'items-start',
+      )}
+    >
       <div
         className={cn(
-          'flex min-w-0 flex-1 flex-col',
-          isYou ? 'items-end' : 'items-start',
+          'mb-0.5 flex items-center gap-2',
+          isYou ? 'flex-row-reverse' : 'flex-row',
+          !isYou && REACTION_INDENT_OTHER,
         )}
       >
-        <div
-          className={cn(
-            'mb-0.5 flex items-center gap-2',
-            isYou ? 'flex-row-reverse' : 'flex-row',
-          )}
-        >
-          {isYou ? (
-            <span className="text-xs font-semibold text-primary">You</span>
-          ) : (
-            <UserProfileLink
-              userId={userId}
-              className="text-xs font-semibold text-foreground hover:underline"
-            >
-              {author.displayName}
-            </UserProfileLink>
-          )}
-          <time
-            className="text-[10px] text-muted-foreground"
-            dateTime={firstMessage.created_at}
-            suppressHydrationWarning
+        {isYou ? (
+          <span className="text-xs font-semibold text-primary">You</span>
+        ) : (
+          <UserProfileLink
+            userId={userId}
+            className="text-xs font-semibold text-foreground hover:underline"
           >
-            {formatChatTimestamp(firstMessage.created_at)}
-          </time>
-        </div>
-
-        {messages.map((message, index) => {
-          const canDelete = isYou || isPoolCreator
-          const canReport = !isYou
-
-          return (
-            <ChatMessageBubble
-              key={message.id}
-              message={message}
-              isYou={isYou}
-              stacked={index > 0}
-              reactions={reactionsByMessageId.get(message.id) ?? []}
-              canDelete={canDelete}
-              canReport={canReport}
-              reported={reportedIds.has(message.id)}
-              deleting={deletingId === message.id}
-              reporting={reportingId === message.id}
-              onDelete={() => onDelete(message.id)}
-              onReport={() => onReport(message)}
-              onToggleReaction={(emoji) => onToggleReaction(message.id, emoji)}
-            />
-          )
-        })}
+            {author.displayName}
+          </UserProfileLink>
+        )}
+        <time
+          className="text-[10px] text-muted-foreground"
+          dateTime={firstMessage.created_at}
+          suppressHydrationWarning
+        >
+          {formatChatTimestamp(firstMessage.created_at)}
+        </time>
       </div>
+
+      {messages.map((message, index) => {
+        const canDelete = isYou || isPoolCreator
+        const canReport = !isYou
+        const isLast = index === messages.length - 1
+
+        return (
+          <ChatMessageBubble
+            key={message.id}
+            message={message}
+            isYou={isYou}
+            stacked={index > 0}
+            reactions={reactionsByMessageId.get(message.id) ?? []}
+            canDelete={canDelete}
+            canReport={canReport}
+            reported={reportedIds.has(message.id)}
+            deleting={deletingId === message.id}
+            reporting={reportingId === message.id}
+            onDelete={() => onDelete(message.id)}
+            onReport={() => onReport(message)}
+            onToggleReaction={(emoji) => onToggleReaction(message.id, emoji)}
+            showAvatar={!isYou && isLast}
+            authorUserId={userId}
+            author={author}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -795,7 +823,7 @@ export function PoolChatTab({
 
       <div
         className={cn(
-          'flex flex-col overflow-hidden rounded-2xl border border-border bg-card',
+          'flex flex-col overflow-hidden rounded-2xl border border-border bg-[#131313]',
           fullBleedMobile
             ? 'max-sm:min-h-0 max-sm:flex-1 max-sm:rounded-none max-sm:border-x-0 sm:h-[min(32rem,calc(100dvh-16rem))]'
             : 'h-[min(32rem,calc(100dvh-16rem))]',
@@ -803,7 +831,7 @@ export function PoolChatTab({
       >
         <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
 
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-[#131313]">
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}

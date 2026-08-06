@@ -7,8 +7,15 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  MoreVertical,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
@@ -257,7 +264,11 @@ export function PoolHomeView({
       themeColor={pool.themeColor}
       className={cn(
         'min-h-screen',
-        isLeaderboardTab ? 'flex flex-col bg-[#0A0E0E]' : 'bg-background',
+        isLeaderboardTab
+          ? 'flex flex-col bg-[#0A0E0E]'
+          : isChatView
+            ? 'bg-[#131313]'
+            : 'bg-background',
         !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
@@ -273,13 +284,28 @@ export function PoolHomeView({
       >
         <header
           className={cn(
-            'sticky top-0 z-[100] isolate border-b border-border bg-background/80 backdrop-blur-xl',
+            'sticky top-0 z-[100] isolate border-b',
+            isChatView
+              ? 'border-white/[0.08] bg-[#131313]'
+              : 'border-border bg-background/80 backdrop-blur-xl',
             isLeaderboardTab && 'shrink-0',
             isMobileChatShell && 'max-sm:shrink-0',
           )}
         >
-          <div className="mx-auto max-w-4xl px-4 py-4 max-sm:py-2.5">
-            <div className="flex items-center gap-4 max-sm:items-start max-sm:gap-2">
+          <div
+            className={cn(
+              'mx-auto max-w-4xl px-4',
+              isChatView ? 'py-2.5 sm:py-3' : 'py-4 max-sm:py-2.5',
+            )}
+          >
+            <div
+              className={cn(
+                'flex items-center gap-4',
+                isChatView
+                  ? 'gap-2'
+                  : 'max-sm:items-start max-sm:gap-2',
+              )}
+            >
               <button
                 type="button"
                 onClick={handleBackClick}
@@ -288,63 +314,94 @@ export function PoolHomeView({
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </button>
-              <PoolAvatarImage
-                avatar={pool.avatar}
-                emblemUrl={pool.emblemUrl}
-                size="sm"
-                className="shrink-0 rounded-xl"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="hidden sm:block">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-                      {pool.name}
-                    </h1>
-                    <ScoringModeBadge scoringStyle={pool.scoringStyle} />
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {pool.acceptingMembers ? (
-                      <>
-                        <span>Invite:</span>
-                        <code className="font-mono text-primary">{pool.inviteCode}</code>
-                      </>
-                    ) : (
-                      <span className="font-medium text-amber-400">Invites closed</span>
-                    )}
-                  </div>
-                </div>
-                <div className="sm:hidden">
-                  <h1 className="truncate font-display text-lg tracking-wide text-foreground">
+
+              {isChatView ? (
+                <>
+                  <h1 className="min-w-0 flex-1 truncate font-display text-xl tracking-wide text-foreground sm:text-2xl">
                     {pool.name}
                   </h1>
-                  <div className="mt-1 flex min-w-0 items-center gap-2">
-                    <ScoringModeBadge
-                      scoringStyle={pool.scoringStyle}
-                      className="shrink-0"
-                    />
-                    {pool.acceptingMembers ? (
-                      <div className="flex min-w-0 items-center gap-1.5 truncate rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                        <span className="shrink-0">Invite:</span>
-                        <code className="truncate font-mono text-primary">
-                          {pool.inviteCode}
-                        </code>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Chat options"
+                      >
+                        <MoreVertical className="h-4 w-4" aria-hidden />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setActiveTab('settings')
+                        }}
+                      >
+                        Pool settings
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <PoolAvatarImage
+                    avatar={pool.avatar}
+                    emblemUrl={pool.emblemUrl}
+                    size="sm"
+                    className="shrink-0 rounded-xl"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="hidden sm:block">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                          {pool.name}
+                        </h1>
+                        <ScoringModeBadge scoringStyle={pool.scoringStyle} />
                       </div>
-                    ) : (
-                      <div className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                        Invites closed
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {pool.acceptingMembers ? (
+                          <>
+                            <span>Invite:</span>
+                            <code className="font-mono text-primary">{pool.inviteCode}</code>
+                          </>
+                        ) : (
+                          <span className="font-medium text-amber-400">Invites closed</span>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    <div className="sm:hidden">
+                      <h1 className="truncate font-display text-lg tracking-wide text-foreground">
+                        {pool.name}
+                      </h1>
+                      <div className="mt-1 flex min-w-0 items-center gap-2">
+                        <ScoringModeBadge
+                          scoringStyle={pool.scoringStyle}
+                          className="shrink-0"
+                        />
+                        {pool.acceptingMembers ? (
+                          <div className="flex min-w-0 items-center gap-1.5 truncate rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <span className="shrink-0">Invite:</span>
+                            <code className="truncate font-mono text-primary">
+                              {pool.inviteCode}
+                            </code>
+                          </div>
+                        ) : (
+                          <div className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+                            Invites closed
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              {canDelete && poolId && !isChatView && (
-                <DeletePoolDialog
-                  poolId={poolId}
-                  poolName={pool.name}
-                  redirectTo="/dashboard"
-                  triggerVariant="outline"
-                  mobileIconOnly
-                />
+                  {canDelete && poolId ? (
+                    <DeletePoolDialog
+                      poolId={poolId}
+                      poolName={pool.name}
+                      redirectTo="/dashboard"
+                      triggerVariant="outline"
+                      mobileIconOnly
+                    />
+                  ) : null}
+                </>
               )}
             </div>
           </div>
@@ -357,7 +414,9 @@ export function PoolHomeView({
             // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
             isLeaderboardTab
               ? 'flex max-w-none flex-1 flex-col bg-[#0A0E0E] px-0 pb-0'
-              : 'max-w-4xl px-4',
+              : isChatView
+                ? 'max-w-4xl bg-[#131313] px-4'
+                : 'max-w-4xl px-4',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
