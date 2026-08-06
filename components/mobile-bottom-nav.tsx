@@ -30,6 +30,7 @@ import {
   type MobileBottomNavId,
   resolveMobileBottomNavActive,
 } from '@/src/lib/mobile-bottom-nav-routes'
+import { triggerHaptic } from '@/src/lib/haptics'
 
 const NAV_ITEMS: {
   id: MobileBottomNavId
@@ -190,7 +191,10 @@ function MobileBottomNavContent() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => switchDashboardTab(dashboardTabId)}
+                  onClick={() => {
+                    triggerHaptic()
+                    switchDashboardTab(dashboardTabId)
+                  }}
                   className={homeClassName}
                   aria-label={item.label}
                   aria-current={isActive ? 'page' : undefined}
@@ -204,6 +208,7 @@ function MobileBottomNavContent() {
               <Link
                 key={item.id}
                 href={item.href}
+                onClick={() => triggerHaptic()}
                 className={homeClassName}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
@@ -221,7 +226,10 @@ function MobileBottomNavContent() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => switchDashboardTab(dashboardTabId)}
+                onClick={() => {
+                  triggerHaptic()
+                  switchDashboardTab(dashboardTabId)
+                }}
                 className={sideClassName}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
@@ -235,6 +243,7 @@ function MobileBottomNavContent() {
             <Link
               key={item.id}
               href={item.href}
+              onClick={() => triggerHaptic()}
               className={sideClassName}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
