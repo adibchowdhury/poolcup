@@ -2,24 +2,35 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, Trophy } from 'lucide-react'
+import { ArrowLeft, Trophy } from 'lucide-react'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   FeaturedMatchCountdownDisplay,
   useKickoffCountdown,
 } from '@/components/dashboard/live-scoreboard'
 import {
+  MatchHubPanels,
+  type WritableScorePool,
+} from '@/components/match/match-hub-panels'
+import {
   formatFeaturedKickoffLocal,
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
 import type { GlobalMatchPhase } from '@/src/lib/global-match-phase'
-import type { MatchEventInfo } from '@/src/lib/match-hub-data'
+import type {
+  HeadToHeadData,
+  MatchCommonScore,
+  MatchConsensus,
+  MatchEventInfo,
+  MatchRelatedPool,
+  TeamFormEntry,
+} from '@/src/lib/match-hub-data'
+import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
 import type { TeamRosterPlayer } from '@/src/lib/team-roster'
 import { sportIconPng } from '@/src/lib/sport-display'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { useAuth } from '@/src/lib/auth-context'
-import { MatchTeamRosters } from '@/components/match/match-team-rosters'
 import { cn } from '@/lib/utils'
 
 function navigateFromMatchDetailBack(
@@ -74,21 +85,30 @@ export type GlobalMatchDisplay = {
 
 type GlobalMatchDetailViewProps = {
   match: GlobalMatchDisplay
+  matchId: string
   phase: GlobalMatchPhase
   eventInfo: MatchEventInfo | null
+  isLoggedIn: boolean
+  consensus: MatchConsensus | null
+  commonScores: MatchCommonScore[]
+  myPredictions: MyMatchPredictions | null
+  writablePools: WritableScorePool[]
+  competitionPools: MatchRelatedPool[]
+  team1Form: TeamFormEntry[]
+  team2Form: TeamFormEntry[]
+  headToHead: HeadToHeadData | null
   team1Players: TeamRosterPlayer[]
   team2Players: TeamRosterPlayer[]
   rostersLoading?: boolean
+  onPredictionSaved?: () => void
 }
 
 function MatchStatusPill({
   phase,
   liveClockLabel,
-  kickoffCountdown,
 }: {
   phase: GlobalMatchPhase
   liveClockLabel: string | null
-  kickoffCountdown: ReturnType<typeof useKickoffCountdown>
 }) {
   if (phase === 'live') {
     return (
@@ -113,20 +133,30 @@ function MatchStatusPill({
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary">
-      <Clock className="h-3.5 w-3.5" aria-hidden />
-      <FeaturedMatchCountdownDisplay compact {...kickoffCountdown} />
-    </div>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+      Upcoming
+    </span>
   )
 }
 
 export function GlobalMatchDetailView({
   match,
+  matchId,
   phase,
   eventInfo,
+  isLoggedIn,
+  consensus,
+  commonScores,
+  myPredictions,
+  writablePools,
+  competitionPools,
+  team1Form,
+  team2Form,
+  headToHead,
   team1Players,
   team2Players,
   rostersLoading = false,
+  onPredictionSaved,
 }: GlobalMatchDetailViewProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -172,7 +202,7 @@ export function GlobalMatchDetailView({
               </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Match info
+                  Match hub
                 </p>
                 <h1 className="truncate font-display text-lg tracking-wide text-foreground sm:text-xl">
                   {match.team1Name} vs {match.team2Name}
@@ -191,7 +221,6 @@ export function GlobalMatchDetailView({
                 <MatchStatusPill
                   phase={phase}
                   liveClockLabel={liveClockLabel}
-                  kickoffCountdown={kickoffCountdown}
                 />
                 {eventName ? (
                   <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -284,16 +313,29 @@ export function GlobalMatchDetailView({
             </div>
           </section>
 
-          <MatchTeamRosters
+          <MatchHubPanels
+            matchId={matchId}
             team1Name={match.team1Name}
             team2Name={match.team2Name}
             team1Flag={match.team1Flag}
             team2Flag={match.team2Flag}
             team1Logo={match.team1Logo}
             team2Logo={match.team2Logo}
+            lockedAt={match.lockedAt}
+            phase={phase}
+            isLoggedIn={isLoggedIn}
+            consensus={consensus}
+            commonScores={commonScores}
+            myPredictions={myPredictions}
+            writablePools={writablePools}
+            competitionPools={competitionPools}
+            team1Form={team1Form}
+            team2Form={team2Form}
+            headToHead={headToHead}
             team1Players={team1Players}
             team2Players={team2Players}
-            loading={rostersLoading}
+            rostersLoading={rostersLoading}
+            onPredictionSaved={onPredictionSaved}
           />
         </main>
       </div>

@@ -11,14 +11,33 @@ import {
 import type { ClassicMatchRow } from '@/src/lib/merge-classic-match-predictions'
 import { deriveGlobalMatchPhase } from '@/src/lib/global-match-phase'
 import {
+  buildMockMatchHub,
+  fetchHeadToHead,
+  fetchMatchCommonScores,
+  fetchMatchCompetitionPools,
+  fetchMatchConsensus,
   fetchMatchEventInfo,
+  fetchTeamForm,
+  USE_MOCK_HUB,
+  writableScorePoolsFromCompetition,
+  type HeadToHeadData,
+  type MatchCommonScore,
+  type MatchConsensus,
   type MatchEventInfo,
+  type MatchRelatedPool,
+  type TeamFormEntry,
 } from '@/src/lib/match-hub-data'
+import {
+  fetchMyMatchPredictions,
+  type MyMatchPredictions,
+} from '@/src/lib/my-match-predictions'
 import {
   fetchRosterForTeamLogo,
   type TeamRosterPlayer,
 } from '@/src/lib/team-roster'
+import type { WritableScorePool } from '@/components/match/match-hub-panels'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
+import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
 
 const MATCH_COLUMNS =
@@ -28,6 +47,28 @@ const LIVE_REFETCH_MS = 30_000
 
 type MatchRowWithEvent = ClassicMatchRow & {
   event_id?: string | null
+}
+
+type HubBundle = {
+  consensus: MatchConsensus | null
+  commonScores: MatchCommonScore[]
+  myPredictions: MyMatchPredictions | null
+  writablePools: WritableScorePool[]
+  competitionPools: MatchRelatedPool[]
+  team1Form: TeamFormEntry[]
+  team2Form: TeamFormEntry[]
+  headToHead: HeadToHeadData | null
+}
+
+const EMPTY_HUB: HubBundle = {
+  consensus: null,
+  commonScores: [],
+  myPredictions: null,
+  writablePools: [],
+  competitionPools: [],
+  team1Form: [],
+  team2Form: [],
+  headToHead: null,
 }
 
 function GlobalMatchPageSkeleton() {
@@ -40,7 +81,8 @@ function GlobalMatchPageSkeleton() {
       <div className="mx-auto max-w-4xl px-4 py-6">
         <ShimmerBlock className="mb-4 h-14 w-full rounded-xl" />
         <ShimmerBlock className="mb-4 h-56 w-full rounded-2xl" />
-        <ShimmerBlock className="h-32 w-full rounded-2xl" />
+        <ShimmerBlock className="mb-3 h-10 w-full rounded-xl" />
+        <ShimmerBlock className="h-40 w-full rounded-2xl" />
       </div>
     </div>
   )
@@ -67,9 +109,65 @@ function toGlobalMatchDisplay(match: MatchRowWithEvent): GlobalMatchDisplay {
   }
 }
 
+async function loadHubBundle(
+  matchId: string,
+  matchRow: MatchRowWithEvent,
+  userId: string | null,
+): Promise<HubBundle> {
+  // TEMPORARY — remove after preview (USE_MOCK_HUB in match-hub-data.ts).
+  if (USE_MOCK_HUB) {
+    const mock = buildMockMatchHub(matchRow.team1_name, matchRow.team2_name)
+    return {
+      consensus: mock.consensus,
+      commonScores: mock.commonScores,
+      myPredictions: mock.myPredictions,
+      writablePools: mock.writablePools,
+      competitionPools: mock.competitionPools,
+      team1Form: mock.team1Form,
+      team2Form: mock.team2Form,
+      headToHead: mock.headToHead,
+    }
+  }
+
+  const [
+    consensus,
+    commonScores,
+    myPredictions,
+    competitionPools,
+    team1Form,
+    team2Form,
+    headToHead,
+  ] = await Promise.all([
+    fetchMatchConsensus(supabase, matchId),
+    fetchMatchCommonScores(supabase, matchId, 3),
+    userId
+      ? fetchMyMatchPredictions(supabase, matchId)
+      : Promise.resolve(null),
+    fetchMatchCompetitionPools(supabase, userId, matchRow.event_id),
+    fetchTeamForm(supabase, matchRow.team1_name, 5),
+    fetchTeamForm(supabase, matchRow.team2_name, 5),
+    fetchHeadToHead(supabase, matchRow.team1_name, matchRow.team2_name, 5),
+  ])
+
+  return {
+    consensus,
+    commonScores,
+    myPredictions,
+    writablePools: writableScorePoolsFromCompetition(competitionPools),
+    competitionPools,
+    team1Form,
+    team2Form,
+    headToHead,
+  }
+}
+
 export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+
   const [match, setMatch] = useState<MatchRowWithEvent | null>(null)
   const [eventInfo, setEventInfo] = useState<MatchEventInfo | null>(null)
+  const [hub, setHub] = useState<HubBundle>(EMPTY_HUB)
   const [team1Players, setTeam1Players] = useState<TeamRosterPlayer[]>([])
   const [team2Players, setTeam2Players] = useState<TeamRosterPlayer[]>([])
   const [rostersLoading, setRostersLoading] = useState(false)
@@ -77,8 +175,12 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
   const [notFound, setNotFound] = useState(false)
 
   const loadMatch = useCallback(
-    async (showLoading: boolean, options?: { reloadRosters?: boolean }) => {
+    async (
+      showLoading: boolean,
+      options?: { reloadRosters?: boolean; reloadHub?: boolean },
+    ) => {
       const reloadRosters = options?.reloadRosters ?? true
+      const reloadHub = options?.reloadHub ?? true
       if (showLoading) setLoading(true)
 
       const { data, error } = await supabase
@@ -95,6 +197,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
         setNotFound(true)
         setMatch(null)
         setEventInfo(null)
+        setHub(EMPTY_HUB)
         setTeam1Players([])
         setTeam2Players([])
         setLoading(false)
@@ -107,6 +210,12 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
 
       const event = await fetchMatchEventInfo(supabase, matchRow.event_id)
       setEventInfo(event)
+
+      if (reloadHub) {
+        const nextHub = await loadHubBundle(matchId, matchRow, userId)
+        setHub(nextHub)
+      }
+
       setLoading(false)
 
       if (!reloadRosters) return
@@ -120,7 +229,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       setTeam2Players(awayRoster.players)
       setRostersLoading(false)
     },
-    [matchId],
+    [matchId, userId],
   )
 
   useEffect(() => {
@@ -136,11 +245,30 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
     if (!match || phase !== 'live') return
 
     const interval = window.setInterval(() => {
-      void loadMatch(false, { reloadRosters: false })
+      void loadMatch(false, { reloadRosters: false, reloadHub: false })
     }, LIVE_REFETCH_MS)
 
     return () => window.clearInterval(interval)
   }, [match, phase, loadMatch])
+
+  const reloadPredictions = useCallback(async () => {
+    if (!match || !userId) return
+    const [myPredictions, competitionPools, consensus, commonScores] =
+      await Promise.all([
+        fetchMyMatchPredictions(supabase, matchId),
+        fetchMatchCompetitionPools(supabase, userId, match.event_id),
+        fetchMatchConsensus(supabase, matchId),
+        fetchMatchCommonScores(supabase, matchId, 3),
+      ])
+    setHub((prev) => ({
+      ...prev,
+      myPredictions,
+      competitionPools,
+      writablePools: writableScorePoolsFromCompetition(competitionPools),
+      consensus,
+      commonScores,
+    }))
+  }, [match, matchId, userId])
 
   if (loading) {
     return <GlobalMatchPageSkeleton />
@@ -173,11 +301,22 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
   return (
     <GlobalMatchDetailView
       match={toGlobalMatchDisplay(match)}
+      matchId={matchId}
       phase={phase}
       eventInfo={eventInfo}
+      isLoggedIn={Boolean(userId)}
+      consensus={hub.consensus}
+      commonScores={hub.commonScores}
+      myPredictions={hub.myPredictions}
+      writablePools={hub.writablePools}
+      competitionPools={hub.competitionPools}
+      team1Form={hub.team1Form}
+      team2Form={hub.team2Form}
+      headToHead={hub.headToHead}
       team1Players={team1Players}
       team2Players={team2Players}
       rostersLoading={rostersLoading}
+      onPredictionSaved={() => void reloadPredictions()}
     />
   )
 }
