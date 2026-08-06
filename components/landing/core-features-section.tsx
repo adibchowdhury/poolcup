@@ -109,31 +109,36 @@ function FeatureCardShell({
   const hasContent = Boolean(children)
 
   return (
-    // Soft accent glow sits behind the whole layered card
-    <div
-      className="relative w-full"
-      style={{
-        filter: [
-          `drop-shadow(0 0 40px rgba(${glowRgb},0.22))`,
-          `drop-shadow(0 0 90px rgba(${glowRgb},0.14))`,
-          `drop-shadow(0 0 160px rgba(${glowRgb},0.08))`,
-        ].join(' '),
-      }}
-    >
-      {/* Outer translucent glass frame / bezel */}
+    <div className="relative w-full">
+      {/*
+        Soft accent halo via static radial gradients + box-shadow — NOT filter:drop-shadow.
+        filter on the card subtree forces costly repaints while scrolling; gradients/box-shadow do not.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-8 -z-10 rounded-[2rem]"
+        style={{
+          background: [
+            `radial-gradient(ellipse 75% 65% at 50% 45%, rgba(${glowRgb},0.28) 0%, transparent 58%)`,
+            `radial-gradient(ellipse 95% 85% at 50% 55%, rgba(${glowRgb},0.12) 0%, transparent 72%)`,
+          ].join(', '),
+        }}
+      />
+
+      {/* Outer glass frame — semi-transparent fill, no backdrop-filter blur */}
       <div
         className="rounded-[1.35rem] p-[5px] sm:p-1.5"
         style={{
           border: '1px solid rgba(255,255,255,0.28)',
           background:
-            'linear-gradient(160deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.025) 100%)',
+            'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(15,20,28,0.88) 48%, rgba(255,255,255,0.03) 100%)',
           boxShadow: [
-            'inset 0 1px 0 rgba(255,255,255,0.18)',
-            'inset 0 0 0 1px rgba(255,255,255,0.06)',
-            '0 12px 40px rgba(0,0,0,0.35)',
+            'inset 0 1px 0 rgba(255,255,255,0.16)',
+            'inset 0 0 0 1px rgba(255,255,255,0.05)',
+            `0 0 28px rgba(${glowRgb},0.2)`,
+            `0 0 56px rgba(${glowRgb},0.08)`,
+            '0 12px 36px rgba(0,0,0,0.4)',
           ].join(', '),
-          backdropFilter: 'blur(14px) saturate(1.15)',
-          WebkitBackdropFilter: 'blur(14px) saturate(1.15)',
         }}
       >
         {/* Inner dark card — gap from outer frame via parent padding */}

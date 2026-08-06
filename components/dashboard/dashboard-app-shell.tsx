@@ -143,7 +143,7 @@ export function DashboardAppShell({
     <div className="min-h-screen bg-background">
       <div className="relative">
         <div className="z-50 md:sticky md:top-0">
-          <header className="border-b border-border bg-background/80 backdrop-blur-xl">
+          <header className="border-b border-border bg-background/80 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] backdrop-blur-xl">
             <div className="mx-auto max-w-6xl px-4">
               {/* Mobile-only header (app layout): hamburger | logo | profile */}
               <WebMobileTopBar
@@ -161,7 +161,7 @@ export function DashboardAppShell({
                 }}
               />
 
-              {/* Desktop header — unchanged */}
+              {/* Desktop header */}
               <div className="hidden items-center justify-between gap-2 py-4 sm:flex sm:gap-3">
                 <PoolCupLogo href="/dashboard" />
 

@@ -1,6 +1,6 @@
 @keyframes hero-confetti-fall {
   0% {
-    transform: translateX(-50%) translateY(-8vh);
+    transform: translate3d(-50%, -8vh, 0);
     opacity: 0;
   }
   8% {
@@ -10,7 +10,7 @@
     opacity: 1;
   }
   100% {
-    transform: translateX(-50%) translateY(108vh);
+    transform: translate3d(-50%, 108vh, 0);
     opacity: 0;
   }
 }
@@ -18,10 +18,10 @@
 @keyframes hero-confetti-drift {
   0%,
   100% {
-    transform: translateX(calc(-1 * var(--drift)));
+    transform: translate3d(calc(-1 * var(--drift)), 0, 0);
   }
   50% {
-    transform: translateX(var(--drift));
+    transform: translate3d(var(--drift), 0, 0);
   }
 }
 
@@ -46,7 +46,6 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   animation-fill-mode: backwards;
-  will-change: transform, opacity;
 }
 
 .hero-confetti-drift {
@@ -54,7 +53,6 @@
   animation-name: hero-confetti-drift;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  will-change: transform;
 }
 
 .hero-confetti-shape {
@@ -63,7 +61,13 @@
   animation-name: hero-confetti-spin;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  will-change: transform;
+}
+
+/* Pause all confetti work when hero is scrolled off-screen */
+.hero-confetti--paused .hero-confetti-piece,
+.hero-confetti--paused .hero-confetti-drift,
+.hero-confetti--paused .hero-confetti-shape {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {

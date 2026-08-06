@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import './hero-confetti.css'
 
@@ -61,19 +61,38 @@ type HeroConfettiProps = {
 }
 
 export function HeroConfetti({ className }: HeroConfettiProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [inView, setInView] = useState(true)
   const pieces = useMemo(() => buildConfettiPieces(), [])
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (!mounted) return
+    const node = rootRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(Boolean(entry?.isIntersecting))
+      },
+      { threshold: 0.05 },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [mounted])
+
   if (!mounted) return null
 
   return (
     <div
+      ref={rootRef}
       className={cn(
         'hero-confetti pointer-events-none absolute inset-0 z-[1] overflow-hidden',
+        !inView && 'hero-confetti--paused',
         className,
       )}
       aria-hidden

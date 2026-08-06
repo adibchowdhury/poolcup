@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 function HubPageHeaderSkeleton() {
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur-xl">
+    <header className="border-b border-border bg-background/80 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] backdrop-blur-xl">
       <div className="mx-auto max-w-6xl px-4 py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <ShimmerBlock className="h-8 w-28 shrink-0 rounded-md sm:h-9 sm:w-32" />
