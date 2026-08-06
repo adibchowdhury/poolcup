@@ -661,6 +661,79 @@
   }
 }
 
+/* ===== Landing hook: phone + peeking Pucky (transform/opacity only) ===== */
+@keyframes landing-hook-float {
+  0%,
+  100% {
+    transform: rotate(-4deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(-4deg) translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes landing-hook-sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.35);
+  }
+}
+
+.landing-hook-phone {
+  animation: landing-hook-float 5.5s ease-in-out infinite;
+}
+
+.landing-hook-pucky {
+  /* Peek: head/upper body out past the phone; lower half stays under it */
+  transform: translate3d(-4%, -18%, 0) rotate(-5deg);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-hook-visual:hover .landing-hook-pucky {
+  /* Peek a bit further up/out on hover */
+  transform: translate3d(-10%, -28%, 0) rotate(-7deg);
+}
+
+.landing-hook-sparkle {
+  animation: landing-hook-sparkle 2.8s ease-in-out infinite;
+}
+
+.landing-hook-sparkle--delayed {
+  animation-delay: 1.1s;
+}
+
+.landing-hook-shape {
+  position: absolute;
+  border: 1px solid rgba(0, 230, 118, 0.12);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hook-phone {
+    animation: none;
+    transform: rotate(-4deg);
+  }
+
+  .landing-hook-pucky {
+    transition: none;
+  }
+
+  .landing-hook-visual:hover .landing-hook-pucky {
+    transform: translate3d(-4%, -18%, 0) rotate(-5deg);
+  }
+
+  .landing-hook-sparkle {
+    animation: none;
+    opacity: 0.5;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-pulse-subtle,
@@ -671,10 +744,19 @@
   .match-crowd-favorite-chip,
   .animate-join-cta-shimmer,
   .animate-join-ball-spin,
-  .animate-join-chat-bounce {
+  .animate-join-chat-bounce,
+  .landing-hook-phone,
+  .landing-hook-pucky,
+  .landing-hook-sparkle {
     animation: none;
     opacity: 1;
     box-shadow: none;
+  }
+
+  .landing-hook-phone,
+  .landing-hook-pucky {
+    transform: none !important;
+    transition: none !important;
   }
 
   [class*='how-it-works-step-in'],

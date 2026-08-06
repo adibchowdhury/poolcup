@@ -8,6 +8,7 @@ import { HeroBackgroundCarousel } from "@/components/landing/hero-background-car
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { CoreFeaturesSection } from "@/components/landing/core-features-section"
+import { LandingHookVisual } from "@/components/landing/landing-hook-visual"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
 import {
   RevealItem,
@@ -215,11 +216,29 @@ export default function LandingPage() {
       {/* ===== POST-HERO HOOK ===== */}
       <section
         id="how-it-works"
-        className="bg-[#0d1520] pt-28 pb-20 md:pt-36 md:pb-28"
+        className="relative overflow-hidden bg-[#0d1520] pt-28 pb-20 md:pt-36 md:pb-28"
         aria-labelledby="hook-heading"
       >
-        <div className="mx-auto max-w-7xl px-6">
-          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
+        {/* Faint depth — gradients + light geometry only (no blur/filters) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_15%_20%,rgba(0,230,118,0.07)_0%,transparent_55%),radial-gradient(ellipse_60%_50%_at_90%_75%,rgba(59,130,246,0.05)_0%,transparent_50%)]"
+        />
+        <div
+          aria-hidden
+          className="landing-hook-shape top-[18%] right-[8%] hidden h-24 w-24 rounded-full md:block"
+        />
+        <div
+          aria-hidden
+          className="landing-hook-shape bottom-[22%] left-[6%] hidden h-16 w-16 rotate-12 rounded-lg md:block"
+        />
+        <div
+          aria-hidden
+          className="landing-hook-shape top-[42%] left-[42%] hidden h-10 w-10 -rotate-6 rounded-md border-[rgba(255,255,255,0.06)] md:block"
+        />
+
+        <div className="relative z-[1] mx-auto max-w-7xl px-6">
+          <ScrollRevealGroup className="flex flex-col gap-12 md:grid md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
             <div className="text-center md:text-left">
               <RevealItem index={0}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
@@ -231,7 +250,7 @@ export default function LandingPage() {
                   id="hook-heading"
                   className="mt-4 font-display text-3xl leading-[1.15] tracking-wide text-[#f0f4f8] sm:text-4xl md:text-[2.6rem] md:leading-[1.12]"
                 >
-                  Every pick, score, and standing — in one place.
+                  Make Every Match Matter.
                 </h2>
               </RevealItem>
               <RevealItem index={2}>
@@ -241,21 +260,32 @@ export default function LandingPage() {
                   rights to back it up.
                 </p>
               </RevealItem>
+              <RevealItem index={3}>
+                <ul className="mt-7 flex flex-wrap items-center justify-center gap-2.5 md:justify-start">
+                  {(
+                    [
+                      { icon: '🏆', label: 'Live Leaderboards' },
+                      { icon: '💬', label: 'Pool Chat' },
+                      { icon: '🎯', label: 'Exact Score Predictions' },
+                    ] as const
+                  ).map((pill) => (
+                    <li
+                      key={pill.label}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#00e676]/25 bg-[#00e676]/8 px-3 py-1.5 text-[12px] font-medium text-[#f0f4f8]/95 sm:text-[13px]"
+                    >
+                      <span aria-hidden>{pill.icon}</span>
+                      <span>{pill.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </RevealItem>
             </div>
 
             <RevealItem
-              index={3}
-              className="mx-auto flex w-full max-w-md items-center justify-center md:mx-0 md:ml-auto md:max-w-lg"
+              index={4}
+              className="mx-auto w-full md:mx-0 md:ml-auto"
             >
-              <Image
-                src="/mascot/pucky_trophy.png"
-                alt="Pucky, the PoolCup mascot holding a trophy"
-                width={640}
-                height={640}
-                className="h-auto w-full max-h-[22rem] object-contain object-center drop-shadow-[0_12px_40px_rgba(0,0,0,0.45)] sm:max-h-[26rem] md:max-h-[28rem]"
-                sizes="(max-width: 768px) 80vw, 28rem"
-                priority={false}
-              />
+              <LandingHookVisual />
             </RevealItem>
           </ScrollRevealGroup>
         </div>
