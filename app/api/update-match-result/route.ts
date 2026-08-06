@@ -6,6 +6,7 @@ import {
   isValidApiFootballFixtureId,
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
+import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -171,6 +172,8 @@ export async function POST(request: Request) {
       })
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
+
+    await tryPostMatchMoments(supabase, match.id, 'update-match-result')
 
     return NextResponse.json({ success: true, matchId: match.id })
   } catch (error) {

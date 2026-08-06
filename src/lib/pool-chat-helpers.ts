@@ -4,12 +4,33 @@ export type AllowedChatReaction = (typeof ALLOWED_CHAT_REACTIONS)[number]
 
 export const MESSAGE_GROUP_GAP_MS = 5 * 60 * 1000
 
+export type PoolChatMessageType = 'user' | 'system'
+
+export type MatchMomentKind = 'full_time' | 'exact_score' | 'new_leader'
+
+/** metadata jsonb on system messages from post_match_moments. */
+export type PoolChatSystemMetadata = {
+  kind?: MatchMomentKind | string
+  team1?: string
+  team2?: string
+  score1?: number | string
+  score2?: number | string
+  team1_logo?: string | null
+  team2_logo?: string | null
+  players?: string[]
+  player?: string
+  match_id?: string
+  [key: string]: unknown
+}
+
 export type PoolChatMessage = {
   id: string
   pool_id: string
-  user_id: string
+  user_id: string | null
   content: string
   created_at: string
+  message_type?: PoolChatMessageType | null
+  metadata?: PoolChatSystemMetadata | null
 }
 
 export type MessageReactionRow = {
@@ -32,6 +53,7 @@ export type MessageGroup = {
 export type ChatListItem =
   | { type: 'day-divider'; label: string; key: string }
   | { type: 'group'; group: MessageGroup; key: string }
+  | { type: 'system'; message: PoolChatMessage; key: string }
 
 const AVATAR_COLOR_CLASSES = [
   'bg-[#1a3d4a] text-[#7dd3fc]',
@@ -117,10 +139,20 @@ export function formatChatTimestamp(iso: string): string {
   return diffYear === 1 ? '1 year ago' : `${diffYear} years ago`
 }
 
+export function isSystemChatMessage(message: PoolChatMessage): boolean {
+  if (message.message_type === 'system') return true
+  if (message.message_type === 'user') return false
+  return message.user_id == null
+}
+
 export function groupMessages(messages: PoolChatMessage[]): MessageGroup[] {
   const groups: MessageGroup[] = []
 
   for (const message of messages) {
+    if (isSystemChatMessage(message) || message.user_id == null) {
+      continue
+    }
+
     const previous = groups[groups.length - 1]
     if (previous && previous.userId === message.user_id) {
       const lastMessage = previous.messages[previous.messages.length - 1]!
@@ -142,27 +174,50 @@ export function groupMessages(messages: PoolChatMessage[]): MessageGroup[] {
 export function buildChatListItems(messages: PoolChatMessage[]): ChatListItem[] {
   const items: ChatListItem[] = []
   let lastDayLabel: string | null = null
+  let pendingUserMessages: PoolChatMessage[] = []
 
-  for (const group of groupMessages(messages)) {
-    const firstMessage = group.messages[0]!
-    const dayLabel = getDayDividerLabel(firstMessage.created_at)
-
+  const pushDayIfNeeded = (createdAt: string) => {
+    const dayLabel = getDayDividerLabel(createdAt)
     if (dayLabel && dayLabel !== lastDayLabel) {
       items.push({
         type: 'day-divider',
         label: dayLabel,
-        key: `day-${dayLabel}-${firstMessage.created_at}`,
+        key: `day-${dayLabel}-${createdAt}`,
       })
       lastDayLabel = dayLabel
     }
-
-    items.push({
-      type: 'group',
-      group,
-      key: `group-${group.messages.map((message) => message.id).join('-')}`,
-    })
   }
 
+  const flushUserMessages = () => {
+    if (pendingUserMessages.length === 0) return
+    for (const group of groupMessages(pendingUserMessages)) {
+      const firstMessage = group.messages[0]!
+      pushDayIfNeeded(firstMessage.created_at)
+      items.push({
+        type: 'group',
+        group,
+        key: `group-${group.messages.map((message) => message.id).join('-')}`,
+      })
+    }
+    pendingUserMessages = []
+  }
+
+  for (const message of messages) {
+    if (isSystemChatMessage(message)) {
+      flushUserMessages()
+      pushDayIfNeeded(message.created_at)
+      items.push({
+        type: 'system',
+        message,
+        key: `system-${message.id}`,
+      })
+      continue
+    }
+
+    pendingUserMessages.push(message)
+  }
+
+  flushUserMessages()
   return items
 }
 
@@ -199,4 +254,12 @@ export function aggregateReactions(
 
 export function isDuplicateReactionError(error: { code?: string } | null): boolean {
   return error?.code === '23505'
+}
+
+export function formatPlayerList(players: string[]): string {
+  const cleaned = players.map((name) => name.trim()).filter(Boolean)
+  if (cleaned.length === 0) return 'Someone'
+  if (cleaned.length === 1) return cleaned[0]!
+  if (cleaned.length === 2) return `${cleaned[0]} & ${cleaned[1]}`
+  return `${cleaned.slice(0, -1).join(', ')} & ${cleaned[cleaned.length - 1]}`
 }

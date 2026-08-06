@@ -15,6 +15,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
+import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -327,6 +328,7 @@ async function runSync(): Promise<{
         })
       } else {
         pointsRecalculated += 1
+        await tryPostMatchMoments(supabase, match.id, 'sync-scores')
       }
     }
   }

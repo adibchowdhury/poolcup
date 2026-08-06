@@ -13,6 +13,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
+import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -183,6 +184,12 @@ async function finalizeForceClosedMatch(
     }
     return 'rpc_error'
   }
+
+  await tryPostMatchMoments(
+    supabase,
+    match.id,
+    'reconcile-stale-matches:force-close',
+  )
 
   try {
     await sendOpsNtfy(ntfyMessage)
@@ -413,6 +420,12 @@ async function runReconcile(): Promise<{
         }
         continue
       }
+
+      await tryPostMatchMoments(
+        supabase,
+        match.id,
+        'reconcile-stale-matches',
+      )
 
       finalized += 1
       const score = `${update.result_team1}-${update.result_team2}`

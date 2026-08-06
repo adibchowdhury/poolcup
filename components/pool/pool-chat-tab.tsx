@@ -26,6 +26,7 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
+import { ChatSystemMoment } from '@/components/pool/chat-system-moment'
 
 export type PoolChatMemberProfile = {
   displayName: string
@@ -465,7 +466,7 @@ export function PoolChatTab({
 
     const { data, error } = await supabase
       .from('pool_messages')
-      .select('id, pool_id, user_id, content, created_at')
+      .select('id, pool_id, user_id, content, created_at, message_type, metadata')
       .eq('pool_id', poolId)
       .order('created_at', { ascending: true })
 
@@ -625,7 +626,7 @@ export function PoolChatTab({
         user_id: currentUserId,
         content,
       })
-      .select('id, pool_id, user_id, content, created_at')
+      .select('id, pool_id, user_id, content, created_at, message_type, metadata')
       .single()
 
     setSending(false)
@@ -837,6 +838,8 @@ export function PoolChatTab({
               chatListItems.map((item) =>
                 item.type === 'day-divider' ? (
                   <ChatDayDivider key={item.key} label={item.label} />
+                ) : item.type === 'system' ? (
+                  <ChatSystemMoment key={item.key} message={item.message} />
                 ) : (
                   <ChatMessageGroup
                     key={item.key}

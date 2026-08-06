@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { HowItWorksDemo } from '@/components/home/how-it-works-demo'
+import { LandingChatPreview } from '@/components/landing/landing-chat-preview'
 import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
 import { LandingProfilePreview } from '@/components/landing/landing-profile-preview'
 import {
@@ -276,6 +277,8 @@ function FeatureBlock({
                 <LandingLeaderboardPreview embedded />
               ) : feature.number === '04' ? (
                 <LandingProfilePreview embedded />
+              ) : feature.number === '05' ? (
+                <LandingChatPreview embedded />
               ) : null}
             </FeatureCardShell>
           </RevealItem>
@@ -287,7 +290,7 @@ function FeatureBlock({
 
 /**
  * Five core product feature blocks for the logged-out landing page.
- * Section 01: pool walkthrough · 02: leaderboard · 04: profile identity preview.
+ * Section 01: pool walkthrough · 02: leaderboard · 04: profile · 05: pool chat.
  */
 export function CoreFeaturesSection() {
   return (

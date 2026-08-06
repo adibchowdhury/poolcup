@@ -666,28 +666,31 @@ export function LiveScoreboardCard({
   )
 }
 
-export function useFeaturedMatch() {
+export function useFeaturedMatch(eventId?: string | null) {
   const [match, setMatch] = useState<FeaturedMatch | null>(null)
   const [mode, setMode] = useState<FeaturedMatchMode | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadFeaturedMatch = useCallback(async (showLoading: boolean) => {
-    if (showLoading) setLoading(true)
-    setError(null)
+  const loadFeaturedMatch = useCallback(
+    async (showLoading: boolean) => {
+      if (showLoading) setLoading(true)
+      setError(null)
 
-    try {
-      const result = await fetchFeaturedMatch(supabase)
-      setMatch(result.match)
-      setMode(result.mode)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load match')
-      setMatch(null)
-      setMode(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      try {
+        const result = await fetchFeaturedMatch(supabase, { eventId })
+        setMatch(result.match)
+        setMode(result.mode)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load match')
+        setMatch(null)
+        setMode(null)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [eventId],
+  )
 
   useEffect(() => {
     void loadFeaturedMatch(true)
@@ -704,8 +707,15 @@ export function useFeaturedMatch() {
   return { match, mode, loading, error }
 }
 
-export function LiveScoreboard({ compact = false }: { compact?: boolean } = {}) {
-  const { match, mode, loading, error } = useFeaturedMatch()
+export function LiveScoreboard({
+  compact = false,
+  eventId = null,
+}: {
+  compact?: boolean
+  /** Scope featured match to a pool's sporting event (pool chat). */
+  eventId?: string | null
+} = {}) {
+  const { match, mode, loading, error } = useFeaturedMatch(eventId)
 
   const matchHref = match?.id ? `/match/${match.id}` : null
 

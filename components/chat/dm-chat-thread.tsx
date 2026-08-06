@@ -43,6 +43,8 @@ function toPoolShape(message: DmMessageRow): PoolChatMessage {
     user_id: message.sender_id,
     content: message.content,
     created_at: message.created_at,
+    message_type: 'user',
+    metadata: null,
   }
 }
 
@@ -447,6 +449,9 @@ export function DmChatThread({
                 if (item.type === 'day-divider') {
                   return <ChatDayDivider key={item.key} label={item.label} />
                 }
+
+                // DMs never emit system moments; skip for type exhaustiveness.
+                if (item.type === 'system') return null
 
                 const isYou = item.group.userId === currentUserId
                 return (
