@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from 'react'
 import { isReferralUuid, readPoolcupRefCookieClient } from '@/src/lib/referral'
-import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -45,21 +44,34 @@ export function WaitlistForm({
     setStatus('loading')
 
     const refRaw = readPoolcupRefCookieClient()
-    const p_ref = isReferralUuid(refRaw) ? refRaw.trim() : null
+    const ref = isReferralUuid(refRaw) ? refRaw.trim() : null
 
-    const { error } = await supabase.rpc('join_waitlist', {
-      p_email: trimmed,
-      p_ref,
-    })
+    try {
+      const response = await fetch('/api/join-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed, ref }),
+      })
 
-    if (error) {
-      console.error('join_waitlist failed:', error)
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string
+      } | null
+
+      if (!response.ok) {
+        setStatus('error')
+        setErrorMessage(
+          payload?.error ||
+            'Something went wrong. Please try again in a moment.',
+        )
+        return
+      }
+
+      setStatus('success')
+    } catch (error) {
+      console.error('join-waitlist request failed:', error)
       setStatus('error')
       setErrorMessage('Something went wrong. Please try again in a moment.')
-      return
     }
-
-    setStatus('success')
   }
 
   if (status === 'success') {
