@@ -1,63 +1,75 @@
 'use client'
 
-import {
-  Award,
-  CheckCircle2,
-  Crown,
-  Flame,
-  Medal,
-  Target,
-  TrendingUp,
-  Trophy,
-  Zap,
-} from 'lucide-react'
+import Image from 'next/image'
+import { Crown } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
-import { UserAvatarImage } from '@/components/user-avatar-image'
 import { cn } from '@/lib/utils'
+import { ACHIEVEMENT_PLACEHOLDER_IMAGE } from '@/src/lib/achievement-badge-art'
 import { xpToLevel } from '@/src/lib/levels'
 
 /**
- * Landing-only presentational clone of ProfileShowcase’s hero + badges.
+ * Landing-only presentational slice of ProfileShowcase.
  * Static example data — no auth, fetch, evaluate, or navigation.
- * (ProfileShowcase itself always fetches global rank / achievements when active.)
+ * Mirrors the redesigned hero (left avatar + name, rank top-right, XP bar)
+ * plus a compact Featured Badges row.
  */
 
 const EXAMPLE = {
-  displayName: 'Alex Rivera',
-  avatar: 'goal_keeper.png',
-  totalXp: 9_100,
-  globalRank: 1,
+  displayName: 'Pucky',
+  /** Full-body mascot — sized with object-contain so it reads in the circle. */
+  avatarSrc: '/mascot/pucky_trophy.png',
+  memberSince: 'Jan 2025',
+  /** Level 8 (floor 4,000 → next 5,200) with a clear mid-bar fill. */
+  totalXp: 4_750,
+  globalRank: 12,
   totalRanked: 2_847,
-  accuracy: 68,
-  predictionsMade: 214,
-  badgesEarned: 18,
   badges: [
     {
       id: 'welcome_aboard',
       name: 'Welcome Aboard',
-      description: 'Joined PoolCup and set up your profile.',
       xp: 50,
+      art: 'id' as const,
     },
     {
       id: 'first_steps',
       name: 'First Steps',
-      description: 'Locked in your first prediction.',
       xp: 100,
+      art: 'id' as const,
     },
     {
       id: 'picture_perfect',
       name: 'Picture Perfect',
-      description: 'Nailed an exact score.',
       xp: 250,
+      art: 'id' as const,
+    },
+    {
+      id: 'rising_star',
+      name: 'Rising Star',
+      xp: 400,
+      art: 'placeholder' as const,
     },
   ],
-  highlights: [
-    { label: 'Highest Pool Finish', value: '#1', icon: Trophy, accent: 'text-amber-300 border-amber-400/25 bg-amber-400/[0.07]' },
-    { label: 'Longest Correct Streak', value: '9 straight', icon: Flame, accent: 'text-orange-300 border-orange-400/25 bg-orange-400/[0.07]' },
-    { label: 'Pools Won', value: '4', icon: Crown, accent: 'text-purple-300 border-purple-400/25 bg-purple-400/[0.07]' },
-    { label: 'Podium Finishes', value: '11', icon: Medal, accent: 'text-sky-300 border-sky-400/25 bg-sky-400/[0.07]' },
-  ],
 } as const
+
+type BadgeRarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
+
+const RARITY_TEXT: Record<BadgeRarity, string> = {
+  Common: 'text-slate-300',
+  Rare: 'text-sky-300',
+  Epic: 'text-purple-300',
+  Legendary: 'text-amber-300',
+}
+
+function getRarity(xpValue: number): BadgeRarity {
+  if (xpValue <= 50) return 'Common'
+  if (xpValue <= 250) return 'Rare'
+  if (xpValue <= 600) return 'Epic'
+  return 'Legendary'
+}
+
+function topPercentFromRank(rank: number, total: number): number {
+  return Math.max(1, Math.min(100, Math.ceil((rank / total) * 100)))
+}
 
 type LandingProfilePreviewProps = {
   /** Nest inside a feature card — drop outer chrome (parent provides glass frame). */
@@ -68,36 +80,7 @@ export function LandingProfilePreview({
   embedded = false,
 }: LandingProfilePreviewProps) {
   const level = xpToLevel(EXAMPLE.totalXp)
-  const stats = [
-    {
-      label: 'Total XP',
-      value: EXAMPLE.totalXp.toLocaleString(),
-      icon: Zap,
-      accent:
-        'border-amber-400/25 bg-[linear-gradient(145deg,rgba(251,191,36,0.16),rgba(15,18,15,0.88))] text-amber-300',
-    },
-    {
-      label: 'Accuracy',
-      value: `${EXAMPLE.accuracy}%`,
-      icon: TrendingUp,
-      accent:
-        'border-sky-400/25 bg-[linear-gradient(145deg,rgba(56,189,248,0.15),rgba(11,18,22,0.9))] text-sky-300',
-    },
-    {
-      label: 'Badges',
-      value: EXAMPLE.badgesEarned.toLocaleString(),
-      icon: Award,
-      accent:
-        'border-purple-400/25 bg-[linear-gradient(145deg,rgba(192,132,252,0.15),rgba(17,13,22,0.9))] text-purple-300',
-    },
-    {
-      label: 'Predictions Made',
-      value: EXAMPLE.predictionsMade.toLocaleString(),
-      icon: Target,
-      accent:
-        'border-primary/25 bg-[linear-gradient(145deg,rgba(0,230,118,0.15),rgba(9,20,14,0.9))] text-primary',
-    },
-  ] as const
+  const topPct = topPercentFromRank(EXAMPLE.globalRank, EXAMPLE.totalRanked)
 
   return (
     <div
@@ -108,159 +91,148 @@ export function LandingProfilePreview({
       )}
       aria-hidden
     >
-      <div className="mx-auto w-full max-w-md space-y-3 px-2.5 pb-3 pt-8 sm:px-3 sm:pb-4 sm:pt-9">
-        {/* Hero — mirrors ProfileShowcase identity card */}
-        <section className="relative rounded-[22px] border border-primary/18 bg-[radial-gradient(circle_at_50%_0%,rgba(0,230,118,0.16),transparent_48%),linear-gradient(155deg,rgba(20,38,29,0.97),rgba(8,17,13,0.99))] px-3 pb-3 pt-[78px] shadow-[0_18px_45px_rgba(0,0,0,0.34),0_1px_0_rgba(255,255,255,0.055)_inset]">
-          <div className="absolute left-1/2 top-0 h-32 w-32 -translate-x-1/2 -translate-y-[38%]">
-            <svg className="-rotate-90" viewBox="0 0 128 128" aria-hidden>
-              <circle
-                cx="64"
-                cy="64"
-                r="58"
-                fill="rgba(8,17,13,0.98)"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="5"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="58"
-                fill="none"
-                stroke="rgb(0,230,118)"
-                strokeWidth="5"
-                strokeLinecap="round"
-                pathLength="100"
-                strokeDasharray="100"
-                strokeDashoffset={100 - level.progressPct}
-                className="drop-shadow-[0_0_7px_rgba(0,230,118,0.65)]"
-              />
-            </svg>
-            <div className="absolute inset-[13px] rounded-[19px] border border-primary/30 bg-[#0b1711] p-1 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
-              <UserAvatarImage
-                avatar={EXAMPLE.avatar}
-                customAvatarUrl={null}
-                className="h-full w-full rounded-[15px] border border-white/10"
-                imgClassName="object-contain object-bottom p-0.5"
-              />
+      <div className="mx-auto w-full max-w-md space-y-3 px-2.5 py-3 sm:px-3 sm:py-3.5">
+        {/* Hero — mirrors redesigned ProfileShowcase */}
+        <section className="relative overflow-hidden rounded-[20px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+          <div className="relative h-[88px] w-full sm:h-[96px]">
+            <Image
+              src="/background_01.png"
+              alt=""
+              fill
+              className="object-cover object-[center_35%]"
+              sizes="(max-width: 512px) 100vw, 420px"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.12),transparent_55%)]" />
+
+            {/* Global rank — top-right */}
+            <div className="absolute right-2.5 top-2.5 z-20 sm:right-3 sm:top-3">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:gap-1.5 sm:px-2.5">
+                <Crown
+                  className="h-2.5 w-2.5 shrink-0 text-primary sm:h-3 sm:w-3"
+                  aria-hidden
+                />
+                <span className="truncate font-display text-[10px] tracking-wide text-foreground sm:text-xs">
+                  <span className="sm:hidden">#{EXAMPLE.globalRank}</span>
+                  <span className="hidden sm:inline">
+                    Global Rank #{EXAMPLE.globalRank}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[8px] font-semibold tabular-nums text-primary sm:text-[9px]">
+                  Top {topPct}%
+                </span>
+              </div>
             </div>
-            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border border-primary/35 bg-[#102219] px-2 py-0.5 font-display text-xs text-primary shadow-[0_0_12px_rgba(0,230,118,0.28)]">
-              {level.level}
-            </span>
           </div>
 
-          <div className="text-center">
-            <p className="truncate font-display text-[25px] tracking-wide text-foreground">
-              {EXAMPLE.displayName}
-            </p>
+          <div className="relative px-3.5 pb-4 pt-1 sm:px-4 sm:pb-4.5">
+            <div className="relative z-10 -mt-10 flex items-end gap-3.5 sm:-mt-11 sm:gap-4">
+              <div className="relative h-[76px] w-[76px] shrink-0 sm:h-[84px] sm:w-[84px]">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static landing mascot */}
+                  <img
+                    src={EXAMPLE.avatarSrc}
+                    alt=""
+                    className="h-[92%] w-[92%] object-contain object-[center_42%]"
+                  />
+                </div>
+              </div>
 
-            <div className="mt-3 flex justify-center">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-[linear-gradient(135deg,rgba(251,191,36,0.22),rgba(15,18,12,0.92))] px-3 py-1 shadow-[0_0_18px_rgba(251,191,36,0.18)]">
-                <Crown className="h-3.5 w-3.5 text-amber-300" aria-hidden />
-                <span className="font-display text-sm tracking-wide text-amber-200">
-                  Global Rank #{EXAMPLE.globalRank}
-                </span>
-                <span className="text-[10px] tabular-nums text-amber-200/65">
-                  of {EXAMPLE.totalRanked.toLocaleString()}
-                </span>
+              <div className="min-w-0 flex-1 pb-1">
+                <p className="truncate font-display text-[20px] leading-none tracking-wide text-foreground sm:text-[24px]">
+                  {EXAMPLE.displayName}
+                </p>
+                <p className="mt-2 text-[10px] text-muted-foreground sm:text-[11px]">
+                  Member since {EXAMPLE.memberSince}
+                </p>
               </div>
             </div>
 
-            <div className="mx-auto mt-4 max-w-[330px] text-left">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-display text-lg tracking-wide text-foreground">
+            <div className="mt-4 sm:mt-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-display text-sm tracking-wide text-foreground sm:text-base">
                   Level {level.level}
                 </span>
-                <span className="text-[10px] tabular-nums text-muted-foreground">
-                  {EXAMPLE.totalXp.toLocaleString()} /{' '}
+                <span className="font-mono text-[10px] tabular-nums text-muted-foreground sm:text-[11px]">
+                  {EXAMPLE.totalXp.toLocaleString()}/
                   {level.nextLevelThreshold?.toLocaleString() ?? '—'} XP
+                  {level.nextLevelThreshold != null
+                    ? ` · ${level.xpToNext.toLocaleString()} to next`
+                    : ' · Max'}
                 </span>
               </div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-white/5 bg-black/55">
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-border bg-muted">
                 <div
-                  className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.5)]"
+                  className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.4)]"
                   style={{ width: `${level.progressPct}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-center text-[10px] font-medium text-primary/85">
-                {level.xpToNext.toLocaleString()} XP to Level {level.level + 1}
-              </p>
             </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-4 gap-1.5">
-            {stats.map((stat) => (
-              <article
-                key={stat.label}
-                className={cn(
-                  'min-w-0 rounded-xl border px-1 py-2.5 text-center shadow-[0_8px_20px_rgba(0,0,0,0.16)]',
-                  stat.accent,
-                )}
-              >
-                <stat.icon className="mx-auto h-3.5 w-3.5" aria-hidden />
-                <p className="mt-1 truncate font-display text-base leading-none tabular-nums text-foreground sm:text-lg">
-                  {stat.value}
-                </p>
-                <p className="mt-1 truncate text-[7px] font-medium uppercase tracking-[0.04em] text-muted-foreground sm:text-[8px]">
-                  {stat.label}
-                </p>
-              </article>
-            ))}
           </div>
         </section>
 
-        {/* Badge rows */}
-        <div className="space-y-2 px-0.5">
-          {EXAMPLE.badges.map((badge) => (
-            <article
-              key={badge.id}
-              className="flex items-center gap-3 rounded-[13px] border border-sky-400/35 bg-[#0c1712]/80 p-2.5 shadow-[0_0_20px_rgba(56,189,248,0.08)]"
-            >
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/40 p-0.5">
-                <AchievementBadgeArt
-                  achievementId={badge.id}
-                  alt={badge.name}
-                />
+        {/* Tab chrome — visual only (Overview active) */}
+        <div className="grid grid-cols-4 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1">
+          {(['Overview', 'Progress', 'Achievements', 'Stats'] as const).map(
+            (label, index) => (
+              <div
+                key={label}
+                className={cn(
+                  'min-w-0 rounded-lg px-1 py-1.5 text-center text-[9px] leading-tight sm:text-[10px]',
+                  index === 0
+                    ? 'bg-primary/15 font-semibold text-primary'
+                    : 'text-muted-foreground',
+                )}
+              >
+                <span className="truncate">{label}</span>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <p className="truncate text-sm font-semibold text-foreground">
-                    {badge.name}
-                  </p>
-                  <CheckCircle2
-                    className="h-3.5 w-3.5 shrink-0 text-primary"
-                    aria-hidden
-                  />
-                </div>
-                <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
-                  {badge.description}
-                </p>
-              </div>
-              <span className="shrink-0 text-[10px] font-semibold tabular-nums text-primary">
-                +{badge.xp} XP
-              </span>
-            </article>
-          ))}
+            ),
+          )}
         </div>
 
-        {/* Career highlights — matches reworded landing bullet */}
-        <div className="grid grid-cols-2 gap-2 px-0.5">
-          {EXAMPLE.highlights.map((highlight) => (
-            <article
-              key={highlight.label}
-              className={cn(
-                'rounded-[13px] border p-2.5',
-                highlight.accent,
-              )}
-            >
-              <highlight.icon className="h-3.5 w-3.5" aria-hidden />
-              <p className="mt-1.5 font-display text-lg leading-none text-foreground">
-                {highlight.value}
-              </p>
-              <p className="mt-1 text-[8px] uppercase tracking-[0.06em] text-muted-foreground">
-                {highlight.label}
-              </p>
-            </article>
-          ))}
+        {/* Featured Badges — flattened grid matching profile Overview */}
+        <div>
+          <p className="mb-2 font-display text-base tracking-wide text-foreground sm:text-lg">
+            Featured Badges
+          </p>
+          <div className="grid grid-cols-4 gap-x-2 gap-y-2">
+            {EXAMPLE.badges.map((badge) => {
+              const rarity = getRarity(badge.xp)
+              return (
+                <div
+                  key={badge.id}
+                  className="flex min-w-0 flex-col items-center text-center"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden sm:h-12 sm:w-12">
+                    {badge.art === 'placeholder' ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- static placeholder shield
+                      <img
+                        src={ACHIEVEMENT_PLACEHOLDER_IMAGE}
+                        alt={badge.name}
+                        className="block h-full w-full object-contain"
+                      />
+                    ) : (
+                      <AchievementBadgeArt
+                        achievementId={badge.id}
+                        alt={badge.name}
+                      />
+                    )}
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-[8px] font-semibold leading-tight text-foreground sm:text-[9px]">
+                    {badge.name}
+                  </p>
+                  <span
+                    className={cn(
+                      'mt-0.5 text-[7px] font-bold uppercase tracking-[0.08em]',
+                      RARITY_TEXT[rarity],
+                    )}
+                  >
+                    {rarity}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
