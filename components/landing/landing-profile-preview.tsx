@@ -2,9 +2,7 @@
 
 import Image from 'next/image'
 import { Crown } from 'lucide-react'
-import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import { cn } from '@/lib/utils'
-import { ACHIEVEMENT_PLACEHOLDER_IMAGE } from '@/src/lib/achievement-badge-art'
 import { xpToLevel } from '@/src/lib/levels'
 
 /**
@@ -15,9 +13,9 @@ import { xpToLevel } from '@/src/lib/levels'
  */
 
 const EXAMPLE = {
-  displayName: 'Pucky',
-  /** Full-body mascot — sized with object-contain so it reads in the circle. */
-  avatarSrc: '/mascot/pucky_trophy.png',
+  displayName: 'Alex Rivera',
+  /** Generic preset avatar from /public/avatars. */
+  avatarSrc: '/avatars/brown_skin_avatar.png',
   memberSince: 'Jan 2025',
   /** Level 8 (floor 4,000 → next 5,200) with a clear mid-bar fill. */
   totalXp: 4_750,
@@ -25,28 +23,28 @@ const EXAMPLE = {
   totalRanked: 2_847,
   badges: [
     {
-      id: 'welcome_aboard',
-      name: 'Welcome Aboard',
+      id: 'welcome',
+      name: 'Welcome',
       xp: 50,
-      art: 'id' as const,
+      src: '/badges/01_welcome_badge.png',
     },
     {
       id: 'first_steps',
       name: 'First Steps',
       xp: 100,
-      art: 'id' as const,
+      src: '/badges/02_first_steps_badge.png',
     },
     {
-      id: 'picture_perfect',
-      name: 'Picture Perfect',
+      id: 'pool_party',
+      name: 'Pool Party',
       xp: 250,
-      art: 'id' as const,
+      src: '/badges/03_pool_party_badge.png',
     },
     {
-      id: 'rising_star',
-      name: 'Rising Star',
+      id: 'pool_host',
+      name: 'Pool Host',
       xp: 400,
-      art: 'placeholder' as const,
+      src: '/badges/04_pool_host_badge.png',
     },
   ],
 } as const
@@ -129,11 +127,11 @@ export function LandingProfilePreview({
             <div className="relative z-10 -mt-10 flex items-end gap-3.5 sm:-mt-11 sm:gap-4">
               <div className="relative h-[76px] w-[76px] shrink-0 sm:h-[84px] sm:w-[84px]">
                 <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- static landing mascot */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static landing avatar */}
                   <img
                     src={EXAMPLE.avatarSrc}
                     alt=""
-                    className="h-[92%] w-[92%] object-contain object-[center_42%]"
+                    className="h-full w-full object-cover object-center"
                   />
                 </div>
               </div>
@@ -190,7 +188,7 @@ export function LandingProfilePreview({
           )}
         </div>
 
-        {/* Featured Badges — flattened grid matching profile Overview */}
+        {/* Featured Badges — real badge art from /public/badges */}
         <div>
           <p className="mb-2 font-display text-base tracking-wide text-foreground sm:text-lg">
             Featured Badges
@@ -204,19 +202,12 @@ export function LandingProfilePreview({
                   className="flex min-w-0 flex-col items-center text-center"
                 >
                   <div className="flex h-11 w-11 items-center justify-center overflow-hidden sm:h-12 sm:w-12">
-                    {badge.art === 'placeholder' ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- static placeholder shield
-                      <img
-                        src={ACHIEVEMENT_PLACEHOLDER_IMAGE}
-                        alt={badge.name}
-                        className="block h-full w-full object-contain"
-                      />
-                    ) : (
-                      <AchievementBadgeArt
-                        achievementId={badge.id}
-                        alt={badge.name}
-                      />
-                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static landing badge art */}
+                    <img
+                      src={badge.src}
+                      alt={badge.name}
+                      className="block h-full w-full object-contain"
+                    />
                   </div>
                   <p className="mt-1.5 line-clamp-2 text-[8px] font-semibold leading-tight text-foreground sm:text-[9px]">
                     {badge.name}
