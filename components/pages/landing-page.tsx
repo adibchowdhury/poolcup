@@ -28,6 +28,14 @@ const ACCOUNT_DELETED_QUERY_PARAM = 'accountDeleted'
 const ACCOUNT_DELETED_SESSION_KEY = 'poolcup_account_deleted'
 const ACCOUNT_DELETED_BANNER_MS = 5000
 
+const HERO_SPORT_IMAGES = [
+  '/sports/soccer.png',
+  '/sports/basketball.png',
+  '/sports/baseball.png',
+  '/sports/football.png',
+  '/sports/cricket.png',
+] as const
+
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [accountDeletedMessage, setAccountDeletedMessage] = useState(false)
@@ -104,87 +112,66 @@ export default function LandingPage() {
         {/* Hero Content */}
         <main
           id="main-content"
-          className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-28 md:pt-24 md:pb-32"
+          className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-28 md:pb-32"
         >
-          <div className="flex flex-col items-center text-center">
-            {/*
-              Title + Pucky as one tight inline unit (not a full-width row).
-              Pucky uses negative margin to cancel transparent padding in
-              pucky_hero.png (~354px art inside a 500px canvas).
-            */}
+          <div className="text-center">
+            <h1 className="font-display text-5xl leading-[0.95] tracking-wide md:text-7xl lg:text-8xl">
+              <span
+                className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
+                style={{ transitionDelay: "0ms" }}
+              >
+                YOUR SQUAD.
+              </span>
+              <span
+                className={cn("block text-[#f0f4f8]", heroReveal(isVisible))}
+                style={{ transitionDelay: "100ms" }}
+              >
+                YOUR POOL.
+              </span>
+              <span
+                className={cn(
+                  "block text-[#00e676]",
+                  heroReveal(isVisible),
+                  isVisible && "hero-glory-glow",
+                )}
+                style={{ transitionDelay: "200ms" }}
+              >
+                YOUR GLORY.
+              </span>
+            </h1>
+
             <div
               className={cn(
-                'inline-flex max-w-full flex-col items-center gap-4',
-                'md:flex-row md:items-center md:gap-0',
+                "mt-6 flex items-center justify-center md:mt-8",
                 heroReveal(isVisible),
               )}
-              style={{ transitionDelay: '0ms' }}
+              style={{ transitionDelay: "250ms" }}
             >
-              <h1
-                className={cn(
-                  'shrink-0 font-display tracking-wide text-[#f0f4f8]',
-                  'text-6xl leading-[0.92] sm:text-7xl',
-                  'md:text-left md:text-8xl md:leading-[0.9]',
-                  'lg:text-[6.75rem] lg:leading-[0.88]',
-                )}
-              >
-                <span
-                  className={cn('block', heroReveal(isVisible))}
-                  style={{ transitionDelay: '0ms' }}
-                >
-                  YOUR SQUAD.
-                </span>
-                <span
-                  className={cn('block', heroReveal(isVisible))}
-                  style={{ transitionDelay: '100ms' }}
-                >
-                  YOUR POOL.
-                </span>
-                <span
-                  className={cn(
-                    'block text-[#00e676]',
-                    heroReveal(isVisible),
-                    isVisible && 'hero-glory-glow',
-                  )}
-                  style={{ transitionDelay: '200ms' }}
-                >
-                  YOUR GLORY.
-                </span>
-              </h1>
-
-              <div
-                className={cn(
-                  'relative shrink-0',
-                  /* Mobile: smaller so title + waitlist aren't crowded */
-                  'w-[min(48vw,11rem)] sm:w-[13rem]',
-                  /* Desktop: keep current prominence */
-                  'md:w-[20rem] md:-ml-10',
-                  'lg:w-[22rem] lg:-ml-12',
-                  'xl:w-[24rem] xl:-ml-14',
-                  heroReveal(isVisible),
-                )}
-                style={{ transitionDelay: '180ms' }}
-              >
+              {HERO_SPORT_IMAGES.map((src, index) => (
                 <Image
-                  src="/mascot/pucky_hero.png"
-                  alt="Pucky the PoolCup mascot holding a trophy overhead"
-                  width={500}
-                  height={500}
-                  priority
-                  className="h-auto w-full bg-transparent object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
-                  sizes="(max-width: 640px) 11rem, (max-width: 768px) 13rem, (max-width: 1024px) 20rem, 24rem"
+                  key={src}
+                  src={src}
+                  alt=""
+                  width={128}
+                  height={128}
+                  className={cn(
+                    "h-20 w-20 object-contain md:h-28 md:w-28 lg:h-32 lg:w-32",
+                    index > 0 && "-ml-10 md:-ml-14 lg:-ml-16",
+                  )}
+                  style={{ zIndex: index }}
+                  aria-hidden
                 />
-              </div>
+              ))}
             </div>
 
             <p
               className={cn(
-                'mx-auto mt-8 max-w-xl text-lg leading-relaxed text-[#f0f4f8] md:mt-10 md:text-xl',
+                "mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#f0f4f8] md:mt-8 md:text-xl",
                 heroReveal(isVisible),
               )}
               style={{
-                transitionDelay: '300ms',
-                textShadow: '0 1px 12px rgba(0,0,0,0.9)',
+                transitionDelay: "300ms",
+                textShadow: "0 1px 12px rgba(0,0,0,0.9)",
               }}
             >
               Create prediction pools for the biggest sporting events of the year.
@@ -193,10 +180,10 @@ export default function LandingPage() {
 
             <div
               className={cn(
-                'mx-auto mt-8 w-full max-w-xl md:mt-10',
+                "mx-auto mt-8 w-full max-w-xl md:mt-10",
                 heroReveal(isVisible),
               )}
-              style={{ transitionDelay: '400ms' }}
+              style={{ transitionDelay: "400ms" }}
             >
               <WaitlistForm id="waitlist" variant="hero" />
             </div>
