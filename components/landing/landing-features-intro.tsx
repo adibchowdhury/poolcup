@@ -25,23 +25,18 @@ export function LandingFeaturesIntro() {
         }}
       />
 
-      <div className="relative z-[1] mx-auto max-w-3xl px-6 text-center">
+      <div className="relative z-[1] mx-auto max-w-5xl px-5 text-center sm:px-6">
         <ScrollRevealGroup>
           <RevealItem index={0}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
-              Why PoolCup
-            </p>
-          </RevealItem>
-          <RevealItem index={1}>
             <h2
               id="features-intro-heading"
-              className="mt-3 font-display text-3xl leading-[1.15] tracking-wide text-[#f0f4f8] sm:text-4xl md:text-[2.4rem] md:leading-[1.12]"
+              className="mx-auto whitespace-nowrap font-display leading-none tracking-wide text-[#f0f4f8] text-[clamp(1.8rem,5.8vw,3.5rem)]"
             >
               Everything you need to play.
             </h2>
           </RevealItem>
-          <RevealItem index={2}>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[#728d9c] sm:text-base">
+          <RevealItem index={1}>
+            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#728d9c] sm:text-base">
               The tools that make every prediction more fun with your friends.
             </p>
           </RevealItem>
