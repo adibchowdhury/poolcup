@@ -694,17 +694,24 @@
 
 .landing-hook-phone {
   animation: landing-hook-float 5.5s ease-in-out infinite;
+  /* Keep the float on the wrapper; promote a clean compositing layer so the
+     rotated mockup doesn't soft-blur from subpixel filtering. */
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .landing-hook-pucky {
-  /* Peek: head/upper body out past the phone; lower half stays under it */
-  transform: translate3d(-4%, -18%, 0) rotate(-5deg);
+  /*
+    Peek: light tuck into the bezel + lift so head/shoulders clear — still
+    z-0 under the phone body, overlapping with no side gap.
+  */
+  transform: translate3d(0%, -24%, 0) rotate(-5deg);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .landing-hook-visual:hover .landing-hook-pucky {
-  /* Peek a bit further up/out on hover */
-  transform: translate3d(-10%, -28%, 0) rotate(-7deg);
+  /* Peek a bit further up/out on hover — still overlapping the edge */
+  transform: translate3d(-4%, -30%, 0) rotate(-7deg);
 }
 
 .landing-hook-sparkle {
@@ -732,7 +739,7 @@
   }
 
   .landing-hook-visual:hover .landing-hook-pucky {
-    transform: translate3d(-4%, -18%, 0) rotate(-5deg);
+    transform: translate3d(0%, -24%, 0) rotate(-5deg);
   }
 
   .landing-hook-sparkle {
@@ -761,9 +768,14 @@
     box-shadow: none;
   }
 
-  .landing-hook-phone,
+  .landing-hook-phone {
+    /* Keep slight tilt; drop motion only */
+    transform: rotate(-4deg) !important;
+    transition: none !important;
+  }
+
   .landing-hook-pucky {
-    transform: none !important;
+    transform: translate3d(0%, -24%, 0) rotate(-5deg) !important;
     transition: none !important;
   }
 

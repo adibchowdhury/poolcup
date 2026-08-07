@@ -11,60 +11,69 @@ type LandingHookVisualProps = {
  * Bare phone mockup + Pucky peeking from behind the phone.
  * No card/panel/background behind the phone — section bg shows through.
  * Motion: transform/opacity only.
+ *
+ * Size model: the PHONE has an explicit large width; equal peek gutters sit
+ * outside it so the combined phone+Pucky unit stays centered.
  */
 export function LandingHookVisual({ className }: LandingHookVisualProps) {
   return (
     <div
       className={cn(
-        'landing-hook-visual group relative mx-auto w-full max-w-[18rem] bg-transparent sm:max-w-[20rem] md:max-w-[22rem]',
+        'landing-hook-visual group relative mx-auto flex w-full max-w-full justify-center bg-transparent',
         className,
       )}
     >
-      <span
-        aria-hidden
-        className="landing-hook-sparkle pointer-events-none absolute top-[8%] right-[4%] z-[3] h-1.5 w-1.5 rounded-full bg-[#00e676]/80"
-      />
-      <span
-        aria-hidden
-        className="landing-hook-sparkle landing-hook-sparkle--delayed pointer-events-none absolute top-[22%] left-[2%] z-[3] h-1 w-1 rounded-full bg-[#00e676]/55"
-      />
-
       {/*
-        Single float unit = phone bounds. Pucky is positioned in the phone's
-        coordinate space (behind it), not in a wider outer card.
+        Composition box = phone + equal L/R gutters (~18% of phone).
+        Phone widths are explicit so the grid column / % padding can't shrink it.
       */}
-      <div className="landing-hook-phone relative mx-auto w-full origin-center bg-transparent">
-        {/*
-          Pucky tucked behind the phone's lower-left edge.
-          Overlaps the phone so part of him is covered (z-0 under phone z-10).
-        */}
-        <div
-          className={cn(
-            'landing-hook-pucky pointer-events-none absolute z-0',
-            /* Peek from lower-left: head/upper body clear of the phone edge */
-            'bottom-[14%] left-[-22%] w-[58%] sm:bottom-[16%] sm:left-[-20%] sm:w-[56%]',
-          )}
-        >
+      <div
+        className={cn(
+          'relative w-full',
+          /* Mobile: near-full column; lean % gutters for peek only */
+          'max-w-[min(100%,calc(36rem+2*3.5rem))] px-[9%]',
+          /* Desktop: phone ~44–48rem + minimal equal peek gutters */
+          'md:max-w-[calc(44rem+2*4rem)] md:px-[4rem]',
+          'lg:max-w-[calc(48rem+2*4.25rem)] lg:px-[4.25rem]',
+        )}
+      >
+        <span
+          aria-hidden
+          className="landing-hook-sparkle pointer-events-none absolute top-[8%] right-[16%] z-[3] h-1.5 w-1.5 rounded-full bg-[#00e676]/80"
+        />
+        <span
+          aria-hidden
+          className="landing-hook-sparkle landing-hook-sparkle--delayed pointer-events-none absolute top-[22%] left-[12%] z-[3] h-1 w-1 rounded-full bg-[#00e676]/55"
+        />
+
+        <div className="landing-hook-phone relative mx-auto w-full origin-center bg-transparent">
+          <div
+            className={cn(
+              'landing-hook-pucky pointer-events-none absolute z-0',
+              'bottom-[9%] left-[-18%] w-[57%] sm:bottom-[11%] sm:left-[-17%] sm:w-[55%]',
+            )}
+          >
+            <Image
+              src="/mascot/pucky_peeking.webp"
+              alt=""
+              width={900}
+              height={600}
+              className="h-auto w-full bg-transparent object-contain"
+              sizes="(max-width: 768px) 65vw, 16rem"
+              aria-hidden
+            />
+          </div>
+
           <Image
-            src="/mascot/pucky_peeking.webp"
-            alt=""
-            width={900}
-            height={600}
-            className="h-auto w-full bg-transparent object-contain"
-            sizes="(max-width: 768px) 40vw, 10rem"
-            aria-hidden
+            src="/dashboard_mockup.webp"
+            alt="PoolCup app on a phone — live pools and match predictions"
+            width={2000}
+            height={3000}
+            className="relative z-10 h-auto w-full max-w-none bg-transparent object-contain [image-rendering:auto]"
+            sizes="(max-width: 768px) 90vw, (max-width: 1024px) 44rem, 48rem"
+            priority={false}
           />
         </div>
-
-        <Image
-          src="/dashboard_mockup.webp"
-          alt="PoolCup app on a phone — live pools and match predictions"
-          width={900}
-          height={1350}
-          className="relative z-10 h-auto w-full bg-transparent object-contain"
-          sizes="(max-width: 768px) 75vw, 20rem"
-          priority={false}
-        />
       </div>
 
       <span className="sr-only">

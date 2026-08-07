@@ -218,7 +218,7 @@ export default function LandingPage() {
         />
 
         <div className="relative z-[1] mx-auto max-w-7xl px-6">
-          <ScrollRevealGroup className="flex flex-col gap-12 md:grid md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
+          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.5fr)] md:items-center md:gap-6 lg:gap-8 xl:gap-10">
             <div className="text-center md:text-left">
               <RevealItem index={0}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
@@ -240,31 +240,9 @@ export default function LandingPage() {
                   rights to back it up.
                 </p>
               </RevealItem>
-              <RevealItem index={3}>
-                <ul className="mt-7 flex flex-wrap items-center justify-center gap-2.5 md:justify-start">
-                  {(
-                    [
-                      { icon: '🏆', label: 'Live Leaderboards' },
-                      { icon: '💬', label: 'Pool Chat' },
-                      { icon: '🎯', label: 'Exact Score Predictions' },
-                    ] as const
-                  ).map((pill) => (
-                    <li
-                      key={pill.label}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[#00e676]/25 bg-[#00e676]/8 px-3 py-1.5 text-[12px] font-medium text-[#f0f4f8]/95 sm:text-[13px]"
-                    >
-                      <span aria-hidden>{pill.icon}</span>
-                      <span>{pill.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </RevealItem>
             </div>
 
-            <RevealItem
-              index={4}
-              className="mx-auto w-full md:mx-0 md:ml-auto"
-            >
+            <RevealItem index={3} className="mx-auto w-full min-w-0">
               <LandingHookVisual />
             </RevealItem>
           </ScrollRevealGroup>
