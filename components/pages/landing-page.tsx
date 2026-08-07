@@ -196,7 +196,7 @@ export default function LandingPage() {
 
       <LandingFinalCtaSection />
 
-      <SiteFooter backgroundClass="bg-[#0d1520]" />
+      <SiteFooter backgroundClass="bg-background" />
     </div>
   )
 }

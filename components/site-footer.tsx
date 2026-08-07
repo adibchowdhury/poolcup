@@ -79,7 +79,7 @@ type SiteFooterProps = {
   backgroundClass?: string
 }
 
-export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps) {
+export function SiteFooter({ backgroundClass = 'bg-background' }: SiteFooterProps) {
   const year = new Date().getFullYear()
 
   const scrollToTop = () => {
@@ -89,7 +89,7 @@ export function SiteFooter({ backgroundClass = 'bg-[#0d1520]' }: SiteFooterProps
 
   return (
     <footer className={`${backgroundClass} font-sans text-[#f0f4f8]`}>
-      <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#111a27]">
+      <div className="border-t border-[rgba(255,255,255,0.08)] bg-background">
         <div className="mx-auto grid max-w-6xl gap-12 px-5 py-14 sm:py-16 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
             <Link

@@ -185,11 +185,14 @@ function FeatureBlock({
   feature,
   reverse,
   compactTop = false,
+  blendIntoCta = false,
 }: {
   feature: CoreFeature
   reverse: boolean
   /** First block after the features intro — avoid stacking huge top padding. */
   compactTop?: boolean
+  /** Last block — fade bottom edge into the final CTA seam color. */
+  blendIntoCta?: boolean
 }) {
   const headingId = `core-feature-${feature.number}`
   const { cardGlow: accent, cardGlowRgb: accentRgb } = feature
@@ -197,11 +200,21 @@ function FeatureBlock({
   return (
     <section
       className={cn(
-        'bg-[#090f18]',
+        'relative',
+        !blendIntoCta && 'bg-[#090f18]',
         compactTop
           ? 'pt-8 pb-12 md:pt-12 md:pb-28'
           : 'py-12 md:py-28',
       )}
+      style={
+        blendIntoCta
+          ? {
+              /* Solid features hue → CTA seam `#0d121a` (matches CTA top). */
+              background:
+                'linear-gradient(to bottom, #090f18 0%, #090f18 70%, #0d121a 100%)',
+            }
+          : undefined
+      }
       aria-labelledby={headingId}
     >
       <div className="mx-auto max-w-7xl px-6">
@@ -315,6 +328,7 @@ export function CoreFeaturesSection() {
           feature={feature}
           reverse={index % 2 === 1}
           compactTop={index === 0}
+          blendIntoCta={index === CORE_FEATURES.length - 1}
         />
       ))}
     </div>
