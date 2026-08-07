@@ -1,0 +1,61 @@
+01_welcome_badge.png              → Welcome
+02_first_steps_badge.png          → First Steps
+03_pool_party_badge.png           → Pool Party
+04_pool_host_badge.png            → Pool Host
+05_profile_perfect_badge.png      → Profile Perfect
+06_picture_perfect_badge.png      → Picture Perfect
+07_bullseye_badge.png             → Bullseye
+08_sharpshooter_badge.png         → Sharpshooter
+09_deadeye_badge.png              → Deadeye
+10_oracle_badge.png               → Oracle
+11_century_club_badge.png         → Century Club
+12_prediction_machine_badge.png   → Prediction Machine
+13_no_days_off_badge.png          → No Days Off
+14_heating_up_badge.png           → Heating Up
+15_on_fire_badge.png              → On Fire
+16_unstoppable_badge.png          → Unstoppable
+17_perfect_day_badge.png          → Perfect Day
+18_perfect_week_badge.png         → Perfect Week
+19_called_it_badge.png            → Called It
+20_giant_killer_badge.png         → Giant Killer
+21_against_the_crowd_badge.png    → Against the Crowd
+22_nobody_believed_me_badge.png   → Nobody Believed Me
+23_nail_biter_badge.png           → Nail Biter
+24_draw_master_badge.png          → Draw Master
+25_first_podium_badge.png         → First Podium
+26_champion_badge.png             → Champion
+27_repeat_champion_badge.png      → Repeat Champion
+28_trophy_cabinet_badge.png       → Trophy Cabinet
+29_dynasty_badge.png              → Dynasty
+30_big_fish_badge.png             → Big Fish
+31_shark_tank_badge.png           → Shark Tank
+32_photo_finish_badge.png         → Photo Finish
+33_say_hello_badge.png            → Say Hello
+34_talk_smack_badge.png           → Talk Smack
+35_crowd_favorite_badge.png       → Crowd Favorite
+36_fan_favorite_badge.png         → Fan Favorite
+37_recruiter_badge.png            → Recruiter
+38_squad_builder_badge.png        → Squad Builder
+39_pack_leader_badge.png          → Pack Leader
+40_soccer_fan_badge.png           → Soccer Fan
+41_hooper_badge.png               → Hooper
+42_sunday_expert_badge.png        → Sunday Expert
+43_puck_head_badge.png            → Puck Head
+44_home_run_badge.png             → Home Run
+45_ace_badge.png                  → Ace
+46_all_rounder_badge.png          → All-Rounder
+47_sports_addict_badge.png        → Sports Addict
+48_rookie_badge.png               → Rookie
+49_rising_star_badge.png          → Rising Star
+50_contender_badge.png            → Contender
+51_elite_badge.png                → Elite
+52_legend_badge.png               → Legend
+53_poolcup_royalty_badge.png      → PoolCup Royalty
+54_lucky_guess_badge.png          → Lucky Guess
+55_comeback_kid_badge.png         → Comeback Kid
+56_clutch_badge.png               → Clutch
+57_early_bird_badge.png           → Early Bird
+58_last_minute_badge.png          → Contrarian... wait — 58 is Last Minute
+58_last_minute_badge.png          → Last Minute
+59_contrarian_badge.png           → Contrarian
+60_clean_sweep_badge.png          → Clean Sweep

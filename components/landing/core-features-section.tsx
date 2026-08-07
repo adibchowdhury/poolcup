@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { HowItWorksDemo } from '@/components/home/how-it-works-demo'
 import { LandingChatPreview } from '@/components/landing/landing-chat-preview'
 import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
+import { LandingPoolCustomizePreview } from '@/components/landing/landing-pool-customize-preview'
 import { LandingProfilePreview } from '@/components/landing/landing-profile-preview'
 import {
   RevealItem,
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils'
 
 type CoreFeature = {
   number: string
-  /** Category label after "FEATURE ·" (e.g. PREDICTION POOLS). */
+  /** Eyebrow/category label (e.g. Prediction Pools). */
   category: string
   title: string
   description: string
@@ -55,15 +56,15 @@ const CORE_FEATURES: CoreFeature[] = [
   },
   {
     number: '03',
-    category: 'Squad Identity & Customization',
-    title: 'Make it YOUR squad.',
+    category: 'Pool Customization & Control',
+    title: 'Your pool, your rules.',
     description:
-      'Name your squad, pick your colors, add your emblem, and even set your own scoring rules. No other prediction app lets you make it truly yours.',
+      'Name your pool, choose your colors, and set your own scoring rules. As the host, you decide how your pool looks and plays — and keep everyone in the loop with announcements.',
     bullets: [
-      'Custom squad name, colors & emblem',
+      'Custom pool name & colors',
       'Set your own scoring rules',
-      'Commissioner admin tools',
-      'Announcements & team branding',
+      'Host controls & member management',
+      'Announcements to keep your pool in the loop',
     ],
     cardGlow: '#8B5CF6',
     cardGlowRgb: '139,92,246',
@@ -217,7 +218,7 @@ function FeatureBlock({
 
                 <div className="min-w-0 pt-1.5">
                   <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#728d9c] sm:text-xs">
-                    Feature · {feature.category}
+                    {feature.category}
                   </p>
                   <span
                     className="mt-1.5 block h-px w-10"
@@ -275,6 +276,8 @@ function FeatureBlock({
                 <HowItWorksDemo embedded />
               ) : feature.number === '02' ? (
                 <LandingLeaderboardPreview embedded />
+              ) : feature.number === '03' ? (
+                <LandingPoolCustomizePreview embedded />
               ) : feature.number === '04' ? (
                 <LandingProfilePreview embedded />
               ) : feature.number === '05' ? (
@@ -290,7 +293,8 @@ function FeatureBlock({
 
 /**
  * Five core product feature blocks for the logged-out landing page.
- * Section 01: pool walkthrough · 02: leaderboard · 04: profile · 05: pool chat.
+ * Section 01: pool walkthrough · 02: leaderboard · 03: pool customize ·
+ * 04: profile · 05: pool chat.
  */
 export function CoreFeaturesSection() {
   return (
