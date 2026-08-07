@@ -32,9 +32,9 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
           'relative w-full',
           /* Mobile: near-full column; lean % gutters for peek only */
           'max-w-[min(100%,calc(36rem+2*3.5rem))] px-[9%]',
-          /* Desktop: phone ~44–48rem + minimal equal peek gutters */
-          'md:max-w-[calc(44rem+2*4rem)] md:px-[4rem]',
-          'lg:max-w-[calc(48rem+2*4.25rem)] lg:px-[4.25rem]',
+          /* Desktop: moderate phone ~20–22rem (comfortable, not dominant) */
+          'md:max-w-[calc(20rem+2*3.5rem)] md:px-[3.5rem]',
+          'lg:max-w-[calc(22rem+2*3.75rem)] lg:px-[3.75rem]',
         )}
       >
         <span
@@ -70,7 +70,7 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
             width={2000}
             height={3000}
             className="relative z-10 h-auto w-full max-w-none bg-transparent object-contain [image-rendering:auto]"
-            sizes="(max-width: 768px) 90vw, (max-width: 1024px) 44rem, 48rem"
+            sizes="(max-width: 768px) 90vw, (max-width: 1024px) 20rem, 22rem"
             priority={false}
           />
         </div>

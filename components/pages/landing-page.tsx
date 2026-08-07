@@ -218,7 +218,7 @@ export default function LandingPage() {
         />
 
         <div className="relative z-[1] mx-auto max-w-7xl px-6">
-          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.5fr)] md:items-center md:gap-6 lg:gap-8 xl:gap-10">
+          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] md:items-center md:gap-10 lg:gap-12 xl:gap-14">
             <div className="text-center md:text-left">
               <RevealItem index={0}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
