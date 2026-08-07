@@ -192,7 +192,7 @@ function FeatureBlock({
 
   return (
     <section
-      className="bg-[#090f18] py-20 md:py-28"
+      className="bg-[#090f18] py-12 md:py-28"
       aria-labelledby={headingId}
     >
       <div className="mx-auto max-w-7xl px-6">
