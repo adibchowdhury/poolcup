@@ -1,13 +1,7 @@
 import type { Metadata, Viewport } from 'next'
+import { Inter, Space_Mono, Teko } from 'next/font/google'
 import { headers } from 'next/headers'
 import { Suspense } from 'react'
-import '@fontsource/bebas-neue'
-import '@fontsource/dm-sans/400.css'
-import '@fontsource/dm-sans/500.css'
-import '@fontsource/dm-sans/600.css'
-import '@fontsource/dm-sans/700.css'
-import '@fontsource/space-mono/400.css'
-import '@fontsource/space-mono/700.css'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
@@ -19,6 +13,30 @@ import { AuthProvider } from '@/src/lib/auth-context'
 import { DashboardTabProvider } from '@/src/lib/dashboard-tab-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
 import { siteUrl } from '@/src/lib/site'
+
+/** UI / body — buttons, nav, labels, descriptions, settings. */
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+/** Display / brand — page titles, section headings, pool & match names. */
+const teko = Teko({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-teko',
+  display: 'swap',
+})
+
+/** Functional numbers — scores, timers (kept alongside Inter/Teko). */
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-space-mono',
+  display: 'swap',
+})
 
 const defaultTitle = 'PoolCup - World Cup 2026 Prediction Pool'
 const defaultDescription =
@@ -60,7 +78,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html
+      lang="en"
+      className={`${inter.variable} ${teko.variable} ${spaceMono.variable} bg-background`}
+    >
       <body
         className="font-sans antialiased bg-background text-[#f0f4f8]"
         suppressHydrationWarning

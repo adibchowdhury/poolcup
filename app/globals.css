@@ -63,9 +63,10 @@
 }
 
 @theme inline {
-  --font-sans: 'DM Sans', sans-serif;
-  --font-mono: 'Space Mono', monospace;
-  --font-display: 'Bebas Neue', sans-serif;
+  /* Inter / Teko / Space Mono via next/font CSS variables on <html> */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+  --font-display: var(--font-teko), ui-sans-serif, sans-serif;
   --color-app-background: var(--app-background);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -111,15 +112,16 @@
   }
 }
 
-/* Bebas Neue for display elements */
+/* Teko for display / brand headings (semibold — thin weights look weak) */
 .font-display {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: var(--font-display);
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-/* Footer column titles (reference SiteFooter — DM Sans caps, not Bebas) */
+/* Footer column titles — Inter caps (UI token), not display Teko */
 .font-footer-heading {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.25;
@@ -129,7 +131,7 @@
 
 /* Space Mono for scores and timers */
 .font-mono {
-  font-family: 'Space Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* Score input styling */
