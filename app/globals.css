@@ -722,6 +722,51 @@
   animation-delay: 1.1s;
 }
 
+@keyframes landing-hook-ball-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+.landing-hook-ball {
+  animation: landing-hook-ball-float 4.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+.landing-hook-ball--a {
+  animation-duration: 5.2s;
+  animation-delay: 0s;
+}
+
+.landing-hook-ball--b {
+  animation-duration: 4.6s;
+  animation-delay: 0.4s;
+}
+
+.landing-hook-ball--c {
+  animation-duration: 5.6s;
+  animation-delay: 0.8s;
+}
+
+.landing-hook-ball--d {
+  animation-duration: 4.4s;
+  animation-delay: 1.1s;
+}
+
+.landing-hook-ball--e {
+  animation-duration: 5s;
+  animation-delay: 0.2s;
+}
+
+.landing-hook-ball--f {
+  animation-duration: 4.9s;
+  animation-delay: 0.65s;
+}
+
 .landing-hook-shape {
   position: absolute;
   border: 1px solid rgba(0, 230, 118, 0.12);
@@ -747,6 +792,10 @@
     opacity: 0.5;
     transform: none;
   }
+
+  .landing-hook-ball {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -762,7 +811,8 @@
   .animate-join-chat-bounce,
   .landing-hook-phone,
   .landing-hook-pucky,
-  .landing-hook-sparkle {
+  .landing-hook-sparkle,
+  .landing-hook-ball {
     animation: none;
     opacity: 1;
     box-shadow: none;

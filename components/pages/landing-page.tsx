@@ -7,13 +7,10 @@ import { HeroBackgroundCarousel } from "@/components/landing/hero-background-car
 import { HeroConfetti } from "@/components/landing/hero-confetti"
 import { LandingNavbar } from "@/components/landing/landing-navbar"
 import { CoreFeaturesSection } from "@/components/landing/core-features-section"
-import { LandingHookVisual } from "@/components/landing/landing-hook-visual"
+import { LandingFinalCtaSection } from "@/components/landing/landing-final-cta-section"
+import { LandingSportsSection } from "@/components/landing/landing-sports-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
 import { WaitlistForm } from "@/components/landing/waitlist-form"
-import {
-  RevealItem,
-  ScrollRevealGroup,
-} from "@/components/landing/scroll-reveal"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 
@@ -193,63 +190,11 @@ export default function LandingPage() {
 
       <PlatformTrustBar />
 
-      {/* ===== POST-HERO HOOK ===== */}
-      <section
-        id="how-it-works"
-        className="relative overflow-hidden bg-[#0d1520] pt-28 pb-20 md:pt-36 md:pb-28"
-        aria-labelledby="hook-heading"
-      >
-        {/* Faint depth — gradients + light geometry only (no blur/filters) */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_15%_20%,rgba(0,230,118,0.07)_0%,transparent_55%),radial-gradient(ellipse_60%_50%_at_90%_75%,rgba(59,130,246,0.05)_0%,transparent_50%)]"
-        />
-        <div
-          aria-hidden
-          className="landing-hook-shape top-[18%] right-[8%] hidden h-24 w-24 rounded-full md:block"
-        />
-        <div
-          aria-hidden
-          className="landing-hook-shape bottom-[22%] left-[6%] hidden h-16 w-16 rotate-12 rounded-lg md:block"
-        />
-        <div
-          aria-hidden
-          className="landing-hook-shape top-[42%] left-[42%] hidden h-10 w-10 -rotate-6 rounded-md border-[rgba(255,255,255,0.06)] md:block"
-        />
-
-        <div className="relative z-[1] mx-auto max-w-7xl px-6">
-          <ScrollRevealGroup className="flex flex-col gap-10 md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] md:items-center md:gap-10 lg:gap-12 xl:gap-14">
-            <div className="text-center md:text-left">
-              <RevealItem index={0}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00e676] sm:text-xs">
-                  One place for everything
-                </p>
-              </RevealItem>
-              <RevealItem index={1}>
-                <h2
-                  id="hook-heading"
-                  className="mt-4 font-display text-3xl leading-[1.15] tracking-wide text-[#f0f4f8] sm:text-4xl md:text-[2.6rem] md:leading-[1.12]"
-                >
-                  Make Every Match Matter.
-                </h2>
-              </RevealItem>
-              <RevealItem index={2}>
-                <p className="mt-5 text-base leading-relaxed text-[#728d9c] md:text-lg">
-                  Predict matches with your friends and let PoolCup handle the
-                  rest — live scoring, instant leaderboards, and the bragging
-                  rights to back it up.
-                </p>
-              </RevealItem>
-            </div>
-
-            <RevealItem index={3} className="mx-auto w-full min-w-0">
-              <LandingHookVisual />
-            </RevealItem>
-          </ScrollRevealGroup>
-        </div>
-      </section>
+      <LandingSportsSection />
 
       <CoreFeaturesSection />
+
+      <LandingFinalCtaSection />
 
       <SiteFooter backgroundClass="bg-[#0d1520]" />
     </div>

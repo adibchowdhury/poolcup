@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { HowItWorksDemo } from '@/components/home/how-it-works-demo'
 import { LandingChatPreview } from '@/components/landing/landing-chat-preview'
+import { LandingFeaturesIntro } from '@/components/landing/landing-features-intro'
 import { LandingLeaderboardPreview } from '@/components/landing/landing-leaderboard-preview'
 import { LandingPoolCustomizePreview } from '@/components/landing/landing-pool-customize-preview'
 import { LandingProfilePreview } from '@/components/landing/landing-profile-preview'
@@ -299,6 +300,7 @@ function FeatureBlock({
 export function CoreFeaturesSection() {
   return (
     <div id="features">
+      <LandingFeaturesIntro />
       {CORE_FEATURES.map((feature, index) => (
         <FeatureBlock
           key={feature.number}

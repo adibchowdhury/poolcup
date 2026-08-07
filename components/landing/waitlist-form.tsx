@@ -11,8 +11,8 @@ function isValidEmail(value: string): boolean {
 }
 
 type WaitlistFormProps = {
-  /** Visual variant: hero (dark overlay) vs coming-soon page. */
-  variant?: 'hero' | 'coming-soon'
+  /** Visual variant: hero/cta (dark overlay) vs coming-soon page. */
+  variant?: 'hero' | 'cta' | 'coming-soon'
   className?: string
   id?: string
 }
@@ -28,7 +28,7 @@ export function WaitlistForm({
   )
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const isHero = variant === 'hero'
+  const isHero = variant === 'hero' || variant === 'cta'
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()

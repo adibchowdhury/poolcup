@@ -3,17 +3,54 @@
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
+/** Subtle multi-sport cue — scattered around the phone, not crowded. */
+const FLOATING_SPORT_BALLS = [
+  {
+    src: '/sports/soccer.png',
+    className:
+      'left-[-2%] top-[6%] w-9 sm:w-11 md:left-[-6%] md:top-[4%] md:w-12',
+    delayClass: 'landing-hook-ball--a',
+  },
+  {
+    src: '/sports/basketball.png',
+    className:
+      'right-[-1%] top-[12%] w-10 sm:w-12 md:right-[-5%] md:top-[10%] md:w-12',
+    delayClass: 'landing-hook-ball--b',
+  },
+  {
+    src: '/sports/football.png',
+    className:
+      'left-[-4%] top-[48%] w-10 sm:w-12 md:left-[-10%] md:top-[46%] md:w-14',
+    delayClass: 'landing-hook-ball--c',
+  },
+  {
+    src: '/sports/hockey.png',
+    className:
+      'right-[-3%] top-[42%] w-8 sm:w-10 md:right-[-8%] md:top-[40%] md:w-11',
+    delayClass: 'landing-hook-ball--d',
+  },
+  {
+    src: '/sports/baseball.png',
+    className:
+      'left-[2%] bottom-[8%] w-8 sm:w-9 md:left-[-2%] md:bottom-[6%] md:w-10',
+    delayClass: 'landing-hook-ball--e',
+  },
+  {
+    src: '/sports/cricket.png',
+    className:
+      'right-[0%] bottom-[14%] w-9 sm:w-10 md:right-[-4%] md:bottom-[12%] md:w-11',
+    delayClass: 'landing-hook-ball--f',
+  },
+] as const
+
 type LandingHookVisualProps = {
   className?: string
 }
 
 /**
- * Bare phone mockup + Pucky peeking from behind the phone.
+ * Bare phone mockup + Pucky peeking + subtle floating sport balls.
  * No card/panel/background behind the phone — section bg shows through.
  * Motion: transform/opacity only.
- *
- * Size model: the PHONE has an explicit large width; equal peek gutters sit
- * outside it so the combined phone+Pucky unit stays centered.
  */
 export function LandingHookVisual({ className }: LandingHookVisualProps) {
   return (
@@ -23,16 +60,12 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
         className,
       )}
     >
-      {/*
-        Composition box = phone + equal L/R gutters (~18% of phone).
-        Phone widths are explicit so the grid column / % padding can't shrink it.
-      */}
       <div
         className={cn(
           'relative w-full',
-          /* Mobile: near-full column; lean % gutters for peek only */
+          /* Mobile: near-full column; lean % gutters for peek + balls */
           'max-w-[min(100%,calc(36rem+2*3.5rem))] px-[9%]',
-          /* Desktop: moderate phone ~20–22rem (comfortable, not dominant) */
+          /* Desktop: moderate phone ~20–22rem */
           'md:max-w-[calc(20rem+2*3.5rem)] md:px-[3.5rem]',
           'lg:max-w-[calc(22rem+2*3.75rem)] lg:px-[3.75rem]',
         )}
@@ -45,6 +78,22 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
           aria-hidden
           className="landing-hook-sparkle landing-hook-sparkle--delayed pointer-events-none absolute top-[22%] left-[12%] z-[3] h-1 w-1 rounded-full bg-[#00e676]/55"
         />
+
+        {FLOATING_SPORT_BALLS.map((ball) => (
+          <Image
+            key={ball.src}
+            src={ball.src}
+            alt=""
+            width={96}
+            height={96}
+            className={cn(
+              'landing-hook-ball pointer-events-none absolute z-[2] object-contain opacity-80 drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]',
+              ball.className,
+              ball.delayClass,
+            )}
+            aria-hidden
+          />
+        ))}
 
         <div className="landing-hook-phone relative mx-auto w-full origin-center bg-transparent">
           <div
@@ -77,7 +126,8 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
       </div>
 
       <span className="sr-only">
-        Pucky the PoolCup mascot peeking from behind a phone showing the app
+        Pucky the PoolCup mascot peeking from behind a phone showing the app,
+        surrounded by sport balls
       </span>
     </div>
   )
