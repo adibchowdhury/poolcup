@@ -184,16 +184,24 @@ function FeatureCardShell({
 function FeatureBlock({
   feature,
   reverse,
+  compactTop = false,
 }: {
   feature: CoreFeature
   reverse: boolean
+  /** First block after the features intro — avoid stacking huge top padding. */
+  compactTop?: boolean
 }) {
   const headingId = `core-feature-${feature.number}`
   const { cardGlow: accent, cardGlowRgb: accentRgb } = feature
 
   return (
     <section
-      className="bg-[#090f18] py-12 md:py-28"
+      className={cn(
+        'bg-[#090f18]',
+        compactTop
+          ? 'pt-8 pb-12 md:pt-12 md:pb-28'
+          : 'py-12 md:py-28',
+      )}
       aria-labelledby={headingId}
     >
       <div className="mx-auto max-w-7xl px-6">
@@ -306,6 +314,7 @@ export function CoreFeaturesSection() {
           key={feature.number}
           feature={feature}
           reverse={index % 2 === 1}
+          compactTop={index === 0}
         />
       ))}
     </div>

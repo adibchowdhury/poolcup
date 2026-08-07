@@ -6,11 +6,14 @@ import {
 /**
  * Light signpost before the five feature blocks — a breath, not a hero.
  * Sits on the shared features hue (`#090f18`) so sports → intro → 01 melt.
+ *
+ * Spacing note: sports showcase has NO bottom padding; feature 01 owns most of
+ * the gap below via its own top padding — keep this section’s pb small.
  */
 export function LandingFeaturesIntro() {
   return (
     <section
-      className="relative overflow-hidden bg-[#090f18] py-12 md:py-16"
+      className="relative overflow-hidden bg-[#090f18] pt-28 pb-4 md:pt-36 md:pb-6"
       aria-labelledby="features-intro-heading"
     >
       <div
