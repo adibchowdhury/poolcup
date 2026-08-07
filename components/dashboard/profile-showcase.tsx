@@ -269,7 +269,7 @@ function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
   )
 
   const surfaceClass =
-    'group block rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] px-3.5 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]'
+    'hue-card-surface group block rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] px-3.5 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]'
 
   if (href) {
     return (
@@ -795,7 +795,7 @@ export function ProfileShowcase({
   return (
     <div className="mx-auto w-full max-w-lg space-y-3 pb-8">
       {/* ── Hero: avatar|name left, rank top-right, XP below ── */}
-      <section className="relative overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+      <section className="hue-card-surface relative overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
         <div className="relative h-[104px] w-full sm:h-[120px]">
           <Image
             src="/background_01.png"
@@ -1146,7 +1146,7 @@ export function ProfileShowcase({
           </section>
 
           {!isPublic ? (
-            <section className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+            <section className="hue-card-surface overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Next Unlock

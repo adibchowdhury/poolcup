@@ -91,7 +91,7 @@ export function LandingProfilePreview({
     >
       <div className="mx-auto w-full max-w-md space-y-3 px-2.5 py-3 sm:px-3 sm:py-3.5">
         {/* Hero — mirrors redesigned ProfileShowcase */}
-        <section className="relative overflow-hidden rounded-[20px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+        <section className="hue-card-surface relative overflow-hidden rounded-[20px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
           <div className="relative h-[88px] w-full sm:h-[96px]">
             <Image
               src="/background_01.png"

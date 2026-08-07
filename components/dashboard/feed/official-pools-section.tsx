@@ -15,6 +15,7 @@ import {
   joinPublicPool,
   type OfficialPoolListItem,
 } from '@/src/lib/fetch-official-pools'
+import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
 import { trackEvent } from '@/src/lib/track'
 
@@ -214,6 +215,20 @@ function OfficialPoolCard({
     pool.eventStartDate,
   )
   const playersLabel = formatPlayerCountLabel(pool.memberCount)
+  const typeLabel = formatScoringStyleLabel(pool.scoringStyle)
+  /** Match PoolCard `getPoolTypePillTheme` (Your Pools) for consistency. */
+  const typePillStyle =
+    pool.scoringStyle === 'winner'
+      ? {
+          color: '#f59e0b',
+          backgroundColor: 'rgba(245,158,11,0.10)',
+          border: '1px solid rgba(245,158,11,0.35)',
+        }
+      : {
+          color: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.10)',
+          border: '1px solid rgba(34,197,94,0.35)',
+        }
 
   return (
     <article
@@ -240,14 +255,28 @@ function OfficialPoolCard({
       <div className="relative z-10 flex h-full min-h-0 flex-col justify-between">
         {/* League identity stays anchored at the top-left. */}
         <div className="min-w-0 px-3 pt-3.5 sm:px-3.5 sm:pt-4">
-          <div className="flex items-start gap-2">
-            <h3 className="min-w-0 flex-1 text-2xl font-bold leading-[1.05] tracking-tight text-white sm:text-3xl">
+          <div className="flex min-w-0 items-start gap-1.5 sm:gap-2">
+            <h3
+              className={cn(
+                'min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap',
+                'text-lg font-bold leading-tight tracking-tight text-white',
+                'sm:text-2xl sm:leading-[1.05]',
+              )}
+              title={pool.leagueName}
+            >
               {pool.leagueName}
             </h3>
-            <OfficialVerifiedBadge className="mt-1 h-6 w-6 sm:h-7 sm:w-7" />
+            <OfficialVerifiedBadge className="mt-0.5 h-5 w-5 shrink-0 sm:mt-1 sm:h-7 sm:w-7" />
           </div>
 
-          <div className="mt-2.5 flex flex-col items-start gap-1 text-sm font-semibold text-white/85 sm:text-base">
+          <span
+            className="mt-1.5 inline-flex max-w-full items-center truncate rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide sm:mt-2 sm:px-3 sm:py-1 sm:text-xs"
+            style={typePillStyle}
+          >
+            {typeLabel}
+          </span>
+
+          <div className="mt-2 flex flex-col items-start gap-1 text-sm font-semibold text-white/85 sm:mt-2.5 sm:text-base">
             {pool.seasonLabel ? <span className="block">{pool.seasonLabel}</span> : null}
             {status.kind !== 'none' && status.label ? (
               <span

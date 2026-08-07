@@ -60,6 +60,99 @@
   --match-surface: #0d1520;
   
   --radius: 0.75rem;
+
+  /* PremiumMatchCard sculpted surface + content (dark default) */
+  --match-card-fill-0: #151516;
+  --match-card-fill-1: #0d0d0e;
+  --match-card-fill-2: #070708;
+  --match-card-glow: #ffffff;
+  --match-card-glow-opacity: 0.08;
+  --match-card-stroke: rgba(255, 255, 255, 0.12);
+  --match-card-score: rgba(255, 255, 255, 0.95);
+  --match-card-score-sep: rgba(255, 255, 255, 0.35);
+  --match-card-vs: rgba(255, 255, 255, 0.7);
+  --match-card-score-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --match-card-footer-border: rgba(255, 255, 255, 0.055);
+  --match-card-clock: rgba(255, 255, 255, 0.35);
+  --match-card-mark-border: rgba(255, 255, 255, 0.1);
+  --match-card-mark-ring: rgba(255, 255, 255, 0.07);
+  --match-card-mark-bg: linear-gradient(145deg, #202124, #0a0a0b);
+  --match-card-mark-inner: radial-gradient(
+      circle at 35% 28%,
+      rgba(255, 255, 255, 0.08),
+      transparent 45%
+    ),
+    linear-gradient(155deg, #171719, #070708);
+  --match-card-mark-text: rgba(255, 255, 255, 0.85);
+  --match-card-shadow: drop-shadow(0 15px 18px rgba(0, 0, 0, 0.34));
+  --match-card-shadow-hover: drop-shadow(0 18px 21px rgba(0, 0, 0, 0.4));
+}
+
+/*
+ * Light mode — same token names, light surfaces / dark text.
+ * Activated when next-themes sets class="light" on <html>.
+ * Brand primary green stays. Default remains :root (dark).
+ */
+html.light {
+  --app-background: #f4f6f8;
+  --background: var(--app-background);
+  --foreground: #0d1520;
+  --card: #ffffff;
+  --card-foreground: #0d1520;
+  --popover: #ffffff;
+  --popover-foreground: #0d1520;
+
+  --primary: #00e676;
+  --primary-foreground: #080b0f;
+
+  --secondary: #ffb300;
+  --secondary-foreground: #080b0f;
+
+  --muted: #e8eef3;
+  --muted-foreground: #5a7080;
+  --muted-on-section: #4a6070;
+
+  --accent: #00e676;
+  --accent-foreground: #080b0f;
+
+  --destructive: #ff4444;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(13, 21, 32, 0.12);
+  --input: rgba(13, 21, 32, 0.12);
+  --ring: #00e676;
+
+  --chart-1: #00e676;
+  --chart-2: #e69a00;
+  --chart-3: #e63939;
+  --chart-4: #5a7080;
+  --chart-5: #0d1520;
+
+  --match-live: #00e676;
+  --match-data: #2563eb;
+  --match-consensus: #d97706;
+  --match-surface: #eef2f6;
+
+  /* PremiumMatchCard — white surface + dark readable content */
+  --match-card-fill-0: #ffffff;
+  --match-card-fill-1: #ffffff;
+  --match-card-fill-2: #ffffff;
+  --match-card-glow: #ffffff;
+  --match-card-glow-opacity: 0;
+  --match-card-stroke: rgba(13, 21, 32, 0.12);
+  --match-card-score: #0d1520;
+  --match-card-score-sep: rgba(13, 21, 32, 0.35);
+  --match-card-vs: rgba(13, 21, 32, 0.55);
+  --match-card-score-shadow: none;
+  --match-card-footer-border: rgba(13, 21, 32, 0.1);
+  --match-card-clock: #5a7080;
+  --match-card-mark-border: rgba(13, 21, 32, 0.12);
+  --match-card-mark-ring: rgba(13, 21, 32, 0.08);
+  --match-card-mark-bg: #e8eef3;
+  --match-card-mark-inner: #f4f6f8;
+  --match-card-mark-text: #0d1520;
+  --match-card-shadow: drop-shadow(0 8px 16px rgba(13, 21, 32, 0.1));
+  --match-card-shadow-hover: drop-shadow(0 10px 18px rgba(13, 21, 32, 0.14));
 }
 
 @theme inline {
@@ -370,6 +463,119 @@
 
 .dashboard-pool-card:hover {
   transform: translateY(-3px);
+}
+
+/*
+ * Hue / gradient card surfaces (pool cards, glass shells, profile chrome).
+ * Dark mode keeps existing Tailwind / component gradients.
+ * Light mode: solid --card (white) — marker class only.
+ */
+html.light .hue-card-surface {
+  background: var(--card) !important;
+  background-image: none !important;
+}
+
+/* Dashboard glass radial/tint layers — dark greens stay; light → solid card */
+.dashboard-glass-backdrop-radial-full {
+  background:
+    radial-gradient(
+      80% 60% at 20% 15%,
+      color-mix(in srgb, var(--primary) 40%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      70% 60% at 85% 25%,
+      rgba(255, 179, 0, 0.16),
+      transparent 55%
+    ),
+    #0d1f14;
+}
+
+.dashboard-glass-backdrop-radial-compact {
+  background:
+    radial-gradient(
+      80% 80% at 50% 0%,
+      color-mix(in srgb, var(--primary) 28%, transparent),
+      transparent 70%
+    ),
+    #0d1f14;
+}
+
+.dashboard-glass-backdrop-tint {
+  background: rgba(176, 224, 196, 0.05);
+}
+
+.dashboard-glass-backdrop-highlight {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.022) 8%,
+    transparent 16%
+  );
+}
+
+html.light .dashboard-glass-backdrop-radial-full,
+html.light .dashboard-glass-backdrop-radial-compact {
+  background: var(--card);
+}
+
+html.light .dashboard-glass-backdrop-tint,
+html.light .dashboard-glass-backdrop-highlight {
+  opacity: 0;
+}
+
+html.light .dashboard-glass-surface {
+  border-color: var(--border);
+  box-shadow: 0 8px 24px -8px rgba(13, 21, 32, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.light .dashboard-glass-surface::before {
+  opacity: 0;
+}
+
+/* Nested hue overlays (green radial washes) — hide in light so card stays white */
+html.light .light-hide-hue-overlay {
+  opacity: 0;
+}
+
+/* PremiumMatchCard drop shadow follows theme tokens */
+.premium-match-card {
+  filter: var(--match-card-shadow);
+}
+
+.premium-match-card:hover {
+  filter: var(--match-card-shadow-hover);
+}
+
+/* Mobile bottom nav — dark bar by default; white/card in light */
+.mobile-bottom-nav-bar {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: #0a0e0e;
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+.mobile-bottom-nav-home {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(0, 230, 118, 0.28);
+}
+
+html.light .mobile-bottom-nav-bar {
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow:
+    0 -8px 24px rgba(13, 21, 32, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+html.light .mobile-bottom-nav-home {
+  box-shadow:
+    0 8px 20px rgba(13, 21, 32, 0.14),
+    0 0 18px rgba(0, 230, 118, 0.22);
 }
 
 ::-webkit-scrollbar {

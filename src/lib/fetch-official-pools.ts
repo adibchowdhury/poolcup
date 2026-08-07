@@ -12,6 +12,8 @@ export type OfficialPoolListItem = {
   seasonLabel: string | null
   eventStatus: string | null
   eventStartDate: string | null
+  /** pools.scoring_style — classic/exact → Score Predictor, winner → Winner Only. */
+  scoringStyle: string
   memberCount: number
   isMember: boolean
 }
@@ -22,6 +24,7 @@ type PoolRow = {
   invite_code: string
   event_id: string | null
   event_name: string | null
+  scoring_style: string
 }
 
 type EventRow = {
@@ -103,8 +106,7 @@ export function formatOfficialStatusLabel(
 }
 
 export function formatPlayerCountLabel(count: number): string {
-  if (count === 1) return '1 player joined'
-  return `${count} players joined`
+  return `${count} joined`
 }
 
 /**
@@ -118,7 +120,7 @@ export async function fetchOfficialPublicPools(
 ): Promise<{ pools: OfficialPoolListItem[]; error: string | null }> {
   const { data: poolRows, error: poolsError } = await supabase
     .from('pools')
-    .select('id, name, invite_code, event_id, event_name')
+    .select('id, name, invite_code, event_id, event_name, scoring_style')
     .eq('is_official', true)
     .eq('is_public', true)
     .order('name', { ascending: true })
@@ -207,6 +209,7 @@ export async function fetchOfficialPublicPools(
       ),
       eventStatus: event?.status ?? null,
       eventStartDate: event?.start_date ?? null,
+      scoringStyle: pool.scoring_style || 'classic',
       memberCount: memberCounts.get(pool.id) ?? 0,
       isMember: myPoolIds.has(pool.id),
     }

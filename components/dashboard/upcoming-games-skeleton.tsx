@@ -4,7 +4,7 @@ import { ShimmerBlock } from '@/components/ui/shimmer-block'
 function UpcomingMatchCardSkeleton() {
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/[0.06] px-3 py-3.5 sm:rounded-[1.25rem] sm:px-5 sm:py-4 shadow-[0_2px_14px_rgba(0,0,0,0.32)]"
+      className="hue-card-surface overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/[0.06] px-3 py-3.5 sm:rounded-[1.25rem] sm:px-5 sm:py-4 shadow-[0_2px_14px_rgba(0,0,0,0.32)]"
       aria-hidden
     >
       <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">

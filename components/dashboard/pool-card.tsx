@@ -135,9 +135,9 @@ interface PoolCardProps {
 
 const POOL_CARD_SURFACE_CLASS = {
   default: 'overflow-hidden rounded-2xl border border-border/90 bg-card/90',
-  /** Matches page bg (#080b0f) with a light primary green wash — easy to revert. */
+  /** Matches page bg (#080b0f) with a light primary green wash — solid --card in light. */
   dashboard:
-    'overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.08]',
+    'hue-card-surface overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.08]',
 } as const
 
 export function PoolCard({

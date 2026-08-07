@@ -55,7 +55,7 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-amber-400/20 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.12),transparent_45%),linear-gradient(160deg,rgba(22,28,18,0.98),rgba(8,12,10,0.99))] shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
+      <div className="hue-card-surface overflow-hidden rounded-2xl border border-amber-400/20 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.12),transparent_45%),linear-gradient(160deg,rgba(22,28,18,0.98),rgba(8,12,10,0.99))] shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
         <div className="h-1 bg-gradient-to-r from-amber-400/80 via-primary/60 to-amber-400/40" />
 
         {rows.length === 0 ? (

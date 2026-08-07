@@ -153,12 +153,25 @@ function TeamMark({
           />
         </div>
       ) : (
-        <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(145deg,#202124,#0a0a0b)] p-1 shadow-[0_9px_18px_rgba(0,0,0,0.38),0_1px_0_rgba(255,255,255,0.07)_inset] sm:h-16 sm:w-16">
+        <div
+          className="relative flex h-14 w-14 items-center justify-center rounded-full border p-1 shadow-[0_9px_18px_rgba(0,0,0,0.12)] sm:h-16 sm:w-16"
+          style={{
+            borderColor: 'var(--match-card-mark-border)',
+            background: 'var(--match-card-mark-bg)',
+          }}
+        >
           <div
-            className="absolute inset-1 rounded-full border border-white/[0.07] bg-[radial-gradient(circle_at_35%_28%,rgba(255,255,255,0.08),transparent_45%),linear-gradient(155deg,#171719,#070708)]"
+            className="absolute inset-1 rounded-full border"
+            style={{
+              borderColor: 'var(--match-card-mark-ring)',
+              background: 'var(--match-card-mark-inner)',
+            }}
             aria-hidden
           />
-          <span className="relative font-display text-xl tracking-[0.09em] text-white/85 sm:text-2xl">
+          <span
+            className="relative font-display text-xl tracking-[0.09em] sm:text-2xl"
+            style={{ color: 'var(--match-card-mark-text)' }}
+          >
             {getTeamInitials(name)}
           </span>
         </div>
@@ -193,9 +206,9 @@ export function PremiumMatchCard({
   const body = (
     <article
       className={cn(
-        'group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-visible',
-        'px-3.5 pb-3 pt-8 drop-shadow-[0_15px_18px_rgba(0,0,0,0.34)]',
-        'transition-[transform,filter] hover:-translate-y-0.5 hover:drop-shadow-[0_18px_21px_rgba(0,0,0,0.4)]',
+        'premium-match-card group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-visible',
+        'px-3.5 pb-3 pt-8',
+        'transition-[transform,filter] hover:-translate-y-0.5',
         className,
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
@@ -215,9 +228,9 @@ export function PremiumMatchCard({
             y2="208"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0" stopColor="#151516" />
-            <stop offset="0.5" stopColor="#0d0d0e" />
-            <stop offset="1" stopColor="#070708" />
+            <stop offset="0" stopColor="var(--match-card-fill-0)" />
+            <stop offset="0.5" stopColor="var(--match-card-fill-1)" />
+            <stop offset="1" stopColor="var(--match-card-fill-2)" />
           </linearGradient>
           <radialGradient
             id={surfaceGlowId}
@@ -227,7 +240,10 @@ export function PremiumMatchCard({
             gradientTransform="translate(180 12) rotate(90) scale(105 188)"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stopColor="#ffffff" stopOpacity="0.08" />
+            <stop
+              stopColor="var(--match-card-glow)"
+              stopOpacity="var(--match-card-glow-opacity)"
+            />
             <stop offset="0.72" stopColor="#111111" stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -236,7 +252,7 @@ export function PremiumMatchCard({
         <path
           d={SCULPTED_CARD_PATH}
           fill="none"
-          stroke="rgba(255,255,255,0.12)"
+          stroke="var(--match-card-stroke)"
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
         />
@@ -274,13 +290,30 @@ export function PremiumMatchCard({
 
         <div className="flex min-h-16 min-w-[5rem] items-center justify-center self-start sm:min-w-[6rem]">
           {showScore ? (
-            <p className="font-display text-4xl leading-none tracking-[0.02em] tabular-nums text-white/95 [text-shadow:0_6px_18px_rgba(0,0,0,0.5)] sm:text-5xl">
+            <p
+              className="font-display text-4xl leading-none tracking-[0.02em] tabular-nums sm:text-5xl"
+              style={{
+                color: 'var(--match-card-score)',
+                textShadow: 'var(--match-card-score-shadow)',
+              }}
+            >
               <span>{score1}</span>
-              <span className="mx-0.5 text-white/35">:</span>
+              <span
+                className="mx-0.5"
+                style={{ color: 'var(--match-card-score-sep)' }}
+              >
+                :
+              </span>
               <span>{score2}</span>
             </p>
           ) : (
-            <span className="font-display text-3xl tracking-[0.14em] text-white/70 [text-shadow:0_6px_18px_rgba(0,0,0,0.5)] sm:text-4xl">
+            <span
+              className="font-display text-3xl tracking-[0.14em] sm:text-4xl"
+              style={{
+                color: 'var(--match-card-vs)',
+                textShadow: 'var(--match-card-score-shadow)',
+              }}
+            >
               VS
             </span>
           )}
@@ -289,8 +322,15 @@ export function PremiumMatchCard({
         <TeamMark name={match.team2_name} logoUrl={match.team2_logo} />
       </div>
 
-      <div className="relative mt-auto flex items-center justify-center gap-1.5 border-t border-white/[0.055] pt-2 text-[10px] font-medium text-muted-foreground">
-        <Clock3 className="h-3 w-3 text-white/35" aria-hidden />
+      <div
+        className="relative mt-auto flex items-center justify-center gap-1.5 border-t pt-2 text-[10px] font-medium text-muted-foreground"
+        style={{ borderColor: 'var(--match-card-footer-border)' }}
+      >
+        <Clock3
+          className="h-3 w-3"
+          style={{ color: 'var(--match-card-clock)' }}
+          aria-hidden
+        />
         <time dateTime={match.kickoff_at} suppressHydrationWarning>
           {formatKickoff(match.kickoff_at)}
         </time>

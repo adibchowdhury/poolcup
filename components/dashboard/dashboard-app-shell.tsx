@@ -16,6 +16,7 @@ import {
 import { BadgeUnlockProvider } from '@/components/achievements/badge-unlock-provider'
 import { useDashboardSignOut } from '@/components/dashboard-sign-out'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
+import { ThemeAppearanceSetting } from '@/components/theme-appearance-setting'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { WebMobileAppDrawer } from '@/components/dashboard/web-mobile-app-drawer'
@@ -289,6 +290,18 @@ export function DashboardAppShell({
 
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="font-display text-xl tracking-wide">
+                      Appearance
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose light or dark for tokenized surfaces across the app.
+                    </p>
+                    <ThemeAppearanceSetting />
+                  </div>
+
+                  <Separator />
+
                   <div className="space-y-2">
                     <h3 className="font-display text-xl tracking-wide">
                       Account email

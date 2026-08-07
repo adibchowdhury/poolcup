@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
-import { ActivitySection } from '@/components/dashboard/feed/activity-section'
 import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
 import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
@@ -17,8 +16,7 @@ import { OfficialPoolsSection } from '@/components/dashboard/feed/official-pools
 import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { ProfileShowcase } from '@/components/dashboard/profile-showcase'
-import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
-import { EventPillsRow } from '@/components/dashboard/event-pills-row'
+import { DashboardMatchFilters } from '@/components/dashboard/dashboard-match-filters'
 import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
@@ -601,8 +599,7 @@ function DashboardViewContent({
               value="dashboard"
               className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
             >
-              <SportBubblesRow className="-mt-6 mb-6 sm:-mt-8" />
-              <EventPillsRow />
+              <DashboardMatchFilters sportRowClassName="-mt-6 mb-6 sm:-mt-8" />
 
               <DashboardFeed>
                 <LiveNowSection userId={userId} />
@@ -619,7 +616,6 @@ function DashboardViewContent({
                   onJoined={() => void loadDashboardPools()}
                 />
                 <RecentResultsSection userId={userId} />
-                <ActivitySection />
                 <GlobalActivitySection userId={userId} />
                 <FriendsActivitySection />
                 <NewsSection />

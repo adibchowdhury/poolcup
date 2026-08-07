@@ -213,8 +213,8 @@ export function GlobalMatchDetailView({
         </header>
 
         <main className="mx-auto max-w-4xl space-y-5 px-4 py-5 sm:space-y-6 sm:py-7">
-          <section className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#1a1a1a] via-app-background to-app-background px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-6">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.10),transparent_55%)]" />
+          <section className="hue-card-surface relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#1a1a1a] via-app-background to-app-background px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-6">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.10),transparent_55%)] light-hide-hue-overlay" />
 
             <div className="relative flex flex-col items-center gap-4">
               <div className="flex flex-wrap items-center justify-center gap-2">

@@ -1,34 +1,54 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PremiumMatchCard } from '@/components/dashboard/premium-match-card'
+import { eventMatchesSportBubble } from '@/components/dashboard/sport-bubbles-row'
 import { cn } from '@/lib/utils'
 import {
   listSportingEvents,
   type SportingEvent,
 } from '@/src/lib/current-event'
 import {
+  EVENT_SLIDER_MATCH_LIMIT,
   fetchEventSliderMatches,
   fetchInHorizonEventIds,
+  sortEventSliderMatches,
   type EventSliderMatch,
 } from '@/src/lib/fetch-event-slider-matches'
 import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
 import { supabase } from '@/src/lib/supabase'
 
+export const DASHBOARD_ALL_EVENT_ID = 'all'
+
+/** Cap when merging matches across events for "All". */
+const ALL_EVENTS_MATCH_LIMIT = EVENT_SLIDER_MATCH_LIMIT * 2
+
 type PrefetchEntry =
   | { status: 'ok'; matches: EventSliderMatch[] }
   | { status: 'error'; message: string }
 
+type MatchCardRow = EventSliderMatch & { competitionName?: string }
+
+type EventPillsRowProps = {
+  className?: string
+  /** null = all sports. Bubble id from SportBubblesRow. */
+  selectedSportId?: string | null
+}
+
 /**
  * Real sporting-event pills + inline match slider.
  *
- * Pills: only events with ≥1 in-horizon match (live OR upcoming ≤30d).
- * Historical / far-future-only events are hidden.
- * Prefetches slider matches only for qualifying events (batched ID check first).
+ * Pills: "All" first (default), then events with ≥1 in-horizon match.
+ * Filtered by selectedSportId when a sport bubble is active.
  */
-export function EventPillsRow({ className }: { className?: string }) {
+export function EventPillsRow({
+  className,
+  selectedSportId = null,
+}: EventPillsRowProps) {
   const [events, setEvents] = useState<SportingEvent[]>([])
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string>(
+    DASHBOARD_ALL_EVENT_ID,
+  )
   const [matchesByEventId, setMatchesByEventId] = useState<
     Record<string, PrefetchEntry>
   >({})
@@ -49,15 +69,15 @@ export function EventPillsRow({ className }: { className?: string }) {
         ])
         if (cancelled) return
 
-        // Only events with live or upcoming-within-horizon matches.
         const qualifying = allEvents.filter((event) =>
           inHorizonIds.has(event.id),
         )
 
         setEvents(qualifying)
         setSelectedEventId((prev) => {
+          if (prev === DASHBOARD_ALL_EVENT_ID) return DASHBOARD_ALL_EVENT_ID
           if (prev && qualifying.some((e) => e.id === prev)) return prev
-          return qualifying[0]?.id ?? null
+          return DASHBOARD_ALL_EVENT_ID
         })
 
         if (qualifying.length === 0) {
@@ -112,9 +132,71 @@ export function EventPillsRow({ className }: { className?: string }) {
     }
   }, [])
 
-  const selectedEvent = events.find((e) => e.id === selectedEventId) ?? null
-  const selectedEntry =
-    selectedEventId != null ? matchesByEventId[selectedEventId] : undefined
+  const visibleEvents = useMemo(() => {
+    if (!selectedSportId) return events
+    return events.filter((event) =>
+      eventMatchesSportBubble(event.sport, selectedSportId),
+    )
+  }, [events, selectedSportId])
+
+  // Sport change / list shrink: keep "All", or reset if specific event left scope.
+  useEffect(() => {
+    if (selectedEventId === DASHBOARD_ALL_EVENT_ID) return
+    if (!visibleEvents.some((e) => e.id === selectedEventId)) {
+      setSelectedEventId(DASHBOARD_ALL_EVENT_ID)
+    }
+  }, [visibleEvents, selectedEventId])
+
+  // When sport switches, default back to All for that scope.
+  useEffect(() => {
+    setSelectedEventId(DASHBOARD_ALL_EVENT_ID)
+  }, [selectedSportId])
+
+  const selectedEvent =
+    selectedEventId === DASHBOARD_ALL_EVENT_ID
+      ? null
+      : (visibleEvents.find((e) => e.id === selectedEventId) ?? null)
+
+  const visibleMatchRows: MatchCardRow[] = useMemo(() => {
+    if (selectedEventId === DASHBOARD_ALL_EVENT_ID) {
+      const nameByMatchId = new Map<string, string>()
+      const merged: EventSliderMatch[] = []
+
+      for (const event of visibleEvents) {
+        const entry = matchesByEventId[event.id]
+        if (!entry || entry.status !== 'ok') continue
+        for (const match of entry.matches) {
+          if (nameByMatchId.has(match.id)) continue
+          nameByMatchId.set(match.id, event.name)
+          merged.push(match)
+        }
+      }
+
+      return sortEventSliderMatches(merged)
+        .slice(0, ALL_EVENTS_MATCH_LIMIT)
+        .map((match) => ({
+          ...match,
+          competitionName: nameByMatchId.get(match.id),
+        }))
+    }
+
+    const entry = matchesByEventId[selectedEventId]
+    if (!entry || entry.status !== 'ok') return []
+    return entry.matches.map((match) => ({
+      ...match,
+      competitionName: selectedEvent?.name,
+    }))
+  }, [
+    selectedEventId,
+    visibleEvents,
+    matchesByEventId,
+    selectedEvent?.name,
+  ])
+
+  const selectedEntryError =
+    selectedEventId !== DASHBOARD_ALL_EVENT_ID
+      ? matchesByEventId[selectedEventId]
+      : undefined
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -136,61 +218,94 @@ export function EventPillsRow({ className }: { className?: string }) {
               No events in the next {UPCOMING_HORIZON_DAYS} days.
             </p>
           ) : (
-            events.map((event) => {
-              const selected = event.id === selectedEventId
+            <>
+              <button
+                type="button"
+                role="listitem"
+                aria-pressed={selectedEventId === DASHBOARD_ALL_EVENT_ID}
+                onClick={() => setSelectedEventId(DASHBOARD_ALL_EVENT_ID)}
+                className={cn(
+                  'inline-flex shrink-0 cursor-pointer select-none items-center rounded-full',
+                  'border px-3.5 py-1.5 text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  selectedEventId === DASHBOARD_ALL_EVENT_ID
+                    ? 'border-primary bg-primary font-semibold text-primary-foreground'
+                    : 'border-border/70 bg-transparent font-normal text-muted-foreground hover:border-border hover:text-foreground/80',
+                )}
+              >
+                All
+              </button>
+              {visibleEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No events for this sport right now.
+                </p>
+              ) : (
+                visibleEvents.map((event) => {
+                  const selected = event.id === selectedEventId
 
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  role="listitem"
-                  aria-pressed={selected}
-                  onClick={() => setSelectedEventId(event.id)}
-                  className={cn(
-                    'inline-flex shrink-0 cursor-pointer select-none items-center rounded-full',
-                    'border px-3.5 py-1.5 text-sm transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    selected
-                      ? 'border-primary bg-primary font-semibold text-primary-foreground'
-                      : 'border-border/70 bg-transparent font-normal text-muted-foreground hover:border-border hover:text-foreground/80',
-                  )}
-                >
-                  {event.name}
-                </button>
-              )
-            })
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      role="listitem"
+                      aria-pressed={selected}
+                      onClick={() => setSelectedEventId(event.id)}
+                      className={cn(
+                        'inline-flex shrink-0 cursor-pointer select-none items-center rounded-full',
+                        'border px-3.5 py-1.5 text-sm transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                        selected
+                          ? 'border-primary bg-primary font-semibold text-primary-foreground'
+                          : 'border-border/70 bg-transparent font-normal text-muted-foreground hover:border-border hover:text-foreground/80',
+                      )}
+                    >
+                      {event.name}
+                    </button>
+                  )
+                })
+              )}
+            </>
           )}
         </div>
       </div>
 
       {prefetchLoading ? (
-        <div className="flex gap-3 px-1" aria-busy="true" aria-label="Loading matches">
+        <div
+          className="flex gap-3 px-1"
+          aria-busy="true"
+          aria-label="Loading matches"
+        >
           <MatchCardSkeleton />
           <MatchCardSkeleton />
         </div>
-      ) : events.length === 0 ? null : selectedEventId ? (
+      ) : events.length === 0 ? null : (
         <div
           className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="list"
           aria-label={
             selectedEvent
               ? `${selectedEvent.name} matches`
-              : 'Event matches'
+              : selectedSportId
+                ? 'Matches for selected sport'
+                : 'All matches'
           }
         >
-          {!selectedEntry || selectedEntry.status === 'error' ? (
+          {selectedEventId !== DASHBOARD_ALL_EVENT_ID &&
+          selectedEntryError?.status === 'error' ? (
             <p className="px-1 text-sm text-muted-foreground">
-              {selectedEntry?.status === 'error'
-                ? selectedEntry.message
-                : 'No matches for this event yet.'}
+              {selectedEntryError.message}
             </p>
-          ) : selectedEntry.matches.length === 0 ? (
+          ) : visibleMatchRows.length === 0 ? (
             <p className="px-1 text-sm text-muted-foreground">
-              No matches for this event yet.
+              {selectedEventId === DASHBOARD_ALL_EVENT_ID
+                ? selectedSportId
+                  ? 'No matches for this sport yet.'
+                  : 'No matches yet.'
+                : 'No matches for this event yet.'}
             </p>
           ) : (
             <div className="flex gap-3">
-              {selectedEntry.matches.map((match) => (
+              {visibleMatchRows.map((match) => (
                 <div
                   key={match.id}
                   role="listitem"
@@ -199,7 +314,7 @@ export function EventPillsRow({ className }: { className?: string }) {
                   <PremiumMatchCard
                     match={match}
                     mode={match.mode}
-                    competitionName={selectedEvent?.name}
+                    competitionName={match.competitionName}
                     href={`/match/${match.id}`}
                   />
                 </div>
@@ -207,7 +322,7 @@ export function EventPillsRow({ className }: { className?: string }) {
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   )
 }

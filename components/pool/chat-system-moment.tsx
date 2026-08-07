@@ -42,7 +42,7 @@ function FullTimeMoment({
   const logo2 = asString(meta.team2_logo)
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-primary/35 bg-gradient-to-br from-[#08140f] via-[#0c1712] to-primary/[0.12] shadow-[0_10px_28px_rgba(0,0,0,0.35),0_0_24px_rgba(0,230,118,0.12)]">
+    <div className="hue-card-surface overflow-hidden rounded-2xl border border-primary/35 bg-gradient-to-br from-[#08140f] via-[#0c1712] to-primary/[0.12] shadow-[0_10px_28px_rgba(0,0,0,0.35),0_0_24px_rgba(0,230,118,0.12)]">
       <div className="flex items-center justify-between border-b border-primary/20 bg-primary/10 px-3 py-1.5">
         <span className="font-display text-[11px] tracking-[0.14em] text-primary">
           FULL TIME
