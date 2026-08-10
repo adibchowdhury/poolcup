@@ -278,7 +278,7 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
                       {mode.knockoutHeading}
                     </h4>
                     <div className="space-y-2">
-                      {'knockoutIntroLines' in mode && mode.knockoutIntroLines ? (
+                      {'knockoutIntroLines' in mode ? (
                         <div className="space-y-2">
                           {mode.knockoutIntroLines.map((line) => (
                             <p
@@ -314,6 +314,37 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
               </article>
             )
           })}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <h3 className="font-display text-lg tracking-wide text-foreground">
+            How ties are broken
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            When two players finish with the same total points, the leaderboard
+            uses a fixed order so places stay consistent.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-foreground">
+                Score Predictor
+              </h4>
+              <ol className="list-decimal space-y-1.5 pl-4 text-sm text-muted-foreground">
+                <li>Most exact scores (correct scoreline)</li>
+                <li>Most correct winners</li>
+                <li>A stable tiebreaker for a consistent ranking</li>
+              </ol>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-foreground">
+                Winner Only
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Tied players stay in a stable, consistent order (no exact-score
+                count in these pools).
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
