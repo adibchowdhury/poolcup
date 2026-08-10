@@ -18,6 +18,7 @@ import {
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
 import type { GlobalMatchPhase } from '@/src/lib/global-match-phase'
+import { getVoidMatchStatusLabel } from '@/src/lib/match-void-status'
 import type {
   HeadToHeadData,
   MatchCommonScore,
@@ -106,10 +107,20 @@ type GlobalMatchDetailViewProps = {
 function MatchStatusPill({
   phase,
   liveClockLabel,
+  voidLabel,
 }: {
   phase: GlobalMatchPhase
   liveClockLabel: string | null
+  voidLabel: string | null
 }) {
+  if (phase === 'void') {
+    return (
+      <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
+        {voidLabel ?? 'No result'}
+      </span>
+    )
+  }
+
   if (phase === 'live') {
     return (
       <span
@@ -164,6 +175,7 @@ export function GlobalMatchDetailView({
   const score1 = match.resultTeam1 ?? 0
   const score2 = match.resultTeam2 ?? 0
   const showLiveScore = phase === 'live' || phase === 'final'
+  const voidLabel = getVoidMatchStatusLabel(match.statusShort)
   const liveClockLabel =
     phase === 'live'
       ? formatFeaturedMatchStatusLabel(
@@ -221,6 +233,7 @@ export function GlobalMatchDetailView({
                 <MatchStatusPill
                   phase={phase}
                   liveClockLabel={liveClockLabel}
+                  voidLabel={voidLabel}
                 />
                 {eventName ? (
                   <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

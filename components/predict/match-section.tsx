@@ -16,6 +16,7 @@ export interface SectionMatch {
   homeScore: string
   awayScore: string
   kickoffAt: string
+  statusNote?: string | null
   winnerPick?: WinnerPick
   isLocked?: boolean
   isPredicted?: boolean
@@ -58,7 +59,7 @@ export function MatchSection({
       <button
         type="button"
         onClick={() => setIsOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/30 sm:px-4 sm:py-3"
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4 sm:py-3"
       >
         <div className="min-w-0 text-left">
           <h3 className="font-display text-lg tracking-wide text-foreground uppercase sm:text-xl">
@@ -110,6 +111,7 @@ export function MatchSection({
                   homeScore={match.homeScore}
                   awayScore={match.awayScore}
                   kickoffAt={match.kickoffAt}
+                  statusNote={match.statusNote}
                   isLocked={match.isLocked}
                   isPredicted={match.isPredicted}
                   onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}

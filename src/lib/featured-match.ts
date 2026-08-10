@@ -66,6 +66,12 @@ export function formatFeaturedMatchStatusLabel(
 ): string {
   const status = (statusShort ?? '').trim().toUpperCase()
 
+  if (status === 'PST') return 'Postponed — no result'
+  if (status === 'CANC') return 'Cancelled — no points'
+  if (status === 'ABD') return 'Abandoned — voided'
+  if (status === 'AWD') return 'Awarded — no points'
+  if (status === 'WO') return 'Walkover — no points'
+
   if (isFinal || status === 'FT' || status === 'AET' || status === 'PEN') {
     return 'Full time'
   }

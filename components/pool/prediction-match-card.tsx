@@ -43,6 +43,11 @@ import {
   getPredictionOutcomeLabel,
   type MatchScoringStyle,
 } from '@/src/lib/prediction-scoring'
+import {
+  getVoidMatchStatusLabel,
+  getVoidPredictionOutcomeLabel,
+  isVoidMatchStatus,
+} from '@/src/lib/match-void-status'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
@@ -74,6 +79,8 @@ export type UserPoolPrediction = {
   resultTeam1: number | null
   resultTeam2: number | null
   isFinal: boolean
+  /** API-Football short status (`PST`, `FT`, …). Used for void UI only. */
+  statusShort: string | null
 }
 
 const ROUND_LABELS: Record<string, string> = {
@@ -132,6 +139,7 @@ function AdvanceTeamChip({
       onClick={onClick}
       className={cn(
         'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         selected
           ? 'border-primary bg-primary/15 text-primary'
           : 'border-border bg-muted/40 text-foreground hover:border-primary/40',
@@ -412,16 +420,26 @@ export function PredictionMatchCard({
     prediction.resultTeam1 != null &&
     prediction.resultTeam2 != null
 
+  const isVoidMatch = isVoidMatchStatus(prediction.statusShort)
+  const voidMatchLabel = getVoidMatchStatusLabel(prediction.statusShort)
+
   const displayAdvancePick = isReadOnly ? prediction.advancePick : advancePick
 
   const earnedPointsLine:
     | {
         points: number
         label: string
-        kind: 'exact' | 'draw' | 'winner' | 'advance' | 'wrong'
+        kind: 'exact' | 'draw' | 'winner' | 'advance' | 'wrong' | 'void'
       }
-    | null =
-    hasResult && hasStoredPrediction
+    | null = isVoidMatch
+    ? hasStoredPrediction
+      ? {
+          points: 0,
+          label: getVoidPredictionOutcomeLabel(),
+          kind: 'void',
+        }
+      : null
+    : hasResult && hasStoredPrediction
       ? isKnockout && scoringStyle === 'classic'
         ? (() => {
             const knockoutOutcome = getClassicKnockoutPredictionDisplayOutcome({
@@ -534,8 +552,8 @@ export function PredictionMatchCard({
   const savedCardComplete = showPersistedCheck
 
   const showPicksExpander =
-    !preview && Boolean(poolId && currentUserId && hasKickedOff)
-  const showResultFooter = hasResult || showPicksExpander
+    !preview && Boolean(poolId && currentUserId && hasKickedOff) && !isVoidMatch
+  const showResultFooter = hasResult || showPicksExpander || isVoidMatch
   const pastMetaTextClassName = getPastMatchMetaTextClassName()
   const pastBodyTextClassName = getPastMatchBodyTextClassName()
 
@@ -923,10 +941,20 @@ export function PredictionMatchCard({
                       earnedPointsLine.kind === 'draw' ||
                       earnedPointsLine.kind === 'advance'
                     ? 'text-[#ffb300]'
-                    : pastMetaTextClassName,
+                    : earnedPointsLine.kind === 'wrong'
+                      ? 'text-destructive'
+                      : earnedPointsLine.kind === 'void'
+                        ? 'text-muted-foreground'
+                        : pastMetaTextClassName,
               )}
             >
-              {earnedPointsLine.label} · +{earnedPointsLine.points} pts
+              {earnedPointsLine.kind === 'void'
+                ? earnedPointsLine.label
+                : `${earnedPointsLine.label} · +${earnedPointsLine.points} pts`}
+            </span>
+          ) : voidMatchLabel ? (
+            <span className="text-xs font-semibold text-muted-foreground">
+              {voidMatchLabel}
             </span>
           ) : (
             <CompactMatchRowKickoffTime
@@ -1084,7 +1112,12 @@ export function PredictionMatchCard({
 
         {showResultFooter ? (
           <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
-            {hasResult ? (
+            {isVoidMatch && voidMatchLabel ? (
+              <p className={cn('text-center text-xs', pastMetaTextClassName)}>
+                {voidMatchLabel}
+                {hasStoredPrediction ? ' · Prediction voided' : ''}
+              </p>
+            ) : hasResult ? (
               <p className={cn('text-center text-xs', pastBodyTextClassName)}>
                 Actual: {prediction.resultTeam1} – {prediction.resultTeam2}
                 {actualAdvancedTeamName

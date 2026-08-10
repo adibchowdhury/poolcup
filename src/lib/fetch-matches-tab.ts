@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { FEATURED_LIVE_STATUS_SHORTS } from '@/src/lib/featured-match'
 import {
+  isVoidMatchStatus,
+  VOID_MATCH_STATUS_SHORTS,
+} from '@/src/lib/match-void-status'
+import {
   getUpcomingHorizonEndIso,
   isWithinUpcomingHorizon,
 } from '@/src/lib/upcoming-match-horizon'
@@ -10,6 +14,9 @@ const MATCHES_TAB_COLUMNS =
 
 /** Full schedule list for the Matches tab (higher than the dashboard slider cap). */
 export const MATCHES_TAB_QUERY_LIMIT = 300
+
+/** How far back to include completed fixtures on the Matches tab. */
+const COMPLETED_LOOKBACK_DAYS = 14
 
 export type MatchesTabMatch = {
   id: string
@@ -36,9 +43,8 @@ export function isMatchesTabLive(statusShort: string | null): boolean {
 }
 
 /**
- * Live + upcoming-within-horizon matches for the Matches tab.
+ * Live + upcoming-within-horizon + recent completed matches for the Matches tab.
  * Pass `eventIds` to scope to selected events; omit / empty returns [].
- * Does NOT include completed/historical fixtures.
  */
 export async function fetchMatchesTabMatches(
   supabase: SupabaseClient,
@@ -49,8 +55,12 @@ export async function fetchMatchesTabMatches(
 
   const nowIso = new Date(nowMs).toISOString()
   const horizonEndIso = getUpcomingHorizonEndIso(nowMs)
+  const completedSinceIso = new Date(
+    nowMs - COMPLETED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString()
 
-  const [liveResult, upcomingResult] = await Promise.all([
+  const [liveResult, upcomingResult, completedResult, voidResult] =
+    await Promise.all([
     supabase
       .from('matches')
       .select(MATCHES_TAB_COLUMNS)
@@ -68,16 +78,37 @@ export async function fetchMatchesTabMatches(
       .eq('is_final', false)
       .order('kickoff_at', { ascending: true })
       .limit(MATCHES_TAB_QUERY_LIMIT),
+    supabase
+      .from('matches')
+      .select(MATCHES_TAB_COLUMNS)
+      .in('event_id', eventIds)
+      .eq('is_final', true)
+      .gte('kickoff_at', completedSinceIso)
+      .lte('kickoff_at', nowIso)
+      .order('kickoff_at', { ascending: false })
+      .limit(MATCHES_TAB_QUERY_LIMIT),
+    supabase
+      .from('matches')
+      .select(MATCHES_TAB_COLUMNS)
+      .in('event_id', eventIds)
+      .in('status_short', [...VOID_MATCH_STATUS_SHORTS])
+      .gte('kickoff_at', completedSinceIso)
+      .order('kickoff_at', { ascending: false })
+      .limit(MATCHES_TAB_QUERY_LIMIT),
   ])
 
   if (liveResult.error) throw new Error(liveResult.error.message)
   if (upcomingResult.error) throw new Error(upcomingResult.error.message)
+  if (completedResult.error) throw new Error(completedResult.error.message)
+  if (voidResult.error) throw new Error(voidResult.error.message)
 
   const seen = new Set<string>()
   const merged: MatchesTabMatch[] = []
   for (const row of [
     ...((liveResult.data ?? []) as MatchesTabMatch[]),
     ...((upcomingResult.data ?? []) as MatchesTabMatch[]),
+    ...((completedResult.data ?? []) as MatchesTabMatch[]),
+    ...((voidResult.data ?? []) as MatchesTabMatch[]),
   ]) {
     if (seen.has(row.id)) continue
     seen.add(row.id)
@@ -86,6 +117,8 @@ export async function fetchMatchesTabMatches(
 
   const filtered = merged.filter((match) => {
     if (isMatchesTabLive(match.status_short)) return true
+    if (match.is_final) return true
+    if (isVoidMatchStatus(match.status_short)) return true
     return isWithinUpcomingHorizon(match.kickoff_at, nowMs)
   })
 
@@ -93,6 +126,7 @@ export async function fetchMatchesTabMatches(
     const aLive = isMatchesTabLive(a.status_short)
     const bLive = isMatchesTabLive(b.status_short)
     if (aLive !== bLive) return aLive ? -1 : 1
+    if (a.is_final !== b.is_final) return a.is_final ? 1 : -1
     return (
       new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime()
     )

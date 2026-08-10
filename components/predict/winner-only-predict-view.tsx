@@ -1322,8 +1322,22 @@ export function WinnerOnlyPredictView({
         )}
       >
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
+          <div
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
+            <p>{error}</p>
+            <button
+              type="button"
+              className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={() => {
+                setError(null)
+                void loadMatches()
+                void loadGroupPredictions()
+              }}
+            >
+              Try again
+            </button>
           </div>
         )}
 

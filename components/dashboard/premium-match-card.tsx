@@ -6,6 +6,10 @@ import { Clock3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeaturedMatchMode } from '@/src/lib/featured-match'
 import { isTeamLogoUrl } from '@/src/lib/team-logos'
+import {
+  getVoidMatchStatusLabel,
+  isVoidMatchStatus,
+} from '@/src/lib/match-void-status'
 
 export type PremiumMatchCardMatch = {
   id: string
@@ -91,35 +95,42 @@ function StatusNotch({
   mode,
   elapsedMinute,
   kickoffAt,
+  voidLabel,
 }: {
   mode: FeaturedMatchMode
   elapsedMinute: number | null
   kickoffAt: string
+  voidLabel: string | null
 }) {
   const isLive = mode === 'live'
   const isFinal = mode === 'final'
-  const label = isLive
-    ? `Live${elapsedMinute != null ? ` · ${elapsedMinute}'` : ''}`
-    : isFinal
-      ? 'FT'
-      : formatStatusDate(kickoffAt)
+  const isVoid = Boolean(voidLabel)
+  const label = isVoid
+    ? voidLabel!
+    : isLive
+      ? `Live${elapsedMinute != null ? ` · ${elapsedMinute}'` : ''}`
+      : isFinal
+        ? 'FT'
+        : formatStatusDate(kickoffAt)
 
   return (
     <div
       className={cn(
-        'absolute left-1/2 top-0 z-20 flex h-6 min-w-20 -translate-x-1/2 items-center justify-center px-3.5',
+        'absolute left-1/2 top-0 z-20 flex h-6 min-w-20 max-w-[90%] -translate-x-1/2 items-center justify-center px-3.5',
         'text-[9px] font-bold uppercase tracking-[0.13em]',
-        'bg-[linear-gradient(180deg,#e84b55,#ba2532)] text-white shadow-[0_4px_12px_rgba(220,38,52,0.28)]',
+        isVoid
+          ? 'bg-[linear-gradient(180deg,#64748b,#475569)] text-white shadow-[0_4px_12px_rgba(71,85,105,0.28)]'
+          : 'bg-[linear-gradient(180deg,#e84b55,#ba2532)] text-white shadow-[0_4px_12px_rgba(220,38,52,0.28)]',
       )}
       style={{
         clipPath:
           'polygon(0 0, 100% 0, 100% 58%, 88% 100%, 12% 100%, 0 58%)',
       }}
     >
-      {isLive ? (
+      {isLive && !isVoid ? (
         <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
       ) : null}
-      {label}
+      <span className="truncate">{label}</span>
     </div>
   )
 }
@@ -196,7 +207,9 @@ export function PremiumMatchCard({
   href?: string | null
   className?: string
 }) {
-  const showScore = mode === 'live' || mode === 'final'
+  const voidLabel = getVoidMatchStatusLabel(match.status_short)
+  const isVoid = isVoidMatchStatus(match.status_short)
+  const showScore = !isVoid && (mode === 'live' || mode === 'final')
   const score1 = match.result_team1 ?? 0
   const score2 = match.result_team2 ?? 0
   const id = useId().replace(/:/g, '')
@@ -279,6 +292,7 @@ export function PremiumMatchCard({
         mode={mode}
         elapsedMinute={match.elapsed_minute}
         kickoffAt={match.kickoff_at}
+        voidLabel={voidLabel}
       />
 
       <p className="relative truncate text-center text-[10px] font-medium uppercase tracking-[0.11em] text-muted-foreground">

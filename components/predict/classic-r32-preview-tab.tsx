@@ -28,6 +28,7 @@ function toPreviewPrediction(entry: (typeof ROUND_OF_32_PREVIEW)[number]): UserP
     resultTeam1: null,
     resultTeam2: null,
     isFinal: false,
+    statusShort: null,
   }
 }
 

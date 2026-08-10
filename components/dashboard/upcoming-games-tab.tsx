@@ -7,6 +7,7 @@ import {
   type EventSelectorItem,
 } from '@/components/dashboard/event-selector'
 import { PremiumMatchCard } from '@/components/dashboard/premium-match-card'
+import { MatchLifecycleSections } from '@/components/predict/match-lifecycle-sections'
 import {
   listSportingEvents,
   type SportingEvent,
@@ -17,11 +18,11 @@ import {
   isMatchesTabLive,
   type MatchesTabMatch,
 } from '@/src/lib/fetch-matches-tab'
-import { supabase } from '@/src/lib/supabase'
 import {
-  formatDateHeader,
-  groupScheduleItemsByDay,
-} from '@/src/lib/upcoming-match-display'
+  getMatchLifecycleSection,
+  partitionByLifecycleSection,
+} from '@/src/lib/match-lifecycle-section'
+import { supabase } from '@/src/lib/supabase'
 import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
 import { sportIconPng } from '@/src/lib/sport-display'
 
@@ -79,33 +80,6 @@ export function prefetchUpcomingMatches() {
   void loadMatchesTabData().catch(() => {
     // Prefetch is best-effort; the tab will surface errors on open.
   })
-}
-
-function DateSectionHeader({
-  kickoffIso,
-  matchCount,
-}: {
-  kickoffIso: string
-  matchCount: number
-}) {
-  const countLabel = matchCount === 1 ? '1 match' : `${matchCount} matches`
-
-  return (
-    <div className="mb-2.5">
-      <div className="flex items-end justify-between gap-3">
-        <h3 className="font-display text-xl tracking-wide text-foreground">
-          {formatDateHeader(kickoffIso)}
-        </h3>
-        <span className="shrink-0 pb-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-          {countLabel}
-        </span>
-      </div>
-      <div
-        className="mt-2 h-px w-full bg-gradient-to-r from-border via-border/70 to-transparent"
-        aria-hidden
-      />
-    </div>
-  )
 }
 
 function RealMatchCard({
@@ -201,8 +175,11 @@ export function UpcomingGamesTab() {
     return matches.filter((match) => match.event_id === selectedEventId)
   }, [matches, selectedEventId])
 
-  const matchesByDay = useMemo(
-    () => groupScheduleItemsByDay(visibleMatches),
+  const lifecycleBuckets = useMemo(
+    () =>
+      partitionByLifecycleSection(visibleMatches, (match) =>
+        getMatchLifecycleSection(match),
+      ),
     [visibleMatches],
   )
 
@@ -234,7 +211,7 @@ export function UpcomingGamesTab() {
           <p className="mt-2 text-xs text-muted-foreground">{error}</p>
           <button
             type="button"
-            className="mt-4 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            className="mt-4 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             onClick={() => void load()}
           >
             Try again
@@ -244,7 +221,7 @@ export function UpcomingGamesTab() {
         <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
           <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="font-display text-xl tracking-wide text-foreground">
-            No upcoming matches in the next {UPCOMING_HORIZON_DAYS} days
+            No matches in the next {UPCOMING_HORIZON_DAYS} days
           </p>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
             Check back when new fixtures fall inside the {UPCOMING_HORIZON_DAYS}
@@ -252,30 +229,19 @@ export function UpcomingGamesTab() {
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {Array.from(matchesByDay.entries()).map(([dayKey, dayMatches]) => (
-            <section key={dayKey}>
-              <DateSectionHeader
-                kickoffIso={dayMatches[0]!.kickoff_at}
-                matchCount={dayMatches.length}
-              />
-              <ul className={MATCH_CARD_GRID}>
-                {dayMatches.map((match) => (
-                  <li key={match.id} className="min-w-0">
-                    <RealMatchCard
-                      match={match}
-                      eventLabel={
-                        match.event_id
-                          ? eventNameById.get(match.event_id)
-                          : null
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <MatchLifecycleSections
+          buckets={lifecycleBuckets}
+          getKey={(match) => match.id}
+          listClassName={MATCH_CARD_GRID}
+          renderItem={(match) => (
+            <RealMatchCard
+              match={match}
+              eventLabel={
+                match.event_id ? eventNameById.get(match.event_id) : null
+              }
+            />
+          )}
+        />
       )}
     </div>
   )

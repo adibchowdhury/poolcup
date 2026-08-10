@@ -43,6 +43,13 @@ import {
   deletePoolMatchPrediction,
   upsertPoolMatchPrediction,
 } from '@/src/lib/pool-match-prediction-write'
+import {
+  getMatchLifecycleSection,
+  MATCH_LIFECYCLE_SECTION_ORDER,
+  partitionByLifecycleSection,
+} from '@/src/lib/match-lifecycle-section'
+import { getVoidMatchStatusLabel } from '@/src/lib/match-void-status'
+import { MatchLifecycleSectionHeader } from '@/components/predict/match-lifecycle-sections'
 import { cn } from '@/lib/utils'
 
 type ScoringStyle = 'classic' | 'winner' | 'exact'
@@ -67,6 +74,8 @@ type Match = {
   team2_logo: string | null
   group_name: string | null
   round: string
+  status_short: string | null
+  is_final: boolean
 }
 
 type PredictionRow = {
@@ -243,6 +252,7 @@ function toSectionMatch(
     homeScore: entry.score1,
     awayScore: entry.score2,
     kickoffAt: match.kickoff_at,
+    statusNote: getVoidMatchStatusLabel(match.status_short),
     isLocked: isMatchLocked(match.locked_at),
     isPredicted: savedMatchIds.has(match.id) && complete && !dirty,
   }
@@ -302,6 +312,7 @@ function ClassicKnockoutPredictCard({
         homeScore={card.homeScore}
         awayScore={card.awayScore}
         kickoffAt={card.kickoffAt}
+        statusNote={card.statusNote}
         isLocked={card.isLocked}
         isPredicted={card.isPredicted}
         onHomeScoreChange={onHomeScoreChange}
@@ -413,7 +424,7 @@ export default function PredictPage() {
     let matchesQuery = supabase
       .from('matches')
       .select(
-        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round',
+        'id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round, status_short, is_final',
       )
       .order('kickoff_at', { ascending: true })
     if (poolData.event_id) {
@@ -434,6 +445,7 @@ export default function PredictPage() {
 
     if (predictionsError) {
       console.error('Failed to load predictions:', predictionsError.message)
+      setError('Failed to load predictions')
     }
 
     const isWinnerOnlyPool = (poolData as Pool).scoring_style === 'winner'
@@ -506,14 +518,6 @@ export default function PredictPage() {
     return buildGroupStageSections(tabMatches)
   }, [tabMatches, activeTab])
 
-  const knockoutTabMatches = useMemo(() => {
-    if (activeTab === 'group') return []
-    return [...tabMatches].sort(
-      (a, b) =>
-        new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
-    )
-  }, [tabMatches, activeTab])
-
   const defaultOpenSectionId = useMemo(() => {
     const open =
       sections.find((s) => sectionNeedsAttention(s, scores, advancePicks))?.id ??
@@ -539,20 +543,13 @@ export default function PredictPage() {
 
   const totalMatches = classicMatchTotalCount(matches.length)
 
-  const priorityMatches = useMemo(() => {
-    return matches
-      .filter(
-        (m) =>
-          !isMatchLocked(m.locked_at) &&
-          !isClassicMatchComplete(m, scores[m.id], advancePicks[m.id]) &&
-          new Date(m.kickoff_at).getTime() >= Date.now(),
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
-      )
-      .slice(0, 3)
-  }, [matches, scores, advancePicks])
+  const lifecycleBuckets = useMemo(
+    () =>
+      partitionByLifecycleSection(tabMatches, (match) =>
+        getMatchLifecycleSection(match),
+      ),
+    [tabMatches],
+  )
 
   const unsavedCount = useMemo(() => {
     return tabMatches.filter((match) =>
@@ -871,178 +868,165 @@ export default function PredictPage() {
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-4">
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
+          <div
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
+            <p>{error}</p>
+            <button
+              type="button"
+              className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={() => void loadData()}
+            >
+              Try again
+            </button>
           </div>
         )}
 
-        {priorityMatches.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-secondary" />
-              <h2 className="font-display text-xl tracking-wide text-foreground uppercase">
-                Up Next
-              </h2>
-            </div>
-            <div className="flex flex-col gap-3">
-              {priorityMatches.map((match) => {
-                const card = toSectionMatch(
-                  match,
-                  scores,
-                  baselineScores,
-                  savedMatchIds,
-                  advancePicks,
-                  baselineAdvancePicks,
-                )
-                if (isKnockoutRound(match.round)) {
-                  return (
-                    <ClassicKnockoutPredictCard
-                      key={`priority-${match.id}`}
-                      match={match}
-                      card={card}
-                      advancePick={advancePicks[match.id] ?? null}
-                      variant="prominent"
-                      onAdvancePick={(pick) => updateAdvancePick(match.id, pick)}
-                      onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
-                      onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
-                    />
-                  )
-                }
-                return (
-                  <CompactMatchRow
-                    key={`priority-${match.id}`}
-                    variant="prominent"
-                    homeTeam={card.homeTeam}
-                    awayTeam={card.awayTeam}
-                    homeScore={card.homeScore}
-                    awayScore={card.awayScore}
-                    kickoffAt={card.kickoffAt}
-                    isLocked={card.isLocked}
-                    isPredicted={card.isPredicted}
-                    onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
-                    onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
-                  />
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        <div key={activeTab} className="space-y-2">
-          {activeTab === 'group' ? (
-            sections.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {classicRoundTabEmptyMessage('group')}
-              </p>
-            ) : (
-              sections.map((group) => (
-                <MatchSection
-                  key={group.id}
-                  id={group.id}
-                  title={group.title}
-                  subtitle={group.subtitle}
-                  matches={group.matches.map((m) =>
-                    toSectionMatch(
-                      m,
-                      scores,
-                      baselineScores,
-                      savedMatchIds,
-                      advancePicks,
-                      baselineAdvancePicks,
-                    ),
-                  )}
-                  predictedInSection={
-                    group.matches.filter((m) =>
-                      isClassicMatchComplete(
-                        m,
-                        scores[m.id],
-                        advancePicks[m.id],
-                      ),
-                    ).length
-                  }
-                  defaultOpen={group.id === defaultOpenSectionId}
-                  onHomeScoreChange={(id, v) => updateScore(id, 'score1', v)}
-                  onAwayScoreChange={(id, v) => updateScore(id, 'score2', v)}
-                />
-              ))
-            )
-          ) : knockoutTabMatches.length === 0 ? (
-            activeTab === 'r32' ? (
-              <ClassicR32PreviewTab />
-            ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {classicRoundTabEmptyMessage(activeTab)}
-              </p>
-            )
+        {tabMatches.length === 0 && !error ? (
+          activeTab === 'r32' ? (
+            <ClassicR32PreviewTab />
           ) : (
-            <div className="flex flex-col gap-3">
-              {(activeTab === 'final'
-                ? knockoutTabMatches.filter((match) => match.round === 'final')
-                : knockoutTabMatches
-              ).map((match) => {
-                const card = toSectionMatch(
-                  match,
-                  scores,
-                  baselineScores,
-                  savedMatchIds,
-                  advancePicks,
-                  baselineAdvancePicks,
-                )
-                return (
-                  <ClassicKnockoutPredictCard
-                    key={match.id}
-                    match={match}
-                    card={card}
-                    advancePick={advancePicks[match.id] ?? null}
-                    onAdvancePick={(pick) => updateAdvancePick(match.id, pick)}
-                    onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
-                    onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {classicRoundTabEmptyMessage(activeTab)}
+            </p>
+          )
+        ) : (
+          <div key={activeTab} className="space-y-6">
+            {MATCH_LIFECYCLE_SECTION_ORDER.filter(
+              (sectionId) => lifecycleBuckets[sectionId].length > 0,
+            ).map((sectionId) => {
+              const sectionMatches = lifecycleBuckets[sectionId]
+              const groupSections =
+                activeTab === 'group'
+                  ? buildGroupStageSections(sectionMatches)
+                  : []
+
+              return (
+                <section
+                  key={sectionId}
+                  aria-label={sectionId}
+                  className="space-y-3"
+                >
+                  <MatchLifecycleSectionHeader
+                    sectionId={sectionId}
+                    count={sectionMatches.length}
                   />
-                )
-              })}
-              {activeTab === 'final' ? (
-                (() => {
-                  const thirdMatch = knockoutTabMatches.find(
-                    (match) => match.round === 'third',
-                  )
-                  if (!thirdMatch) {
-                    return <ClassicThirdPlaceTbdCard />
-                  }
-                  const card = toSectionMatch(
-                    thirdMatch,
-                    scores,
-                    baselineScores,
-                    savedMatchIds,
-                    advancePicks,
-                    baselineAdvancePicks,
-                  )
-                  return (
-                    <section className="space-y-2">
-                      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        3rd Place Playoff
+
+                  {activeTab === 'group' ? (
+                    groupSections.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">
+                        No matches in this section.
                       </p>
-                      <ClassicKnockoutPredictCard
-                        key={thirdMatch.id}
-                        match={thirdMatch}
-                        card={card}
-                        advancePick={advancePicks[thirdMatch.id] ?? null}
-                        onAdvancePick={(pick) =>
-                          updateAdvancePick(thirdMatch.id, pick)
+                    ) : (
+                      groupSections.map((group) => (
+                        <MatchSection
+                          key={`${sectionId}-${group.id}`}
+                          id={`${sectionId}-${group.id}`}
+                          title={group.title}
+                          subtitle={group.subtitle}
+                          matches={group.matches.map((m) =>
+                            toSectionMatch(
+                              m,
+                              scores,
+                              baselineScores,
+                              savedMatchIds,
+                              advancePicks,
+                              baselineAdvancePicks,
+                            ),
+                          )}
+                          predictedInSection={
+                            group.matches.filter((m) =>
+                              isClassicMatchComplete(
+                                m,
+                                scores[m.id],
+                                advancePicks[m.id],
+                              ),
+                            ).length
+                          }
+                          defaultOpen={
+                            sectionId !== 'completed' &&
+                            group.id === defaultOpenSectionId
+                          }
+                          onHomeScoreChange={(id, v) =>
+                            updateScore(id, 'score1', v)
+                          }
+                          onAwayScoreChange={(id, v) =>
+                            updateScore(id, 'score2', v)
+                          }
+                        />
+                      ))
+                    )
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {(activeTab === 'final'
+                        ? sectionMatches.filter(
+                            (match) =>
+                              match.round === 'final' ||
+                              match.round === 'third',
+                          )
+                        : sectionMatches
+                      ).map((match) => {
+                        const card = toSectionMatch(
+                          match,
+                          scores,
+                          baselineScores,
+                          savedMatchIds,
+                          advancePicks,
+                          baselineAdvancePicks,
+                        )
+                        if (match.round === 'third') {
+                          return (
+                            <section key={match.id} className="space-y-2">
+                              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                3rd Place Playoff
+                              </p>
+                              <ClassicKnockoutPredictCard
+                                match={match}
+                                card={card}
+                                advancePick={advancePicks[match.id] ?? null}
+                                onAdvancePick={(pick) =>
+                                  updateAdvancePick(match.id, pick)
+                                }
+                                onHomeScoreChange={(v) =>
+                                  updateScore(match.id, 'score1', v)
+                                }
+                                onAwayScoreChange={(v) =>
+                                  updateScore(match.id, 'score2', v)
+                                }
+                              />
+                            </section>
+                          )
                         }
-                        onHomeScoreChange={(v) =>
-                          updateScore(thirdMatch.id, 'score1', v)
-                        }
-                        onAwayScoreChange={(v) =>
-                          updateScore(thirdMatch.id, 'score2', v)
-                        }
-                      />
-                    </section>
-                  )
-                })()
-              ) : null}
-            </div>
-          )}
-        </div>
+                        return (
+                          <ClassicKnockoutPredictCard
+                            key={match.id}
+                            match={match}
+                            card={card}
+                            advancePick={advancePicks[match.id] ?? null}
+                            onAdvancePick={(pick) =>
+                              updateAdvancePick(match.id, pick)
+                            }
+                            onHomeScoreChange={(v) =>
+                              updateScore(match.id, 'score1', v)
+                            }
+                            onAwayScoreChange={(v) =>
+                              updateScore(match.id, 'score2', v)
+                            }
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
+                </section>
+              )
+            })}
+            {activeTab === 'final' &&
+            !tabMatches.some((match) => match.round === 'third') ? (
+              <ClassicThirdPlaceTbdCard />
+            ) : null}
+          </div>
+        )}
       </main>
 
       <SaveBar

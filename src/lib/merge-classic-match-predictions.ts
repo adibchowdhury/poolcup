@@ -87,6 +87,7 @@ export function mergeMatchesWithPredictions(
       resultTeam1: match.result_team1,
       resultTeam2: match.result_team2,
       isFinal: match.is_final,
+      statusShort: match.status_short ?? null,
     }
   })
 }

@@ -20,6 +20,10 @@ import {
 } from '@/src/lib/sort-classic-predictions'
 import { normalizeMatchScoringStyle } from '@/src/lib/prediction-scoring'
 import {
+  getMatchLifecycleSection,
+  partitionByLifecycleSection,
+} from '@/src/lib/match-lifecycle-section'
+import {
   PredictionMatchCard,
   type UserPoolPrediction,
 } from '@/components/pool/prediction-match-card'
@@ -29,6 +33,7 @@ import {
 } from '@/components/pool/prediction-save-context'
 import { cn } from '@/lib/utils'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
+import { MatchLifecycleSections } from '@/components/predict/match-lifecycle-sections'
 import {
   Select,
   SelectContent,
@@ -60,7 +65,7 @@ function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
   }, [unsavedCount])
 
   const handleSave = useCallback(async () => {
-    if (unsavedCount === 0) return
+    if (unsavedCount === 0 && !saveError) return
 
     setSaving(true)
     setSaveError(null)
@@ -87,7 +92,7 @@ function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
       setSaveSuccess(true)
       window.setTimeout(() => setSaveSuccess(false), 2000)
     }
-  }, [saveAll, unsavedCount])
+  }, [saveAll, saveError, unsavedCount])
 
   return (
     <SaveBar
@@ -160,6 +165,18 @@ export function YourPredictionsSection({
     [stageFilteredPredictions, classicSortMode],
   )
 
+  const lifecycleBuckets = useMemo(
+    () =>
+      partitionByLifecycleSection(orderedClassicPredictions, (prediction) =>
+        getMatchLifecycleSection({
+          statusShort: prediction.statusShort,
+          isFinal: prediction.isFinal,
+          kickoffAt: prediction.kickoffAt,
+        }),
+      ),
+    [orderedClassicPredictions],
+  )
+
   const activeMatchIds = useMemo(
     () => stageFilteredPredictions.map((prediction) => prediction.matchId),
     [stageFilteredPredictions],
@@ -230,21 +247,22 @@ export function YourPredictionsSection({
           </p>
         )
       ) : (
-        <ul className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2">
-          {orderedClassicPredictions.map((prediction) => (
-            <li key={prediction.matchId} className="min-w-0">
-              <PredictionMatchCard
-                prediction={prediction}
-                poolId={poolId}
-                memberId={memberId}
-                currentUserId={currentUserId}
-                scoringStyle={matchScoringStyle}
-                onPredictionSaved={onPredictionSaved}
-                onPredictionRemoved={onPredictionRemoved}
-              />
-            </li>
-          ))}
-        </ul>
+        <MatchLifecycleSections
+          buckets={lifecycleBuckets}
+          getKey={(prediction) => prediction.matchId}
+          listClassName="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2"
+          renderItem={(prediction) => (
+            <PredictionMatchCard
+              prediction={prediction}
+              poolId={poolId}
+              memberId={memberId}
+              currentUserId={currentUserId}
+              scoringStyle={matchScoringStyle}
+              onPredictionSaved={onPredictionSaved}
+              onPredictionRemoved={onPredictionRemoved}
+            />
+          )}
+        />
       )}
 
       {hasClassicContent && activeMatchIds.length > 0 ? (

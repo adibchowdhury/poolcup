@@ -23,6 +23,7 @@ export interface CompactMatchRowProps {
   homeScore: string
   awayScore: string
   kickoffAt?: string
+  statusNote?: string | null
   onHomeScoreChange: (value: string) => void
   onAwayScoreChange: (value: string) => void
   isLocked?: boolean
@@ -36,6 +37,7 @@ export function CompactMatchRow({
   homeScore,
   awayScore,
   kickoffAt,
+  statusNote = null,
   onHomeScoreChange,
   onAwayScoreChange,
   isLocked = false,
@@ -53,12 +55,18 @@ export function CompactMatchRow({
         variant,
       })}
     >
-      {kickoffAt ? (
+      {statusNote || kickoffAt ? (
         <div className="flex w-full justify-end pr-4">
-          <CompactMatchRowKickoffTime
-            kickoffAt={kickoffAt}
-            isLocked={isLocked}
-          />
+          {statusNote ? (
+            <span className="shrink-0 text-[10px] font-semibold text-muted-foreground sm:text-xs">
+              {statusNote}
+            </span>
+          ) : kickoffAt ? (
+            <CompactMatchRowKickoffTime
+              kickoffAt={kickoffAt}
+              isLocked={isLocked}
+            />
+          ) : null}
         </div>
       ) : null}
 

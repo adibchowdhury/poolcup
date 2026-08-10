@@ -192,6 +192,7 @@ export function PoolMatchRoom({
                 isFinal={match.is_final || mode === 'final'}
                 resultTeam1={match.result_team1}
                 resultTeam2={match.result_team2}
+                statusShort={match.status_short}
               />
             ) : match && !canRevealPicks ? (
               <MatchRoomLockTally

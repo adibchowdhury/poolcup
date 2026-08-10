@@ -14,6 +14,10 @@ import {
   type PredictionOutcomeKind,
 } from '@/src/lib/prediction-scoring'
 import { projectMatchPoints } from '@/src/lib/project-match-points'
+import {
+  getVoidPredictionOutcomeLabel,
+  isVoidMatchStatus,
+} from '@/src/lib/match-void-status'
 import { supabase } from '@/src/lib/supabase'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 import { UserAvatarImage } from '@/components/user-avatar-image'
@@ -30,6 +34,7 @@ type MatchRoomPicksPanelProps = {
   resultTeam2: number | null
   matchRound?: string
   advancingTeam?: number | null
+  statusShort?: string | null
   externalPicks?: MatchPoolPick[] | null
   externalPicksLoading?: boolean
   externalPicksError?: string | null
@@ -37,7 +42,7 @@ type MatchRoomPicksPanelProps = {
 
 type EnrichedPick = MatchPoolPick & {
   statusLabel: string
-  outcomeKind: PredictionOutcomeKind | 'pending'
+  outcomeKind: PredictionOutcomeKind | 'pending' | 'void'
   projectedPoints: number
 }
 
@@ -50,7 +55,7 @@ function getLiveStatusLabel(kind: PredictionOutcomeKind): string {
     case 'winner':
       return 'Correct winner'
     case 'wrong':
-      return 'Off'
+      return 'Wrong'
   }
 }
 
@@ -62,7 +67,17 @@ function enrichPick(
   scoringStyle: MatchScoringStyle,
   matchRound?: string,
   advancingTeam?: number | null,
+  isVoid = false,
 ): EnrichedPick {
+  if (isVoid) {
+    return {
+      ...pick,
+      statusLabel: getVoidPredictionOutcomeLabel(),
+      outcomeKind: 'void',
+      projectedPoints: 0,
+    }
+  }
+
   if (resultTeam1 == null || resultTeam2 == null) {
     return {
       ...pick,
@@ -113,7 +128,7 @@ function enrichPick(
   }
 }
 
-function getPillLabel(kind: PredictionOutcomeKind | 'pending'): string {
+function getPillLabel(kind: PredictionOutcomeKind | 'pending' | 'void'): string {
   switch (kind) {
     case 'exact':
       return 'Exact'
@@ -122,7 +137,9 @@ function getPillLabel(kind: PredictionOutcomeKind | 'pending'): string {
     case 'winner':
       return 'Winner'
     case 'wrong':
-      return 'Off'
+      return 'Wrong'
+    case 'void':
+      return 'Void'
     case 'pending':
       return '—'
   }
@@ -131,7 +148,7 @@ function getPillLabel(kind: PredictionOutcomeKind | 'pending'): string {
 function PickStatusPill({
   kind,
 }: {
-  kind: PredictionOutcomeKind | 'pending'
+  kind: PredictionOutcomeKind | 'pending' | 'void'
 }) {
   const label = getPillLabel(kind)
 
@@ -145,7 +162,9 @@ function PickStatusPill({
           'border border-sky-500/40 bg-sky-500/15 text-sky-400',
         kind === 'winner' &&
           'border border-amber-500/40 bg-amber-500/15 text-amber-400',
-        (kind === 'wrong' || kind === 'pending') &&
+        kind === 'wrong' &&
+          'border border-destructive/40 bg-destructive/15 text-destructive',
+        (kind === 'pending' || kind === 'void') &&
           'border border-border bg-muted/50 text-muted-foreground',
       )}
     >
@@ -311,11 +330,13 @@ export function MatchRoomPicksPanel({
   resultTeam2,
   matchRound,
   advancingTeam,
+  statusShort = null,
   externalPicks,
   externalPicksLoading = false,
   externalPicksError = null,
 }: MatchRoomPicksPanelProps) {
   const useExternalPicks = externalPicks !== undefined
+  const isVoid = isVoidMatchStatus(statusShort)
   const [picks, setPicks] = useState<MatchPoolPick[] | null>(null)
   const [loading, setLoading] = useState(!useExternalPicks)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -383,6 +404,7 @@ export function MatchRoomPicksPanel({
           scoringStyle,
           matchRound,
           advancingTeam,
+          isVoid,
         ),
       )
       .sort((a, b) => {
@@ -401,6 +423,7 @@ export function MatchRoomPicksPanel({
     scoringStyle,
     matchRound,
     advancingTeam,
+    isVoid,
   ])
 
   const yourPick = enrichedPicks.find((pick) => pick.userId === currentUserId)

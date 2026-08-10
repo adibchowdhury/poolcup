@@ -75,6 +75,7 @@ function WinnerTeamButton({
       aria-label={`Pick ${team.name} to win`}
       className={cn(
         'flex min-h-[88px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border-2 px-3 py-4 transition-all duration-200',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         prominent && 'min-h-[100px] sm:min-h-[108px]',
         selected
           ? 'border-primary bg-primary/15 shadow-[0_0_16px_rgba(0,230,118,0.15)]'

@@ -37,10 +37,10 @@ export function PredictScoreInput({
       className={cn(
         'predict-score-input h-[44px] w-[44px] shrink-0 rounded-lg border text-center font-mono text-[18px] text-white outline-none transition-all duration-200',
         'bg-[#080b0f] border-[rgba(255,255,255,0.15)]',
-        'focus:border-[rgba(0,230,118,0.5)] focus:shadow-[0_0_12px_rgba(0,230,118,0.2)]',
+        'focus-visible:border-[rgba(0,230,118,0.5)] focus-visible:shadow-[0_0_12px_rgba(0,230,118,0.2)] focus-visible:ring-2 focus-visible:ring-[#00e676]/40',
         filled && 'border-[#00e676] text-[#00e676]',
         (disabled || readOnly) &&
-          'cursor-not-allowed opacity-50 focus:border-[rgba(255,255,255,0.15)] focus:shadow-none',
+          'cursor-not-allowed opacity-50 focus-visible:border-[rgba(255,255,255,0.15)] focus-visible:shadow-none focus-visible:ring-0',
       )}
       aria-label={label}
     />

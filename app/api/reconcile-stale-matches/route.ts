@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import {
   deriveMatchUpdateFromFixture,
   fetchFixtureById,
+  fetchFixturesByIds,
+  isFinalStatus,
   resolveFixtureScoresForForceClose,
   type ApiFootballFixture,
 } from '@/src/lib/api-football'
@@ -12,6 +14,10 @@ import {
   isValidApiFootballFixtureId,
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
+import {
+  isVoidMatchStatus,
+  normalizeMatchStatusShort,
+} from '@/src/lib/match-void-status'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
@@ -27,6 +33,14 @@ const FORCE_FINAL_MINUTES = 135
 const FORCE_CLOSE_MIN_ELAPSED_MINUTE = 85
 /** Hard catch-all: wall-clock threshold past which any stuck live status (incl. HT) may close. */
 const FORCE_CLOSE_HARD_MINUTES = 155
+
+/**
+ * Re-verify recently-final matches for official score corrections.
+ * Window field: `matches.kickoff_at` within the last FINAL_REVERIFY_LOOKBACK_DAYS.
+ * (No separate finalized_at column — kickoff bounds recent finals.)
+ */
+const FINAL_REVERIFY_LOOKBACK_DAYS = 7
+const DEFAULT_MAX_FINAL_REVERIFY = 40
 
 const FORCE_CLOSE_ELIGIBLE_STATUSES = new Set([
   '2H',
@@ -73,6 +87,14 @@ function getMaxCandidates(): number {
   return Math.min(parsed, 200)
 }
 
+function getMaxFinalReverify(): number {
+  const raw = process.env.RECONCILE_MAX_FINAL_REVERIFY
+  if (!raw) return DEFAULT_MAX_FINAL_REVERIFY
+  const parsed = parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_MAX_FINAL_REVERIFY
+  return Math.min(parsed, 100)
+}
+
 type ReconcileError = {
   fixtureId: string
   message: string
@@ -90,6 +112,31 @@ type CandidateRow = {
   kickoff_at: string
   status_short: string | null
   elapsed_minute: number | null
+  advancing_team?: number | null
+}
+
+type FinalReverifyRow = {
+  id: string
+  fixture_id: string | null
+  round: string
+  team1_name: string
+  team2_name: string
+  result_team1: number | null
+  result_team2: number | null
+  is_final: boolean
+  kickoff_at: string
+  status_short: string | null
+  elapsed_minute: number | null
+  advancing_team: number | null
+}
+
+type FinalReverifySummary = {
+  checked: number
+  corrected: number
+  voided: number
+  clawedBack: number
+  unchanged: number
+  errors: ReconcileError[]
 }
 
 type MatchLiveUpdatePayload = {
@@ -200,6 +247,387 @@ async function finalizeForceClosedMatch(
   return 'finalized'
 }
 
+async function sumPredictionPointsAwarded(
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+  matchId: string,
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('predictions')
+    .select('points_awarded')
+    .eq('match_id', matchId)
+
+  if (error) {
+    console.error('reconcile-stale-matches: failed to sum points_awarded', {
+      matchId,
+      message: error.message,
+    })
+    return null
+  }
+
+  return (data ?? []).reduce(
+    (sum, row) => sum + (typeof row.points_awarded === 'number' ? row.points_awarded : 0),
+    0,
+  )
+}
+
+/**
+ * Bounded re-check of recently-final matches for official score corrections.
+ * Uses batched `fetchFixturesByIds` (≤20 ids/request) — same throttle pattern as sync-scores.
+ *
+ * Void rule: if API status is PST/CANC/ABD/AWD/WO, mark the match void
+ * (`status_short` + `is_final=false`), then call `void_match_points` to reverse
+ * any previously awarded points and rebuild leaderboards. Do NOT call
+ * `calculate_match_points` on void.
+ */
+async function reverifyRecentFinalMatches(
+  apiKey: string,
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
+): Promise<FinalReverifySummary> {
+  const nowMs = Date.now()
+  const kickoffSinceIso = new Date(
+    nowMs - FINAL_REVERIFY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString()
+  const maxFinalReverify = getMaxFinalReverify()
+
+  const summary: FinalReverifySummary = {
+    checked: 0,
+    corrected: 0,
+    voided: 0,
+    clawedBack: 0,
+    unchanged: 0,
+    errors: [],
+  }
+
+  const { data: rows, error: loadError } = await supabase
+    .from('matches')
+    .select(
+      'id, fixture_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute, advancing_team',
+    )
+    .eq('is_final', true)
+    .gte('kickoff_at', kickoffSinceIso)
+    .lte('kickoff_at', new Date(nowMs).toISOString())
+    .order('kickoff_at', { ascending: false })
+    .limit(maxFinalReverify)
+
+  if (loadError) {
+    throw new Error(
+      `Failed to load recent final matches for re-verify: ${loadError.message}`,
+    )
+  }
+
+  const finals = (rows ?? []) as FinalReverifyRow[]
+  const pollable = finals.filter((match) =>
+    isValidApiFootballFixtureId(match.fixture_id),
+  )
+
+  for (const match of finals) {
+    if (isValidApiFootballFixtureId(match.fixture_id)) continue
+    logUpdaterGuardWarning(
+      'reconcile-stale-matches:final-reverify',
+      'Skipping final match with invalid fixture_id — will not poll API',
+      {
+        matchId: match.id,
+        fixtureId: match.fixture_id,
+        kickoffAt: match.kickoff_at,
+      },
+    )
+    summary.unchanged += 1
+  }
+
+  summary.checked = finals.length
+
+  if (pollable.length === 0) {
+    return summary
+  }
+
+  const fixtureIds = pollable.map((m) => m.fixture_id as string)
+  let fixtures: ApiFootballFixture[]
+  try {
+    fixtures = await fetchFixturesByIds(apiKey, fixtureIds)
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'API-Football batch fetch failed'
+    summary.errors.push({ fixtureId: 'batch', message })
+    return summary
+  }
+
+  const fixtureById = new Map<string, ApiFootballFixture>()
+  for (const fixture of fixtures) {
+    fixtureById.set(String(fixture.fixture.id), fixture)
+  }
+
+  for (const match of pollable) {
+    const fixtureId = match.fixture_id as string
+    const label = `${match.team1_name} v ${match.team2_name}`
+
+    try {
+      const fixture = fixtureById.get(fixtureId)
+      if (!fixture) {
+        summary.errors.push({
+          fixtureId,
+          message: `API returned no fixture for final re-verify (match ${match.id})`,
+        })
+        continue
+      }
+
+      const apiStatus = normalizeMatchStatusShort(fixture.fixture.status.short)
+
+      // Previously-final match became void after the fact — don't score; claw back points.
+      if (isVoidMatchStatus(apiStatus)) {
+        const alreadyVoidMarked =
+          isVoidMatchStatus(match.status_short) && !match.is_final
+        if (alreadyVoidMarked) {
+          summary.unchanged += 1
+          continue
+        }
+
+        const { error: voidUpdateError } = await supabase
+          .from('matches')
+          .update({
+            status_short: apiStatus,
+            is_final: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', match.id)
+
+        if (voidUpdateError) {
+          summary.errors.push({
+            fixtureId,
+            message: `void update failed: ${voidUpdateError.message}`,
+          })
+          continue
+        }
+
+        summary.voided += 1
+
+        // Always call — idempotent when points are already 0.
+        try {
+          const { error: voidPointsError } = await supabase.rpc(
+            'void_match_points',
+            { p_match_id: match.id },
+          )
+
+          if (voidPointsError) {
+            summary.errors.push({
+              fixtureId,
+              message: `void_match_points: ${voidPointsError.message}`,
+            })
+            console.error(
+              'reconcile-stale-matches: void_match_points failed after void mark',
+              {
+                matchId: match.id,
+                fixtureId,
+                message: voidPointsError.message,
+              },
+            )
+            try {
+              await sendOpsNtfy(
+                `Error: voided ${label} (match ${match.id}) ${apiStatus} but void_match_points failed: ${voidPointsError.message}`,
+              )
+            } catch (notifyError) {
+              console.error(
+                'reconcile-stale-matches: ops ntfy failed',
+                notifyError,
+              )
+            }
+          } else {
+            summary.clawedBack += 1
+            console.info(
+              'reconcile-stale-matches: final match voided — points clawed back via void_match_points',
+              {
+                matchId: match.id,
+                fixtureId,
+                label,
+                oldStatus: match.status_short,
+                newStatus: apiStatus,
+                oldScore: `${match.result_team1}-${match.result_team2}`,
+              },
+            )
+            try {
+              await sendOpsNtfy(
+                `Final→void: ${label} (match ${match.id}) ${match.status_short ?? 'FT'} → ${apiStatus}. Points clawed back.`,
+              )
+            } catch (notifyError) {
+              console.error(
+                'reconcile-stale-matches: ops ntfy failed',
+                notifyError,
+              )
+            }
+          }
+        } catch (voidPointsThrown) {
+          const message =
+            voidPointsThrown instanceof Error
+              ? voidPointsThrown.message
+              : 'void_match_points threw'
+          summary.errors.push({ fixtureId, message })
+          console.error(
+            'reconcile-stale-matches: void_match_points threw after void mark',
+            { matchId: match.id, fixtureId, message },
+          )
+        }
+        continue
+      }
+
+      // Still final: compare official score/status (and knockout advance).
+      if (!isFinalStatus(apiStatus)) {
+        // Do not auto-unfinalize for live/other statuses — log only.
+        console.warn(
+          'reconcile-stale-matches: final match API status is no longer final (left unchanged)',
+          {
+            matchId: match.id,
+            fixtureId,
+            label,
+            dbStatus: match.status_short,
+            apiStatus,
+          },
+        )
+        summary.unchanged += 1
+        continue
+      }
+
+      const update = deriveMatchUpdateFromFixture(fixture)
+      if (!update || !update.is_final) {
+        summary.unchanged += 1
+        continue
+      }
+
+      let advancingTeam: number | undefined
+      if (isKnockoutRound(match.round)) {
+        const knockoutFields = knockoutFinalizeFieldsFromFixture(
+          match.round,
+          fixture,
+        )
+        if (!knockoutFields) {
+          summary.errors.push({
+            fixtureId,
+            message:
+              'Knockout re-verify blocked: level score without advancing team',
+          })
+          continue
+        }
+        advancingTeam = knockoutFields.advancing_team
+      }
+
+      const scoreChanged =
+        match.result_team1 !== update.result_team1 ||
+        match.result_team2 !== update.result_team2
+      const statusChanged =
+        normalizeMatchStatusShort(match.status_short) !==
+        normalizeMatchStatusShort(update.status_short)
+      const advanceChanged =
+        advancingTeam != null && advancingTeam !== match.advancing_team
+
+      if (!scoreChanged && !statusChanged && !advanceChanged) {
+        summary.unchanged += 1
+        continue
+      }
+
+      const pointsBefore = await sumPredictionPointsAwarded(supabase, match.id)
+
+      const correctionPayload: {
+        result_team1: number
+        result_team2: number
+        is_final: true
+        status_short: string
+        elapsed_minute: number | null
+        updated_at: string
+        advancing_team?: number
+      } = {
+        result_team1: update.result_team1,
+        result_team2: update.result_team2,
+        is_final: true,
+        status_short: update.status_short,
+        elapsed_minute: update.elapsed_minute,
+        updated_at: new Date().toISOString(),
+      }
+      if (advancingTeam != null) {
+        correctionPayload.advancing_team = advancingTeam
+      }
+
+      const { error: updateError } = await supabase
+        .from('matches')
+        .update(correctionPayload)
+        .eq('id', match.id)
+
+      if (updateError) {
+        summary.errors.push({
+          fixtureId,
+          message: `correction update failed: ${updateError.message}`,
+        })
+        continue
+      }
+
+      // Delta-safe recalculation — do not modify calculate_match_points.
+      const { error: rpcError } = await supabase.rpc('calculate_match_points', {
+        p_match_id: match.id,
+      })
+
+      if (rpcError) {
+        summary.errors.push({
+          fixtureId,
+          message: `calculate_match_points after correction: ${rpcError.message}`,
+        })
+        try {
+          await sendOpsNtfy(
+            `Error: corrected ${label} (match ${match.id}) ${match.result_team1}-${match.result_team2}→${update.result_team1}-${update.result_team2} but calculate_match_points failed: ${rpcError.message}`,
+          )
+        } catch (notifyError) {
+          console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+        }
+        continue
+      }
+
+      // Idempotent — post_match_moments is keyed to avoid duplicate chat posts.
+      await tryPostMatchMoments(
+        supabase,
+        match.id,
+        'reconcile-stale-matches:final-reverify',
+      )
+
+      const pointsAfter = await sumPredictionPointsAwarded(supabase, match.id)
+      const pointsDelta =
+        pointsBefore != null && pointsAfter != null
+          ? pointsAfter - pointsBefore
+          : null
+
+      summary.corrected += 1
+      console.info('reconcile-stale-matches: final result corrected + points recalculated', {
+        matchId: match.id,
+        fixtureId,
+        label,
+        oldScore: `${match.result_team1}-${match.result_team2}`,
+        newScore: `${update.result_team1}-${update.result_team2}`,
+        oldStatus: match.status_short,
+        newStatus: update.status_short,
+        pointsBefore,
+        pointsAfter,
+        pointsDelta,
+      })
+
+      try {
+        await sendOpsNtfy(
+          `Final corrected: ${label} (match ${match.id}) ${match.result_team1}-${match.result_team2} → ${update.result_team1}-${update.result_team2}${
+            pointsDelta != null ? ` (points Δ ${pointsDelta})` : ''
+          }`,
+        )
+      } catch (notifyError) {
+        console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Final re-verify failed'
+      summary.errors.push({ fixtureId, message })
+      console.error('reconcile-stale-matches: final re-verify error', {
+        matchId: match.id,
+        fixtureId,
+        message,
+      })
+    }
+  }
+
+  return summary
+}
+
 type ForceCloseKind = 'gentle' | 'hard'
 
 async function attemptForceCloseWithResolvedScore(
@@ -253,6 +681,7 @@ async function runReconcile(): Promise<{
   stillLive: number
   alerted: number
   errors: ReconcileError[]
+  finalReverify: FinalReverifySummary
 }> {
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) {
@@ -574,12 +1003,41 @@ async function runReconcile(): Promise<{
     }
   }
 
+  // After stale non-final reconcile: re-check recent finals for official corrections.
+  // Best-effort — failures inside the pass are collected, not thrown.
+  let finalReverify: FinalReverifySummary
+  try {
+    finalReverify = await reverifyRecentFinalMatches(apiKey, supabase)
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Final re-verify pass failed'
+    console.error('reconcile-stale-matches: final re-verify pass failed', error)
+    finalReverify = {
+      checked: 0,
+      corrected: 0,
+      voided: 0,
+      clawedBack: 0,
+      unchanged: 0,
+      errors: [{ fixtureId: 'final-reverify', message }],
+    }
+  }
+
   return {
     candidates: candidates.length,
     finalized,
     stillLive,
     alerted,
-    errors,
+    errors: [...errors, ...finalReverify.errors],
+    finalReverify: {
+      checked: finalReverify.checked,
+      corrected: finalReverify.corrected,
+      voided: finalReverify.voided,
+      clawedBack: finalReverify.clawedBack,
+      unchanged: finalReverify.unchanged,
+      errors: finalReverify.errors,
+    },
   }
 }
 
