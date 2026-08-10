@@ -184,6 +184,10 @@ export function FriendsActivitySection() {
 
   const groups = useMemo(() => groupFriendActivity(rows), [rows])
 
+  if (!loading && groups.length === 0) {
+    return null
+  }
+
   return (
     <DashboardFeedSection
       id="friends-activity"
@@ -204,18 +208,6 @@ export function FriendsActivitySection() {
         >
           <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
           Loading…
-        </div>
-      ) : groups.length === 0 ? (
-        <div className="py-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            No friend activity yet. Add friends to see what they&apos;re up to.
-          </p>
-          <Link
-            href="/friends#find"
-            className="mt-2 inline-block rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            Find friends
-          </Link>
         </div>
       ) : (
         <div className="space-y-5">

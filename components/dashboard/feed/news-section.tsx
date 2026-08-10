@@ -145,6 +145,10 @@ export function NewsSection() {
     void load()
   }, [load])
 
+  if (!loading && !error && items.length === 0) {
+    return null
+  }
+
   return (
     <DashboardFeedSection id="news-highlights" title="News & Highlights">
       {loading ? (
@@ -161,12 +165,6 @@ export function NewsSection() {
           >
             Try again
           </Button>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/70 bg-card/60 px-4 py-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No football headlines right now. Check back soon.
-          </p>
         </div>
       ) : (
         <div

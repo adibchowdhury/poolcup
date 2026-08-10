@@ -30,6 +30,7 @@ import { trackEvent } from '@/src/lib/track'
 import { useAuth } from '@/src/lib/auth-context'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 export type PoolMemberAvatar = {
   displayName: string
@@ -58,6 +59,11 @@ export type DashboardPoolCardData = {
   rankDelta: number
   totalPredictions: number
   yourPredictions: number
+  /**
+   * Upcoming matches (horizon) still missing a prediction for this member.
+   * Winner pools: remaining group/knockout progress slots when unlocked.
+   */
+  picksNeeded?: number
   nextMatchKickoffAt: string | null
   predictionsLocked: boolean
   canDelete?: boolean
@@ -183,6 +189,9 @@ export function PoolCard({
   const visibleAvatars = pool.memberAvatars.slice(0, MAX_VISIBLE_MEMBER_AVATARS)
   const overflowCount = Math.max(0, pool.members - MAX_VISIBLE_MEMBER_AVATARS)
   const playersLabel = `${pool.members} ${pool.members === 1 ? 'player' : 'players'}`
+  const picksNeeded = Math.max(0, pool.picksNeeded ?? 0)
+  const showPicksNeededBadge =
+    !isPreview && showPredictButton && picksNeeded > 0
 
   const copyCode = () => {
     if (isPreview) return
@@ -236,6 +245,20 @@ export function PoolCard({
               >
                 {pool.isOfficial ? 'Official' : 'Invite'}
               </span>
+              {showPicksNeededBadge ? (
+                <span
+                  className="inline-flex w-fit items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-600 dark:text-amber-400"
+                  aria-label={
+                    picksNeeded === 1
+                      ? '1 pick needed'
+                      : `${picksNeeded} picks needed`
+                  }
+                >
+                  {picksNeeded === 1
+                    ? '1 pick needed'
+                    : `${picksNeeded} picks needed`}
+                </span>
+              ) : null}
             </div>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Trophy
@@ -341,7 +364,10 @@ export function PoolCard({
           {showPredictButton ? (
             <Link
               href={predictButtonHref}
-              className="inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-primary px-2.5 py-[11px] text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:px-3"
+              className={cn(
+                'inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] bg-primary px-2.5 py-[11px] text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:px-3',
+                FOCUS_VISIBLE_RING,
+              )}
             >
               <Zap className="h-4 w-4 shrink-0 fill-current" aria-hidden />
               <span className="truncate">
@@ -353,6 +379,7 @@ export function PoolCard({
             href={leaderboardHref}
             className={cn(
               'inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border bg-transparent px-2.5 py-[11px] text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-3',
+              FOCUS_VISIBLE_RING,
               showPredictButton ? undefined : 'w-full',
             )}
           >
@@ -364,7 +391,10 @@ export function PoolCard({
         {isPreview ? (
           <Link
             href={previewActionHref!}
-            className="relative mt-2 flex w-full items-center gap-2 overflow-hidden rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className={cn(
+              'relative mt-2 flex w-full items-center gap-2 overflow-hidden rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted',
+              FOCUS_VISIBLE_RING,
+            )}
           >
             <span
               aria-hidden
@@ -380,7 +410,10 @@ export function PoolCard({
           <button
             type="button"
             onClick={copyCode}
-            className="mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted"
+            className={cn(
+              'mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted',
+              FOCUS_VISIBLE_RING,
+            )}
           >
             <UserPlus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
             <span className="flex-1 text-sm font-medium text-primary">

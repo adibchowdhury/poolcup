@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
+import { ContinuePredictingSection } from '@/components/dashboard/feed/continue-predicting-section'
 import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
 import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
@@ -27,6 +28,8 @@ import {
 } from '@/components/dashboard/upcoming-games-tab'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
+import { defaultSportBubbleFromFavorites } from '@/src/lib/favorite-sports'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
 import {
   getAvatarSrc,
@@ -77,6 +80,8 @@ interface DashboardViewProps {
   customAvatarUrl?: string | null
   createdAt?: string | null
   supportPromptLastShownAt?: string | null
+  /** From users.favorite_sports — seeds the home sport filter. */
+  favoriteSports?: string[]
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
   errorMessage?: string | null
@@ -113,10 +118,15 @@ function DashboardViewContent({
   customAvatarUrl: initialCustomAvatarUrl = null,
   createdAt = null,
   supportPromptLastShownAt = null,
+  favoriteSports = [],
   quickStats,
   passwordResetSuccess,
   errorMessage,
 }: DashboardViewProps) {
+  const defaultSportId = useMemo(
+    () => defaultSportBubbleFromFavorites(favoriteSports),
+    [favoriteSports],
+  )
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [fullName, setFullName] = useState(displayName ?? '')
   const [headerName, setHeaderName] = useState(displayName ?? '')
@@ -148,6 +158,7 @@ function DashboardViewContent({
   const [dashboardPoolsError, setDashboardPoolsError] = useState<string | null>(
     null,
   )
+  const dashboardViewedRef = useRef(false)
 
   useEffect(() => {
     setActiveTab(dashboardTabFromParam(searchParams.get('tab')))
@@ -236,6 +247,19 @@ function DashboardViewContent({
   useEffect(() => {
     void refreshUserPoints()
   }, [refreshUserPoints])
+
+  useEffect(() => {
+    if (activeTab !== 'dashboard') {
+      dashboardViewedRef.current = false
+      return
+    }
+    if (dashboardViewedRef.current) return
+    dashboardViewedRef.current = true
+    capturePostHog('dashboard_viewed', {
+      default_sport_id: defaultSportId,
+      favorite_sports_count: favoriteSports.length,
+    })
+  }, [activeTab, defaultSportId, favoriteSports.length])
 
   useEffect(() => {
     const channel = supabase
@@ -599,10 +623,17 @@ function DashboardViewContent({
               value="dashboard"
               className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
             >
-              <DashboardMatchFilters sportRowClassName="-mt-6 mb-6 sm:-mt-8" />
+              <DashboardMatchFilters
+                sportRowClassName="-mt-6 mb-6 sm:-mt-8"
+                defaultSportId={defaultSportId}
+              />
 
               <DashboardFeed>
                 <LiveNowSection userId={userId} />
+                <ContinuePredictingSection
+                  pools={dashboardPools}
+                  loading={dashboardPoolsLoading}
+                />
                 <YourPoolsSection
                   userId={userId}
                   pools={dashboardPools}

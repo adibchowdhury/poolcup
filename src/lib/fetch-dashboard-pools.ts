@@ -114,13 +114,15 @@ export async function fetchDashboardPools(
 
   let upcomingMatchQuery = supabase
     .from('matches')
-    .select('*', { count: 'exact', head: true })
+    .select('id')
     .gt('kickoff_at', nowIso)
     .lte('kickoff_at', horizonEndIso)
   if (eventId) upcomingMatchQuery = upcomingMatchQuery.eq('event_id', eventId)
-  const { count: upcomingMatchCount } = await upcomingMatchQuery
+  const { data: upcomingMatchRows } = await upcomingMatchQuery
 
-  const predictionsLocked = (upcomingMatchCount ?? 0) === 0
+  const upcomingMatchIds = (upcomingMatchRows ?? []).map((row) => row.id)
+  const upcomingMatchCount = upcomingMatchIds.length
+  const predictionsLocked = upcomingMatchCount === 0
 
   let matchesPlayedQuery = supabase
     .from('matches')
@@ -202,6 +204,33 @@ export async function fetchDashboardPools(
     supabase,
     classicMemberContexts,
   )
+
+  /** Classic: upcoming matches in horizon still missing a prediction. */
+  const upcomingPicksNeededByMember = new Map<string, number>()
+  if (classicMemberContexts.length > 0 && upcomingMatchIds.length > 0) {
+    const classicMemberIds = classicMemberContexts.map((row) => row.memberId)
+    const { data: upcomingPredictionRows } = await supabase
+      .from('predictions')
+      .select('member_id, match_id')
+      .in('member_id', classicMemberIds)
+      .in('match_id', upcomingMatchIds)
+
+    const predictedUpcomingByMember = new Map<string, Set<string>>()
+    for (const row of upcomingPredictionRows ?? []) {
+      if (!predictedUpcomingByMember.has(row.member_id)) {
+        predictedUpcomingByMember.set(row.member_id, new Set())
+      }
+      predictedUpcomingByMember.get(row.member_id)!.add(row.match_id)
+    }
+
+    for (const memberId of classicMemberIds) {
+      const predicted = predictedUpcomingByMember.get(memberId)?.size ?? 0
+      upcomingPicksNeededByMember.set(
+        memberId,
+        Math.max(0, upcomingMatchIds.length - predicted),
+      )
+    }
+  }
 
   const winnerMemberships = validMemberships.filter(
     (row) => row.pools!.scoring_style === 'winner',
@@ -339,6 +368,11 @@ export async function fetchDashboardPools(
     const poolTotalPredictions = isWinnerPool
       ? WINNER_ONLY_DASHBOARD_PROGRESS_TOTAL
       : totalPredictions
+    const picksNeeded = predictionsLocked
+      ? 0
+      : isWinnerPool
+        ? Math.max(0, poolTotalPredictions - yourPredictions)
+        : (upcomingPicksNeededByMember.get(row.id) ?? upcomingMatchIds.length)
     const movementFields = movementByMember.get(row.id) ?? {
       movement: 'none' as const,
       rankDelta: 0,
@@ -356,6 +390,7 @@ export async function fetchDashboardPools(
       rankDelta: movementFields.rankDelta,
       totalPredictions: poolTotalPredictions,
       yourPredictions,
+      picksNeeded,
       nextMatchKickoffAt,
       predictionsLocked,
       canDelete: pool.creator_id === userId,

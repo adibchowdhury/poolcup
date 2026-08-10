@@ -33,10 +33,14 @@ export default async function DashboardPage({
   const { data: profile } = await supabase
     .from('users')
     .select(
-      'display_name, points, avatar, custom_avatar_url, support_prompt_last_shown_at, created_at',
+      'display_name, points, avatar, custom_avatar_url, support_prompt_last_shown_at, created_at, favorite_sports',
     )
     .eq('id', user.id)
     .maybeSingle()
+
+  const favoriteSports = Array.isArray(profile?.favorite_sports)
+    ? profile.favorite_sports.filter((s): s is string => typeof s === 'string')
+    : []
 
   const { data: memberships, error: memberError } = await supabase
     .from('pool_members')
@@ -95,6 +99,7 @@ export default async function DashboardPage({
       customAvatarUrl={profile?.custom_avatar_url ?? null}
       createdAt={profile?.created_at ?? null}
       supportPromptLastShownAt={profile?.support_prompt_last_shown_at ?? null}
+      favoriteSports={favoriteSports}
       quickStats={{
         totalPoints: profile?.points ?? 0,
         predictionsMade,

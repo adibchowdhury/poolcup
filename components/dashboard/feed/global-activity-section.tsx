@@ -194,6 +194,14 @@ export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
     void load()
   }, [load])
 
+  const hasCards = Boolean(
+    data?.mostPredicted || data?.closestCall,
+  )
+
+  if (!loading && data && !data.error && (data.isEmpty || !hasCards)) {
+    return null
+  }
+
   return (
     <DashboardFeedSection
       id="global-activity"
@@ -222,11 +230,6 @@ export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
               Try again
             </Button>
           </div>
-        ) : data?.isEmpty ? (
-          <p className="py-3 text-center text-sm text-muted-foreground">
-            Community stats will show once predictions and leaderboard movements
-            are in.
-          </p>
         ) : data ? (
           <div className="space-y-2">
             {data.mostPredicted ? (
@@ -235,11 +238,6 @@ export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
             {data.closestCall &&
             data.closestCall.match.id !== data.mostPredicted?.id ? (
               <ClosestCallCard item={data.closestCall} />
-            ) : null}
-            {!data.mostPredicted && !data.closestCall ? (
-              <p className="py-2 text-center text-sm text-muted-foreground">
-                No community highlights right now.
-              </p>
             ) : null}
           </div>
         ) : null}

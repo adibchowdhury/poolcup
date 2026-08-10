@@ -118,27 +118,7 @@ export function OfficialPoolsSection({
   }
 
   if (!loading && !error && pools.length === 0) {
-    return (
-      <DashboardFeedSection id="official-pools" title="Discover Pools">
-        <div className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-8 text-center">
-          <p className="text-sm font-medium text-foreground">
-            No official pools to discover right now
-          </p>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Create your own pool or join a friend with an invite code.
-          </p>
-          <Link
-            href="/create"
-            className={cn(
-              'mt-4 inline-flex rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            )}
-          >
-            Create a pool
-          </Link>
-        </div>
-      </DashboardFeedSection>
-    )
+    return null
   }
 
   return (

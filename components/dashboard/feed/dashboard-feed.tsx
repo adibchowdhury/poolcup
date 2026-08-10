@@ -5,12 +5,13 @@ import { cn } from '@/lib/utils'
  * Vertical dashboard homepage feed.
  * Section order (pools tab; sport/event pills sit above this wrapper):
  * 1. Live Now
- * 2. Your Pools
- * 3. Discover Pools (OfficialPoolsSection)
- * 4. Your Progress (stats + achievements stacked)
- * 5. Global PoolCup Activity
- * 6. Friends Activity
- * 7. News & Highlights (RSS link-out teasers)
+ * 2. Continue Predicting
+ * 3. Your Pools
+ * 4. Discover Pools (OfficialPoolsSection)
+ * 5. Your Progress (stats + achievements stacked)
+ * 6. Global PoolCup Activity
+ * 7. Friends Activity
+ * 8. News & Highlights (RSS link-out teasers)
  */
 type DashboardFeedProps = {
   children: ReactNode

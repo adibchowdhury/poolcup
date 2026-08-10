@@ -4,7 +4,13 @@ import {
   sumMemberCounts,
 } from '@/src/lib/member-prediction-counts'
 import { projectMatchPoints } from '@/src/lib/project-match-points'
-import { getPredictionOutcomeLabel } from '@/src/lib/prediction-scoring'
+import {
+  getPredictionOutcomeLabel,
+  type PredictionOutcomeKind,
+} from '@/src/lib/prediction-scoring'
+
+/** How many recently scored match picks to surface on the home Progress module. */
+export const RECENT_SCORED_LIMIT = 5
 
 export type BestPrediction =
   | {
@@ -31,12 +37,29 @@ export type BestPrediction =
       summary: string
     }
 
+/** Settled match prediction for the home "Recent results" list (most recent first). */
+export type RecentScoredPrediction = {
+  matchId: string
+  team1Name: string
+  team2Name: string
+  predTeam1: number
+  predTeam2: number
+  resultTeam1: number
+  resultTeam2: number
+  points: number
+  outcomeKind: PredictionOutcomeKind
+  outcomeLabel: string
+  kickoffAt: string
+}
+
 export type RecentResultsFeedData = {
   totalPoints: number
   winRate: number | null
   /** Consecutive settled matches with at least one positive-scoring pick. */
   currentStreak: number
   bestPrediction: BestPrediction | null
+  /** Chronological settled match picks (most recent kickoff first). */
+  recentScored: RecentScoredPrediction[]
   /** True when the user has no points or settled prediction activity. */
   isEmpty: boolean
   error: string | null
@@ -56,6 +79,7 @@ type MatchJoin = {
   group_name: string | null
   is_final: boolean
   advancing_team: number | null
+  kickoff_at?: string
 }
 
 type PredictionBestRow = {
@@ -63,6 +87,7 @@ type PredictionBestRow = {
   pred_team1: number
   pred_team2: number
   advance_pick: number | null
+  match_id?: string
   matches: MatchJoin | MatchJoin[] | null
 }
 
@@ -159,6 +184,70 @@ function buildMatchBestPrediction(row: PredictionBestRow): BestPrediction | null
   }
 }
 
+function buildRecentScoredPrediction(
+  row: PredictionBestRow,
+): RecentScoredPrediction | null {
+  const matchId = typeof row.match_id === 'string' ? row.match_id : ''
+  const match = unwrapMatch(row.matches)
+  if (!matchId || !match) return null
+  if (match.result_team1 == null || match.result_team2 == null) return null
+  if (!match.is_final) return null
+
+  const kickoffAt = match.kickoff_at ?? ''
+  const kickoffMs = kickoffAt ? new Date(kickoffAt).getTime() : NaN
+  if (!Number.isFinite(kickoffMs)) return null
+
+  const projection = projectMatchPoints(
+    match.round,
+    row.pred_team1,
+    row.pred_team2,
+    row.advance_pick,
+    match.result_team1,
+    match.result_team2,
+    match.advancing_team,
+  )
+
+  return {
+    matchId,
+    team1Name: match.team1_name,
+    team2Name: match.team2_name,
+    predTeam1: row.pred_team1,
+    predTeam2: row.pred_team2,
+    resultTeam1: match.result_team1,
+    resultTeam2: match.result_team2,
+    points: row.points_awarded,
+    outcomeKind: projection.kind,
+    outcomeLabel: getPredictionOutcomeLabel(projection.kind),
+    kickoffAt,
+  }
+}
+
+/**
+ * Dedupe multi-pool picks for the same match (keep highest points), then
+ * take the newest RECENT_SCORED_LIMIT by kickoff.
+ */
+function buildRecentScoredList(
+  rows: PredictionBestRow[],
+): RecentScoredPrediction[] {
+  const byMatch = new Map<string, RecentScoredPrediction>()
+
+  for (const row of rows) {
+    const item = buildRecentScoredPrediction(row)
+    if (!item) continue
+    const existing = byMatch.get(item.matchId)
+    if (!existing || item.points > existing.points) {
+      byMatch.set(item.matchId, item)
+    }
+  }
+
+  return [...byMatch.values()]
+    .sort(
+      (a, b) =>
+        new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime(),
+    )
+    .slice(0, RECENT_SCORED_LIMIT)
+}
+
 export async function fetchRecentResultsFeed(
   supabase: SupabaseClient,
   userId: string,
@@ -168,6 +257,7 @@ export async function fetchRecentResultsFeed(
     winRate: null,
     currentStreak: 0,
     bestPrediction: null,
+    recentScored: [],
     isEmpty: true,
     error: null,
   }
@@ -208,6 +298,7 @@ export async function fetchRecentResultsFeed(
     let winRate: number | null = null
     let currentStreak = 0
     let bestPrediction: BestPrediction | null = null
+    let recentScored: RecentScoredPrediction[] = []
 
     if (memberIds.length > 0) {
       const [
@@ -217,6 +308,7 @@ export async function fetchRecentResultsFeed(
         bestMatchResult,
         bestGroupResult,
         bestThirdResult,
+        recentMatchResult,
       ] = await Promise.all([
         fetchMemberPredictionCounts(supabase, memberContexts),
         supabase
@@ -278,6 +370,37 @@ export async function fetchRecentResultsFeed(
           .order('points_awarded', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from('predictions')
+          .select(
+            `
+            points_awarded,
+            pred_team1,
+            pred_team2,
+            advance_pick,
+            match_id,
+            matches!inner (
+              team1_name,
+              team2_name,
+              result_team1,
+              result_team2,
+              round,
+              group_name,
+              is_final,
+              advancing_team,
+              kickoff_at
+            )
+          `,
+          )
+          .in('member_id', memberIds)
+          .eq('matches.is_final', true)
+          .not('matches.result_team1', 'is', null)
+          .not('matches.result_team2', 'is', null)
+          .order('kickoff_at', {
+            ascending: false,
+            foreignTable: 'matches',
+          })
+          .limit(RECENT_SCORED_LIMIT * 4),
       ])
 
       if (cacheResult.error) {
@@ -340,11 +463,18 @@ export async function fetchRecentResultsFeed(
           row.points > best.points ? row : best,
         )
       }
+
+      if (!recentMatchResult.error && recentMatchResult.data) {
+        recentScored = buildRecentScoredList(
+          recentMatchResult.data as PredictionBestRow[],
+        )
+      }
     }
 
     const isEmpty =
       totalPoints <= 0 &&
       bestPrediction == null &&
+      recentScored.length === 0 &&
       winRate == null &&
       currentStreak === 0
 
@@ -353,6 +483,7 @@ export async function fetchRecentResultsFeed(
       winRate,
       currentStreak,
       bestPrediction,
+      recentScored,
       isEmpty,
       error: null,
     }
