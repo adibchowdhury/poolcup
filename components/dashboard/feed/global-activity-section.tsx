@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, GitBranch, Users } from 'lucide-react'
+import { ArrowRight, GitBranch, TrendingUp, Users } from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
@@ -16,6 +16,7 @@ import {
 } from '@/src/lib/featured-match'
 import {
   fetchGlobalActivityFeed,
+  type BiggestCommunityClimb,
   type ClosestCallActivity,
   type GlobalActivityFeedData,
   type GlobalActivityMatch,
@@ -69,7 +70,7 @@ function CompactMatchHeader({
       </div>
       <Link
         href={`/match/${match.id}`}
-        className="shrink-0 text-[11px] font-medium text-primary hover:underline"
+        className="shrink-0 rounded-sm text-[11px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         View
       </Link>
@@ -77,7 +78,7 @@ function CompactMatchHeader({
   )
 }
 
-function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
+export function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
   return (
     <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2.5 sm:px-3.5">
       <CompactMatchHeader match={match} eyebrow="Most predicted" />
@@ -110,7 +111,7 @@ function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
   )
 }
 
-function ClosestCallCard({ item }: { item: ClosestCallActivity }) {
+export function ClosestCallCard({ item }: { item: ClosestCallActivity }) {
   const { match } = item
   const splitPct = Math.round(item.maxShare * 100)
 
@@ -133,19 +134,50 @@ function ClosestCallCard({ item }: { item: ClosestCallActivity }) {
   )
 }
 
-function GlobalActivitySkeleton() {
+export function BiggestCommunityClimbCard({
+  item,
+}: {
+  item: BiggestCommunityClimb
+}) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2.5 sm:px-3.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <TrendingUp className="h-3.5 w-3.5 text-primary" aria-hidden />
+        Biggest climb
+      </div>
+      <p className="mt-1.5 truncate text-sm font-semibold text-foreground">
+        {item.poolName}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Climbed{' '}
+        <span className="font-medium tabular-nums text-primary">
+          +{item.rankDelta}
+        </span>{' '}
+        to rank #{item.rank}
+        {item.prevRank > 0 ? (
+          <span className="text-muted-foreground">
+            {' '}
+            (was #{item.prevRank})
+          </span>
+        ) : null}
+      </p>
+    </div>
+  )
+}
+
+export function GlobalActivitySkeleton({ rows = 2 }: { rows?: number }) {
   return (
     <div className="space-y-2" aria-hidden>
-      <ShimmerBlock className="h-20 w-full rounded-xl" />
-      <ShimmerBlock className="h-20 w-full rounded-xl" />
+      {Array.from({ length: rows }, (_, i) => (
+        <ShimmerBlock key={i} className="h-20 w-full rounded-xl" />
+      ))}
     </div>
   )
 }
 
 /**
  * Compact community strip — max 2 cards.
- * Dropped "Biggest climber" to keep height down (flagged in restructure).
- * TODO: wire View All `/activity` to a full feed when that page is built out.
+ * Full highlights (incl. biggest climb): /activity
  */
 export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
   const [data, setData] = useState<GlobalActivityFeedData | null>(null)

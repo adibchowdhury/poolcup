@@ -1,6 +1,9 @@
 'use client'
 
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { handleRovingTabKeyDown } from '@/src/lib/roving-tablist'
 import { TOURNAMENT_ROUND_LABELS } from '@/src/lib/tournament-round-labels'
 
 export const CLASSIC_ROUND_TAB_ORDER = [
@@ -20,6 +23,7 @@ interface ClassicRoundTabsProps {
 }
 
 export function ClassicRoundTabs({ activeId, onChange }: ClassicRoundTabsProps) {
+  const tablistRef = useRef<HTMLDivElement>(null)
   const tabs = CLASSIC_ROUND_TAB_ORDER.map((id) => ({
     id,
     label: TOURNAMENT_ROUND_LABELS[id],
@@ -28,7 +32,20 @@ export function ClassicRoundTabs({ activeId, onChange }: ClassicRoundTabsProps) 
   return (
     <div className="min-w-0 border-b border-[rgba(255,255,255,0.08)]">
       <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 md:mx-0 md:overflow-x-visible md:px-0">
-        <div className="flex w-max min-w-full md:w-full" role="tablist">
+        <div
+          ref={tablistRef}
+          className="flex w-max min-w-full md:w-full"
+          role="tablist"
+          aria-label="Tournament round"
+          onKeyDown={(event) =>
+            handleRovingTabKeyDown(event, {
+              tabs: CLASSIC_ROUND_TAB_ORDER,
+              activeId,
+              onChange,
+              tablist: tablistRef.current,
+            })
+          }
+        >
           {tabs.map((tab) => {
             const active = tab.id === activeId
             return (
@@ -36,10 +53,13 @@ export function ClassicRoundTabs({ activeId, onChange }: ClassicRoundTabsProps) 
                 key={tab.id}
                 type="button"
                 role="tab"
+                data-tab-id={tab.id}
                 aria-selected={active}
+                tabIndex={active ? 0 : -1}
                 onClick={() => onChange(tab.id)}
                 className={cn(
-                  'relative shrink-0 whitespace-nowrap px-3 py-3 text-sm font-semibold transition-colors md:flex-1 md:shrink md:px-4',
+                  'relative shrink-0 whitespace-nowrap rounded-sm px-3 py-3 text-sm font-semibold transition-colors md:flex-1 md:shrink md:px-4',
+                  FOCUS_VISIBLE_RING,
                   active
                     ? 'text-[#f0f4f8]'
                     : 'text-[#5a7080] hover:text-[#f0f4f8]/80',

@@ -207,7 +207,7 @@ export function GlobalMatchDetailView({
                 onClick={() =>
                   navigateFromMatchDetailBack(router, Boolean(user))
                 }
-                className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted"
+                className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 aria-label={user ? 'Back to dashboard' : 'Back to home'}
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />

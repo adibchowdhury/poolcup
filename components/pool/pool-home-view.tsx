@@ -321,7 +321,7 @@ export function PoolHomeView({
               <button
                 type="button"
                 onClick={handleBackClick}
-                className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted max-sm:p-1.5"
+                className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
                 aria-label={isChatView ? 'Back to chats' : 'Back to dashboard'}
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
@@ -336,7 +336,7 @@ export function PoolHomeView({
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         aria-label="Chat options"
                       >
                         <MoreVertical className="h-4 w-4" aria-hidden />

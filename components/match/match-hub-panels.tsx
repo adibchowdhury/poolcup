@@ -393,6 +393,7 @@ function CompetitionPanel({
                   className={cn(
                     'flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition-colors',
                     'border-primary/35 bg-primary/10 hover:bg-primary/15',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   )}
                 >
                   <div className="min-w-0">
@@ -445,7 +446,7 @@ function CompetitionPanel({
                 <Link
                   href={USE_MOCK_HUB ? '#' : `/pool/${pool.inviteCode}`}
                   onClick={USE_MOCK_HUB ? (e) => e.preventDefault() : undefined}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/20 px-3 py-3 transition-colors hover:border-white/20"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/20 px-3 py-3 transition-colors hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">

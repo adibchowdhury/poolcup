@@ -79,7 +79,7 @@ function TodayMatchRow({ match }: { match: DashboardTodayMatch }) {
       <Link
         href={`/match/${match.id}`}
         aria-label={`${match.team1_name} vs ${match.team2_name}`}
-        className="flex items-start gap-2.5 rounded-lg px-1 py-2.5 transition-colors hover:bg-muted/50"
+        className="flex items-start gap-2.5 rounded-lg px-1 py-2.5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <TeamFlagImage

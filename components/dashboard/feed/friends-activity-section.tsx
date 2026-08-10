@@ -150,7 +150,7 @@ function FriendsActivityRow({ item }: { item: FriendActivityRow }) {
       <p className="min-w-0 flex-1 truncate text-sm leading-snug">
         <UserProfileLink
           userId={item.actor_id}
-          className="font-semibold text-foreground hover:underline"
+          className="rounded-sm font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           {name}
         </UserProfileLink>{' '}
@@ -191,7 +191,7 @@ export function FriendsActivitySection() {
       action={
         <Link
           href="/friends"
-          className="text-xs font-medium text-primary hover:underline"
+          className="rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           Friends
         </Link>
@@ -212,7 +212,7 @@ export function FriendsActivitySection() {
           </p>
           <Link
             href="/friends#find"
-            className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+            className="mt-2 inline-block rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             Find friends
           </Link>

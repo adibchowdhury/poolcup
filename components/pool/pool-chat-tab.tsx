@@ -897,7 +897,7 @@ export function PoolChatTab({
               <button
                 type="button"
                 onClick={() => scrollToBottom('smooth')}
-                className="pointer-events-auto inline-flex min-h-10 items-center rounded-full border border-primary/30 bg-card/95 px-4 text-sm font-medium text-primary shadow-lg backdrop-blur-sm"
+                className="pointer-events-auto inline-flex min-h-10 items-center rounded-full border border-primary/30 bg-card/95 px-4 text-sm font-medium text-primary shadow-lg backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 New messages ↓
               </button>

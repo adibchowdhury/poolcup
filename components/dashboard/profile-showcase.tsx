@@ -269,7 +269,7 @@ function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
   )
 
   const surfaceClass =
-    'hue-card-surface group block rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] px-3.5 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]'
+    'hue-card-surface group block rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] px-3.5 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
 
   if (href) {
     return (
@@ -875,7 +875,7 @@ export function ProfileShowcase({
                 <button
                   type="button"
                   onClick={onEditProfile}
-                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground"
+                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Edit profile and avatar"
                 >
                   <Pencil className="h-3 w-3" aria-hidden />

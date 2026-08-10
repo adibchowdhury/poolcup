@@ -640,7 +640,7 @@ export function PoolSettingsTab({
                   disabled={savingTheme}
                   onClick={() => void handleSaveThemeColor(null)}
                   className={cn(
-                    'relative h-11 min-w-[4.5rem] overflow-hidden rounded-xl border px-3 text-xs font-semibold transition-all',
+                    'relative h-11 min-w-[4.5rem] overflow-hidden rounded-xl border px-3 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     poolThemeColor == null
                       ? 'scale-[1.03] border-primary shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_40%,transparent)]'
                       : 'border-white/15 hover:scale-[1.03]',
@@ -675,7 +675,7 @@ export function PoolSettingsTab({
                       disabled={savingTheme}
                       onClick={() => void handleSaveThemeColor(preset.hex)}
                       className={cn(
-                        'relative h-11 w-11 overflow-hidden rounded-xl border-2 transition-all',
+                        'relative h-11 w-11 overflow-hidden rounded-xl border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                         selected
                           ? 'scale-[1.08] border-white shadow-[0_0_20px_color-mix(in_srgb,var(--primary)_50%,transparent)]'
                           : 'border-white/20 hover:scale-[1.06]',

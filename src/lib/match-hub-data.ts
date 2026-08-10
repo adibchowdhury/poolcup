@@ -2,8 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 
-// TEMPORARY — remove after preview (flip to false or delete this mock block).
-export const USE_MOCK_HUB = true
+/** Set true only for local match-hub design preview (fake consensus/pools). */
+export const USE_MOCK_HUB = false
 
 export type MatchEventInfo = {
   id: string

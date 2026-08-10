@@ -8,8 +8,8 @@
  */
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 
-/** TEMPORARY — set false (or remove this module) after design review. */
-export const USE_MOCK_LEADERBOARD = true
+/** Set true only for local design preview of mock standings. */
+export const USE_MOCK_LEADERBOARD = false
 
 /**
  * TEMPORARY — which place is "you".
