@@ -15,15 +15,28 @@ export function isFinalStatus(statusShort: string): boolean {
 export type ApiFootballFixture = {
   fixture: {
     id: number
+    date?: string
     status: { short: string; elapsed: number | null }
+  }
+  league?: {
+    id?: number
+    round?: string
   }
   goals: {
     home: number | null
     away: number | null
   }
   teams: {
-    home: { winner: boolean | null }
-    away: { winner: boolean | null }
+    home: {
+      name?: string
+      logo?: string | null
+      winner: boolean | null
+    }
+    away: {
+      name?: string
+      logo?: string | null
+      winner: boolean | null
+    }
   }
   score: {
     penalty: {
@@ -42,20 +55,11 @@ export function todayUtcDateString(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function buildTodayFixturesUrl(date: string): string {
-  const params = new URLSearchParams({
-    league: '1',
-    season: '2026',
-    date,
-  })
-  return `${API_FOOTBALL_BASE}/fixtures?${params.toString()}`
-}
-
-export async function fetchTodayFixtures(
+async function fetchApiFootballFixtures(
   apiKey: string,
-  date: string = todayUtcDateString(),
+  params: URLSearchParams,
 ): Promise<ApiFootballFixture[]> {
-  const url = buildTodayFixturesUrl(date)
+  const url = `${API_FOOTBALL_BASE}/fixtures?${params.toString()}`
 
   const res = await fetch(url, {
     headers: { 'x-apisports-key': apiKey },
@@ -75,6 +79,40 @@ export async function fetchTodayFixtures(
   }
 
   return raw.response ?? []
+}
+
+export function buildTodayFixturesUrl(date: string): string {
+  const params = new URLSearchParams({
+    league: '1',
+    season: '2026',
+    date,
+  })
+  return `${API_FOOTBALL_BASE}/fixtures?${params.toString()}`
+}
+
+export async function fetchTodayFixtures(
+  apiKey: string,
+  date: string = todayUtcDateString(),
+): Promise<ApiFootballFixture[]> {
+  const params = new URLSearchParams({
+    league: '1',
+    season: '2026',
+    date,
+  })
+  return fetchApiFootballFixtures(apiKey, params)
+}
+
+/** Full-season fixtures for a league (upcoming + past). */
+export async function fetchLeagueSeasonFixtures(
+  apiKey: string,
+  leagueId: number,
+  season: number,
+): Promise<ApiFootballFixture[]> {
+  const params = new URLSearchParams({
+    league: String(leagueId),
+    season: String(season),
+  })
+  return fetchApiFootballFixtures(apiKey, params)
 }
 
 export function buildFixtureByIdUrl(fixtureId: string): string {
@@ -108,26 +146,8 @@ async function fetchFixturesByIdsBatch(
 ): Promise<ApiFootballFixture[]> {
   if (fixtureIds.length === 0) return []
 
-  const url = buildFixturesByIdsUrl(fixtureIds)
-
-  const res = await fetch(url, {
-    headers: { 'x-apisports-key': apiKey },
-    cache: 'no-store',
-  })
-
-  const raw = (await res.json()) as ApiFootballResponse
-
-  if (!res.ok) {
-    throw new Error(
-      `API-Football request failed: ${res.status} ${res.statusText}`,
-    )
-  }
-
-  if (raw.errors && Object.keys(raw.errors).length > 0) {
-    throw new Error(`API-Football error: ${JSON.stringify(raw.errors)}`)
-  }
-
-  return raw.response ?? []
+  const params = new URLSearchParams({ ids: fixtureIds.join('-') })
+  return fetchApiFootballFixtures(apiKey, params)
 }
 
 export async function fetchFixturesByIds(

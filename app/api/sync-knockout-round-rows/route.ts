@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { CURRENT_EVENT_SLUG } from '@/src/lib/current-event'
+import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
-import { secureCompare } from '@/src/lib/secure-compare'
+import { withSyncJob } from '@/src/lib/sync-jobs'
 import {
   syncKnockoutRoundRows,
   type KnockoutRoundRowWouldCreate,
@@ -12,22 +13,6 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const ACTIVE_EVENT_STATUSES = new Set(['live', 'upcoming'])
-
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return false
-
-  const authHeader = request.headers.get('authorization')
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : null
-  if (bearerToken && secureCompare(bearerToken, cronSecret)) return true
-
-  const cronHeader = request.headers.get('x-cron-secret')
-  if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
-
-  return false
-}
 
 function collectCreated(
   rounds: Awaited<ReturnType<typeof syncKnockoutRoundRows>>['rounds'],
@@ -39,17 +24,22 @@ function collectCreated(
   return created
 }
 
-async function runSyncKnockoutRoundRowsJob(): Promise<{
-  summary: Awaited<ReturnType<typeof syncKnockoutRoundRows>>
-  ntfySent: boolean
-} | {
-  skipped: 'wc_not_active'
-  eventStatus: string | null
-}> {
+async function runSyncKnockoutRoundRowsJob(): Promise<
+  | {
+      summary: Awaited<ReturnType<typeof syncKnockoutRoundRows>>
+      ntfySent: boolean
+      eventId: string | null
+    }
+  | {
+      skipped: 'wc_not_active'
+      eventStatus: string | null
+      eventId: string | null
+    }
+> {
   const supabase = createAdminSupabaseClient()
   const { data: worldCupEvent, error: eventError } = await supabase
     .from('sporting_events')
-    .select('status')
+    .select('id, status')
     .eq('slug', CURRENT_EVENT_SLUG)
     .maybeSingle()
 
@@ -57,13 +47,15 @@ async function runSyncKnockoutRoundRowsJob(): Promise<{
     throw new Error(`Failed to load World Cup event status: ${eventError.message}`)
   }
 
+  const eventId =
+    typeof worldCupEvent?.id === 'string' ? worldCupEvent.id : null
   const eventStatus =
     typeof worldCupEvent?.status === 'string'
       ? worldCupEvent.status.trim().toLowerCase()
       : null
 
   if (!eventStatus || !ACTIVE_EVENT_STATUSES.has(eventStatus)) {
-    return { skipped: 'wc_not_active', eventStatus }
+    return { skipped: 'wc_not_active', eventStatus, eventId }
   }
 
   const apiKey = process.env.API_FOOTBALL_KEY
@@ -89,34 +81,90 @@ async function runSyncKnockoutRoundRowsJob(): Promise<{
     }
   }
 
-  return { summary, ntfySent }
+  return { summary, ntfySent, eventId }
 }
 
 async function handleRequest(request: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
+  if (!requireCronSecretConfigured()) {
     return NextResponse.json(
       { error: 'CRON_SECRET is not configured' },
       { status: 500 },
     )
   }
 
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const result = await runSyncKnockoutRoundRowsJob()
+  const supabase = createAdminSupabaseClient()
+  const { data: worldCupEvent } = await supabase
+    .from('sporting_events')
+    .select('id')
+    .eq('slug', CURRENT_EVENT_SLUG)
+    .maybeSingle()
+  const eventId =
+    typeof worldCupEvent?.id === 'string' ? worldCupEvent.id : null
 
-    if ('skipped' in result) {
+  try {
+    type JobResult =
+      | {
+          skipped: 'wc_not_active'
+          eventStatus: string | null
+          eventId: string | null
+        }
+      | {
+          summary: Awaited<ReturnType<typeof syncKnockoutRoundRows>>
+          ntfySent: boolean
+          eventId: string | null
+        }
+
+    const wrapped = await withSyncJob<JobResult>(
+      supabase,
+      {
+        jobType: 'sync_knockout_round_rows',
+        eventId,
+      },
+      async () => {
+        const result = await runSyncKnockoutRoundRowsJob()
+
+        if ('skipped' in result) {
+          return {
+            itemsProcessed: 0,
+            itemsChanged: 0,
+            detail: {
+              skipped: result.skipped,
+              event_status: result.eventStatus,
+              event_id: result.eventId,
+            },
+            result,
+          }
+        }
+
+        const createdCount = collectCreated(result.summary.rounds).length
+        return {
+          itemsProcessed: createdCount + result.summary.needs_attention.length,
+          itemsChanged: createdCount,
+          partial: result.summary.needs_attention.length > 0,
+          detail: {
+            created_count: createdCount,
+            needs_attention: result.summary.needs_attention.length,
+            ntfy_sent: result.ntfySent,
+            event_id: result.eventId,
+          },
+          result,
+        }
+      },
+    )
+
+    if ('skipped' in wrapped) {
       return NextResponse.json({
         success: true,
-        skipped: result.skipped,
-        event_status: result.eventStatus,
+        skipped: wrapped.skipped,
+        event_status: wrapped.eventStatus,
       })
     }
 
-    const { summary, ntfySent } = result
+    const { summary, ntfySent } = wrapped
     const createdCount = collectCreated(summary.rounds).length
 
     return NextResponse.json({

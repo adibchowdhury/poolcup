@@ -21,7 +21,8 @@ import {
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
-import { secureCompare } from '@/src/lib/secure-compare'
+import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
+import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -174,22 +175,6 @@ function canHardForceCloseStaleMatch(
   if (HARD_FORCE_CLOSE_BLOCKED_STATUSES.has(status)) return false
   if (status === 'ET' || status === 'P') return false
   return minutesSinceKickoff > FORCE_CLOSE_HARD_MINUTES
-}
-
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return false
-
-  const authHeader = request.headers.get('authorization')
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : null
-  if (bearerToken && secureCompare(bearerToken, cronSecret)) return true
-
-  const cronHeader = request.headers.get('x-cron-secret')
-  if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
-
-  return false
 }
 
 async function finalizeForceClosedMatch(
@@ -1042,20 +1027,39 @@ async function runReconcile(): Promise<{
 }
 
 async function handleReconcileRequest(request: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
+  if (!requireCronSecretConfigured()) {
     return NextResponse.json(
       { error: 'CRON_SECRET is not configured' },
       { status: 500 },
     )
   }
 
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const supabase = createAdminSupabaseClient()
+
   try {
-    const summary = await runReconcile()
+    const summary = await withSyncJob(
+      supabase,
+      { jobType: 'reconcile_stale_matches' },
+      async () => {
+        const result = await runReconcile()
+        return {
+          itemsProcessed: result.candidates,
+          itemsChanged: result.finalized + (result.finalReverify?.corrected ?? 0),
+          partial: result.errors.length > 0,
+          detail: {
+            stillLive: result.stillLive,
+            alerted: result.alerted,
+            finalReverify: result.finalReverify,
+            errorCount: result.errors.length,
+          },
+          result,
+        }
+      },
+    )
     return NextResponse.json({
       success: true,
       ...summary,

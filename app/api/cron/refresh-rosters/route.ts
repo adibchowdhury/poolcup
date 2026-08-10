@@ -1,39 +1,23 @@
 import { NextResponse } from 'next/server'
+import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { refreshTeamRosters } from '@/src/lib/refresh-team-rosters'
-import { secureCompare } from '@/src/lib/secure-compare'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 /** Weekly roster refresh can take ~1–2 min when many teams are stale. */
 export const maxDuration = 300
 
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return false
-
-  const authHeader = request.headers.get('authorization')
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : null
-  if (bearerToken && secureCompare(bearerToken, cronSecret)) return true
-
-  const cronHeader = request.headers.get('x-cron-secret')
-  if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
-
-  return false
-}
-
 async function handleRefreshRequest(request: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
+  if (!requireCronSecretConfigured()) {
     return NextResponse.json(
       { error: 'CRON_SECRET is not configured' },
       { status: 500 },
     )
   }
 
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -45,12 +29,26 @@ async function handleRefreshRequest(request: Request) {
     )
   }
 
+  const supabase = createAdminSupabaseClient()
+
   try {
-    const supabase = createAdminSupabaseClient()
-    const summary = await refreshTeamRosters(supabase, apiKey, {
-      forceAll: false,
-      logger: (message) => console.log(`[refresh-rosters] ${message}`),
-    })
+    const summary = await withSyncJob(
+      supabase,
+      { jobType: 'refresh_rosters' },
+      async () => {
+        const result = await refreshTeamRosters(supabase, apiKey, {
+          forceAll: false,
+          logger: (message) => console.log(`[refresh-rosters] ${message}`),
+        })
+        return {
+          itemsProcessed: result.teamsProcessed ?? 0,
+          itemsChanged: result.playersUpserted ?? 0,
+          partial: (result.teamsFailed ?? 0) > 0,
+          detail: { ...result },
+          result,
+        }
+      },
+    )
 
     return NextResponse.json({
       success: true,

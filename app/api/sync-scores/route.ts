@@ -16,8 +16,9 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
-import { secureCompare } from '@/src/lib/secure-compare'
+import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -47,22 +48,6 @@ type MatchLiveUpdatePayload = {
   result_team2?: number
   is_final?: boolean
   advancing_team?: number
-}
-
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return false
-
-  const authHeader = request.headers.get('authorization')
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length)
-    : null
-  if (bearerToken && secureCompare(bearerToken, cronSecret)) return true
-
-  const cronHeader = request.headers.get('x-cron-secret')
-  if (cronHeader && secureCompare(cronHeader, cronSecret)) return true
-
-  return false
 }
 
 /** Cheap no-op guard: skip the cron when nothing could be in play. */
@@ -355,20 +340,40 @@ async function runSync(): Promise<{
 }
 
 async function handleSyncRequest(request: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
+  if (!requireCronSecretConfigured()) {
     return NextResponse.json(
       { error: 'CRON_SECRET is not configured' },
       { status: 500 },
     )
   }
 
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const supabase = createAdminSupabaseClient()
+
   try {
-    const summary = await runSync()
+    const summary = await withSyncJob(
+      supabase,
+      { jobType: 'sync_scores' },
+      async () => {
+        const result = await runSync()
+        return {
+          itemsProcessed: result.matchesChecked,
+          itemsChanged: result.matchesUpdated,
+          partial: result.errors.length > 0,
+          detail: {
+            matchesSkipped: result.matchesSkipped,
+            pointsRecalculated: result.pointsRecalculated,
+            apiMissing: result.apiMissing,
+            errorCount: result.errors.length,
+            skipped: result.skipped ?? null,
+          },
+          result,
+        }
+      },
+    )
     return NextResponse.json({
       success: true,
       ...summary,

@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/refresh-rosters",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/sync-fixtures",
+      "schedule": "0 */6 * * *"
     }
   ],
   "headers": [
