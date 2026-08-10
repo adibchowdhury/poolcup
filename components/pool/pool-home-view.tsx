@@ -43,6 +43,7 @@ import {
   MOBILE_BOTTOM_NAV_PAD_CLASS,
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
@@ -84,6 +85,9 @@ interface PoolHomeViewProps {
   leaderboardRefreshing?: boolean
   /** Event currently in the live / recent-final polling window. */
   leaderboardLiveSync?: boolean
+  /** Soft-refresh / cache load failure message. */
+  leaderboardError?: string | null
+  onRetryLeaderboard?: () => void
   canDelete?: boolean
   poolId?: string
   memberId?: string
@@ -122,6 +126,8 @@ export function PoolHomeView({
   leaderboardLoading = false,
   leaderboardRefreshing = false,
   leaderboardLiveSync = false,
+  leaderboardError = null,
+  onRetryLeaderboard,
   canDelete,
   poolId,
   memberId,
@@ -162,6 +168,14 @@ export function PoolHomeView({
   const [activeTab, setActiveTab] = useState(() =>
     normalizeTab(searchParams.get('tab')),
   )
+
+  useEffect(() => {
+    if (activeTab !== 'leaderboard') return
+    capturePostHog('leaderboard_viewed', {
+      type: 'pool',
+      pool_id: poolId ?? null,
+    })
+  }, [activeTab, poolId])
 
   const copyInviteLink = () => {
     if (!pool.acceptingMembers) return
@@ -591,14 +605,35 @@ export function PoolHomeView({
                   <LeaderboardSkeleton />
                 </div>
               ) : (
-                <PoolLeaderboardStandings
-                  members={leaderboardMembers}
-                  acceptingMembers={pool.acceptingMembers}
-                  copied={copied}
-                  onInvite={inviteFromLeaderboard}
-                  showPreMatchNote={showPreMatchLeaderboardNote}
-                  className="min-h-0 flex-1"
-                />
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {leaderboardError ? (
+                    <div
+                      className="mx-auto mb-3 w-full max-w-4xl rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center"
+                      role="alert"
+                    >
+                      <p className="text-sm text-destructive">
+                        Couldn’t refresh standings.
+                      </p>
+                      {onRetryLeaderboard ? (
+                        <button
+                          type="button"
+                          onClick={onRetryLeaderboard}
+                          className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+                        >
+                          Try again
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <PoolLeaderboardStandings
+                    members={leaderboardMembers}
+                    acceptingMembers={pool.acceptingMembers}
+                    copied={copied}
+                    onInvite={inviteFromLeaderboard}
+                    showPreMatchNote={showPreMatchLeaderboardNote}
+                    className="min-h-0 flex-1"
+                  />
+                </div>
               )}
             </TabsContent>
 

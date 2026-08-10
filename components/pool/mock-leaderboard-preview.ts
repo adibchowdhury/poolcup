@@ -140,6 +140,7 @@ export function buildMockLeaderboardMembers(
       customAvatarUrl: null,
       points: seed.points,
       correctPredictions: Math.max(0, Math.round(seed.points / 8)),
+      exactScores: Math.max(0, Math.round(seed.points / 20)),
       totalPredictions: 24,
       rank: seed.place,
       prevRank: seed.prevRank,

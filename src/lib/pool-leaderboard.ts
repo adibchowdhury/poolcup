@@ -451,6 +451,7 @@ export function buildPoolLeaderboardMembers({
     display_name: string
     points: number
     correct_predictions: number
+    exact_scores: number
     rank: number
     prev_rank: number | null
     climb_streak: number
@@ -466,6 +467,7 @@ export function buildPoolLeaderboardMembers({
       display_name: member.display_name,
       points: 0,
       correct_predictions: 0,
+      exact_scores: 0,
       climb_streak: 0,
     }))
   } else if (useCache) {
@@ -480,6 +482,9 @@ export function buildPoolLeaderboardMembers({
         display_name: member.display_name,
         points: row?.total_points ?? 0,
         correct_predictions: isWinnerPool ? 0 : (row?.correct_winners ?? 0),
+        exact_scores: isWinnerPool
+          ? 0
+          : Math.max(0, row?.exact_scores ?? 0),
         climb_streak:
           typeof row?.climb_streak === 'number' && row.climb_streak > 0
             ? row.climb_streak
@@ -495,6 +500,7 @@ export function buildPoolLeaderboardMembers({
       display_name: member.display_name,
       points: 0,
       correct_predictions: 0,
+      exact_scores: 0,
       climb_streak: 0,
     }))
   }
@@ -514,6 +520,7 @@ export function buildPoolLeaderboardMembers({
       customAvatarUrl: avatarFields.customAvatarUrl,
       points: entry.points,
       correctPredictions: entry.correct_predictions,
+      exactScores: entry.exact_scores,
       totalPredictions: predictionsByMember.get(entry.member_id) ?? 0,
       rank: entry.rank,
       prevRank: entry.prev_rank,

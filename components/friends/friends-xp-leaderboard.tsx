@@ -38,7 +38,7 @@ type FriendsXpLeaderboardProps = {
 }
 
 /**
- * Ranked list of you + friends by XP (global currency). Not pool points.
+ * Compact friends XP preview on /friends. Full board: /leaderboard?scope=friends
  */
 export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) {
   return (
@@ -53,18 +53,47 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
             Ranked by XP (badges &amp; level) — not pool points.
           </p>
         </div>
+        <Link
+          href="/leaderboard?scope=friends"
+          className="shrink-0 text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+        >
+          Full board
+        </Link>
       </div>
 
       <div className="hue-card-surface overflow-hidden rounded-2xl border border-amber-400/20 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.12),transparent_45%),linear-gradient(160deg,rgba(22,28,18,0.98),rgba(8,12,10,0.99))] shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
         <div className="h-1 bg-gradient-to-r from-amber-400/80 via-primary/60 to-amber-400/40" />
 
-        {rows.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Leaderboard unavailable right now.
-          </p>
+        {solo || rows.length <= 1 ? (
+          <div className="space-y-3 px-4 py-8 text-center">
+            <p className="text-sm font-medium text-foreground">
+              No friends yet — add friends to compare
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Find people you know, then climb the XP board together.
+            </p>
+            <Link
+              href="/friends#find"
+              className="inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+            >
+              Find friends
+            </Link>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="space-y-3 px-4 py-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Leaderboard unavailable right now.
+            </p>
+            <Link
+              href="/leaderboard?scope=friends"
+              className="inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+            >
+              Try the XP leaderboard
+            </Link>
+          </div>
         ) : (
           <ol className="divide-y divide-white/[0.06] p-2">
-            {rows.map((row) => {
+            {rows.slice(0, 5).map((row) => {
               const name = row.display_name?.trim() || 'PoolCup player'
               return (
                 <li
@@ -81,72 +110,40 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
                   >
                     <RankBadge rank={row.rank} />
                   </div>
-
                   <UserProfileLink
                     userId={row.user_id}
                     ariaLabel={`${name}'s profile`}
-                    className="shrink-0"
+                    className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <UserAvatarImage
                       avatar={resolveAvatarFilename(row.avatar)}
                       customAvatarUrl={row.custom_avatar_url}
                       className={cn(
                         'h-10 w-10',
-                        row.is_me && 'ring-2 ring-primary/45',
+                        row.is_me && 'ring-2 ring-primary/60',
                       )}
                     />
                   </UserProfileLink>
-
                   <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <UserProfileLink
-                        userId={row.user_id}
-                        className={cn(
-                          'min-w-0 truncate text-sm font-semibold hover:underline',
-                          row.is_me ? 'text-primary' : 'text-foreground',
-                        )}
-                      >
-                        {name}
-                      </UserProfileLink>
-                      {row.is_me ? (
-                        <span className="shrink-0 rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          You
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
-                      <Zap className="h-3 w-3 text-amber-300/80" aria-hidden />
-                      {row.total_xp.toLocaleString()} XP
+                    <UserProfileLink
+                      userId={row.user_id}
+                      className="truncate text-sm font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+                    >
+                      {name}
+                      {row.is_me ? ' (You)' : ''}
+                    </UserProfileLink>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="inline-flex items-center gap-1 font-display text-lg tabular-nums text-primary">
+                      <Zap className="h-3.5 w-3.5" aria-hidden />
+                      {row.total_xp.toLocaleString()}
                     </p>
                   </div>
-
-                  <span
-                    className={cn(
-                      'shrink-0 font-display text-lg tabular-nums tracking-wide',
-                      row.rank <= 3 ? 'text-amber-200' : 'text-muted-foreground',
-                    )}
-                  >
-                    #{row.rank}
-                  </span>
                 </li>
               )
             })}
           </ol>
         )}
-
-        {solo ? (
-          <div className="border-t border-white/[0.06] px-4 py-3 text-center">
-            <p className="text-xs text-muted-foreground">
-              Add friends to compete on this XP board.
-            </p>
-            <Link
-              href="/dashboard"
-              className="mt-1.5 inline-block text-xs font-medium text-primary hover:underline"
-            >
-              Find players from pools &amp; leaderboards →
-            </Link>
-          </div>
-        ) : null}
       </div>
     </section>
   )

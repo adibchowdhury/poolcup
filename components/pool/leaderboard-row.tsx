@@ -32,6 +32,8 @@ export type LeaderboardMember = {
   customAvatarUrl: string | null
   points: number
   correctPredictions: number
+  /** Exact scoreline hits from leaderboard_cache.exact_scores (classic pools). */
+  exactScores: number
   totalPredictions: number
   /** Cache rank (1-based); used with prevRank for movement. */
   rank: number

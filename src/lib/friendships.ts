@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fetchFriendsXpLeaderboard } from '@/src/lib/global-rank'
 
 export type FriendshipStatus =
   | 'none'
@@ -296,16 +297,19 @@ export async function getIncomingFriendRequests(
 export async function getFriendsLeaderboard(
   supabase: SupabaseClient,
 ): Promise<FriendsLeaderboardRow[]> {
-  const { data, error } = await supabase.rpc('get_friends_leaderboard')
+  const { rows, error } = await fetchFriendsXpLeaderboard(supabase)
   if (error) {
-    console.error('get_friends_leaderboard failed:', error.message)
     return []
   }
-  const rows = Array.isArray(data) ? data : []
-  return rows
-    .map(coerceFriendsLeaderboardRow)
-    .filter((row): row is FriendsLeaderboardRow => row != null)
-    .sort((a, b) => a.rank - b.rank)
+  return rows.map((row) => ({
+    user_id: row.user_id,
+    display_name: row.display_name,
+    avatar: row.avatar,
+    custom_avatar_url: row.custom_avatar_url,
+    total_xp: row.total_xp,
+    rank: row.global_rank,
+    is_me: row.is_me,
+  }))
 }
 
 /**

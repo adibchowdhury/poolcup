@@ -10,6 +10,7 @@ import {
   Mail,
   Settings,
   Shield,
+  Trophy,
   UserPlus,
   X,
 } from 'lucide-react'
@@ -43,7 +44,7 @@ type DrawerItem = {
  * - Help → /dashboard?tab=how-it-works
  * - Contact → /contact
  * - Log out → site sign-out
- * Omitted (no real website page): Invite friends, Leaderboard
+ * Omitted (no real website page): Invite friends
  */
 export function WebMobileAppDrawer({
   open,
@@ -77,6 +78,14 @@ export function WebMobileAppDrawer({
       icon: UserPlus,
       action: () => {
         router.push(DASHBOARD_TAB_HREFS.dashboard)
+      },
+    },
+    {
+      id: 'leaderboard',
+      label: 'Leaderboard',
+      icon: Trophy,
+      action: () => {
+        router.push('/leaderboard')
       },
     },
     {

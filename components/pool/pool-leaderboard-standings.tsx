@@ -232,6 +232,11 @@ function PodiumPedestal({
                 pts
               </span>
             </p>
+            {member.exactScores > 0 ? (
+              <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+                {member.exactScores} exact
+              </p>
+            ) : null}
           </div>
         </>
       ) : (
@@ -298,6 +303,11 @@ function PodiumPedestal({
                 pts
               </span>
             </p>
+            {member.exactScores > 0 ? (
+              <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+                {member.exactScores} exact
+              </p>
+            ) : null}
           </div>
         </>
       )}
@@ -420,6 +430,11 @@ function StandingListRow({
           {member.points}
         </span>
         <span className="ml-0.5 text-[10px] text-muted-foreground">pts</span>
+        {member.exactScores > 0 ? (
+          <p className="text-[10px] tabular-nums text-muted-foreground">
+            {member.exactScores} exact
+          </p>
+        ) : null}
       </div>
     </li>
   )

@@ -112,6 +112,7 @@ export default function PoolPage() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
   const [leaderboardLiveSync, setLeaderboardLiveSync] = useState(false)
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [poolId, setPoolId] = useState<string | null>(null)
   const [memberId, setMemberId] = useState<string | null>(null)
@@ -505,6 +506,9 @@ export default function PoolPage() {
 
     if (cacheError) {
       console.error('Failed to load leaderboard:', cacheError.message)
+      setLeaderboardError(cacheError.message)
+    } else {
+      setLeaderboardError(null)
     }
 
     let breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]> | undefined
@@ -619,8 +623,11 @@ export default function PoolPage() {
           'Failed to soft-refresh leaderboard:',
           cacheError.message,
         )
+        setLeaderboardError(cacheError.message)
         return
       }
+
+      setLeaderboardError(null)
 
       let breakdownByMember:
         | Map<string, LeaderboardPointBreakdownItem[]>
@@ -767,6 +774,8 @@ export default function PoolPage() {
       leaderboardLoading={leaderboardLoading}
       leaderboardRefreshing={leaderboardRefreshing}
       leaderboardLiveSync={leaderboardLiveSync}
+      leaderboardError={leaderboardError}
+      onRetryLeaderboard={() => void softRefreshLeaderboard()}
       canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}
