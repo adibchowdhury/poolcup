@@ -4,6 +4,7 @@ import {
   POOLCUP_REF_COOKIE,
   POOLCUP_REF_MAX_AGE_SECONDS,
 } from '@/src/lib/referral'
+import { updateSessionAndGateAuth } from '@/src/lib/supabase/update-session'
 
 const COOKIE_NAME = 'poolcup_preview'
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 // 1 year
@@ -91,18 +92,18 @@ function applyRefCookie(
 
 /**
  * Next.js 16 network boundary (formerly middleware.ts).
- * Always captures ?ref= (first-touch). When COMING_SOON_MODE=on: marketing
- * pages stay public; auth + app rewrite to /coming-soon (unless bypass).
+ *
+ * Order:
+ * 1) First-touch ?ref=
+ * 2) Passthrough (API, assets, /coming-soon)
+ * 3) Coming-soon product gate (when on) — rewrite unless marketing/bypass
+ * 4) Supabase session refresh + auth gate for protected app routes
+ *
+ * Coming-soon is an environment product lock; auth is a session lock.
+ * Auth never runs for traffic rewritten to /coming-soon.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const refToSet = getFirstTouchRefToSet(request)
-
-  // Gate off: still capture ref, otherwise pure passthrough.
-  if (!isComingSoonEnabled()) {
-    return applyRefCookie(NextResponse.next(), refToSet)
-  }
-
-  const bypassToken = getBypassToken()
   const { pathname, searchParams } = request.nextUrl
 
   // Always allow Next internals, APIs, static assets, and the holding page.
@@ -110,40 +111,51 @@ export function proxy(request: NextRequest) {
     return applyRefCookie(NextResponse.next(), refToSet)
   }
 
-  // ?preview=<token> — set cookie and redirect to a clean URL (no token in bar).
-  const previewParam = searchParams.get('preview')
-  if (bypassToken && previewParam && previewParam === bypassToken) {
-    const cleanUrl = request.nextUrl.clone()
-    cleanUrl.searchParams.delete('preview')
+  // —— Coming-soon gate (product closed) ——
+  if (isComingSoonEnabled()) {
+    const bypassToken = getBypassToken()
 
-    const response = NextResponse.redirect(cleanUrl)
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: bypassToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: COOKIE_MAX_AGE_SECONDS,
-    })
-    return applyRefCookie(response, refToSet)
+    // ?preview=<token> — set cookie and redirect to a clean URL (no token in bar).
+    const previewParam = searchParams.get('preview')
+    if (bypassToken && previewParam && previewParam === bypassToken) {
+      const cleanUrl = request.nextUrl.clone()
+      cleanUrl.searchParams.delete('preview')
+
+      const response = NextResponse.redirect(cleanUrl)
+      response.cookies.set({
+        name: COOKIE_NAME,
+        value: bypassToken,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: COOKIE_MAX_AGE_SECONDS,
+      })
+      return applyRefCookie(response, refToSet)
+    }
+
+    const hasBypass =
+      Boolean(bypassToken) && hasValidBypassCookie(request, bypassToken!)
+
+    // Soft launch: landing + legal/marketing pages stay public (no auth gate).
+    if (!hasBypass && isMarketingPath(pathname)) {
+      return applyRefCookie(NextResponse.next(), refToSet)
+    }
+
+    // No bypass → holding page for everything else (including /login, /dashboard).
+    if (!hasBypass) {
+      const comingSoonUrl = request.nextUrl.clone()
+      comingSoonUrl.pathname = '/coming-soon'
+      comingSoonUrl.search = ''
+      return applyRefCookie(NextResponse.rewrite(comingSoonUrl), refToSet)
+    }
+
+    // Valid bypass — fall through to session refresh + auth gate.
   }
 
-  // Valid bypass cookie — full site access.
-  if (bypassToken && hasValidBypassCookie(request, bypassToken)) {
-    return applyRefCookie(NextResponse.next(), refToSet)
-  }
-
-  // Soft launch: landing + legal/marketing pages stay public.
-  if (isMarketingPath(pathname)) {
-    return applyRefCookie(NextResponse.next(), refToSet)
-  }
-
-  // Everything else (auth + app) → coming-soon holding page.
-  const comingSoonUrl = request.nextUrl.clone()
-  comingSoonUrl.pathname = '/coming-soon'
-  comingSoonUrl.search = ''
-  return applyRefCookie(NextResponse.rewrite(comingSoonUrl), refToSet)
+  // —— Session refresh + auth gate (product open or coming-soon bypassed) ——
+  const sessionResponse = await updateSessionAndGateAuth(request)
+  return applyRefCookie(sessionResponse, refToSet)
 }
 
 export const config = {

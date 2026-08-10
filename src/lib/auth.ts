@@ -1,11 +1,27 @@
 import type { User } from '@supabase/supabase-js'
 import { isStaleAuthSessionError } from './auth-session'
+import {
+  AUTH_ALREADY_REGISTERED_MESSAGE,
+  AUTH_SIGNUP_CHECK_INBOX_MESSAGE,
+  isExplicitAlreadyRegisteredError,
+} from './auth-form'
 import { fireRecordReferralBestEffort } from './referral'
 import { supabase } from './supabase'
 
 export type SignUpProfile = {
   firstName: string
   lastName: string
+}
+
+export type SignUpResult = {
+  error: Error | null
+  needsEmailConfirmation?: boolean
+  /**
+   * Duplicate / ambiguous signup.
+   * - `explicit`: Supabase returned a clear already-registered error
+   * - `ambiguous`: no session + empty identities (common anti-enumeration shape)
+   */
+  alreadyRegistered?: 'explicit' | 'ambiguous'
 }
 
 function buildDisplayName(firstName: string, lastName: string) {
@@ -38,8 +54,8 @@ export function resolveUserDisplayName(
 export async function signUpWithPassword(
   email: string,
   password: string,
-  profile: SignUpProfile
-): Promise<{ error: Error | null; needsEmailConfirmation?: boolean }> {
+  profile: SignUpProfile,
+): Promise<SignUpResult> {
   const firstName = profile.firstName.trim()
   const lastName = profile.lastName.trim()
   const displayName = buildDisplayName(firstName, lastName)
@@ -57,10 +73,25 @@ export async function signUpWithPassword(
   })
 
   if (error) {
+    if (isExplicitAlreadyRegisteredError(error.message)) {
+      return {
+        error: new Error(AUTH_ALREADY_REGISTERED_MESSAGE),
+        alreadyRegistered: 'explicit',
+      }
+    }
     return { error: new Error(error.message) }
   }
 
   const userId = data.user?.id
+  const identities = data.user?.identities ?? []
+
+  // Anti-enumeration: existing email often returns user + no session + empty identities.
+  if (userId && !data.session && identities.length === 0) {
+    return {
+      error: new Error(AUTH_SIGNUP_CHECK_INBOX_MESSAGE),
+      alreadyRegistered: 'ambiguous',
+    }
+  }
 
   // Best-effort referral: fire even without a session (email confirmation).
   // Never await — must not block or fail signup/redirect.
@@ -94,6 +125,17 @@ export async function signUpWithPassword(
   return { error: null }
 }
 
+export async function resendSignupVerificationEmail(
+  email: string,
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+  })
+
+  return { error: error ? new Error(error.message) : null }
+}
+
 export async function signInWithGoogle(
   next?: string,
 ): Promise<{ error: Error | null }> {
@@ -116,7 +158,7 @@ export async function signInWithGoogle(
 
 export async function signInWithPassword(
   email: string,
-  password: string
+  password: string,
 ): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
@@ -134,7 +176,7 @@ function getPasswordResetRedirectUrl(): string {
 }
 
 export async function sendPasswordResetEmail(
-  email: string
+  email: string,
 ): Promise<{ error: Error | null }> {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: getPasswordResetRedirectUrl(),

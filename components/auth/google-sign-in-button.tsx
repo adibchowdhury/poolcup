@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { GoogleIcon } from '@/components/auth/google-icon'
 import { signInWithGoogle } from '@/src/lib/auth'
+import { AUTH_FOCUS_VISIBLE_CLASS } from '@/src/lib/auth-form'
+import { cn } from '@/lib/utils'
 
 type GoogleSignInButtonProps = {
   next?: string
@@ -31,8 +33,14 @@ export function GoogleSignInButton({
 
   const buttonClassName =
     variant === 'primary'
-      ? 'flex w-full items-center justify-center gap-3 rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-60'
-      : 'flex w-full items-center justify-center gap-3 rounded-lg border border-[#1e2d3d] bg-white px-4 py-3 text-sm font-medium text-[#1f1f1f] transition-colors hover:bg-[#f5f5f5] disabled:cursor-not-allowed disabled:opacity-60'
+      ? cn(
+          'flex w-full items-center justify-center gap-3 rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-60',
+          AUTH_FOCUS_VISIBLE_CLASS,
+        )
+      : cn(
+          'flex w-full items-center justify-center gap-3 rounded-lg border border-[#1e2d3d] bg-white px-4 py-3 text-sm font-medium text-[#1f1f1f] transition-colors hover:bg-[#f5f5f5] disabled:cursor-not-allowed disabled:opacity-60',
+          AUTH_FOCUS_VISIBLE_CLASS,
+        )
 
   return (
     <div className="space-y-2">

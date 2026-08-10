@@ -101,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading || !user) return
+    // Don't interrupt first-session onboarding with a pending join redirect.
+    if (pathname?.startsWith('/onboarding')) return
 
     const pendingInvite = getPendingJoinInvite()
     if (pendingInvite && !pathname?.startsWith('/join/')) {

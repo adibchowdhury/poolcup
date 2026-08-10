@@ -7,10 +7,21 @@ import { AuthFormDivider } from '@/components/auth/auth-form-divider'
 import { PoolCupLogo } from '@/components/poolcup-logo'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
-import { signUpWithPassword } from '@/src/lib/auth'
+import {
+  resendSignupVerificationEmail,
+  signUpWithPassword,
+} from '@/src/lib/auth'
+import {
+  AUTH_INVALID_EMAIL_MESSAGE,
+  AUTH_FOCUS_VISIBLE_CLASS,
+  AUTH_PRIMARY_SUBMIT_CLASS,
+  isValidEmailFormat,
+} from '@/src/lib/auth-form'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { getSafeNext } from '@/src/lib/safe-redirect'
 
 const inputClassName = authInputClassName
+const RESEND_COOLDOWN_SECONDS = 60
 
 function CreateAccountPageContent() {
   const router = useRouter()
@@ -24,19 +35,37 @@ function CreateAccountPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [pendingConfirmation, setPendingConfirmation] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = window.setInterval(() => {
+      setResendCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [resendCooldown])
+
   async function handleSignUp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setInfo(null)
+    setResendMessage(null)
 
     if (!firstName.trim() || !lastName.trim()) {
       setError('First name and last name are required')
+      return
+    }
+
+    if (!isValidEmailFormat(email)) {
+      setError(AUTH_INVALID_EMAIL_MESSAGE)
       return
     }
 
@@ -50,28 +79,67 @@ function CreateAccountPageContent() {
       return
     }
 
+    capturePostHog('signup_submitted')
     setLoading(true)
 
-    const { error: authError, needsEmailConfirmation } = await signUpWithPassword(
-      email,
-      password,
-      { firstName, lastName },
-    )
+    const { error: authError, needsEmailConfirmation, alreadyRegistered } =
+      await signUpWithPassword(email, password, { firstName, lastName })
 
     setLoading(false)
 
     if (authError) {
+      capturePostHog('signup_failed', {
+        reason: alreadyRegistered ?? 'error',
+      })
+      if (alreadyRegistered === 'ambiguous') {
+        setError(null)
+        setInfo(authError.message)
+        setPendingConfirmation(true)
+        return
+      }
       setError(authError.message)
       return
     }
 
     if (needsEmailConfirmation) {
+      capturePostHog('signup_succeeded', { needs_confirmation: true })
+      setPendingConfirmation(true)
       setInfo('Account created. Check your email to confirm, then sign in.')
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
       return
     }
 
+    capturePostHog('signup_succeeded', { needs_confirmation: false })
     router.push(next ?? '/dashboard')
   }
+
+  async function handleResendVerification() {
+    setResendMessage(null)
+    setError(null)
+
+    if (!isValidEmailFormat(email)) {
+      setError(AUTH_INVALID_EMAIL_MESSAGE)
+      return
+    }
+
+    if (resendCooldown > 0 || resendLoading) return
+
+    setResendLoading(true)
+    const { error: resendError } = await resendSignupVerificationEmail(email)
+    setResendLoading(false)
+
+    if (resendError) {
+      setError(resendError.message)
+      return
+    }
+
+    setResendMessage('Verification email sent. Check your inbox.')
+    setResendCooldown(RESEND_COOLDOWN_SECONDS)
+  }
+
+  const loginHref = next
+    ? `/login?next=${encodeURIComponent(next)}`
+    : '/login'
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -193,29 +261,39 @@ function CreateAccountPageContent() {
 
           {info && (
             <p className="text-sm text-[#00e676]" role="status">
-              {info}
-              {!error && (
-                <>
-                  {' '}
-                  <Link
-                    href={
-                      next
-                        ? `/login?next=${encodeURIComponent(next)}`
-                        : '/login'
-                    }
-                    className="font-medium underline"
-                  >
-                    Sign in
-                  </Link>
-                </>
-              )}
+              {info}{' '}
+              <Link href={loginHref} className="font-medium underline">
+                Sign in
+              </Link>
             </p>
+          )}
+
+          {pendingConfirmation && (
+            <div className="space-y-2 rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 p-3">
+              {resendMessage && (
+                <p className="text-sm text-[#00e676]" role="status">
+                  {resendMessage}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleResendVerification()}
+                disabled={resendLoading || resendCooldown > 0}
+                className={`w-full rounded-lg border border-[#00e676]/40 px-4 py-2.5 text-sm font-medium text-[#00e676] transition-colors hover:bg-[#00e676]/10 disabled:cursor-not-allowed disabled:opacity-50 ${AUTH_FOCUS_VISIBLE_CLASS}`}
+              >
+                {resendLoading
+                  ? 'Sending…'
+                  : resendCooldown > 0
+                    ? `Resend verification email (${resendCooldown}s)`
+                    : 'Resend verification email'}
+              </button>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={AUTH_PRIMARY_SUBMIT_CLASS}
           >
             {loading ? 'Creating account…' : 'Create account'}
           </button>
@@ -223,9 +301,7 @@ function CreateAccountPageContent() {
           <p className="text-center text-sm text-[#5a7080]">
             Already have an account?{' '}
             <Link
-              href={
-                next ? `/login?next=${encodeURIComponent(next)}` : '/login'
-              }
+              href={loginHref}
               className="font-medium text-[#00e676] hover:underline"
             >
               Sign in

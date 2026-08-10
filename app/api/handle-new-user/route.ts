@@ -92,6 +92,13 @@ export async function POST(request: Request) {
     )
 
     if (authUser.user.app_metadata?.welcome_email_sent) {
+      // Still ensure a default username for brand-new rows that skipped welcome.
+      try {
+        const { ensureDefaultUsername } = await import('@/src/lib/username')
+        await ensureDefaultUsername(admin, userId)
+      } catch (usernameError) {
+        console.error('handle-new-user: username ensure failed', usernameError)
+      }
       return NextResponse.json({ success: true, skipped: true })
     }
 
@@ -114,6 +121,16 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error('handle-new-user metadata update error:', updateError.message)
+    }
+
+    try {
+      const { ensureDefaultUsername } = await import('@/src/lib/username')
+      const { error: usernameError } = await ensureDefaultUsername(admin, userId)
+      if (usernameError) {
+        console.error('handle-new-user: username ensure failed', usernameError)
+      }
+    } catch (usernameError) {
+      console.error('handle-new-user: username ensure failed', usernameError)
     }
 
     return NextResponse.json({ success: true })

@@ -8,6 +8,12 @@ import { PoolCupLogo } from '@/components/poolcup-logo'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { sendPasswordResetEmail, signInWithPassword } from '@/src/lib/auth'
+import {
+  AUTH_INVALID_EMAIL_MESSAGE,
+  AUTH_PRIMARY_SUBMIT_CLASS,
+  isValidEmailFormat,
+} from '@/src/lib/auth-form'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { getSafeNext } from '@/src/lib/safe-redirect'
 
 const inputClassName = authInputClassName
@@ -38,8 +44,8 @@ function LoginPageContent() {
     }
   }, [searchParams])
 
-  function switchMode(next: AuthMode) {
-    setMode(next)
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode)
     setError(null)
     setInfo(null)
     setForgotSent(false)
@@ -50,6 +56,13 @@ function LoginPageContent() {
     e.preventDefault()
     setError(null)
     setInfo(null)
+
+    if (!isValidEmailFormat(email)) {
+      setError(AUTH_INVALID_EMAIL_MESSAGE)
+      return
+    }
+
+    capturePostHog('login_submitted')
     setLoading(true)
 
     const { error: authError } = await signInWithPassword(email, password)
@@ -57,10 +70,12 @@ function LoginPageContent() {
     setLoading(false)
 
     if (authError) {
+      capturePostHog('login_failed')
       setError(authError.message)
       return
     }
 
+    capturePostHog('login_succeeded')
     router.push(next ?? '/dashboard')
   }
 
@@ -69,6 +84,12 @@ function LoginPageContent() {
     setError(null)
     setInfo(null)
     setForgotSent(false)
+
+    if (!isValidEmailFormat(email)) {
+      setError(AUTH_INVALID_EMAIL_MESSAGE)
+      return
+    }
+
     setLoading(true)
 
     const { error: authError } = await sendPasswordResetEmail(email)
@@ -164,7 +185,7 @@ function LoginPageContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className={AUTH_PRIMARY_SUBMIT_CLASS}
               >
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
@@ -224,7 +245,7 @@ function LoginPageContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={AUTH_PRIMARY_SUBMIT_CLASS}
                 >
                   {loading ? 'Sending…' : 'Send reset link'}
                 </button>
