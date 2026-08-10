@@ -1,6 +1,13 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -15,13 +22,38 @@ import {
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog, poolCreatedMode } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
-import { getCurrentEvent } from '@/src/lib/current-event'
+import {
+  formatSportingEventDateRange,
+  listCreatableSportingEvents,
+  type SportingEvent,
+} from '@/src/lib/current-event'
+import {
+  normalizePoolDescription,
+  normalizePoolName,
+  POOL_DESCRIPTION_MAX_LENGTH,
+  POOL_NAME_MAX_LENGTH,
+  validatePoolDescription,
+  validatePoolName,
+} from '@/src/lib/pool-name'
+import { normalizeSportKey } from '@/src/lib/sport-display'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
 const TOTAL_STEPS = 4
 
+const FOCUS_RING_CLASS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50'
+
 type SportId = 'soccer' | 'basketball' | 'baseball' | 'football' | 'hockey'
+
+/** Map create-flow sport tiles → normalizeSportKey buckets on sporting_events.sport. */
+const CREATE_SPORT_KEY: Record<SportId, string> = {
+  soccer: 'football',
+  basketball: 'basketball',
+  baseball: 'baseball',
+  football: 'american_football',
+  hockey: 'hockey',
+}
 
 const SPORTS: {
   id: SportId
@@ -51,14 +83,6 @@ const SPORTS: {
   { id: 'hockey', label: 'Hockey', imageSrc: '/sports/hockey.png', available: false },
 ]
 
-const SOCCER_EVENTS = [
-  {
-    id: 'fifa-wc-2026',
-    title: 'FIFA World Cup 2026',
-    dates: 'Jun 11 to Jul 19',
-  },
-] as const
-
 type CreatedPool = {
   id: string
   name: string
@@ -80,11 +104,15 @@ function fireConfettiBursts() {
   }, 250)
 }
 
-const SHARE_BUTTON_CLASS =
-  'w-full rounded-lg border border-[#1e2d3d] px-2 py-1.5 text-[10px] font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:text-xs sm:px-2'
+const SHARE_BUTTON_CLASS = cn(
+  'w-full rounded-lg border border-[#1e2d3d] px-2 py-1.5 text-[10px] font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:text-xs sm:px-2',
+  FOCUS_RING_CLASS,
+)
 
-const PRIMARY_CTA_CLASS =
-  'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90'
+const PRIMARY_CTA_CLASS = cn(
+  'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90',
+  FOCUS_RING_CLASS,
+)
 
 const INVITE_QR_PROPS = {
   size: 160,
@@ -107,28 +135,82 @@ function BackButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="text-sm text-[#5a7080] transition-colors hover:text-[#00e676]"
+      className={cn(
+        'text-sm text-[#5a7080] transition-colors hover:text-[#00e676]',
+        FOCUS_RING_CLASS,
+        'rounded-md',
+      )}
     >
       ← Back
     </button>
   )
 }
 
+function formatSportLabel(sport: SportId | null): string {
+  if (!sport) return '—'
+  return SPORTS.find((row) => row.id === sport)?.label ?? sport
+}
+
 export default function CreatePoolPage() {
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
+  const goToPoolRef = useRef<HTMLAnchorElement>(null)
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
   const [step, setStep] = useState(1)
   const [selectedSport, setSelectedSport] = useState<SportId | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [creatableEvents, setCreatableEvents] = useState<SportingEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState<string | null>(null)
   const [poolName, setPoolName] = useState('')
+  const [poolDescription, setPoolDescription] = useState('')
   const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('winner')
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+
+  const selectedEvent = useMemo((): SportingEvent | null => {
+    if (!selectedEventId) return null
+    return creatableEvents.find((event) => event.id === selectedEventId) ?? null
+  }, [creatableEvents, selectedEventId])
+
+  const eventsForSelectedSport = useMemo(() => {
+    if (!selectedSport) return []
+    const sportKey = CREATE_SPORT_KEY[selectedSport]
+    return creatableEvents.filter(
+      (event) => normalizeSportKey(event.sport) === sportKey,
+    )
+  }, [creatableEvents, selectedSport])
+
+  const selectedScoring = useMemo(
+    () => POOL_SCORING_STYLE_OPTIONS.find((s) => s.id === scoringStyle) ?? null,
+    [scoringStyle],
+  )
+
+  const loadCreatableEvents = useCallback(async () => {
+    setEventsLoading(true)
+    setEventsError(null)
+    try {
+      const rows = await listCreatableSportingEvents(supabase)
+      setCreatableEvents(rows)
+    } catch (err) {
+      console.error('create: failed to load creatable events', err)
+      setCreatableEvents([])
+      setEventsError('Could not load events. Please try again.')
+    } finally {
+      setEventsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (step !== 2) return
+    void loadCreatableEvents()
+  }, [step, loadCreatableEvents])
 
   useEffect(() => {
     if (step !== 4 || !createdPool) return
@@ -139,6 +221,7 @@ export default function CreatePoolPage() {
       requestAnimationFrame(() => {
         if (!cancelled) {
           fireConfettiBursts()
+          goToPoolRef.current?.focus()
         }
       })
     })
@@ -168,42 +251,49 @@ export default function CreatePoolPage() {
     if (!available) return
     setSelectedSport(sport)
     setSelectedEventId(null)
+    setError(null)
     setStep(2)
   }
 
   function handleEventSelect(eventId: string) {
     setSelectedEventId(eventId)
+    setError(null)
     setStep(3)
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!user) return
+  async function createPool() {
+    if (!user || submitting) return
+
+    const nameValidation = validatePoolName(poolName)
+    const descriptionValidation = validatePoolDescription(poolDescription)
+    setNameError(nameValidation)
+    setDescriptionError(descriptionValidation)
+    if (nameValidation || descriptionValidation) {
+      setError(null)
+      return
+    }
+
+    if (!selectedEvent) {
+      setError('Select an event before creating your pool.')
+      return
+    }
 
     setError(null)
     setSubmitting(true)
     setLoadingMessage('Creating pool…')
 
-    const selectedEvent = SOCCER_EVENTS.find(
-      (event) => event.id === selectedEventId,
-    )
-    const eventName = selectedEvent?.title ?? 'FIFA World Cup 2026'
+    const trimmedName = normalizePoolName(poolName)
+    const trimmedDescription = normalizePoolDescription(poolDescription)
 
-    const currentEvent = await getCurrentEvent(supabase)
-    if (!currentEvent) {
-      setSubmitting(false)
-      setLoadingMessage(null)
-      setError('Could not resolve the current sporting event. Please try again.')
-      return
-    }
-
+    // Bind pool to the selected row's real sporting_events.id (no slug re-lookup).
     const { data: pool, error: insertError } = await supabase
       .from('pools')
       .insert({
-        name: poolName.trim(),
+        name: trimmedName,
+        description: trimmedDescription || null,
         scoring_style: scoringStyle,
-        event_name: eventName,
-        event_id: currentEvent.id,
+        event_name: selectedEvent.name,
+        event_id: selectedEvent.id,
         creator_id: user.id,
       })
       .select('id, invite_code')
@@ -255,7 +345,7 @@ export default function CreatePoolPage() {
     setLoadingMessage(null)
     setCreatedPool({
       id: pool.id,
-      name: poolName.trim(),
+      name: trimmedName,
       inviteCode: pool.invite_code,
     })
     capturePostHog('pool_created', {
@@ -263,6 +353,11 @@ export default function CreatePoolPage() {
       pool_id: pool.id,
     })
     setStep(4)
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    await createPool()
   }
 
   function copyInviteLink() {
@@ -387,9 +482,6 @@ export default function CreatePoolPage() {
   const containerWidth =
     step === 1 ? 'max-w-2xl' : step === 2 ? 'max-w-lg' : 'max-w-md'
 
-  const activeEvents =
-    selectedSport === 'soccer' ? SOCCER_EVENTS : []
-
   return (
     <main
       className={cn(
@@ -402,7 +494,10 @@ export default function CreatePoolPage() {
           {step === 1 ? (
             <Link
               href="/dashboard"
-              className="text-sm text-[#5a7080] hover:text-[#00e676] transition-colors"
+              className={cn(
+                'text-sm text-[#5a7080] hover:text-[#00e676] transition-colors rounded-md',
+                FOCUS_RING_CLASS,
+              )}
             >
               ← Back to dashboard
             </Link>
@@ -423,32 +518,36 @@ export default function CreatePoolPage() {
 
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {SPORTS.map((sport) => (
-                    <button
-                      key={sport.id}
-                      type="button"
-                      disabled={!sport.available}
-                      onClick={() => handleSportSelect(sport.id, sport.available)}
-                      className={`relative flex flex-col items-center gap-3 rounded-xl border px-4 py-6 text-center transition-all ${
-                        sport.available
-                          ? 'cursor-pointer border-[#1e2d3d] bg-[#080b0f] text-[#f0f4f8] hover:border-[#00e676]/50 hover:bg-[#00e676]/5'
-                          : 'cursor-not-allowed border-[#1e2d3d]/60 bg-[#080b0f]/60 text-[#5a7080] opacity-60'
-                      }`}
-                    >
-                      {!sport.available && (
-                        <span className="absolute right-2 top-2 rounded-full border border-[#1e2d3d] bg-[#111a27] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5a7080]">
-                          Coming soon
-                        </span>
-                      )}
-                      <Image
-                        src={sport.imageSrc}
-                        alt={sport.label}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 object-contain"
-                      />
-                      <span className="text-sm font-medium">{sport.label}</span>
-                    </button>
-                  ))}
+                  <button
+                    key={sport.id}
+                    type="button"
+                    disabled={!sport.available}
+                    onClick={() =>
+                      handleSportSelect(sport.id, sport.available)
+                    }
+                    className={cn(
+                      'relative flex flex-col items-center gap-3 rounded-xl border px-4 py-6 text-center transition-all',
+                      FOCUS_RING_CLASS,
+                      sport.available
+                        ? 'cursor-pointer border-[#1e2d3d] bg-[#080b0f] text-[#f0f4f8] hover:border-[#00e676]/50 hover:bg-[#00e676]/5'
+                        : 'cursor-not-allowed border-[#1e2d3d]/60 bg-[#080b0f]/60 text-[#5a7080] opacity-60',
+                    )}
+                  >
+                    {!sport.available && (
+                      <span className="absolute right-2 top-2 rounded-full border border-[#1e2d3d] bg-[#111a27] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5a7080]">
+                        Coming soon
+                      </span>
+                    )}
+                    <Image
+                      src={sport.imageSrc}
+                      alt={sport.label}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 object-contain"
+                    />
+                    <span className="text-sm font-medium">{sport.label}</span>
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -467,22 +566,55 @@ export default function CreatePoolPage() {
               </p>
 
               <div className="mt-8 space-y-3">
-                {activeEvents.length === 0 ? (
+                {eventsLoading ? (
+                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-8 text-center">
+                    <p className="text-sm text-[#5a7080]">Loading events…</p>
+                  </div>
+                ) : eventsError ? (
+                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-8 text-center">
+                    <p className="text-sm text-red-400">{eventsError}</p>
+                    <button
+                      type="button"
+                      onClick={() => void loadCreatableEvents()}
+                      className={cn(
+                        'mt-4 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm text-[#f0f4f8] hover:border-[#00e676]/50',
+                        FOCUS_RING_CLASS,
+                      )}
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : eventsForSelectedSport.length === 0 ? (
                   <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-8 text-center opacity-60">
                     <p className="text-sm text-[#5a7080]">
                       No active events right now.
                     </p>
                   </div>
                 ) : (
-                  activeEvents.map((event) => (
+                  eventsForSelectedSport.map((event) => (
                     <button
                       key={event.id}
                       type="button"
                       onClick={() => handleEventSelect(event.id)}
-                      className="w-full rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-5 text-left transition-all hover:border-[#00e676]/50 hover:bg-[#00e676]/5"
+                      className={cn(
+                        'w-full rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-5 text-left transition-all hover:border-[#00e676]/50 hover:bg-[#00e676]/5',
+                        FOCUS_RING_CLASS,
+                      )}
                     >
-                      <p className="font-medium text-[#f0f4f8]">{event.title}</p>
-                      <p className="mt-1 text-sm text-[#5a7080]">{event.dates}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium text-[#f0f4f8]">{event.name}</p>
+                        {event.status === 'live' ? (
+                          <span className="shrink-0 rounded-full border border-[#00e676]/40 bg-[#00e676]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#00e676]">
+                            Live
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-sm text-[#5a7080]">
+                        {formatSportingEventDateRange(
+                          event.start_date,
+                          event.end_date,
+                        )}
+                      </p>
                     </button>
                   ))
                 )}
@@ -503,11 +635,45 @@ export default function CreatePoolPage() {
                 Set up your pool and start inviting your squad.
               </p>
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              <div className="mt-6 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/70 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#5a7080]">
+                  Creating
+                </p>
+                <dl className="mt-2 space-y-1.5 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#5a7080]">Sport</dt>
+                    <dd className="text-right font-medium text-[#f0f4f8]">
+                      {formatSportLabel(selectedSport)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#5a7080]">Event</dt>
+                    <dd className="text-right font-medium text-[#f0f4f8]">
+                      {selectedEvent?.name ?? '—'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#5a7080]">Scoring</dt>
+                    <dd className="text-right font-medium text-[#f0f4f8]">
+                      {selectedScoring?.label ?? scoringStyle}
+                    </dd>
+                  </div>
+                  {normalizePoolName(poolName) ? (
+                    <div className="flex justify-between gap-3 border-t border-[#1e2d3d] pt-1.5">
+                      <dt className="text-[#5a7080]">Pool name</dt>
+                      <dd className="text-right font-medium text-[#00e676]">
+                        {normalizePoolName(poolName)}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+
+              <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-6">
                 <div>
                   <label
                     htmlFor="pool-name"
-                    className="block text-xs font-medium uppercase tracking-wider text-[#5a7080] mb-2"
+                    className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
                   >
                     Pool name
                   </label>
@@ -515,15 +681,88 @@ export default function CreatePoolPage() {
                     id="pool-name"
                     type="text"
                     required
+                    maxLength={POOL_NAME_MAX_LENGTH}
                     value={poolName}
-                    onChange={(e) => setPoolName(e.target.value)}
+                    onChange={(e) => {
+                      setPoolName(e.target.value)
+                      setNameError(null)
+                    }}
                     placeholder="Marketing Team WC 2026"
-                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]"
+                    aria-invalid={Boolean(nameError)}
+                    aria-describedby={
+                      nameError ? 'pool-name-error' : 'pool-name-hint'
+                    }
+                    className={cn(
+                      'w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+                    )}
                   />
+                  <p
+                    id="pool-name-hint"
+                    className="mt-1.5 text-[11px] text-[#5a7080]"
+                  >
+                    2–{POOL_NAME_MAX_LENGTH} characters
+                  </p>
+                  {nameError ? (
+                    <p
+                      id="pool-name-error"
+                      className="mt-1.5 text-sm text-red-400"
+                      role="alert"
+                    >
+                      {nameError}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
-                  <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080] mb-2">
+                  <label
+                    htmlFor="pool-description"
+                    className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
+                  >
+                    Description{' '}
+                    <span className="normal-case tracking-normal text-[#5a7080]/80">
+                      (optional)
+                    </span>
+                  </label>
+                  <textarea
+                    id="pool-description"
+                    rows={3}
+                    maxLength={POOL_DESCRIPTION_MAX_LENGTH}
+                    value={poolDescription}
+                    onChange={(e) => {
+                      setPoolDescription(e.target.value)
+                      setDescriptionError(null)
+                    }}
+                    placeholder="Office World Cup pool — winner buys lunch"
+                    aria-invalid={Boolean(descriptionError)}
+                    aria-describedby={
+                      descriptionError
+                        ? 'pool-description-error'
+                        : 'pool-description-hint'
+                    }
+                    className={cn(
+                      'w-full resize-y rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+                    )}
+                  />
+                  <p
+                    id="pool-description-hint"
+                    className="mt-1.5 text-[11px] tabular-nums text-[#5a7080]"
+                  >
+                    {normalizePoolDescription(poolDescription).length}/
+                    {POOL_DESCRIPTION_MAX_LENGTH}
+                  </p>
+                  {descriptionError ? (
+                    <p
+                      id="pool-description-error"
+                      className="mt-1.5 text-sm text-red-400"
+                      role="alert"
+                    >
+                      {descriptionError}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
                     Scoring style
                   </span>
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -532,46 +771,60 @@ export default function CreatePoolPage() {
                         key={style.id}
                         type="button"
                         onClick={() => setScoringStyle(style.id)}
-                        className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                        className={cn(
+                          'flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                          FOCUS_RING_CLASS,
                           scoringStyle === style.id
                             ? 'border-2 border-[#00e676] bg-[#00e676]/5 text-[#00e676]'
-                            : 'border border-[#1e2d3d] text-[#5a7080] hover:text-[#f0f4f8]'
-                        }`}
+                            : 'border border-[#1e2d3d] text-[#5a7080] hover:text-[#f0f4f8]',
+                        )}
                       >
                         {style.label}
                       </button>
                     ))}
                   </div>
-                  {(() => {
-                    const selected = POOL_SCORING_STYLE_OPTIONS.find(
-                      (s) => s.id === scoringStyle,
-                    )
-                    if (!selected) return null
-                    return (
-                      <div className="mt-3 rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-3">
-                        <ul className="space-y-1.5 text-sm text-[#5a7080]">
-                          {selected.rules.map((rule) => (
-                            <li key={rule}>{rule}</li>
-                          ))}
-                        </ul>
-                        <p className="mt-2 text-xs font-medium text-[#00e676]">
-                          {selected.tagline}
-                        </p>
-                      </div>
-                    )
-                  })()}
+                  {selectedScoring ? (
+                    <div className="mt-3 rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-3">
+                      <ul className="space-y-1.5 text-sm text-[#5a7080]">
+                        {selectedScoring.rules.map((rule) => (
+                          <li key={rule}>{rule}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-xs font-medium text-[#00e676]">
+                        {selectedScoring.tagline}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
-                {error && (
-                  <p className="text-sm text-red-400" role="alert">
-                    {error}
-                  </p>
-                )}
+                {error ? (
+                  <div
+                    className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-400"
+                    role="alert"
+                  >
+                    <p>{error}</p>
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => void createPool()}
+                      className={cn(
+                        'mt-2 text-sm font-semibold text-[#00e676] underline-offset-4 hover:underline',
+                        FOCUS_RING_CLASS,
+                        'rounded-md',
+                      )}
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : null}
 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                  className={cn(
+                    'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50',
+                    FOCUS_RING_CLASS,
+                  )}
                 >
                   {submitting
                     ? (loadingMessage ?? 'Processing…')
@@ -603,7 +856,10 @@ export default function CreatePoolPage() {
                 <button
                   type="button"
                   onClick={downloadInviteQr}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-[#00e676]/50 hover:bg-[#080b0f] hover:text-[#00e676]"
+                  className={cn(
+                    'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-[#00e676]/50 hover:bg-[#080b0f] hover:text-[#00e676]',
+                    FOCUS_RING_CLASS,
+                  )}
                 >
                   <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   Download QR
@@ -620,7 +876,7 @@ export default function CreatePoolPage() {
               <div className="mt-8">
                 <label
                   htmlFor="invite-link"
-                  className="block text-xs font-medium uppercase tracking-wider text-[#5a7080] mb-2"
+                  className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
                 >
                   Invite link
                 </label>
@@ -630,7 +886,7 @@ export default function CreatePoolPage() {
                   readOnly
                   value={inviteLink}
                   onFocus={(e) => e.target.select()}
-                  className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:outline-none focus:ring-2 focus:ring-[#00e676]/50 focus:border-[#00e676]"
+                  className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50"
                 />
               </div>
 
@@ -681,8 +937,12 @@ export default function CreatePoolPage() {
               </div>
 
               <Link
+                ref={goToPoolRef}
                 href={`/pool/${createdPool.inviteCode}`}
-                className="mt-6 block w-full text-center text-sm text-[#5a7080] transition-colors hover:text-[#00e676]"
+                className={cn(
+                  'mt-6 flex w-full items-center justify-center rounded-lg border-2 border-[#00e676] bg-[#00e676]/10 px-4 py-3 text-sm font-semibold text-[#00e676] transition-colors hover:bg-[#00e676]/20',
+                  FOCUS_RING_CLASS,
+                )}
               >
                 Go to my pool
               </Link>

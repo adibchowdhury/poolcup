@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS public.pools (
     stripe_session_id text,
     created_at timestamp with time zone DEFAULT now(),
     event_name text NOT NULL DEFAULT 'FIFA World Cup 2026'::text,
-    avatar text
+    avatar text,
+    description text
 );
 
 CREATE TABLE IF NOT EXISTS public.predictions (

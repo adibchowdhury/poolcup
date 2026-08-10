@@ -118,3 +118,58 @@ export async function listSportingEvents(
     return a.name.localeCompare(b.name)
   })
 }
+
+const CREATABLE_EVENT_STATUSES = ['live', 'upcoming'] as const
+
+/**
+ * Events available for new pool creation: status live or upcoming only.
+ * Completed/finished leagues (e.g. finished World Cup) are excluded.
+ * Ordered: live first, then upcoming by start_date ascending, then name.
+ * Direct select — sporting_events is already client-readable (same as dashboard).
+ */
+export async function listCreatableSportingEvents(
+  client: SupabaseClient = browserSupabase,
+): Promise<SportingEvent[]> {
+  const { data, error } = await client
+    .from('sporting_events')
+    .select(SPORTING_EVENT_SELECT)
+    .in('status', [...CREATABLE_EVENT_STATUSES])
+
+  if (error) {
+    console.error('listCreatableSportingEvents failed', error.message)
+    return []
+  }
+
+  const rows = (data ?? []) as SportingEvent[]
+  return [...rows].sort((a, b) => {
+    const pa = EVENT_STATUS_PRIORITY[a.status] ?? 50
+    const pb = EVENT_STATUS_PRIORITY[b.status] ?? 50
+    if (pa !== pb) return pa - pb
+    const aStart = a.start_date ?? ''
+    const bStart = b.start_date ?? ''
+    if (aStart !== bStart) return aStart.localeCompare(bStart)
+    return a.name.localeCompare(b.name)
+  })
+}
+
+/** Short date range for create-flow event cards. */
+export function formatSportingEventDateRange(
+  startDate: string | null,
+  endDate: string | null,
+): string {
+  const format = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00Z`)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+  }
+
+  if (startDate && endDate) return `${format(startDate)} – ${format(endDate)}`
+  if (startDate) return `Starts ${format(startDate)}`
+  if (endDate) return `Ends ${format(endDate)}`
+  return 'Dates TBA'
+}
