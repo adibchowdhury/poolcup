@@ -27,6 +27,7 @@ type MembershipRow = {
     creator_id: string
     event_name: string
     scoring_style: string
+    is_official: boolean | null
   } | null
 }
 
@@ -70,7 +71,8 @@ export async function fetchDashboardPools(
         invite_code,
         creator_id,
         event_name,
-        scoring_style
+        scoring_style,
+        is_official
       )
     `,
     )
@@ -357,6 +359,7 @@ export async function fetchDashboardPools(
       nextMatchKickoffAt,
       predictionsLocked,
       canDelete: pool.creator_id === userId,
+      isOfficial: Boolean(pool.is_official),
     }
   })
 

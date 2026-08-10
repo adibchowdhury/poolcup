@@ -17,6 +17,7 @@ import {
 } from '@/src/lib/fetch-official-pools'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 
 /** Default card art — swap per league later via `backgroundImage` on each card. */
@@ -93,6 +94,13 @@ export function OfficialPoolsSection({
       metadata: { via: 'official_discover', already_member: alreadyMember },
     })
 
+    if (!alreadyMember) {
+      capturePostHog('pool_joined', {
+        pool_id: pool.id,
+        via: 'official',
+      })
+    }
+
     setPools((prev) =>
       prev.map((p) =>
         p.id === pool.id
@@ -110,7 +118,27 @@ export function OfficialPoolsSection({
   }
 
   if (!loading && !error && pools.length === 0) {
-    return null
+    return (
+      <DashboardFeedSection id="official-pools" title="Discover Pools">
+        <div className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-8 text-center">
+          <p className="text-sm font-medium text-foreground">
+            No official pools to discover right now
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Create your own pool or join a friend with an invite code.
+          </p>
+          <Link
+            href="/create"
+            className={cn(
+              'mt-4 inline-flex rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            )}
+          >
+            Create a pool
+          </Link>
+        </div>
+      </DashboardFeedSection>
+    )
   }
 
   return (
@@ -137,7 +165,19 @@ export function OfficialPoolsSection({
           </div>
         </div>
       ) : error ? (
-        <p className="text-sm text-muted-foreground">{error}</p>
+        <div className="rounded-xl border border-border bg-card/50 px-4 py-6 text-center">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className={cn(
+              'mt-3 text-sm font-semibold text-primary underline-offset-4 hover:underline',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md',
+            )}
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <div
           className={cn(
@@ -322,6 +362,7 @@ function OfficialPoolCard({
               className={cn(
                 'block w-full rounded-full px-3 py-1.5 text-center text-sm font-semibold',
                 'bg-white/15 text-white transition-colors hover:bg-white/25',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               )}
             >
               Open →
@@ -335,6 +376,7 @@ function OfficialPoolCard({
                 'w-full rounded-full px-3 py-1.5 text-center text-sm font-semibold',
                 'bg-primary text-primary-foreground transition-colors hover:bg-primary/90',
                 'disabled:pointer-events-none disabled:opacity-60',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               )}
             >
               {joining ? 'Joining…' : 'Join →'}

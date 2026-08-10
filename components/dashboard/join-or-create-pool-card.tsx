@@ -78,6 +78,7 @@ export function JoinOrCreatePoolCard() {
         className={cn(
           dashboardGlassSurfaceClass('2xl'),
           'group w-full cursor-pointer border-2 border-dashed border-white/25 text-left transition-colors hover:border-primary/50',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         )}
       >
         <DashboardGlassBackdrops variant="full" />

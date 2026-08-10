@@ -201,6 +201,20 @@ export default function PoolPage() {
     )
   }, [])
 
+  const handleOwnershipTransferred = useCallback(
+    (newOwnerUserId: string) => {
+      setPoolCreatorUserId(newOwnerUserId)
+      setCanDelete(newOwnerUserId === userId)
+      if (leaderboardRefreshCtxRef.current) {
+        leaderboardRefreshCtxRef.current = {
+          ...leaderboardRefreshCtxRef.current,
+          creatorUserId: newOwnerUserId,
+        }
+      }
+    },
+    [userId],
+  )
+
   const handleAnnouncementDismissed = useCallback((announcementId: string) => {
     setActiveAnnouncement((previous) =>
       previous?.id === announcementId ? null : previous,
@@ -768,6 +782,7 @@ export default function PoolPage() {
       onPoolEmblemUrlChange={handlePoolEmblemUrlChange}
       onPoolScoringChange={handlePoolScoringChange}
       onMemberRemoved={handleMemberRemoved}
+      onOwnershipTransferred={handleOwnershipTransferred}
       activeAnnouncement={activeAnnouncement}
       onAnnouncementDismissed={handleAnnouncementDismissed}
       onManagedAnnouncementChange={handleManagedAnnouncementChange}

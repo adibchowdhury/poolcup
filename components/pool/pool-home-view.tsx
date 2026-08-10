@@ -108,6 +108,7 @@ interface PoolHomeViewProps {
     scoreDrawPoints: number | null
   }) => void
   onMemberRemoved?: (memberId: string) => void
+  onOwnershipTransferred?: (newOwnerUserId: string) => void
   activeAnnouncement?: PoolAnnouncement | null
   onAnnouncementDismissed?: (announcementId: string) => void
   onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
@@ -136,6 +137,7 @@ export function PoolHomeView({
   onPoolEmblemUrlChange,
   onPoolScoringChange,
   onMemberRemoved,
+  onOwnershipTransferred,
   activeAnnouncement = null,
   onAnnouncementDismissed,
   onManagedAnnouncementChange,
@@ -619,6 +621,7 @@ export function PoolHomeView({
                 onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}
                 onMemberRemoved={onMemberRemoved}
+                onOwnershipTransferred={onOwnershipTransferred}
                 onManagedAnnouncementChange={onManagedAnnouncementChange}
               />
             </TabsContent>

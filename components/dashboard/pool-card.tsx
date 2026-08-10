@@ -61,6 +61,8 @@ export type DashboardPoolCardData = {
   nextMatchKickoffAt: string | null
   predictionsLocked: boolean
   canDelete?: boolean
+  /** PoolCup-generated official event pool (vs invite/user pool). */
+  isOfficial?: boolean
 }
 
 const MAX_VISIBLE_MEMBER_AVATARS = 4
@@ -208,21 +210,33 @@ export function PoolCard({
       <div className="border-b border-border px-[15px] py-[13px]">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-col gap-1">
-            <span
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
-              style={{
-                color: typePillTheme.accent,
-                backgroundColor: typePillTheme.accentBg,
-                borderColor: typePillTheme.accentBorder,
-              }}
-            >
-              <TypeIcon
-                className="h-3 w-3 shrink-0"
-                style={{ color: typePillTheme.accent }}
-                aria-hidden
-              />
-              {typeLabel}
-            </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span
+                className="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  color: typePillTheme.accent,
+                  backgroundColor: typePillTheme.accentBg,
+                  borderColor: typePillTheme.accentBorder,
+                }}
+              >
+                <TypeIcon
+                  className="h-3 w-3 shrink-0"
+                  style={{ color: typePillTheme.accent }}
+                  aria-hidden
+                />
+                {typeLabel}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                  pool.isOfficial
+                    ? 'border-primary/35 bg-primary/10 text-primary'
+                    : 'border-border bg-muted/40 text-muted-foreground',
+                )}
+              >
+                {pool.isOfficial ? 'Official' : 'Invite'}
+              </span>
+            </div>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Trophy
                 className="h-3 w-3 shrink-0 text-muted-foreground/80"

@@ -156,9 +156,8 @@ export default function JoinPoolPage() {
     prefillName()
   }, [user])
 
-  async function handleJoin(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!user || !pool) return
+  async function submitJoin() {
+    if (!user || !pool || joining) return
 
     trackEvent('join_started', {
       poolId: pool.id,
@@ -215,6 +214,11 @@ export default function JoinPoolPage() {
     router.push(`/pool/${inviteCode}`)
   }
 
+  async function handleJoin(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    await submitJoin()
+  }
+
   const joinNext = `/join/${inviteCode}`
   const isAlreadyMember = Boolean(
     user && members.some((member) => member.user_id === user.id),
@@ -254,6 +258,16 @@ export default function JoinPoolPage() {
           <p className="mt-2 text-sm text-[#5a7080]">
             The invite link may be invalid.
           </p>
+          <button
+            type="button"
+            onClick={() => void loadPoolData()}
+            className={cn(
+              'mt-6 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-colors hover:border-[#00e676]/50',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+            )}
+          >
+            Try again
+          </button>
         </div>
       </main>
     )
@@ -315,7 +329,7 @@ export default function JoinPoolPage() {
               <p className="mt-4 text-center text-sm text-[#5a7080]">
                 <Link
                   href={`/create-account?next=${encodeURIComponent(joinNext)}`}
-                  className="font-medium text-[#00e676] hover:underline"
+                  className="font-medium text-[#00e676] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50 rounded-sm"
                 >
                   Sign up with email
                 </Link>
@@ -325,7 +339,7 @@ export default function JoinPoolPage() {
                 Already have an account?{' '}
                 <Link
                   href={`/login?next=${encodeURIComponent(joinNext)}`}
-                  className="font-medium text-[#00e676] hover:underline"
+                  className="font-medium text-[#00e676] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50 rounded-sm"
                 >
                   Sign in
                 </Link>
@@ -414,7 +428,7 @@ export default function JoinPoolPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Alex"
-                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus:ring-1 focus:ring-[#00e676]"
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50"
                   />
                 </div>
                 <div>
@@ -432,23 +446,37 @@ export default function JoinPoolPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Jordan"
-                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus:ring-1 focus:ring-[#00e676]"
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50"
                   />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={joining}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className={cn(
+                  'flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+                )}
               >
                 {joining ? 'Joining…' : 'Join →'}
               </button>
             </form>
 
             {error && (
-              <p className="mt-3 text-sm text-red-400" role="alert">
-                {error}
-              </p>
+              <div className="mt-3" role="alert">
+                <p className="text-sm text-red-400">{error}</p>
+                <button
+                  type="button"
+                  disabled={joining}
+                  onClick={() => void submitJoin()}
+                  className={cn(
+                    'mt-2 text-sm font-semibold text-[#00e676] underline-offset-4 hover:underline',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50 rounded-md',
+                  )}
+                >
+                  Try again
+                </button>
+              </div>
             )}
 
             <div className="mt-6 border-t border-[#1e2d3d] pt-6">

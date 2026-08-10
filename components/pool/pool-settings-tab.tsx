@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
+import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
+import { TransferOwnershipDialog } from '@/components/pool/transfer-ownership-dialog'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import {
   AlertDialog,
@@ -94,6 +96,8 @@ type PoolSettingsTabProps = {
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
   /** After a member is removed (cascade deletes their pool predictions). */
   onMemberRemoved?: (memberId: string) => void
+  /** After creator transfers ownership to another member. */
+  onOwnershipTransferred?: (newOwnerUserId: string) => void
   /**
    * Sync banner after commissioner posts or clears.
    * `null` = cleared / no active announcement for management.
@@ -192,11 +196,13 @@ export function PoolSettingsTab({
   onPoolScoringChange,
   onAcceptingMembersChange,
   onMemberRemoved,
+  onOwnershipTransferred,
   onManagedAnnouncementChange,
 }: PoolSettingsTabProps) {
   const isCreator = Boolean(
     poolCreatorUserId && currentUserId === poolCreatorUserId,
   )
+  const [transferOpen, setTransferOpen] = useState(false)
   const roster = [...members].sort((a, b) => {
     if (a.rank !== b.rank) return a.rank - b.rank
     return a.name.localeCompare(b.name)
@@ -1183,19 +1189,66 @@ export function PoolSettingsTab({
         )}
       </section>
 
-      {isCreator && poolId ? (
-        <section>
-          <SubsectionHeading title="Danger Zone" tone="danger" />
-          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-            Permanently deletes the pool, all members, and every prediction.
-            Prefer closing to new members instead.
+      {poolId ? (
+        <section className="space-y-4">
+          <SubsectionHeading title="Your membership" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isCreator
+              ? 'As host you can transfer ownership to another member, or leave after transferring. Delete only if you want the pool gone for everyone.'
+              : 'Leave this pool to remove yourself and your predictions here.'}
           </p>
-          <DeletePoolDialog
-            poolId={poolId}
-            poolName={poolName}
-            redirectTo="/dashboard"
-            triggerVariant="outline"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {isCreator ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                onClick={() => setTransferOpen(true)}
+              >
+                <Crown className="mr-2 h-4 w-4" aria-hidden />
+                Transfer ownership
+              </Button>
+            ) : null}
+            <LeavePoolDialog
+              poolId={poolId}
+              poolName={poolName}
+              currentUserId={currentUserId}
+              isCreator={isCreator}
+              members={members}
+              onOwnershipTransferred={onOwnershipTransferred}
+            />
+          </div>
+
+          {isCreator ? (
+            <div className="pt-2">
+              <SubsectionHeading title="Danger Zone" tone="danger" />
+              <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                Permanently deletes the pool, all members, and every prediction.
+                Prefer closing to new members or transferring ownership instead.
+              </p>
+              <DeletePoolDialog
+                poolId={poolId}
+                poolName={poolName}
+                redirectTo="/dashboard"
+                triggerVariant="outline"
+                triggerClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              />
+            </div>
+          ) : null}
+
+          {isCreator ? (
+            <TransferOwnershipDialog
+              open={transferOpen}
+              onOpenChange={setTransferOpen}
+              poolId={poolId}
+              poolName={poolName}
+              currentUserId={currentUserId}
+              members={members}
+              onTransferred={(newOwnerUserId) => {
+                onOwnershipTransferred?.(newOwnerUserId)
+              }}
+            />
+          ) : null}
         </section>
       ) : null}
 
