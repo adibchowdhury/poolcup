@@ -1,8 +1,17 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Trophy } from 'lucide-react'
+import { useState } from 'react'
+import {
+  ArrowLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  Trophy,
+} from 'lucide-react'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   FeaturedMatchCountdownDisplay,
@@ -20,18 +29,24 @@ import {
 import type { GlobalMatchPhase } from '@/src/lib/global-match-phase'
 import { getVoidMatchStatusLabel } from '@/src/lib/match-void-status'
 import type {
+  AdjacentMatchNav,
+  FriendMatchPrediction,
   HeadToHeadData,
   MatchCommonScore,
   MatchConsensus,
   MatchEventInfo,
   MatchRelatedPool,
+  PoolMatchDistribution,
   TeamFormEntry,
 } from '@/src/lib/match-hub-data'
 import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
 import type { TeamRosterPlayer } from '@/src/lib/team-roster'
-import { sportIconPng } from '@/src/lib/sport-display'
+import { sportDisplayLabel, sportIconPng } from '@/src/lib/sport-display'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { useAuth } from '@/src/lib/auth-context'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 function navigateFromMatchDetailBack(
@@ -92,15 +107,21 @@ type GlobalMatchDetailViewProps = {
   isLoggedIn: boolean
   consensus: MatchConsensus | null
   commonScores: MatchCommonScore[]
+  friends: FriendMatchPrediction[]
   myPredictions: MyMatchPredictions | null
+  myPickPoints: number | null
   writablePools: WritableScorePool[]
   competitionPools: MatchRelatedPool[]
+  poolDistributions: PoolMatchDistribution[]
   team1Form: TeamFormEntry[]
   team2Form: TeamFormEntry[]
   headToHead: HeadToHeadData | null
+  adjacent: AdjacentMatchNav
   team1Players: TeamRosterPlayer[]
   team2Players: TeamRosterPlayer[]
   rostersLoading?: boolean
+  hubError?: string | null
+  onRetryHub?: () => void
   onPredictionSaved?: () => void
 }
 
@@ -158,20 +179,27 @@ export function GlobalMatchDetailView({
   isLoggedIn,
   consensus,
   commonScores,
+  friends,
   myPredictions,
+  myPickPoints,
   writablePools,
   competitionPools,
+  poolDistributions,
   team1Form,
   team2Form,
   headToHead,
+  adjacent,
   team1Players,
   team2Players,
   rostersLoading = false,
+  hubError = null,
+  onRetryHub,
   onPredictionSaved,
 }: GlobalMatchDetailViewProps) {
   const router = useRouter()
   const { user } = useAuth()
   const kickoffCountdown = useKickoffCountdown(match.kickoffAt)
+  const [shareFlash, setShareFlash] = useState(false)
   const score1 = match.resultTeam1 ?? 0
   const score2 = match.resultTeam2 ?? 0
   const showLiveScore = phase === 'live' || phase === 'final'
@@ -192,7 +220,46 @@ export function GlobalMatchDetailView({
         : null
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.groupName)
   const eventName = eventInfo?.name ?? null
+  const sportLabel = eventInfo?.sport
+    ? sportDisplayLabel(eventInfo.sport)
+    : null
   const sportBadge = eventInfo?.sport ? sportIconPng(eventInfo.sport) : null
+
+  async function handleShare() {
+    const url =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/match/${matchId}`
+        : `/match/${matchId}`
+    const title = `${match.team1Name} vs ${match.team2Name}`
+    const text = eventName
+      ? `${title} · ${eventName} on PoolCup`
+      : `${title} on PoolCup`
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, text, url })
+        capturePostHog('match_shared', {
+          match_id: matchId,
+          method: 'native',
+        })
+        return
+      } catch {
+        // Fall through to clipboard (user cancel or unsupported payload).
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      capturePostHog('match_shared', {
+        match_id: matchId,
+        method: 'copy',
+      })
+      setShareFlash(true)
+      window.setTimeout(() => setShareFlash(false), 1800)
+    } catch {
+      // Ignore clipboard failures.
+    }
+  }
 
   return (
     <div
@@ -201,13 +268,16 @@ export function GlobalMatchDetailView({
       <div className="relative" id="main-content">
         <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-app-background/90 backdrop-blur-xl">
           <div className="mx-auto max-w-4xl px-4 py-2.5 sm:py-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() =>
                   navigateFromMatchDetailBack(router, Boolean(user))
                 }
-                className="group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className={cn(
+                  'group shrink-0 rounded-lg p-2 transition-colors hover:bg-muted',
+                  FOCUS_VISIBLE_RING,
+                )}
                 aria-label={user ? 'Back to dashboard' : 'Back to home'}
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
@@ -220,11 +290,67 @@ export function GlobalMatchDetailView({
                   {match.team1Name} vs {match.team2Name}
                 </h1>
               </div>
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card/80 px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted',
+                  FOCUS_VISIBLE_RING,
+                )}
+                aria-label="Share match"
+              >
+                {shareFlash ? (
+                  <Check className="h-4 w-4 text-primary" aria-hidden />
+                ) : (
+                  <Share2 className="h-4 w-4" aria-hidden />
+                )}
+                <span className="hidden sm:inline">
+                  {shareFlash ? 'Copied' : 'Share'}
+                </span>
+              </button>
             </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-4xl space-y-5 px-4 py-5 sm:space-y-6 sm:py-7">
+          {sportLabel || eventName ? (
+            <nav
+              aria-label="Competition"
+              className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              {sportLabel ? (
+                <span className="font-medium text-foreground/80">{sportLabel}</span>
+              ) : null}
+              {sportLabel && eventName ? (
+                <span aria-hidden className="text-muted-foreground/60">
+                  ›
+                </span>
+              ) : null}
+              {eventName ? (
+                <span className="font-medium text-foreground/80">{eventName}</span>
+              ) : null}
+            </nav>
+          ) : null}
+
+          {hubError ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center">
+              <p className="text-sm text-destructive">
+                Some match details failed to load: {hubError}
+              </p>
+              {onRetryHub ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={onRetryHub}
+                >
+                  Try again
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
           <section className="hue-card-surface relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#1a1a1a] via-app-background to-app-background px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-6">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.10),transparent_55%)] light-hide-hue-overlay" />
 
@@ -326,6 +452,56 @@ export function GlobalMatchDetailView({
             </div>
           </section>
 
+          {(adjacent.prev || adjacent.next) && (
+            <nav
+              aria-label="Nearby matches"
+              className="flex items-stretch justify-between gap-2"
+            >
+              {adjacent.prev ? (
+                <Link
+                  href={`/match/${adjacent.prev.id}`}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2.5 text-left transition-colors hover:bg-muted/50',
+                    FOCUS_VISIBLE_RING,
+                  )}
+                >
+                  <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Previous
+                    </span>
+                    <span className="block truncate text-sm text-foreground">
+                      {adjacent.prev.team1Name} vs {adjacent.prev.team2Name}
+                    </span>
+                  </span>
+                </Link>
+              ) : (
+                <span className="flex-1" />
+              )}
+              {adjacent.next ? (
+                <Link
+                  href={`/match/${adjacent.next.id}`}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center justify-end gap-1.5 rounded-xl border border-border bg-card/60 px-3 py-2.5 text-right transition-colors hover:bg-muted/50',
+                    FOCUS_VISIBLE_RING,
+                  )}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Next
+                    </span>
+                    <span className="block truncate text-sm text-foreground">
+                      {adjacent.next.team1Name} vs {adjacent.next.team2Name}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              ) : (
+                <span className="flex-1" />
+              )}
+            </nav>
+          )}
+
           <MatchHubPanels
             matchId={matchId}
             team1Name={match.team1Name}
@@ -339,9 +515,12 @@ export function GlobalMatchDetailView({
             isLoggedIn={isLoggedIn}
             consensus={consensus}
             commonScores={commonScores}
+            friends={friends}
             myPredictions={myPredictions}
+            myPickPoints={myPickPoints}
             writablePools={writablePools}
             competitionPools={competitionPools}
+            poolDistributions={poolDistributions}
             team1Form={team1Form}
             team2Form={team2Form}
             headToHead={headToHead}

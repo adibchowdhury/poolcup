@@ -48,6 +48,24 @@ export type MatchRelatedPool = {
   yourPoints: number | null
 }
 
+/** Adjacent matches in the same event (kickoff order). */
+export type AdjacentMatchNav = {
+  prev: { id: string; team1Name: string; team2Name: string } | null
+  next: { id: string; team1Name: string; team2Name: string } | null
+}
+
+/** Per-pool post-lock pick distribution for a match. */
+export type PoolMatchDistribution = {
+  poolId: string
+  poolName: string
+  inviteCode: string
+  total: number
+  homePct: number
+  drawPct: number
+  awayPct: number
+  topScores: Array<{ score: string; count: number; pct: number }>
+}
+
 export type TeamFormResult = 'W' | 'D' | 'L'
 
 export type TeamFormEntry = {
@@ -623,6 +641,145 @@ export async function fetchMatchCompetitionPools(
 
 export function formatPoolScoringLabel(scoringStyle: string): string {
   return formatScoringStyleLabel(scoringStyle)
+}
+
+/**
+ * Previous / next match in the same competition by kickoff time.
+ */
+export async function fetchAdjacentEventMatches(
+  supabase: SupabaseClient,
+  eventId: string | null | undefined,
+  matchId: string,
+  kickoffAt: string,
+): Promise<AdjacentMatchNav> {
+  const empty: AdjacentMatchNav = { prev: null, next: null }
+  if (!eventId || !kickoffAt) return empty
+
+  const selectCols = 'id, team1_name, team2_name, kickoff_at'
+
+  const [prevResult, nextResult] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(selectCols)
+      .eq('event_id', eventId)
+      .neq('id', matchId)
+      .lt('kickoff_at', kickoffAt)
+      .order('kickoff_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('matches')
+      .select(selectCols)
+      .eq('event_id', eventId)
+      .neq('id', matchId)
+      .gt('kickoff_at', kickoffAt)
+      .order('kickoff_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  if (prevResult.error) {
+    console.error('fetchAdjacentEventMatches prev failed:', prevResult.error.message)
+  }
+  if (nextResult.error) {
+    console.error('fetchAdjacentEventMatches next failed:', nextResult.error.message)
+  }
+
+  const toNav = (
+    row: {
+      id: string
+      team1_name: string
+      team2_name: string
+    } | null,
+  ) =>
+    row
+      ? {
+          id: row.id,
+          team1Name: row.team1_name,
+          team2Name: row.team2_name,
+        }
+      : null
+
+  return {
+    prev: toNav(prevResult.data as { id: string; team1_name: string; team2_name: string } | null),
+    next: toNav(nextResult.data as { id: string; team1_name: string; team2_name: string } | null),
+  }
+}
+
+/**
+ * Sum of points_awarded across the user's memberships for this match.
+ * Null when nothing scored yet.
+ */
+export async function fetchMyMatchPickPoints(
+  supabase: SupabaseClient,
+  matchId: string,
+  memberIds: string[],
+): Promise<number | null> {
+  if (memberIds.length === 0) return null
+
+  const { data, error } = await supabase
+    .from('predictions')
+    .select('points_awarded')
+    .eq('match_id', matchId)
+    .in('member_id', memberIds)
+
+  if (error) {
+    console.error('fetchMyMatchPickPoints failed:', error.message)
+    return null
+  }
+
+  let sum = 0
+  let any = false
+  for (const row of data ?? []) {
+    if (typeof row.points_awarded === 'number') {
+      sum += row.points_awarded
+      any = true
+    }
+  }
+  return any ? sum : null
+}
+
+/**
+ * Build home/draw/away + top scorelines from pool member picks.
+ */
+export function buildPoolMatchDistribution(
+  pool: Pick<MatchRelatedPool, 'id' | 'name' | 'inviteCode'>,
+  picks: Array<{ predTeam1: number; predTeam2: number }>,
+): PoolMatchDistribution {
+  const total = picks.length
+  let home = 0
+  let draw = 0
+  let away = 0
+  const scoreCounts = new Map<string, number>()
+
+  for (const pick of picks) {
+    if (pick.predTeam1 > pick.predTeam2) home += 1
+    else if (pick.predTeam1 < pick.predTeam2) away += 1
+    else draw += 1
+
+    const score = `${pick.predTeam1}–${pick.predTeam2}`
+    scoreCounts.set(score, (scoreCounts.get(score) ?? 0) + 1)
+  }
+
+  const topScores = [...scoreCounts.entries()]
+    .map(([score, count]) => ({
+      score,
+      count,
+      pct: total > 0 ? Math.round((count * 100) / total) : 0,
+    }))
+    .sort((a, b) => b.count - a.count || a.score.localeCompare(b.score))
+    .slice(0, 3)
+
+  return {
+    poolId: pool.id,
+    poolName: pool.name,
+    inviteCode: pool.inviteCode,
+    total,
+    homePct: total > 0 ? Math.round((home * 100) / total) : 0,
+    drawPct: total > 0 ? Math.round((draw * 100) / total) : 0,
+    awayPct: total > 0 ? Math.round((away * 100) / total) : 0,
+    topScores,
+  }
 }
 
 /** TEMPORARY — frontend-only mock hub payload. Never written to the DB. */
