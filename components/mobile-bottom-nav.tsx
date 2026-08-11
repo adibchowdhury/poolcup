@@ -5,15 +5,13 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   Calendar,
+  Compass,
   Home,
-  MessageCircle,
   User,
   Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
 import { NavIconWithCountBadge } from '@/components/nav-icon-with-count-badge'
-import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import {
   hasAuthenticatedBottomBar,
@@ -23,14 +21,15 @@ import { useMobileInputFocused } from '@/hooks/use-mobile-input-focused'
 import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import {
-  CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
+  DISCOVER_HREF,
   FRIENDS_HREF,
   isDashboardBottomNavId,
   type MobileBottomNavId,
   resolveMobileBottomNavActive,
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { triggerHaptic } from '@/src/lib/haptics'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 const NAV_ITEMS: {
   id: MobileBottomNavId
@@ -53,12 +52,17 @@ const NAV_ITEMS: {
   },
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Home',
     href: DASHBOARD_TAB_HREFS.dashboard,
     icon: Home,
     homeAnchor: true,
   },
-  { id: 'chat', label: 'Chat', href: CHAT_INBOX_HREF, icon: MessageCircle },
+  {
+    id: 'discover',
+    label: 'Discover',
+    href: DISCOVER_HREF,
+    icon: Compass,
+  },
   {
     id: 'profile',
     label: 'Profile',
@@ -75,23 +79,11 @@ function SideTabIcon({
   isActive: boolean
 }) {
   const Icon = item.icon
-  const unreadChatCount = useUnreadChatCount()
   const { count: friendRequestCount } = useFriendRequestCount()
   const iconClass = cn(
     'h-7 w-7',
     isActive ? 'text-primary' : 'text-muted-foreground',
   )
-
-  if (item.id === 'chat') {
-    return (
-      <ChatNavIconWithBadge
-        icon={MessageCircle}
-        count={unreadChatCount}
-        variant="footer"
-        iconClassName={iconClass}
-      />
-    )
-  }
 
   if (item.id === 'friends') {
     return (
@@ -168,13 +160,16 @@ function MobileBottomNavContent() {
 
           const sideClassName = cn(
             'flex min-w-0 flex-1 items-center justify-center px-0.5 transition-colors',
+            FOCUS_VISIBLE_RING,
             isActive
               ? 'text-primary'
               : 'text-muted-foreground hover:text-foreground',
           )
 
-          const homeClassName =
-            'relative flex flex-1 items-center justify-center overflow-visible'
+          const homeClassName = cn(
+            'relative flex flex-1 items-center justify-center overflow-visible',
+            FOCUS_VISIBLE_RING,
+          )
 
           if (isHome) {
             const homeInner = (

@@ -122,7 +122,21 @@ export function OfficialPoolsSection({
   }
 
   return (
-    <DashboardFeedSection id="official-pools" title="Discover Pools">
+    <DashboardFeedSection
+      id="official-pools"
+      title="Discover Pools"
+      action={
+        <Link
+          href="/discover"
+          className={cn(
+            'rounded-sm text-xs font-medium text-primary hover:underline',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+          )}
+        >
+          Browse all
+        </Link>
+      }
+    >
       {loading ? (
         <div
           className={cn(

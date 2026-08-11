@@ -3,13 +3,13 @@ export type MobileBottomNavId =
   | 'dashboard'
   | 'upcoming'
   | 'how-it-works'
-  | 'chat'
+  | 'discover'
   | 'friends'
 
-/** Dashboard footer tabs only (excludes Chat + Friends hub routes). */
+/** Dashboard footer tabs only (excludes Discover + Friends hub routes). */
 export type DashboardBottomNavId = Exclude<
   MobileBottomNavId,
-  'chat' | 'friends'
+  'discover' | 'friends'
 >
 
 export const DASHBOARD_NAV_ID_TO_TAB_VALUE: Record<DashboardBottomNavId, string> =
@@ -33,7 +33,7 @@ export const DASHBOARD_TAB_VALUE_TO_NAV_ID: Record<string, DashboardBottomNavId>
 export function isDashboardBottomNavId(
   id: MobileBottomNavId,
 ): id is DashboardBottomNavId {
-  return id !== 'chat' && id !== 'friends'
+  return id !== 'discover' && id !== 'friends'
 }
 
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
@@ -80,13 +80,16 @@ export const DASHBOARD_TAB_HREFS = {
 } as const
 
 export const CHAT_INBOX_HREF = '/chat'
+export const DISCOVER_HREF = '/discover'
 export const FRIENDS_HREF = '/friends'
 
 export function resolveMobileBottomNavActive(
   pathname: string,
   tabParam: string | null,
 ): MobileBottomNavId | null {
-  if (pathname === '/chat' || pathname.startsWith('/chat/')) return 'chat'
+  // Chat lives in the top bar now — no bottom-nav active state.
+  if (pathname === '/chat' || pathname.startsWith('/chat/')) return null
+  if (pathname === '/discover') return 'discover'
   if (pathname === '/friends' || pathname.startsWith('/friends')) return 'friends'
   if (pathname === '/leaderboard') return 'friends'
 
@@ -99,7 +102,6 @@ export function resolveMobileBottomNavActive(
   }
 
   if (pathname.startsWith('/pool/')) {
-    if (tabParam === 'chat') return 'chat'
     return 'dashboard'
   }
 

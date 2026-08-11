@@ -4,6 +4,7 @@
  */
 export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/dashboard') return true
+  if (pathname === '/discover') return true
   if (pathname === '/chat' || pathname.startsWith('/chat/')) return true
   if (pathname === '/friends') return true
   if (pathname === '/leaderboard') return true
@@ -30,6 +31,7 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
  */
 export function isProtectedAppPath(pathname: string): boolean {
   if (pathname === '/dashboard') return true
+  if (pathname === '/discover') return true
   if (pathname === '/chat' || pathname.startsWith('/chat/')) return true
   if (pathname === '/friends') return true
   if (pathname === '/leaderboard') return true

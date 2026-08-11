@@ -3,7 +3,9 @@
 import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import { UserAvatarImage } from '@/components/user-avatar-image'
+import { HeaderChatButton } from '@/components/dashboard/header-chat-button'
 import { HeaderNotificationBell } from '@/components/dashboard/header-notification-bell'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { cn } from '@/lib/utils'
 
 type WebMobileTopBarProps = {
@@ -35,13 +37,20 @@ export function WebMobileTopBar({
       <button
         type="button"
         onClick={onOpenDrawer}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-muted/50"
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-muted/50',
+          FOCUS_VISIBLE_RING,
+        )}
         aria-label="Open menu"
       >
         <Menu className="h-6 w-6" aria-hidden />
       </button>
 
-      <Link href="/dashboard" className="shrink-0" aria-label="PoolCup home">
+      <Link
+        href="/dashboard"
+        className={cn('shrink-0 rounded-sm', FOCUS_VISIBLE_RING)}
+        aria-label="PoolCup home"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/poolcup-logo.png"
@@ -52,12 +61,18 @@ export function WebMobileTopBar({
 
       <div className="min-w-0 flex-1" aria-hidden />
 
-      <HeaderNotificationBell />
+      <div className="flex shrink-0 items-center gap-0.5">
+        <HeaderChatButton />
+        <HeaderNotificationBell />
+      </div>
 
       <button
         type="button"
         onClick={onOpenProfilePopover}
-        className="rounded-full transition-opacity hover:opacity-90"
+        className={cn(
+          'rounded-full transition-opacity hover:opacity-90',
+          FOCUS_VISIBLE_RING,
+        )}
         aria-label={`${label} menu`}
       >
         <UserAvatarImage

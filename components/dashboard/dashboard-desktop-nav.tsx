@@ -1,21 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { Calendar, Home, MessageCircle, User, Users } from 'lucide-react'
-import { ChatNavIconWithBadge } from '@/components/chat/chat-nav-icon-with-badge'
+import { Calendar, Compass, Home, User, Users } from 'lucide-react'
 import { NavIconWithCountBadge } from '@/components/nav-icon-with-count-badge'
 import { TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
-import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { cn } from '@/lib/utils'
 import {
-  CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
+  DISCOVER_HREF,
   FRIENDS_HREF,
 } from '@/src/lib/mobile-bottom-nav-routes'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
-const triggerClassName =
-  'gap-1.5 rounded-full px-2 py-2 text-[11px] sm:px-2.5 sm:text-sm'
+const triggerClassName = cn(
+  'gap-1.5 rounded-full px-2 py-2 text-[11px] sm:px-2.5 sm:text-sm',
+  FOCUS_VISIBLE_RING,
+)
 
 type DashboardDesktopNavProps = {
   /** When true, dashboard sections link to /dashboard tabs (for /chat and other hub routes). */
@@ -55,7 +56,6 @@ function DashboardNavTrigger({
 export function DashboardDesktopNav({
   linkDashboardTabs = false,
 }: DashboardDesktopNavProps) {
-  const unreadChatCount = useUnreadChatCount()
   const { count: friendRequestCount } = useFriendRequestCount()
 
   return (
@@ -91,17 +91,13 @@ export function DashboardDesktopNav({
         )}
       >
         <Home className="h-4 w-4 shrink-0" />
-        <span className="truncate">Dashboard</span>
+        <span className="truncate">Home</span>
       </DashboardNavTrigger>
 
-      <TabsTrigger value="chat" asChild className={triggerClassName}>
-        <Link href={CHAT_INBOX_HREF}>
-          <ChatNavIconWithBadge
-            icon={MessageCircle}
-            count={unreadChatCount}
-            iconClassName="h-4 w-4"
-          />
-          <span className="truncate">Chat</span>
+      <TabsTrigger value="discover" asChild className={triggerClassName}>
+        <Link href={DISCOVER_HREF}>
+          <Compass className="h-4 w-4 shrink-0" />
+          <span className="truncate">Discover</span>
         </Link>
       </TabsTrigger>
 

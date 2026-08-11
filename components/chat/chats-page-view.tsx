@@ -487,7 +487,7 @@ export function ChatsPageView({
       customAvatarUrl={customAvatarUrl}
       mainClassName="py-6 sm:py-8"
     >
-      <Tabs value="chat" className="gap-8">
+      <Tabs value="inbox" className="gap-8">
         <DashboardDesktopNav linkDashboardTabs />
 
         <div className="mx-auto w-full max-w-2xl">
