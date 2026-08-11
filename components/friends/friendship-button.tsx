@@ -27,11 +27,19 @@ import { supabase } from '@/src/lib/supabase'
 type FriendshipButtonProps = {
   profileUserId: string
   className?: string
+  onAction?: (
+    action:
+      | 'request_sent'
+      | 'accepted'
+      | 'removed'
+      | 'login_prompt',
+  ) => void
 }
 
 export function FriendshipButton({
   profileUserId,
   className,
+  onAction,
 }: FriendshipButtonProps) {
   const { user, loading: authLoading } = useAuth()
   const [status, setStatus] = useState<FriendshipStatus | null>(null)
@@ -72,7 +80,10 @@ export function FriendshipButton({
     const next = `/u/${profileUserId}`
     return (
       <Button asChild size="sm" className={cn('h-8 gap-1.5', className)}>
-        <Link href={`/login?next=${encodeURIComponent(next)}`}>
+        <Link
+          href={`/login?next=${encodeURIComponent(next)}`}
+          onClick={() => onAction?.('login_prompt')}
+        >
           <UserPlus className="h-3.5 w-3.5" aria-hidden />
           Add friend
         </Link>
@@ -103,6 +114,7 @@ export function FriendshipButton({
       return
     }
     setStatus(mapped)
+    onAction?.(mapped === 'friends' ? 'accepted' : 'request_sent')
     toast.success(
       mapped === 'friends' ? 'You are now friends' : 'Friend request sent',
     )
@@ -121,6 +133,7 @@ export function FriendshipButton({
       return
     }
     toast.success('You are now friends')
+    onAction?.('accepted')
     emitFriendRequestsChanged()
   }
 
@@ -137,6 +150,7 @@ export function FriendshipButton({
       return
     }
     toast.success(successMessage)
+    onAction?.('removed')
   }
 
   if (status === 'none') {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
@@ -17,12 +17,15 @@ import {
   Sparkles,
   Target,
   Trophy,
+  Users,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FriendshipButton } from '@/components/friends/friendship-button'
+import { ReportUserButton } from '@/components/profile/report-user-button'
 import { cn } from '@/lib/utils'
 import {
   fetchUserAchievementProgress,
@@ -31,12 +34,24 @@ import {
   type UserAchievementProgress,
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
-import { fetchUserAchievementsReadOnly } from '@/src/lib/fetch-public-profile'
+import {
+  favoriteSportChips,
+  fetchPublicProfile,
+  fetchUserAchievementsReadOnly,
+  type FavoriteSportChip,
+} from '@/src/lib/fetch-public-profile'
 import {
   fetchProfilePools,
   type ProfilePoolSummary,
   type ProfileSportSummary,
 } from '@/src/lib/fetch-profile-pools'
+import {
+  fetchProfileBreakdownStats,
+  fetchProfileRecentActivity,
+  type ProfileActivityItem,
+  type ProfileCompetitionStat,
+  type ProfileSportStat,
+} from '@/src/lib/fetch-profile-activity'
 import {
   fetchUserGlobalRank,
   type UserGlobalRank,
@@ -45,6 +60,8 @@ import { pickNextAchievement } from '@/src/lib/pick-next-achievement'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import { sportDisplayLabel, sportIconPng } from '@/src/lib/sport-display'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import { xpToLevel } from '@/src/lib/levels'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
@@ -53,13 +70,18 @@ export type ProfileShowcaseMode = 'self' | 'public'
 
 type ProfileShowcaseProps = {
   userId: string
+  username?: string | null
   displayName: string
   avatar: string
   customAvatarUrl: string | null
   predictionsMade: number
   accuracy: number | null
-  /** Pool points (`users.points`) — career highlights (self). */
+  /** Pool points (`users.points`) — career highlights. */
   totalPoints?: number | null
+  exactScores?: number | null
+  longestStreak?: number | null
+  friendsCount?: number | null
+  favoriteSports?: FavoriteSportChip[]
   /** Account created date — “Member since”. */
   createdAt?: string | null
   /**
@@ -86,6 +108,11 @@ type ProfileShowcaseProps = {
   isOwnPublicProfile?: boolean
   /** Optional preloaded achievements (public page server fetch). */
   initialAchievements?: UserAchievementsData | null
+  initialSportStats?: ProfileSportStat[]
+  initialCompetitionStats?: ProfileCompetitionStat[]
+  initialActivity?: ProfileActivityItem[]
+  initialGlobalRank?: UserGlobalRank | null
+  loadError?: string | null
 }
 
 type ProfileTab = 'overview' | 'progress' | 'achievements' | 'stats'
@@ -360,7 +387,7 @@ function SportsYouFollowSection({
     <section>
       <div className="mb-2.5">
         <h2 className="font-display text-xl tracking-wide text-foreground">
-          {isPublic ? 'Sports' : 'Sports You Follow'}
+          {isPublic ? 'Sports played' : 'Sports You Play'}
         </h2>
         <p className="text-[10px] text-muted-foreground">
           From the events in {isPublic ? 'their' : 'your'} pools
@@ -550,12 +577,17 @@ function BadgeDetailList({
 
 export function ProfileShowcase({
   userId,
+  username = null,
   displayName,
   avatar,
   customAvatarUrl,
-  predictionsMade: _predictionsMade,
+  predictionsMade,
   accuracy,
   totalPoints = null,
+  exactScores = null,
+  longestStreak = null,
+  friendsCount = null,
+  favoriteSports = [],
   createdAt = null,
   profileTitle = null,
   seasonLabel = null,
@@ -564,6 +596,11 @@ export function ProfileShowcase({
   onEditProfile,
   isOwnPublicProfile = false,
   initialAchievements = null,
+  initialSportStats,
+  initialCompetitionStats,
+  initialActivity,
+  initialGlobalRank = null,
+  loadError = null,
 }: ProfileShowcaseProps) {
   const isPublic = mode === 'public'
   const [data, setData] = useState<UserAchievementsData | null>(
@@ -573,20 +610,102 @@ export function ProfileShowcase({
     [],
   )
   const [loading, setLoading] = useState(false)
-  const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(null)
-  const [globalRankLoaded, setGlobalRankLoaded] = useState(false)
+  const [sectionError, setSectionError] = useState<string | null>(loadError)
+  const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(
+    initialGlobalRank,
+  )
+  const [globalRankLoaded, setGlobalRankLoaded] = useState(
+    initialGlobalRank != null,
+  )
   const [profileTab, setProfileTab] = useState<ProfileTab>('overview')
   const [profilePools, setProfilePools] = useState<ProfilePoolSummary[]>([])
   const [profileSports, setProfileSports] = useState<ProfileSportSummary[]>([])
   const [poolsLoading, setPoolsLoading] = useState(false)
+  const [sportStats, setSportStats] = useState<ProfileSportStat[]>(
+    initialSportStats ?? [],
+  )
+  const [competitionStats, setCompetitionStats] = useState<
+    ProfileCompetitionStat[]
+  >(initialCompetitionStats ?? [])
+  const [activity, setActivity] = useState<ProfileActivityItem[]>(
+    initialActivity ?? [],
+  )
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [liveFriendsCount, setLiveFriendsCount] = useState<number | null>(
+    friendsCount,
+  )
+  const [liveFavorites, setLiveFavorites] = useState<FavoriteSportChip[]>(
+    favoriteSports,
+  )
+  const [liveUsername, setLiveUsername] = useState<string | null>(username)
   const badgeUnlock = useBadgeUnlockOptional()
+  const viewedRef = useRef(false)
 
   const titleText = profileTitle?.trim() || ''
   const seasonText = seasonLabel?.trim() || ''
   const memberSince = formatMemberSince(createdAt)
+  const handle = liveUsername?.trim() || null
+
+  const reloadExtras = useCallback(async () => {
+    if (!userId) return
+    setSectionError(null)
+    setActivityLoading(true)
+    setPoolsLoading(true)
+
+    const [poolsResult, breakdown, recent, publicProfile] = await Promise.all([
+      fetchProfilePools(supabase, userId, {
+        includeInviteCodes: !isPublic,
+      }),
+      fetchProfileBreakdownStats(supabase, userId),
+      fetchProfileRecentActivity(supabase, userId, { limit: 12 }),
+      fetchPublicProfile(supabase, userId),
+    ])
+
+    setProfilePools(poolsResult.pools)
+    setProfileSports(poolsResult.sports)
+    setPoolsLoading(false)
+
+    if (breakdown.error || recent.error) {
+      setSectionError(breakdown.error || recent.error)
+    } else {
+      setSportStats(breakdown.sports)
+      setCompetitionStats(breakdown.competitions)
+      setActivity(recent.items)
+    }
+    setActivityLoading(false)
+
+    if (publicProfile) {
+      if (publicProfile.friends_count != null) {
+        setLiveFriendsCount(publicProfile.friends_count)
+      }
+      if (publicProfile.username) {
+        setLiveUsername(publicProfile.username)
+      }
+      const favs = favoriteSportChips(publicProfile.favorite_sports)
+      if (favs.length || publicProfile.favorite_sports != null) {
+        setLiveFavorites(favs)
+      }
+    }
+  }, [userId, isPublic])
+
+
+  useEffect(() => {
+    if (!active || !userId || viewedRef.current) return
+    viewedRef.current = true
+    capturePostHog('profile_viewed', {
+      profile_user_id: userId,
+      viewer: isOwnPublicProfile || !isPublic ? 'self' : 'other',
+      mode: isPublic ? 'public' : 'self',
+    })
+  }, [active, userId, isPublic, isOwnPublicProfile])
 
   useEffect(() => {
     if (!active || !userId) return
+    if (initialGlobalRank) {
+      setGlobalRank(initialGlobalRank)
+      setGlobalRankLoaded(true)
+      return
+    }
 
     let cancelled = false
     setGlobalRankLoaded(false)
@@ -601,32 +720,56 @@ export function ProfileShowcase({
     return () => {
       cancelled = true
     }
-  }, [active, userId])
+  }, [active, userId, initialGlobalRank])
 
   useEffect(() => {
     if (!active || !userId) return
-
-    let cancelled = false
-    setPoolsLoading(true)
-
-    void fetchProfilePools(supabase, userId, {
-      includeInviteCodes: !isPublic,
-    }).then((result) => {
-      if (cancelled) return
-      setProfilePools(result.pools)
-      setProfileSports(result.sports)
-      setPoolsLoading(false)
-    })
-
-    return () => {
-      cancelled = true
+    // Public page preloads extras; self dashboard fetches client-side.
+    if (isPublic && initialActivity) {
+      setActivity(initialActivity)
+      setSportStats(initialSportStats ?? [])
+      setCompetitionStats(initialCompetitionStats ?? [])
+      setLiveFriendsCount(friendsCount)
+      setLiveFavorites(favoriteSports)
+      setLiveUsername(username)
+      void fetchProfilePools(supabase, userId, {
+        includeInviteCodes: false,
+      }).then((result) => {
+        setProfilePools(result.pools)
+        setProfileSports(result.sports)
+        setPoolsLoading(false)
+      })
+      return
     }
-  }, [active, userId, isPublic])
+
+    void reloadExtras()
+  }, [
+    active,
+    userId,
+    isPublic,
+    initialActivity,
+    initialSportStats,
+    initialCompetitionStats,
+    friendsCount,
+    favoriteSports,
+    username,
+    reloadExtras,
+  ])
 
   useEffect(() => {
     if (!active || !userId) return
     if (isPublic && initialAchievements) {
       setData(initialAchievements)
+      // Still load progress for public career metrics when not pre-supplied.
+      if (
+        exactScores == null ||
+        longestStreak == null ||
+        totalPoints == null
+      ) {
+        void fetchUserAchievementProgress(supabase, userId).then((progress) => {
+          setProgressRows(progress)
+        })
+      }
       return
     }
 
@@ -636,9 +779,10 @@ export function ProfileShowcase({
     void (async () => {
       if (isPublic) {
         const result = await fetchUserAchievementsReadOnly(supabase, userId)
+        const progress = await fetchUserAchievementProgress(supabase, userId)
         if (cancelled) return
         setData(result)
-        setProgressRows([])
+        setProgressRows(progress)
         setLoading(false)
         return
       }
@@ -655,7 +799,16 @@ export function ProfileShowcase({
     return () => {
       cancelled = true
     }
-  }, [active, userId, badgeUnlock, isPublic, initialAchievements])
+  }, [
+    active,
+    userId,
+    badgeUnlock,
+    isPublic,
+    initialAchievements,
+    exactScores,
+    longestStreak,
+    totalPoints,
+  ])
 
   const progressById = useMemo(
     () =>
@@ -697,7 +850,12 @@ export function ProfileShowcase({
     return values
   }, [progressRows])
 
-  const predictionStreak = metricValues.get('consecutive_correct')
+  const predictionStreak =
+    longestStreak ?? metricValues.get('consecutive_correct') ?? 0
+  const resolvedExactScores =
+    exactScores ?? metricValues.get('exact_scores') ?? 0
+  const resolvedTotalPoints =
+    totalPoints ?? metricValues.get('points_total') ?? null
   const nextAchievement = useMemo(
     () => (isPublic ? null : pickNextAchievement(progressRows)),
     [isPublic, progressRows],
@@ -709,9 +867,50 @@ export function ProfileShowcase({
   )
 
   const careerHighlights = useMemo(() => {
-    if (isPublic) return [] as CareerItem[]
-
     const items: CareerItem[] = []
+
+    items.push({
+      label: 'Predictions',
+      value: predictionsMade.toLocaleString(),
+      icon: Target,
+      accent: 'text-foreground border-border bg-card/80',
+    })
+
+    if (accuracy != null) {
+      items.push({
+        label: 'Accuracy',
+        value: `${accuracy}%`,
+        icon: Target,
+        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
+      })
+    }
+
+    if (resolvedExactScores > 0) {
+      items.push({
+        label: 'Exact Scores',
+        value: resolvedExactScores.toLocaleString(),
+        icon: Award,
+        accent: 'text-foreground border-border bg-card/80',
+      })
+    }
+
+    if (resolvedTotalPoints != null) {
+      items.push({
+        label: 'Total Points',
+        value: resolvedTotalPoints.toLocaleString(),
+        icon: Zap,
+        accent: 'text-foreground border-border bg-card/80',
+      })
+    }
+
+    if (predictionStreak > 0) {
+      items.push({
+        label: 'Longest Streak',
+        value: `${predictionStreak}`,
+        icon: Flame,
+        accent: 'text-orange-300 border-orange-400/20 bg-orange-400/[0.06]',
+      })
+    }
 
     const poolsWon = metricValues.get('first_place_finishes')
     if (poolsWon != null && poolsWon > 0) {
@@ -723,25 +922,6 @@ export function ProfileShowcase({
       })
     }
 
-    if (accuracy != null) {
-      items.push({
-        label: 'Prediction Accuracy',
-        value: `${accuracy}%`,
-        icon: Target,
-        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
-      })
-    }
-
-    const exactScores = metricValues.get('exact_scores')
-    if (exactScores != null && exactScores > 0) {
-      items.push({
-        label: 'Exact Scores',
-        value: exactScores.toLocaleString(),
-        icon: Award,
-        accent: 'text-foreground border-border bg-card/80',
-      })
-    }
-
     const bestFinish = metricValues.get('best_finish_rank_at_or_below')
     if (bestFinish != null && bestFinish > 0) {
       items.push({
@@ -749,24 +929,6 @@ export function ProfileShowcase({
         value: `#${bestFinish}`,
         icon: Trophy,
         accent: 'text-primary border-primary/20 bg-primary/[0.06]',
-      })
-    }
-
-    if (predictionStreak != null && predictionStreak > 0) {
-      items.push({
-        label: 'Longest Streak',
-        value: `${predictionStreak}`,
-        icon: Flame,
-        accent: 'text-orange-300 border-orange-400/20 bg-orange-400/[0.06]',
-      })
-    }
-
-    if (totalPoints != null) {
-      items.push({
-        label: 'Total Points',
-        value: totalPoints.toLocaleString(),
-        icon: Zap,
-        accent: 'text-foreground border-border bg-card/80',
       })
     }
 
@@ -781,7 +943,14 @@ export function ProfileShowcase({
     }
 
     return items
-  }, [accuracy, isPublic, metricValues, predictionStreak, totalPoints])
+  }, [
+    accuracy,
+    metricValues,
+    predictionStreak,
+    predictionsMade,
+    resolvedExactScores,
+    resolvedTotalPoints,
+  ])
 
   const showViewAllAchievements = !isPublic || isOwnPublicProfile
 
@@ -885,15 +1054,22 @@ export function ProfileShowcase({
 
             <div className="min-w-0 flex-1 pb-1.5">
               <div className="flex items-start justify-between gap-2">
-                <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
-                  {displayName}
-                </h1>
+                <div className="min-w-0">
+                  <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
+                    {displayName}
+                  </h1>
+                  {handle ? (
+                    <p className="mt-1.5 truncate text-sm text-muted-foreground">
+                      @{handle}
+                    </p>
+                  ) : null}
+                </div>
                 {isPublic && isOwnPublicProfile ? (
                   <Button
                     asChild
                     size="sm"
                     variant="outline"
-                    className="h-7 shrink-0 gap-1 px-2 text-[10px]"
+                    className={cn('h-7 shrink-0 gap-1 px-2 text-[10px]', FOCUS_VISIBLE_RING)}
                   >
                     <Link href={DASHBOARD_TAB_HREFS.profile}>
                       <Pencil className="h-3 w-3" aria-hidden />
@@ -915,6 +1091,19 @@ export function ProfileShowcase({
                   Member since {memberSince}
                 </p>
               ) : null}
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
+                  <Users className="h-3.5 w-3.5" aria-hidden />
+                  {liveFriendsCount != null
+                    ? `${liveFriendsCount} friend${liveFriendsCount === 1 ? '' : 's'}`
+                    : 'Friends'}
+                </span>
+                <span>
+                  {predictionsMade.toLocaleString()} prediction
+                  {predictionsMade === 1 ? '' : 's'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -949,8 +1138,17 @@ export function ProfileShowcase({
           </div>
 
           {isPublic && !isOwnPublicProfile ? (
-            <div className="mt-5">
-              <FriendshipButton profileUserId={userId} />
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <FriendshipButton
+                profileUserId={userId}
+                onAction={(action) => {
+                  capturePostHog('friend_action', {
+                    action,
+                    profile_user_id: userId,
+                  })
+                }}
+              />
+              <ReportUserButton profileUserId={userId} />
             </div>
           ) : null}
         </div>
@@ -959,7 +1157,15 @@ export function ProfileShowcase({
       {/* ── Tabs: Overview · Progress · Achievements · Stats ── */}
       <Tabs
         value={profileTab}
-        onValueChange={(value) => setProfileTab(value as ProfileTab)}
+        onValueChange={(value) => {
+          const next = value as ProfileTab
+          setProfileTab(next)
+          capturePostHog('tab_changed', {
+            surface: 'profile',
+            tab: next,
+            profile_user_id: userId,
+          })
+        }}
         className="gap-3"
       >
         <TabsList className="grid h-auto w-full grid-cols-4 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1">
@@ -974,12 +1180,29 @@ export function ProfileShowcase({
             <TabsTrigger
               key={value}
               value={value}
-              className="min-w-0 rounded-lg px-1 py-2 text-[10px] leading-tight sm:px-2 sm:text-[11px] data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className={cn(
+                'min-w-0 rounded-lg px-1 py-2 text-[10px] leading-tight sm:px-2 sm:text-[11px] data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none',
+                FOCUS_VISIBLE_RING,
+              )}
             >
               <span className="truncate">{label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
+
+        {sectionError ? (
+          <div className="rounded-2xl border border-border bg-card/70 px-4 py-6 text-center">
+            <p className="text-sm text-destructive">{sectionError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('mt-3', FOCUS_VISIBLE_RING)}
+              onClick={() => void reloadExtras()}
+            >
+              Try again
+            </Button>
+          </div>
+        ) : null}
 
         {/* OVERVIEW */}
         <TabsContent value="overview" className="mt-1 space-y-5">
@@ -1059,12 +1282,85 @@ export function ProfileShowcase({
             isPublic={isPublic}
           />
 
+          {liveFavorites.length > 0 ? (
+            <section>
+              <h2 className="font-display text-xl tracking-wide text-foreground">
+                Favorite sports
+              </h2>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {liveFavorites.map((sport) => (
+                  <span
+                    key={sport.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-2.5 py-1 text-xs font-medium text-foreground"
+                  >
+                    {sport.ballSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={sport.ballSrc}
+                        alt=""
+                        className="h-4 w-4 object-contain"
+                      />
+                    ) : null}
+                    {sport.label}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <SportsYouFollowSection
             sports={profileSports}
             loading={poolsLoading}
             hasPools={profilePools.length > 0}
             isPublic={isPublic}
           />
+
+          <section>
+            <h2 className="mb-2.5 font-display text-xl tracking-wide text-foreground">
+              Recent activity
+            </h2>
+            {activityLoading && activity.length === 0 ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <ShimmerBlock key={i} className="h-14 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : activity.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                No recent scored activity yet.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {activity.map((item) => (
+                  <li
+                    key={item.id}
+                    className="rounded-xl border border-border/80 bg-card/70 px-3 py-2.5"
+                  >
+                    {item.kind === 'badge' ? (
+                      <p className="text-sm text-foreground">
+                        Unlocked{' '}
+                        <span className="font-semibold">{item.title}</span>
+                      </p>
+                    ) : (
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {item.team1Name} {item.predTeam1}–{item.predTeam2}{' '}
+                          {item.team2Name}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {item.resultTeam1 != null && item.resultTeam2 != null
+                            ? `Final ${item.resultTeam1}–${item.resultTeam2} · `
+                            : null}
+                          {item.points} pts
+                          {item.eventName ? ` · ${item.eventName}` : null}
+                        </p>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </TabsContent>
 
         {/* PROGRESS — XP, levels, global rank, next unlock */}
@@ -1263,7 +1559,7 @@ export function ProfileShowcase({
           )}
         </TabsContent>
 
-        {/* STATS — accuracy & career highlights */}
+        {/* STATS — accuracy, career, per-sport / per-competition */}
         <TabsContent value="stats" className="mt-1 space-y-5">
           <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
             <h2 className="font-display text-xl tracking-wide text-foreground">
@@ -1275,35 +1571,137 @@ export function ProfileShowcase({
             <p className="mt-1 text-[11px] text-muted-foreground">
               Correct winner picks across classic match predictions
             </p>
-            {!isPublic && predictionStreak != null && predictionStreak > 0 ? (
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Flame className="h-4 w-4 text-orange-300" aria-hidden />
-                Longest streak:{' '}
-                <span className="font-mono tabular-nums text-foreground">
-                  {predictionStreak}
-                </span>{' '}
-                correct
-              </p>
-            ) : null}
-          </section>
-
-          {isPublic ? (
-            <p className="rounded-2xl border border-border/90 bg-card/80 px-4 py-10 text-center text-sm text-muted-foreground">
-              Career highlights are only visible on your own profile.
-            </p>
-          ) : (
-            <section>
-              <div className="mb-2.5">
-                <h2 className="font-display text-xl tracking-wide text-foreground">
-                  Career Highlights
-                </h2>
-                <p className="text-[10px] text-muted-foreground">
-                  From your real pool finishes and prediction stats
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Predictions
+                </p>
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {predictionsMade.toLocaleString()}
                 </p>
               </div>
-              <CareerHighlightsGrid items={careerHighlights} />
-            </section>
-          )}
+              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Exact
+                </p>
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {resolvedExactScores.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Points
+                </p>
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {(resolvedTotalPoints ?? 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Streak
+                </p>
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {predictionStreak}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-2.5">
+              <h2 className="font-display text-xl tracking-wide text-foreground">
+                Career Highlights
+              </h2>
+              <p className="text-[10px] text-muted-foreground">
+                From pool finishes and prediction stats
+              </p>
+            </div>
+            <CareerHighlightsGrid items={careerHighlights} />
+          </section>
+
+          <section>
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              By sport
+            </h2>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              Post-lock predictions only · expands as more sports launch
+            </p>
+            {activityLoading && sportStats.length === 0 ? (
+              <div className="mt-3 space-y-2">
+                <ShimmerBlock className="h-16 w-full rounded-xl" />
+              </div>
+            ) : sportStats.length === 0 ? (
+              <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                No scored predictions by sport yet.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {sportStats.map((row) => (
+                  <li
+                    key={row.sportKey}
+                    className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-foreground">
+                        {row.sportLabel}
+                      </p>
+                      <p className="font-mono text-sm tabular-nums text-foreground">
+                        {row.points} pts
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {row.predictions} preds
+                      {row.accuracy != null ? ` · ${row.accuracy}%` : ''}
+                      {` · ${row.exactScores} exact`}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              By competition
+            </h2>
+            {activityLoading && competitionStats.length === 0 ? (
+              <div className="mt-3 space-y-2">
+                <ShimmerBlock className="h-16 w-full rounded-xl" />
+              </div>
+            ) : competitionStats.length === 0 ? (
+              <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+                No scored predictions by competition yet.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {competitionStats.map((row) => (
+                  <li
+                    key={row.eventId}
+                    className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">
+                          {row.eventName}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {row.sportLabel}
+                        </p>
+                      </div>
+                      <p className="shrink-0 font-mono text-sm tabular-nums text-foreground">
+                        {row.points} pts
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {row.predictions} preds
+                      {row.accuracy != null ? ` · ${row.accuracy}%` : ''}
+                      {` · ${row.exactScores} exact`}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </TabsContent>
       </Tabs>
     </div>

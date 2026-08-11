@@ -29,6 +29,7 @@ import {
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
 import { defaultSportBubbleFromFavorites } from '@/src/lib/favorite-sports'
+import { favoriteSportChips } from '@/src/lib/fetch-public-profile'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
 import {
@@ -76,6 +77,7 @@ interface DashboardViewProps {
   userId: string
   email: string
   displayName?: string | null
+  username?: string | null
   avatar?: string | null
   customAvatarUrl?: string | null
   createdAt?: string | null
@@ -114,6 +116,7 @@ function DashboardViewContent({
   userId,
   email,
   displayName,
+  username = null,
   avatar,
   customAvatarUrl: initialCustomAvatarUrl = null,
   createdAt = null,
@@ -125,6 +128,10 @@ function DashboardViewContent({
 }: DashboardViewProps) {
   const defaultSportId = useMemo(
     () => defaultSportBubbleFromFavorites(favoriteSports),
+    [favoriteSports],
+  )
+  const favoriteSportChipsList = useMemo(
+    () => favoriteSportChips(favoriteSports),
     [favoriteSports],
   )
   const [editProfileOpen, setEditProfileOpen] = useState(false)
@@ -460,12 +467,14 @@ function DashboardViewContent({
             <TabsContent value="profile" className="mt-0">
               <ProfileShowcase
                 userId={userId}
+                username={username}
                 displayName={shownName}
                 avatar={selectedAvatar}
                 customAvatarUrl={customAvatarUrl}
                 predictionsMade={quickStats.predictionsMade}
                 accuracy={quickStats.winRate}
                 totalPoints={liveTotalPoints}
+                favoriteSports={favoriteSportChipsList}
                 createdAt={createdAt}
                 active={activeTab === 'profile'}
                 onEditProfile={openEditProfile}

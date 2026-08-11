@@ -6,10 +6,12 @@ import {
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
+import { ONBOARDING_SPORT_OPTIONS } from '@/src/lib/onboarding'
 
 export type PublicProfile = {
   id: string
   display_name: string | null
+  username: string | null
   avatar: string | null
   custom_avatar_url: string | null
   is_supporter: boolean
@@ -18,6 +20,25 @@ export type PublicProfile = {
   badges_earned: number
   predictions_made: number
   accuracy: number | null
+  favorite_sports: string[] | null
+  exact_scores: number | null
+  points_total: number | null
+  consecutive_correct: number | null
+  friends_count: number | null
+}
+
+export type PublicProfileCareer = {
+  predictionsMade: number
+  accuracy: number | null
+  exactScores: number
+  totalPoints: number
+  longestStreak: number
+}
+
+export type FavoriteSportChip = {
+  id: string
+  label: string
+  ballSrc: string | null
 }
 
 type UserAchievementRow = {
@@ -39,6 +60,15 @@ function emptyAchievements(error: string | null = null): UserAchievementsData {
   }
 }
 
+function asNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 function coercePublicProfile(raw: unknown): PublicProfile | null {
   if (!raw || typeof raw !== 'object') return null
   const row = raw as Record<string, unknown>
@@ -51,10 +81,16 @@ function coercePublicProfile(raw: unknown): PublicProfile | null {
       ? null
       : Math.round(Number(accuracyRaw))
 
+  const favoriteRaw = row.favorite_sports
+  const favorite_sports = Array.isArray(favoriteRaw)
+    ? favoriteRaw.filter((s): s is string => typeof s === 'string')
+    : null
+
   return {
     id,
     display_name:
       typeof row.display_name === 'string' ? row.display_name : null,
+    username: typeof row.username === 'string' ? row.username : null,
     avatar: typeof row.avatar === 'string' ? row.avatar : null,
     custom_avatar_url:
       typeof row.custom_avatar_url === 'string'
@@ -68,12 +104,20 @@ function coercePublicProfile(raw: unknown): PublicProfile | null {
     predictions_made: Math.max(0, Number(row.predictions_made) || 0),
     accuracy:
       accuracy == null || Number.isNaN(accuracy) ? null : accuracy,
+    favorite_sports,
+    exact_scores: asNumber(row.exact_scores),
+    points_total: asNumber(row.points_total ?? row.total_points ?? row.points),
+    consecutive_correct: asNumber(
+      row.consecutive_correct ?? row.longest_streak ?? row.streak,
+    ),
+    friends_count: asNumber(row.friends_count),
   }
 }
 
 /**
- * Safe public profile via SECURITY DEFINER RPC.
- * Returns ONLY public fields — never email or private UX state.
+ * Safe public profile via SECURITY DEFINER RPC `get_public_profile`.
+ * Returns public fields only (includes username, favorites, friends_count,
+ * points, exact_scores). Excludes banned users. Never email / private UX.
  */
 export async function fetchPublicProfile(
   supabase: SupabaseClient,
@@ -94,6 +138,64 @@ export async function fetchPublicProfile(
     return coercePublicProfile(data[0] ?? null)
   }
   return coercePublicProfile(data)
+}
+
+/** Map achievement progress metrics → career stats (streak from progress). */
+export function careerFromProgress(
+  profile: Pick<
+    PublicProfile,
+    | 'predictions_made'
+    | 'accuracy'
+    | 'exact_scores'
+    | 'points_total'
+    | 'consecutive_correct'
+  >,
+  progress: Array<{ condition_metric: string; current_value: number }>,
+): PublicProfileCareer {
+  const metric = (key: string) => {
+    let best = 0
+    for (const row of progress) {
+      if (row.condition_metric === key) {
+        best = Math.max(best, Number(row.current_value) || 0)
+      }
+    }
+    return best
+  }
+
+  return {
+    predictionsMade: Math.max(
+      profile.predictions_made,
+      metric('predictions_made'),
+    ),
+    accuracy: profile.accuracy,
+    exactScores: profile.exact_scores ?? metric('exact_scores'),
+    totalPoints: profile.points_total ?? metric('points_total'),
+    longestStreak:
+      profile.consecutive_correct ?? metric('consecutive_correct'),
+  }
+}
+
+export function favoriteSportChips(
+  favorites: string[] | null | undefined,
+): FavoriteSportChip[] {
+  if (!favorites?.length) return []
+  const byId = new Map(
+    ONBOARDING_SPORT_OPTIONS.map((s) => [s.id, s] as const),
+  )
+  const chips: FavoriteSportChip[] = []
+  const seen = new Set<string>()
+  for (const raw of favorites) {
+    const id = raw.trim().toLowerCase()
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    const opt = byId.get(id as (typeof ONBOARDING_SPORT_OPTIONS)[number]['id'])
+    chips.push({
+      id,
+      label: opt?.label ?? id.charAt(0).toUpperCase() + id.slice(1),
+      ballSrc: opt?.ballSrc ?? null,
+    })
+  }
+  return chips
 }
 
 /**

@@ -95,6 +95,7 @@ function LeaderboardRowItem({
 
       <UserProfileLink
         userId={row.user_id}
+        username={row.username}
         ariaLabel={`${name}'s profile`}
         className={cn('shrink-0 rounded-full', FOCUS_RING)}
       >
