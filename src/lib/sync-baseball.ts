@@ -1,12 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  fetchGamesByIds,
+  fetchGamesByDate,
   fetchLeagueSeasonGames,
   isBaseballFinalStatus,
   isBaseballLiveStatus,
   isValidApiBaseballGameId,
   mapBaseballStatusToMatchStatus,
   parseBaseballRuns,
+  todayUtcDateString,
   type ApiBaseballGame,
 } from '@/src/lib/api-baseball'
 import { ensureOfficialPoolsBestEffort } from '@/src/lib/ensure-official-pools'
@@ -485,6 +486,10 @@ type BaseballLiveMatchRow = {
 /**
  * Frequent live-score path: poll only baseball games that are live or should
  * be underway. Does not fetch the full season (that is syncBaseballFromApi).
+ *
+ * Uses /games?league&season&date (NOT unsupported `ids`) — typically 1 call
+ * per event for today's slate; also covers candidate kickoff dates (e.g. late
+ * games still live from "yesterday" UTC).
  */
 export async function syncBaseballLiveScores(
   supabase: SupabaseClient,
@@ -556,11 +561,26 @@ export async function syncBaseballLiveScores(
     return empty('no_pollable_matches')
   }
 
-  const fixtureIds = candidates.map((m) => m.fixture_id as string)
-  const games = await fetchGamesByIds(apiKey, fixtureIds)
+  // Dates to poll: today + UTC dates of candidate kickoffs (covers late games).
+  const datesNeeded = new Set<string>([todayUtcDateString()])
+  for (const match of candidates) {
+    const d = new Date(match.kickoff_at).toISOString().slice(0, 10)
+    if (d) datesNeeded.add(d)
+  }
+
   const gameById = new Map<string, ApiBaseballGame>()
-  for (const game of games) {
-    gameById.set(String(game.id), game)
+  for (const event of events) {
+    const leagueId = Number(event.provider_league_id)
+    const season = Number(event.provider_season)
+    if (!Number.isFinite(leagueId) || leagueId <= 0) continue
+    if (!Number.isFinite(season) || season < 2000) continue
+
+    for (const date of datesNeeded) {
+      const games = await fetchGamesByDate(apiKey, leagueId, season, date)
+      for (const game of games) {
+        gameById.set(String(game.id), game)
+      }
+    }
   }
 
   let matchesUpdated = 0

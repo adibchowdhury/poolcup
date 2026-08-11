@@ -197,9 +197,10 @@ export async function fetchGamesByDate(
   return fetchApiBaseballGames(apiKey, params)
 }
 
-/** api-sports baseball allows dash-separated ids (same pattern as football). */
-export const BASEBALL_GAME_IDS_BATCH_SIZE = 20
-
+/**
+ * Baseball /games does NOT support football-style `ids` batches.
+ * Use singular `id` per request (or prefer fetchGamesByDate for live polls).
+ */
 export async function fetchGamesByIds(
   apiKey: string,
   gameIds: string[],
@@ -212,14 +213,11 @@ export async function fetchGamesByIds(
   if (uniqueIds.length === 0) return []
 
   const games: ApiBaseballGame[] = []
-
-  for (let i = 0; i < uniqueIds.length; i += BASEBALL_GAME_IDS_BATCH_SIZE) {
-    const batch = uniqueIds.slice(i, i + BASEBALL_GAME_IDS_BATCH_SIZE)
-    const params = new URLSearchParams({ ids: batch.join('-') })
+  for (const id of uniqueIds) {
+    const params = new URLSearchParams({ id })
     const batchGames = await fetchApiBaseballGames(apiKey, params)
     games.push(...batchGames)
   }
-
   return games
 }
 
@@ -228,6 +226,7 @@ export async function fetchGameById(
   gameId: string,
 ): Promise<ApiBaseballGame | null> {
   if (!isValidApiBaseballGameId(gameId)) return null
-  const games = await fetchGamesByIds(apiKey, [gameId])
+  const params = new URLSearchParams({ id: gameId })
+  const games = await fetchApiBaseballGames(apiKey, params)
   return games[0] ?? null
 }

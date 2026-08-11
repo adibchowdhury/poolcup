@@ -97,9 +97,9 @@ Scores use `scores.home.total` / `scores.away.total` (includes extra-inning runs
 | Path | Cadence | Job type | Job |
 |------|---------|----------|-----|
 | `/api/cron/sync-baseball` | Every 6 hours (`0 */6 * * *`) | `sync_baseball` | Full-season fixture upsert + newly final scoring + official pools |
-| `/api/cron/sync-baseball-live` | Every minute (`* * * * *`) | `sync_baseball_live` | **Cheap** poll of live / in-window games only (`fetchGamesByIds`) |
+| `/api/cron/sync-baseball-live` | Every minute (`* * * * *`) | `sync_baseball_live` | **Cheap** poll: today's games by date (1 call), filter to in-window DB rows |
 
-Live path skips the API when no baseball games are in the kickoff window. It updates `status_short`, run totals, and `is_final`, then calls **`calculate_match_points`** only for newly finalized games (same RPC as soccer; do not edit it here).
+Live path skips the API when no baseball games are in the kickoff window. It fetches **by date** (`/games?league&season&date` — baseball does not support football-style `ids` batches), updates `status_short`, run totals, and `is_final`, then calls **`calculate_match_points`** only for newly finalized games (same RPC as soccer; do not edit it here).
 
 ### Baseball lifecycle
 
@@ -138,10 +138,12 @@ Code: `src/lib/api-american-football.ts`, `src/lib/sync-american-football.ts`.
 
 ### NFL crons
 
-| Path | Cadence | Job type |
-|------|---------|----------|
-| `/api/cron/sync-american-football` | Every 6 hours | `sync_american_football` |
-| `/api/cron/sync-american-football-live` | Every minute | `sync_american_football_live` |
+| Path | Cadence | Job type | Job |
+|------|---------|----------|-----|
+| `/api/cron/sync-american-football` | Every 6 hours | `sync_american_football` | Full-season fixture upsert + newly final scoring + official pools |
+| `/api/cron/sync-american-football-live` | Every minute | `sync_american_football_live` | **Cheap** poll: today's games by date (1 call), filter to in-window DB rows |
+
+Live path uses `/games?league&season&date` (american-football does not support football-style `ids` batches), same pattern as baseball.
 
 ---
 
