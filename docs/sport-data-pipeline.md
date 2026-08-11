@@ -110,6 +110,41 @@ Live path skips the API when no baseball games are in the kickoff window. It upd
 
 ---
 
+## American football / NFL (API-American-Football)
+
+Provider: **`v1.american-football.api-sports.io`** (`provider = 'api-american-football'`).
+
+Auth reuses **`API_FOOTBALL_KEY`**. Store events with `sport = 'american_football'` (not `football`) so the NFL bubble does not collide with soccer.
+
+### Competition mapping
+
+| Field | NFL 2026 |
+|-------|----------|
+| `sport` | `american_football` |
+| `provider` | `api-american-football` |
+| `provider_league_id` | `1` (NFL) |
+| `provider_season` | `2026` |
+| `matches.round` | `preseason` / `regular` / `playoff` (from `game.stage`) |
+
+Code: `src/lib/api-american-football.ts`, `src/lib/sync-american-football.ts`.
+
+### Status / score
+
+- Final: `FT` / `AOT` + totals → `is_final`
+- Live: `Q1`–`Q4`, `HT`, `OT`, `LIVE`, `BT`
+- Upcoming: `NS`
+- Postponed: `POST` → `PST`
+- Points: `scores.home.total` / `scores.away.total` → `result_team1` / `result_team2`
+
+### NFL crons
+
+| Path | Cadence | Job type |
+|------|---------|----------|
+| `/api/cron/sync-american-football` | Every 6 hours | `sync_american_football` |
+| `/api/cron/sync-american-football-live` | Every minute | `sync_american_football_live` |
+
+---
+
 ## Shared observability
 
 All cron routes require `Authorization: Bearer $CRON_SECRET` (or `x-cron-secret`).

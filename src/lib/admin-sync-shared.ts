@@ -33,6 +33,18 @@ export const SYNC_JOB_RETRY_TARGETS = [
     supportsEventId: false,
   },
   {
+    jobType: 'sync_american_football',
+    label: 'Sync NFL / american football (season)',
+    path: '/api/cron/sync-american-football',
+    supportsEventId: true,
+  },
+  {
+    jobType: 'sync_american_football_live',
+    label: 'Sync NFL / american football (live scores)',
+    path: '/api/cron/sync-american-football-live',
+    supportsEventId: false,
+  },
+  {
     jobType: 'sync_scores',
     label: 'Sync scores (soccer live + final)',
     path: '/api/sync-scores',
@@ -115,7 +127,11 @@ export function orderSyncJobTypesForDisplay(
 }
 
 export function isStaleFixtureSync(row: SyncStatusRow, nowMs = Date.now()): boolean {
-  if (row.job_type !== 'sync_fixtures' && row.job_type !== 'sync_baseball') {
+  if (
+    row.job_type !== 'sync_fixtures' &&
+    row.job_type !== 'sync_baseball' &&
+    row.job_type !== 'sync_american_football'
+  ) {
     return false
   }
   const stamp =

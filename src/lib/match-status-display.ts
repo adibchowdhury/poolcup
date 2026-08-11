@@ -2,7 +2,7 @@ import { normalizeSportKey } from '@/src/lib/sport-display'
 
 /**
  * Shared live status shorts for dashboard / matches tab / featured queries.
- * Unions soccer (API-Football) and baseball (api-sports baseball) live codes.
+ * Unions soccer (API-Football), baseball, and american football (NFL) live codes.
  */
 export const FEATURED_LIVE_STATUS_SHORTS = [
   // Soccer
@@ -24,6 +24,12 @@ export const FEATURED_LIVE_STATUS_SHORTS = [
   'IN7',
   'IN8',
   'IN9',
+  // American football (NFL) quarters / OT
+  'Q1',
+  'Q2',
+  'Q3',
+  'Q4',
+  'OT',
 ] as const
 
 export type FeaturedLiveStatusShort =

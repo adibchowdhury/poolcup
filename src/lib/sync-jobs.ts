@@ -4,6 +4,8 @@ export type SyncJobType =
   | 'sync_fixtures'
   | 'sync_baseball'
   | 'sync_baseball_live'
+  | 'sync_american_football'
+  | 'sync_american_football_live'
   | 'sync_scores'
   | 'reconcile_stale_matches'
   | 'sync_knockout_round_rows'
