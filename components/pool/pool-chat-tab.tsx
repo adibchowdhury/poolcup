@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Flag, MessageCircle, MoreHorizontal, Send } from 'lucide-react'
+import { Flag, Loader2, MessageCircle, MoreHorizontal, RotateCcw, Send } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,14 +12,25 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { emitPoolMarkedRead, markPoolRead } from '@/src/lib/pool-unread-counts'
+import {
+  emitPoolMarkedRead,
+  fetchPoolLastReadAt,
+  markPoolRead,
+} from '@/src/lib/pool-unread-counts'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import {
   ALLOWED_CHAT_REACTIONS,
   aggregateReactions,
   buildChatListItems,
+  findFirstUnreadMessageId,
+  formatChatAbsoluteTimestamp,
   formatChatTimestamp,
   isDuplicateReactionError,
+  isOptimisticChatMessageId,
+  isPoolChatRateLimitError,
+  POOL_CHAT_PAGE_SIZE,
   type AggregatedReaction,
   type MessageReactionRow,
   type PoolChatMessage,
@@ -46,6 +58,12 @@ type PoolChatTabProps = {
 
 const LONG_PRESS_MS = 450
 const SCROLL_BOTTOM_THRESHOLD_PX = 48
+const SCROLL_TOP_LOAD_THRESHOLD_PX = 72
+const MESSAGE_SELECT =
+  'id, pool_id, user_id, content, created_at, message_type, metadata'
+
+const RATE_LIMIT_MESSAGE =
+  "You're sending messages too fast — slow down a moment"
 
 function resolveAuthor(
   userId: string,
@@ -75,7 +93,7 @@ function ChatUserAvatar({
     <UserProfileLink
       userId={userId}
       ariaLabel={`${profile.displayName}'s profile`}
-      className="mb-0.5 shrink-0"
+      className={cn('mb-0.5 shrink-0', FOCUS_VISIBLE_RING)}
     >
       <UserAvatarImage
         avatar={profile.avatar}
@@ -98,6 +116,23 @@ function ChatDayDivider({ label }: { label: string }) {
   )
 }
 
+function ChatUnreadDivider() {
+  return (
+    <div
+      id="pool-chat-unread-anchor"
+      className="flex items-center gap-3 py-3"
+      role="separator"
+      aria-label="New messages"
+    >
+      <div className="h-px flex-1 bg-primary/40" />
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-primary">
+        New messages
+      </span>
+      <div className="h-px flex-1 bg-primary/40" />
+    </div>
+  )
+}
+
 function ReactionChip({
   reaction,
   onToggle,
@@ -111,6 +146,7 @@ function ReactionChip({
       onClick={onToggle}
       className={cn(
         'inline-flex min-h-8 items-center gap-1 rounded-full border px-2 text-xs transition-colors',
+        FOCUS_VISIBLE_RING,
         reaction.reactedByMe
           ? 'border-primary/40 bg-primary/15 text-foreground'
           : 'border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted/70',
@@ -136,6 +172,7 @@ function ChatMessageBubble({
   onDelete,
   onReport,
   onToggleReaction,
+  onRetry,
   showAvatar = false,
   authorUserId,
   author,
@@ -152,14 +189,17 @@ function ChatMessageBubble({
   onDelete: () => void
   onReport: () => void
   onToggleReaction: (emoji: string) => void
-  /** When true, render member avatar beside the bubble (others only). */
+  onRetry?: () => void
   showAvatar?: boolean
   authorUserId?: string
   author?: PoolChatMemberProfile
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const showActions = canDelete || canReport
+  const isOptimistic = isOptimisticChatMessageId(message.id)
+  const isFailed = message.clientStatus === 'failed'
+  const isSending = message.clientStatus === 'sending'
+  const showActions = !isOptimistic && (canDelete || canReport)
   const reserveOtherGutter = !isYou
 
   const clearLongPress = useCallback(() => {
@@ -190,7 +230,6 @@ function ChatMessageBubble({
       onTouchMove={clearLongPress}
       onTouchCancel={clearLongPress}
     >
-      {/* Avatar + bubble only — reactions sit below so they never shift alignment */}
       <div
         className={cn(
           'flex w-full min-w-0 items-end gap-2',
@@ -218,6 +257,8 @@ function ChatMessageBubble({
                 isYou
                   ? 'rounded-tr-md bg-primary/20 text-foreground ring-1 ring-primary/35'
                   : 'rounded-tl-md bg-muted/60 text-foreground',
+                isFailed && 'opacity-80 ring-destructive/50',
+                isSending && 'opacity-70',
               )}
             >
               {message.content}
@@ -230,6 +271,7 @@ function ChatMessageBubble({
                     type="button"
                     className={cn(
                       'inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:bg-muted/60 hover:text-foreground',
+                      FOCUS_VISIBLE_RING,
                       'opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100',
                       menuOpen && 'opacity-100',
                     )}
@@ -244,7 +286,10 @@ function ChatMessageBubble({
                       <button
                         key={emoji}
                         type="button"
-                        className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-lg hover:bg-muted"
+                        className={cn(
+                          'inline-flex min-h-10 min-w-10 items-center justify-center rounded-md text-lg hover:bg-muted',
+                          FOCUS_VISIBLE_RING,
+                        )}
                         onClick={() => {
                           onToggleReaction(emoji)
                           setMenuOpen(false)
@@ -285,6 +330,38 @@ function ChatMessageBubble({
               </DropdownMenu>
             ) : null}
           </div>
+
+          {isFailed && onRetry ? (
+            <div
+              className={cn(
+                'mt-1 flex items-center gap-2 text-[11px] text-destructive',
+                isYou ? 'justify-end' : 'justify-start',
+              )}
+            >
+              <span>Not sent</span>
+              <button
+                type="button"
+                onClick={onRetry}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-primary hover:underline',
+                  FOCUS_VISIBLE_RING,
+                )}
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden />
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {isSending ? (
+            <p
+              className={cn(
+                'mt-1 text-[10px] text-muted-foreground',
+                isYou ? 'text-right' : 'text-left',
+              )}
+            >
+              Sending…
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -322,6 +399,7 @@ function ChatMessageGroup({
   onDelete,
   onReport,
   onToggleReaction,
+  onRetry,
 }: {
   userId: string
   messages: PoolChatMessage[]
@@ -335,10 +413,12 @@ function ChatMessageGroup({
   onDelete: (messageId: string) => void
   onReport: (message: PoolChatMessage) => void
   onToggleReaction: (messageId: string, emoji: string) => void
+  onRetry: (messageId: string) => void
 }) {
   const isYou = userId === currentUserId
   const author = resolveAuthor(userId, memberProfilesByUserId)
   const firstMessage = messages[0]!
+  const absoluteTime = formatChatAbsoluteTimestamp(firstMessage.created_at)
 
   return (
     <div
@@ -359,7 +439,10 @@ function ChatMessageGroup({
         ) : (
           <UserProfileLink
             userId={userId}
-            className="text-xs font-semibold text-foreground hover:underline"
+            className={cn(
+              'text-xs font-semibold text-foreground hover:underline',
+              FOCUS_VISIBLE_RING,
+            )}
           >
             {author.displayName}
           </UserProfileLink>
@@ -367,6 +450,7 @@ function ChatMessageGroup({
         <time
           className="text-[10px] text-muted-foreground"
           dateTime={firstMessage.created_at}
+          title={absoluteTime}
           suppressHydrationWarning
         >
           {formatChatTimestamp(firstMessage.created_at)}
@@ -374,8 +458,9 @@ function ChatMessageGroup({
       </div>
 
       {messages.map((message, index) => {
-        const canDelete = isYou || isPoolCreator
-        const canReport = !isYou
+        const optimistic = isOptimisticChatMessageId(message.id)
+        const canDelete = !optimistic && (isYou || isPoolCreator)
+        const canReport = !optimistic && !isYou
         const isLast = index === messages.length - 1
 
         return (
@@ -384,7 +469,9 @@ function ChatMessageGroup({
             message={message}
             isYou={isYou}
             stacked={index > 0}
-            reactions={reactionsByMessageId.get(message.id) ?? []}
+            reactions={
+              optimistic ? [] : (reactionsByMessageId.get(message.id) ?? [])
+            }
             canDelete={canDelete}
             canReport={canReport}
             reported={reportedIds.has(message.id)}
@@ -393,6 +480,11 @@ function ChatMessageGroup({
             onDelete={() => onDelete(message.id)}
             onReport={() => onReport(message)}
             onToggleReaction={(emoji) => onToggleReaction(message.id, emoji)}
+            onRetry={
+              message.clientStatus === 'failed'
+                ? () => onRetry(message.id)
+                : undefined
+            }
             showAvatar={!isYou && isLast}
             authorUserId={userId}
             author={author}
@@ -415,6 +507,8 @@ export function PoolChatTab({
   const [messages, setMessages] = useState<PoolChatMessage[]>([])
   const [reactionRows, setReactionRows] = useState<MessageReactionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [hasMoreOlder, setHasMoreOlder] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
@@ -424,11 +518,17 @@ export function PoolChatTab({
   const [reportedIds, setReportedIds] = useState<Set<string>>(() => new Set())
   const [reportNotice, setReportNotice] = useState<string | null>(null)
   const [showNewMessagesPill, setShowNewMessagesPill] = useState(false)
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<string | null>(
+    null,
+  )
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const isAtBottomRef = useRef(true)
   const hasInitialScrolledRef = useRef(false)
+  const isPrependingRef = useRef(false)
+  const loadingOlderRef = useRef(false)
+  const openedTrackedRef = useRef(false)
   const isPoolCreator = currentUserId === poolCreatorUserId
   const { setOpenChatPoolId } = useMobileChatChrome()
 
@@ -439,12 +539,21 @@ export function PoolChatTab({
     }
   }, [poolId, setOpenChatPoolId])
 
+  useEffect(() => {
+    if (openedTrackedRef.current) return
+    openedTrackedRef.current = true
+    capturePostHog('chat_opened', { pool_id: poolId, surface: 'pool' })
+  }, [poolId])
+
   const reactionsByMessageId = useMemo(
     () => aggregateReactions(reactionRows, currentUserId),
     [reactionRows, currentUserId],
   )
 
-  const chatListItems = useMemo(() => buildChatListItems(messages), [messages])
+  const chatListItems = useMemo(
+    () => buildChatListItems(messages, { firstUnreadMessageId }),
+    [messages, firstUnreadMessageId],
+  )
 
   const focusInput = useCallback(() => {
     requestAnimationFrame(() => {
@@ -470,6 +579,21 @@ export function PoolChatTab({
   const appendMessage = useCallback((message: PoolChatMessage) => {
     setMessages((previous) => {
       if (previous.some((entry) => entry.id === message.id)) return previous
+      // Reconcile optimistic bubble for the same author+content still sending.
+      if (message.user_id) {
+        const optimisticIndex = previous.findIndex(
+          (entry) =>
+            isOptimisticChatMessageId(entry.id) &&
+            entry.user_id === message.user_id &&
+            entry.content === message.content &&
+            entry.clientStatus === 'sending',
+        )
+        if (optimisticIndex >= 0) {
+          const next = [...previous]
+          next[optimisticIndex] = { ...message, clientStatus: null }
+          return next
+        }
+      }
       return [...previous, message]
     })
   }, [])
@@ -491,43 +615,100 @@ export function PoolChatTab({
   const loadMessages = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
+    setHasMoreOlder(true)
+    setFirstUnreadMessageId(null)
+    hasInitialScrolledRef.current = false
+
+    const lastReadAt = await fetchPoolLastReadAt(
+      supabase,
+      poolId,
+      currentUserId,
+    )
 
     const { data, error } = await supabase
       .from('pool_messages')
-      .select('id, pool_id, user_id, content, created_at, message_type, metadata')
+      .select(MESSAGE_SELECT)
       .eq('pool_id', poolId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(POOL_CHAT_PAGE_SIZE)
 
     if (error) {
       console.error('Failed to load pool messages:', error.message)
       setLoadError('Could not load messages.')
       setMessages([])
+      setHasMoreOlder(false)
     } else {
-      setMessages((data ?? []) as PoolChatMessage[])
+      const rows = ([...(data ?? [])] as PoolChatMessage[]).reverse()
+      setMessages(rows)
+      setHasMoreOlder((data?.length ?? 0) >= POOL_CHAT_PAGE_SIZE)
+      setFirstUnreadMessageId(
+        findFirstUnreadMessageId(rows, lastReadAt, currentUserId),
+      )
     }
 
     await loadReactions()
     setLoading(false)
-    hasInitialScrolledRef.current = false
-  }, [poolId, loadReactions])
+
+    const marked = await markPoolRead(supabase, poolId, currentUserId)
+    if (marked) emitPoolMarkedRead(poolId)
+  }, [poolId, currentUserId, loadReactions])
 
   useEffect(() => {
     void loadMessages()
   }, [loadMessages])
 
-  useEffect(() => {
-    let cancelled = false
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlderRef.current || !hasMoreOlder) return
+    const oldest = messages.find((m) => !isOptimisticChatMessageId(m.id))
+    if (!oldest) return
 
-    void (async () => {
-      const marked = await markPoolRead(supabase, poolId, currentUserId)
-      if (cancelled || !marked) return
-      emitPoolMarkedRead(poolId)
-    })()
+    const container = scrollContainerRef.current
+    const prevHeight = container?.scrollHeight ?? 0
+    const prevTop = container?.scrollTop ?? 0
 
-    return () => {
-      cancelled = true
+    loadingOlderRef.current = true
+    isPrependingRef.current = true
+    setLoadingOlder(true)
+
+    const { data, error } = await supabase
+      .from('pool_messages')
+      .select(MESSAGE_SELECT)
+      .eq('pool_id', poolId)
+      .lt('created_at', oldest.created_at)
+      .order('created_at', { ascending: false })
+      .limit(POOL_CHAT_PAGE_SIZE)
+
+    if (error) {
+      console.error('Failed to load older messages:', error.message)
+      toast.error('Could not load older messages')
+      setLoadingOlder(false)
+      loadingOlderRef.current = false
+      isPrependingRef.current = false
+      return
     }
-  }, [poolId])
+
+    const older = ([...(data ?? [])] as PoolChatMessage[]).reverse()
+    setHasMoreOlder((data?.length ?? 0) >= POOL_CHAT_PAGE_SIZE)
+    if (older.length > 0) {
+      setMessages((previous) => {
+        const existing = new Set(previous.map((m) => m.id))
+        const unique = older.filter((m) => !existing.has(m.id))
+        return [...unique, ...previous]
+      })
+    }
+
+    setLoadingOlder(false)
+    loadingOlderRef.current = false
+
+    requestAnimationFrame(() => {
+      const el = scrollContainerRef.current
+      if (el) {
+        const delta = el.scrollHeight - prevHeight
+        el.scrollTop = prevTop + delta
+      }
+      isPrependingRef.current = false
+    })
+  }, [hasMoreOlder, messages, poolId])
 
   useEffect(() => {
     const channel = supabase
@@ -542,6 +723,11 @@ export function PoolChatTab({
         },
         (payload) => {
           appendMessage(payload.new as PoolChatMessage)
+          if (document.visibilityState === 'visible') {
+            void markPoolRead(supabase, poolId, currentUserId).then((ok) => {
+              if (ok) emitPoolMarkedRead(poolId)
+            })
+          }
         },
       )
       .on(
@@ -614,31 +800,112 @@ export function PoolChatTab({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [poolId, appendMessage])
+  }, [poolId, appendMessage, currentUserId])
 
   useLayoutEffect(() => {
-    if (loading || messages.length === 0) return
+    if (loading || isPrependingRef.current) return
 
     if (!hasInitialScrolledRef.current) {
-      scrollToBottom('instant')
+      if (firstUnreadMessageId) {
+        const anchor = document.getElementById('pool-chat-unread-anchor')
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'auto', block: 'center' })
+          isAtBottomRef.current = isNearBottom()
+          hasInitialScrolledRef.current = true
+          return
+        }
+      }
+      if (messages.length > 0) {
+        scrollToBottom('instant')
+      }
       hasInitialScrolledRef.current = true
       return
     }
+
+    if (messages.length === 0) return
 
     if (isAtBottomRef.current) {
       scrollToBottom('smooth')
     } else {
       setShowNewMessagesPill(true)
     }
-  }, [loading, messages, scrollToBottom])
+  }, [
+    loading,
+    messages,
+    scrollToBottom,
+    firstUnreadMessageId,
+    isNearBottom,
+  ])
 
   const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
     const atBottom = isNearBottom()
     isAtBottomRef.current = atBottom
     if (atBottom) {
       setShowNewMessagesPill(false)
     }
-  }, [isNearBottom])
+
+    if (
+      container.scrollTop < SCROLL_TOP_LOAD_THRESHOLD_PX &&
+      hasMoreOlder &&
+      !loadingOlderRef.current &&
+      !loading
+    ) {
+      void loadOlderMessages()
+    }
+  }, [hasMoreOlder, isNearBottom, loadOlderMessages, loading])
+
+  const persistMessage = useCallback(
+    async (optimisticId: string, content: string) => {
+      const { data, error } = await supabase
+        .from('pool_messages')
+        .insert({
+          pool_id: poolId,
+          user_id: currentUserId,
+          content,
+        })
+        .select(MESSAGE_SELECT)
+        .single()
+
+      if (error) {
+        console.error('Failed to send message:', error.message)
+        setMessages((previous) =>
+          previous.map((entry) =>
+            entry.id === optimisticId
+              ? { ...entry, clientStatus: 'failed' }
+              : entry,
+          ),
+        )
+        if (isPoolChatRateLimitError(error)) {
+          setSendError(RATE_LIMIT_MESSAGE)
+          toast.error(RATE_LIMIT_MESSAGE)
+        } else {
+          setSendError('Could not send message.')
+          toast.error('Could not send message.')
+        }
+        return
+      }
+
+      setSendError(null)
+      setMessages((previous) =>
+        previous.map((entry) =>
+          entry.id === optimisticId
+            ? { ...(data as PoolChatMessage), clientStatus: null }
+            : entry,
+        ),
+      )
+      capturePostHog('chat_message_sent', {
+        pool_id: poolId,
+        message_id: (data as PoolChatMessage).id,
+      })
+      void markPoolRead(supabase, poolId, currentUserId).then((ok) => {
+        if (ok) emitPoolMarkedRead(poolId)
+      })
+    },
+    [currentUserId, poolId],
+  )
 
   const sendMessage = useCallback(async () => {
     const content = draft.trim()
@@ -647,31 +914,49 @@ export function PoolChatTab({
     setSending(true)
     setSendError(null)
 
-    const { data, error } = await supabase
-      .from('pool_messages')
-      .insert({
-        pool_id: poolId,
-        user_id: currentUserId,
-        content,
-      })
-      .select('id, pool_id, user_id, content, created_at, message_type, metadata')
-      .single()
-
-    setSending(false)
-
-    if (error) {
-      console.error('Failed to send message:', error.message)
-      setSendError('Could not send message.')
-      focusInput()
-      return
+    const optimisticId = `optimistic-${crypto.randomUUID()}`
+    const optimistic: PoolChatMessage = {
+      id: optimisticId,
+      pool_id: poolId,
+      user_id: currentUserId,
+      content,
+      created_at: new Date().toISOString(),
+      message_type: 'user',
+      clientStatus: 'sending',
     }
-
-    if (data) {
-      appendMessage(data as PoolChatMessage)
-    }
+    appendMessage(optimistic)
     setDraft('')
     focusInput()
-  }, [appendMessage, currentUserId, draft, focusInput, poolId, sending])
+
+    await persistMessage(optimisticId, content)
+    setSending(false)
+  }, [
+    appendMessage,
+    currentUserId,
+    draft,
+    focusInput,
+    persistMessage,
+    poolId,
+    sending,
+  ])
+
+  const retryFailedMessage = useCallback(
+    async (messageId: string) => {
+      const target = messages.find((m) => m.id === messageId)
+      if (!target || target.clientStatus !== 'failed') return
+
+      setSendError(null)
+      setMessages((previous) =>
+        previous.map((entry) =>
+          entry.id === messageId
+            ? { ...entry, clientStatus: 'sending' }
+            : entry,
+        ),
+      )
+      await persistMessage(messageId, target.content)
+    },
+    [messages, persistMessage],
+  )
 
   async function handleSend(event: React.FormEvent) {
     event.preventDefault()
@@ -686,6 +971,11 @@ export function PoolChatTab({
   }
 
   async function handleDelete(messageId: string) {
+    if (isOptimisticChatMessageId(messageId)) {
+      setMessages((previous) => previous.filter((entry) => entry.id !== messageId))
+      return
+    }
+
     setDeletingId(messageId)
 
     const { error } = await supabase.from('pool_messages').delete().eq('id', messageId)
@@ -694,6 +984,12 @@ export function PoolChatTab({
 
     if (error) {
       console.error('Failed to delete message:', error.message)
+      toast.error('Could not delete message', {
+        action: {
+          label: 'Retry',
+          onClick: () => void handleDelete(messageId),
+        },
+      })
       return
     }
 
@@ -701,9 +997,15 @@ export function PoolChatTab({
     setReactionRows((previous) =>
       previous.filter((row) => row.message_id !== messageId),
     )
+    capturePostHog('chat_message_deleted', {
+      pool_id: poolId,
+      message_id: messageId,
+    })
   }
 
   async function handleReport(message: PoolChatMessage) {
+    if (isOptimisticChatMessageId(message.id)) return
+
     setReportingId(message.id)
     setReportNotice(null)
 
@@ -719,16 +1021,28 @@ export function PoolChatTab({
 
     if (error) {
       console.error('Failed to report message:', error.message)
+      toast.error('Could not report message', {
+        action: {
+          label: 'Retry',
+          onClick: () => void handleReport(message),
+        },
+      })
       return
     }
 
     setReportedIds((previous) => new Set(previous).add(message.id))
     setReportNotice('Thanks — this message has been reported.')
+    capturePostHog('chat_message_reported', {
+      pool_id: poolId,
+      message_id: message.id,
+    })
     window.setTimeout(() => setReportNotice(null), 4000)
   }
 
   const handleToggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
+      if (isOptimisticChatMessageId(messageId)) return
+
       const existing = reactionRows.find(
         (row) =>
           row.message_id === messageId &&
@@ -756,6 +1070,7 @@ export function PoolChatTab({
 
         if (error) {
           console.error('Failed to remove reaction:', error.message)
+          toast.error('Could not update reaction')
           void loadReactions()
         }
         return
@@ -777,6 +1092,7 @@ export function PoolChatTab({
       if (error) {
         if (!isDuplicateReactionError(error)) {
           console.error('Failed to add reaction:', error.message)
+          toast.error('Could not add reaction')
         }
         setReactionRows((previous) =>
           previous.filter(
@@ -791,7 +1107,14 @@ export function PoolChatTab({
         if (!isDuplicateReactionError(error)) {
           void loadReactions()
         }
+        return
       }
+
+      capturePostHog('chat_reaction_added', {
+        pool_id: poolId,
+        message_id: messageId,
+        emoji,
+      })
     },
     [currentUserId, loadReactions, poolId, reactionRows],
   )
@@ -841,6 +1164,15 @@ export function PoolChatTab({
                 'max-sm:overflow-x-hidden max-sm:scrollbar-none max-sm:overscroll-contain max-sm:pt-2',
             )}
           >
+            {loadingOlder ? (
+              <div className="flex justify-center py-2">
+                <Loader2
+                  className="h-4 w-4 animate-spin text-primary"
+                  aria-label="Loading older messages"
+                />
+              </div>
+            ) : null}
+
             {loading ? (
               <div className="space-y-4">
                 {[0, 1, 2].map((index) => (
@@ -852,7 +1184,18 @@ export function PoolChatTab({
                 ))}
               </div>
             ) : loadError ? (
-              <p className="py-8 text-center text-sm text-destructive">{loadError}</p>
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <p className="text-sm text-destructive">{loadError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={FOCUS_VISIBLE_RING}
+                  onClick={() => void loadMessages()}
+                >
+                  Try again
+                </Button>
+              </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full min-h-[12rem] flex-col items-center justify-center py-8 text-center">
                 <MessageCircle className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
@@ -866,6 +1209,8 @@ export function PoolChatTab({
               chatListItems.map((item) =>
                 item.type === 'day-divider' ? (
                   <ChatDayDivider key={item.key} label={item.label} />
+                ) : item.type === 'unread-divider' ? (
+                  <ChatUnreadDivider key={item.key} />
                 ) : item.type === 'system' ? (
                   <ChatSystemMoment key={item.key} message={item.message} />
                 ) : (
@@ -885,6 +1230,7 @@ export function PoolChatTab({
                     onToggleReaction={(messageId, emoji) =>
                       void handleToggleReaction(messageId, emoji)
                     }
+                    onRetry={(messageId) => void retryFailedMessage(messageId)}
                   />
                 ),
               )
@@ -897,7 +1243,10 @@ export function PoolChatTab({
               <button
                 type="button"
                 onClick={() => scrollToBottom('smooth')}
-                className="pointer-events-auto inline-flex min-h-10 items-center rounded-full border border-primary/30 bg-card/95 px-4 text-sm font-medium text-primary shadow-lg backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className={cn(
+                  'pointer-events-auto inline-flex min-h-10 items-center rounded-full border border-primary/30 bg-card/95 px-4 text-sm font-medium text-primary shadow-lg backdrop-blur-sm',
+                  FOCUS_VISIBLE_RING,
+                )}
               >
                 New messages ↓
               </button>
@@ -925,22 +1274,28 @@ export function PoolChatTab({
               placeholder="Message your pool…"
               maxLength={500}
               rows={1}
-              className="min-h-10 min-w-0 flex-1 resize-none py-2"
+              className={cn('min-h-10 min-w-0 flex-1 resize-none py-2', FOCUS_VISIBLE_RING)}
               aria-label="Chat message"
             />
             <Button
               type="submit"
               disabled={!canSend}
-              className="min-h-10 shrink-0 gap-2"
+              className={cn('min-h-10 shrink-0 gap-2', FOCUS_VISIBLE_RING)}
               onMouseDown={(event) => event.preventDefault()}
             >
-              <Send className="h-4 w-4" />
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               <span className="sr-only sm:not-sr-only">Send</span>
             </Button>
           </form>
 
           {sendError ? (
-            <p className="px-4 pb-3 text-xs text-destructive">{sendError}</p>
+            <p className="px-4 pb-3 text-xs text-destructive" role="alert">
+              {sendError}
+            </p>
           ) : null}
         </div>
       </div>

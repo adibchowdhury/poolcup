@@ -452,8 +452,10 @@ export function DmChatThread({
                   return <ChatDayDivider key={item.key} label={item.label} />
                 }
 
-                // DMs never emit system moments; skip for type exhaustiveness.
-                if (item.type === 'system') return null
+                // DMs never emit system moments or unread dividers.
+                if (item.type === 'system' || item.type === 'unread-divider') {
+                  return null
+                }
 
                 const isYou = item.group.userId === currentUserId
                 return (

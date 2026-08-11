@@ -112,6 +112,28 @@ export async function fetchMyUnreadChats(
     .filter((row) => row.invite_code !== '')
 }
 
+/** Current user's last_read_at for a pool, or null if never read. */
+export async function fetchPoolLastReadAt(
+  supabase: SupabaseClient,
+  poolId: string,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('pool_chat_reads')
+    .select('last_read_at')
+    .eq('pool_id', poolId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Failed to fetch pool last_read_at:', error.message)
+    return null
+  }
+
+  const value = (data as { last_read_at?: string } | null)?.last_read_at
+  return typeof value === 'string' && value ? value : null
+}
+
 export async function markPoolRead(
   supabase: SupabaseClient,
   poolId: string,

@@ -23,6 +23,8 @@ export type PoolChatSystemMetadata = {
   [key: string]: unknown
 }
 
+export type PoolChatMessageClientStatus = 'sending' | 'failed'
+
 export type PoolChatMessage = {
   id: string
   pool_id: string
@@ -31,6 +33,8 @@ export type PoolChatMessage = {
   created_at: string
   message_type?: PoolChatMessageType | null
   metadata?: PoolChatSystemMetadata | null
+  /** Client-only: optimistic send lifecycle (not stored in DB). */
+  clientStatus?: PoolChatMessageClientStatus | null
 }
 
 export type MessageReactionRow = {
@@ -52,8 +56,15 @@ export type MessageGroup = {
 
 export type ChatListItem =
   | { type: 'day-divider'; label: string; key: string }
+  | { type: 'unread-divider'; key: string }
   | { type: 'group'; group: MessageGroup; key: string }
   | { type: 'system'; message: PoolChatMessage; key: string }
+
+export const POOL_CHAT_PAGE_SIZE = 50
+
+export function isOptimisticChatMessageId(id: string): boolean {
+  return id.startsWith('optimistic-')
+}
 
 const AVATAR_COLOR_CLASSES = [
   'bg-[#1a3d4a] text-[#7dd3fc]',
@@ -101,10 +112,24 @@ export function getDayDividerLabel(iso: string): string {
   if (isSameCalendarDay(date, today)) return 'Today'
   if (isSameCalendarDay(date, yesterday)) return 'Yesterday'
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
+  })
+}
+
+/** Absolute local time for hover / title (user locale). */
+export function formatChatAbsoluteTimestamp(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   })
 }
 
@@ -139,6 +164,23 @@ export function formatChatTimestamp(iso: string): string {
   return diffYear === 1 ? '1 year ago' : `${diffYear} years ago`
 }
 
+/** True when pool_messages INSERT was blocked by send rate-limit RLS. */
+export function isPoolChatRateLimitError(
+  error: { code?: string; message?: string } | null,
+): boolean {
+  if (!error) return false
+  const msg = (error.message ?? '').toLowerCase()
+  if (msg.includes('too fast') || msg.includes('rate limit') || msg.includes('too many')) {
+    return true
+  }
+  // RLS policy rejection (Postgres insufficient_privilege / generic RLS).
+  if (error.code === '42501' && msg.includes('row-level security')) return true
+  if (msg.includes('row-level security') && msg.includes('pool_messages')) {
+    return true
+  }
+  return false
+}
+
 export function isSystemChatMessage(message: PoolChatMessage): boolean {
   if (message.message_type === 'system') return true
   if (message.message_type === 'user') return false
@@ -171,10 +213,22 @@ export function groupMessages(messages: PoolChatMessage[]): MessageGroup[] {
   return groups
 }
 
-export function buildChatListItems(messages: PoolChatMessage[]): ChatListItem[] {
+export function buildChatListItems(
+  messages: PoolChatMessage[],
+  options?: { firstUnreadMessageId?: string | null },
+): ChatListItem[] {
+  const firstUnreadMessageId = options?.firstUnreadMessageId ?? null
   const items: ChatListItem[] = []
   let lastDayLabel: string | null = null
   let pendingUserMessages: PoolChatMessage[] = []
+  let unreadDividerInserted = false
+
+  const pushUnreadIfNeeded = (messageId: string) => {
+    if (!firstUnreadMessageId || unreadDividerInserted) return
+    if (messageId !== firstUnreadMessageId) return
+    items.push({ type: 'unread-divider', key: 'unread-divider' })
+    unreadDividerInserted = true
+  }
 
   const pushDayIfNeeded = (createdAt: string) => {
     const dayLabel = getDayDividerLabel(createdAt)
@@ -193,11 +247,32 @@ export function buildChatListItems(messages: PoolChatMessage[]): ChatListItem[] 
     for (const group of groupMessages(pendingUserMessages)) {
       const firstMessage = group.messages[0]!
       pushDayIfNeeded(firstMessage.created_at)
-      items.push({
-        type: 'group',
-        group,
-        key: `group-${group.messages.map((message) => message.id).join('-')}`,
-      })
+      // Unread divider sits just before the first unread message in the group.
+      const unreadIndex = firstUnreadMessageId
+        ? group.messages.findIndex((m) => m.id === firstUnreadMessageId)
+        : -1
+      if (unreadIndex > 0) {
+        const before = group.messages.slice(0, unreadIndex)
+        const after = group.messages.slice(unreadIndex)
+        items.push({
+          type: 'group',
+          group: { userId: group.userId, messages: before },
+          key: `group-${before.map((message) => message.id).join('-')}`,
+        })
+        pushUnreadIfNeeded(firstUnreadMessageId!)
+        items.push({
+          type: 'group',
+          group: { userId: group.userId, messages: after },
+          key: `group-${after.map((message) => message.id).join('-')}`,
+        })
+      } else {
+        pushUnreadIfNeeded(firstMessage.id)
+        items.push({
+          type: 'group',
+          group,
+          key: `group-${group.messages.map((message) => message.id).join('-')}`,
+        })
+      }
     }
     pendingUserMessages = []
   }
@@ -206,6 +281,7 @@ export function buildChatListItems(messages: PoolChatMessage[]): ChatListItem[] 
     if (isSystemChatMessage(message)) {
       flushUserMessages()
       pushDayIfNeeded(message.created_at)
+      pushUnreadIfNeeded(message.id)
       items.push({
         type: 'system',
         message,
@@ -219,6 +295,26 @@ export function buildChatListItems(messages: PoolChatMessage[]): ChatListItem[] 
 
   flushUserMessages()
   return items
+}
+
+/** First message strictly after lastReadAt (ISO), or null. */
+export function findFirstUnreadMessageId(
+  messages: PoolChatMessage[],
+  lastReadAt: string | null,
+  currentUserId: string,
+): string | null {
+  if (!lastReadAt) return null
+  const readMs = Date.parse(lastReadAt)
+  if (Number.isNaN(readMs)) return null
+
+  for (const message of messages) {
+    if (isOptimisticChatMessageId(message.id)) continue
+    if (message.user_id === currentUserId) continue
+    const createdMs = Date.parse(message.created_at)
+    if (Number.isNaN(createdMs)) continue
+    if (createdMs > readMs) return message.id
+  }
+  return null
 }
 
 export function aggregateReactions(
