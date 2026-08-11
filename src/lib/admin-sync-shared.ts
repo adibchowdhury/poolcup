@@ -16,13 +16,25 @@ export type SyncStatusRow = {
 export const SYNC_JOB_RETRY_TARGETS = [
   {
     jobType: 'sync_fixtures',
-    label: 'Sync fixtures',
+    label: 'Sync fixtures (soccer)',
     path: '/api/cron/sync-fixtures',
     supportsEventId: true,
   },
   {
+    jobType: 'sync_baseball',
+    label: 'Sync baseball (season)',
+    path: '/api/cron/sync-baseball',
+    supportsEventId: true,
+  },
+  {
+    jobType: 'sync_baseball_live',
+    label: 'Sync baseball (live scores)',
+    path: '/api/cron/sync-baseball-live',
+    supportsEventId: false,
+  },
+  {
     jobType: 'sync_scores',
-    label: 'Sync scores (live + final)',
+    label: 'Sync scores (soccer live + final)',
     path: '/api/sync-scores',
     supportsEventId: false,
   },
@@ -48,8 +60,64 @@ export const SYNC_JOB_RETRY_TARGETS = [
 
 export type SyncJobRetryType = (typeof SYNC_JOB_RETRY_TARGETS)[number]['jobType']
 
+export type SyncJobRetryTarget = {
+  jobType: string
+  label: string
+  path: string
+  supportsEventId: boolean
+}
+
+const RETRY_TARGET_BY_TYPE = new Map<string, SyncJobRetryTarget>(
+  SYNC_JOB_RETRY_TARGETS.map((t) => [t.jobType, t]),
+)
+
+export function getSyncJobRetryTarget(
+  jobType: string,
+): SyncJobRetryTarget | undefined {
+  return RETRY_TARGET_BY_TYPE.get(jobType)
+}
+
+/** Humanize unknown job_type keys for the admin dashboard. */
+export function formatSyncJobTypeLabel(jobType: string): string {
+  const known = RETRY_TARGET_BY_TYPE.get(jobType)
+  if (known) return known.label
+  return jobType
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+/**
+ * Ordered section keys: known retry targets first (stable order), then any
+ * extra job types returned by get_sync_status (future sports / ad-hoc jobs).
+ */
+export function orderSyncJobTypesForDisplay(
+  jobTypesFromStatus: Iterable<string>,
+): string[] {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+
+  for (const target of SYNC_JOB_RETRY_TARGETS) {
+    seen.add(target.jobType)
+    ordered.push(target.jobType)
+  }
+
+  const extras = [...jobTypesFromStatus]
+    .filter((t) => t && !seen.has(t))
+    .sort((a, b) => a.localeCompare(b))
+
+  for (const extra of extras) {
+    ordered.push(extra)
+  }
+
+  return ordered
+}
+
 export function isStaleFixtureSync(row: SyncStatusRow, nowMs = Date.now()): boolean {
-  if (row.job_type !== 'sync_fixtures') return false
+  if (row.job_type !== 'sync_fixtures' && row.job_type !== 'sync_baseball') {
+    return false
+  }
   const stamp =
     row.last_success_at ?? row.last_fixture_sync_at ?? row.last_finished_at
   if (!stamp) return true

@@ -1,18 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveCurrentEventId } from '@/src/lib/current-event'
 import { getUpcomingHorizonEndIso } from '@/src/lib/upcoming-match-horizon'
+import {
+  FEATURED_LIVE_STATUS_SHORTS,
+  formatMatchStatusLabel,
+} from '@/src/lib/match-status-display'
+
+export { FEATURED_LIVE_STATUS_SHORTS } from '@/src/lib/match-status-display'
 
 export const FEATURED_COMPETITION_LABEL = 'FIFA World Cup 2026'
-
-export const FEATURED_LIVE_STATUS_SHORTS = [
-  '1H',
-  'HT',
-  '2H',
-  'ET',
-  'BT',
-  'P',
-  'LIVE',
-] as const
 
 const LIVE_MAX_AGE_MINUTES = 210
 
@@ -63,26 +59,9 @@ export function formatFeaturedMatchStatusLabel(
   statusShort: string | null,
   elapsedMinute: number | null,
   isFinal: boolean,
+  sport?: string | null,
 ): string {
-  const status = (statusShort ?? '').trim().toUpperCase()
-
-  if (status === 'PST') return 'Postponed — no result'
-  if (status === 'CANC') return 'Cancelled — no points'
-  if (status === 'ABD') return 'Abandoned — voided'
-  if (status === 'AWD') return 'Awarded — no points'
-  if (status === 'WO') return 'Walkover — no points'
-
-  if (isFinal || status === 'FT' || status === 'AET' || status === 'PEN') {
-    return 'Full time'
-  }
-  if (status === 'HT') return 'Halftime'
-  if (status === '1H' || status === '2H') {
-    return elapsedMinute != null ? `${elapsedMinute}'` : status
-  }
-  if (status === 'NS') return 'Upcoming'
-  if (elapsedMinute != null) return `${elapsedMinute}'`
-  if (status === 'LIVE') return 'Live'
-  return status || ''
+  return formatMatchStatusLabel(statusShort, elapsedMinute, isFinal, sport)
 }
 
 export function formatFeaturedKickoffLocal(iso: string): string {

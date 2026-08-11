@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type SyncJobType =
   | 'sync_fixtures'
+  | 'sync_baseball'
+  | 'sync_baseball_live'
   | 'sync_scores'
   | 'reconcile_stale_matches'
   | 'sync_knockout_round_rows'

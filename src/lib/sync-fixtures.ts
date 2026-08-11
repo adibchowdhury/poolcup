@@ -5,6 +5,7 @@ import {
   type ApiFootballFixture,
 } from '@/src/lib/api-football'
 import { mapProviderRound } from '@/src/lib/api-football-round-map'
+import { ensureOfficialPoolsBestEffort } from '@/src/lib/ensure-official-pools'
 import { isValidApiFootballFixtureId } from '@/src/lib/match-updater-guards'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
@@ -48,6 +49,7 @@ export type SyncFixturesSummary = {
   eventsFailed: number
   fixturesProcessed: number
   fixturesChanged: number
+  officialPoolsCreated: number | null
   results: EventFixtureSyncResult[]
 }
 
@@ -374,12 +376,18 @@ export async function syncFixturesFromApiFootball(
     }
   }
 
+  const official = await ensureOfficialPoolsBestEffort(
+    supabase,
+    'sync-fixtures',
+  )
+
   return {
     eventsConsidered: events.length,
     eventsSynced: results.filter((r) => r.status === 'success').length,
     eventsFailed: results.filter((r) => r.status === 'error').length,
     fixturesProcessed: results.reduce((n, r) => n + r.processed, 0),
     fixturesChanged: results.reduce((n, r) => n + r.upserted, 0),
+    officialPoolsCreated: official.created,
     results,
   }
 }

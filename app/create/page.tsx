@@ -59,28 +59,12 @@ const SPORTS: {
   id: SportId
   label: string
   imageSrc: string
-  available: boolean
 }[] = [
-  { id: 'soccer', label: 'Soccer/Fútbol', imageSrc: '/sports/soccer.png', available: true },
-  {
-    id: 'basketball',
-    label: 'Basketball',
-    imageSrc: '/sports/basketball.png',
-    available: false,
-  },
-  {
-    id: 'baseball',
-    label: 'Baseball',
-    imageSrc: '/sports/baseball.png',
-    available: false,
-  },
-  {
-    id: 'football',
-    label: 'Football',
-    imageSrc: '/sports/football.png',
-    available: false,
-  },
-  { id: 'hockey', label: 'Hockey', imageSrc: '/sports/hockey.png', available: false },
+  { id: 'soccer', label: 'Soccer/Fútbol', imageSrc: '/sports/soccer.png' },
+  { id: 'basketball', label: 'Basketball', imageSrc: '/sports/basketball.png' },
+  { id: 'baseball', label: 'Baseball', imageSrc: '/sports/baseball.png' },
+  { id: 'football', label: 'Football', imageSrc: '/sports/football.png' },
+  { id: 'hockey', label: 'Hockey', imageSrc: '/sports/hockey.png' },
 ]
 
 type CreatedPool = {
@@ -247,8 +231,7 @@ export default function CreatePoolPage() {
     }
   }, [authLoading, user, router])
 
-  function handleSportSelect(sport: SportId, available: boolean) {
-    if (!available) return
+  function handleSportSelect(sport: SportId) {
     setSelectedSport(sport)
     setSelectedEventId(null)
     setError(null)
@@ -521,23 +504,13 @@ export default function CreatePoolPage() {
                   <button
                     key={sport.id}
                     type="button"
-                    disabled={!sport.available}
-                    onClick={() =>
-                      handleSportSelect(sport.id, sport.available)
-                    }
+                    onClick={() => handleSportSelect(sport.id)}
                     className={cn(
-                      'relative flex flex-col items-center gap-3 rounded-xl border px-4 py-6 text-center transition-all',
+                      'relative flex flex-col items-center gap-3 rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-6 text-center transition-all',
+                      'cursor-pointer text-[#f0f4f8] hover:border-[#00e676]/50 hover:bg-[#00e676]/5',
                       FOCUS_RING_CLASS,
-                      sport.available
-                        ? 'cursor-pointer border-[#1e2d3d] bg-[#080b0f] text-[#f0f4f8] hover:border-[#00e676]/50 hover:bg-[#00e676]/5'
-                        : 'cursor-not-allowed border-[#1e2d3d]/60 bg-[#080b0f]/60 text-[#5a7080] opacity-60',
                     )}
                   >
-                    {!sport.available && (
-                      <span className="absolute right-2 top-2 rounded-full border border-[#1e2d3d] bg-[#111a27] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5a7080]">
-                        Coming soon
-                      </span>
-                    )}
                     <Image
                       src={sport.imageSrc}
                       alt={sport.label}
@@ -587,7 +560,8 @@ export default function CreatePoolPage() {
                 ) : eventsForSelectedSport.length === 0 ? (
                   <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-8 text-center opacity-60">
                     <p className="text-sm text-[#5a7080]">
-                      No active events right now.
+                      No active {formatSportLabel(selectedSport)} events right
+                      now — check back soon.
                     </p>
                   </div>
                 ) : (

@@ -14,6 +14,7 @@ import {
   formatFeaturedKickoffLocal,
   formatFeaturedMatchRoundLabel,
 } from '@/src/lib/featured-match'
+import { matchStartLabel, matchStartLabelLower } from '@/src/lib/match-status-display'
 import {
   fetchGlobalActivityFeed,
   type BiggestCommunityClimb,
@@ -98,8 +99,8 @@ export function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
       </div>
       {!match.isLocked ? (
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          Kickoff {formatFeaturedKickoffLocal(match.kickoffAt)}. Crowd % after
-          kickoff.
+          {matchStartLabel(null)} {formatFeaturedKickoffLocal(match.kickoffAt)}.
+          Crowd % after {matchStartLabelLower(null)}.
         </p>
       ) : match.confidenceLabel ? (
         <p className="mt-1.5 text-[11px] text-muted-foreground">

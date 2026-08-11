@@ -22,6 +22,7 @@ import { supabase } from '@/src/lib/supabase'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
+import { matchStartLabelLower } from '@/src/lib/match-status-display'
 
 type MatchRoomPicksPanelProps = {
   poolId: string
@@ -205,12 +206,15 @@ export function MatchRoomLockTally({
   poolId,
   matchId,
   memberCount,
+  sport,
 }: {
   poolId: string
   matchId: string
   memberCount: number
+  sport?: string | null
 }) {
   const [lockedCount, setLockedCount] = useState<number | null>(null)
+  const startLower = matchStartLabelLower(sport)
 
   useEffect(() => {
     let cancelled = false
@@ -246,7 +250,7 @@ export function MatchRoomLockTally({
         Pool Picks
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Predictions lock at kickoff. Picks stay hidden until then.
+        Predictions lock at {startLower}. Picks stay hidden until then.
       </p>
       <p className="mt-4 font-mono text-2xl font-bold tabular-nums text-primary">
         {lockedCount == null ? '—' : lockedCount}

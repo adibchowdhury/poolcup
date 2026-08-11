@@ -87,6 +87,10 @@ function computeLiveMatchClockDisplay(
   const status = (statusShort ?? '').trim().toUpperCase()
   if (!status) return null
 
+  // Baseball (and other non-minute sports): no soccer-style running clock.
+  // Callers fall back to formatFeaturedMatchStatusLabel (innings / Live).
+  if (/^IN[0-9]$/.test(status)) return null
+
   if (status === 'HT') return 'Halftime'
   if (status === 'P') return 'Penalties'
 

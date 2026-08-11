@@ -26,6 +26,7 @@ import {
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
 } from '@/src/lib/featured-match'
+import { matchFinalLabel } from '@/src/lib/match-status-display'
 import type { GlobalMatchPhase } from '@/src/lib/global-match-phase'
 import { getVoidMatchStatusLabel } from '@/src/lib/match-void-status'
 import type {
@@ -129,10 +130,12 @@ function MatchStatusPill({
   phase,
   liveClockLabel,
   voidLabel,
+  finalLabel,
 }: {
   phase: GlobalMatchPhase
   liveClockLabel: string | null
   voidLabel: string | null
+  finalLabel: string
 }) {
   if (phase === 'void') {
     return (
@@ -159,7 +162,7 @@ function MatchStatusPill({
   if (phase === 'final') {
     return (
       <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        Full time
+        {finalLabel}
       </span>
     )
   }
@@ -203,6 +206,7 @@ export function GlobalMatchDetailView({
   const score1 = match.resultTeam1 ?? 0
   const score2 = match.resultTeam2 ?? 0
   const showLiveScore = phase === 'live' || phase === 'final'
+  const sport = eventInfo?.sport ?? null
   const voidLabel = getVoidMatchStatusLabel(match.statusShort)
   const liveClockLabel =
     phase === 'live'
@@ -210,8 +214,10 @@ export function GlobalMatchDetailView({
           match.statusShort,
           match.elapsedMinute,
           false,
+          sport,
         )
       : null
+  const finalLabel = matchFinalLabel(sport)
   const actualAdvancedTeamName =
     match.advancingTeam === 1
       ? match.team1Name
@@ -220,10 +226,8 @@ export function GlobalMatchDetailView({
         : null
   const roundLabel = formatFeaturedMatchRoundLabel(match.round, match.groupName)
   const eventName = eventInfo?.name ?? null
-  const sportLabel = eventInfo?.sport
-    ? sportDisplayLabel(eventInfo.sport)
-    : null
-  const sportBadge = eventInfo?.sport ? sportIconPng(eventInfo.sport) : null
+  const sportLabel = sport ? sportDisplayLabel(sport) : null
+  const sportBadge = sport ? sportIconPng(sport) : null
 
   async function handleShare() {
     const url =
@@ -360,6 +364,7 @@ export function GlobalMatchDetailView({
                   phase={phase}
                   liveClockLabel={liveClockLabel}
                   voidLabel={voidLabel}
+                  finalLabel={finalLabel}
                 />
                 {eventName ? (
                   <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -512,6 +517,7 @@ export function GlobalMatchDetailView({
             team2Logo={match.team2Logo}
             lockedAt={match.lockedAt}
             phase={phase}
+            sport={sport}
             isLoggedIn={isLoggedIn}
             consensus={consensus}
             commonScores={commonScores}

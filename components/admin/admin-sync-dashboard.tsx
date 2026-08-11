@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { AlertTriangle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  formatSyncJobTypeLabel,
+  getSyncJobRetryTarget,
   isStaleFixtureSync,
-  SYNC_JOB_RETRY_TARGETS,
+  orderSyncJobTypesForDisplay,
   type SyncStatusRow,
 } from '@/src/lib/admin-sync-shared'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -78,6 +80,11 @@ export function AdminSyncDashboard({
     return map
   }, [rows])
 
+  const sectionJobTypes = useMemo(
+    () => orderSyncJobTypesForDisplay(grouped.keys()),
+    [grouped],
+  )
+
   async function retryJob(jobType: string, eventId: string | null) {
     const key = `${jobType}:${eventId ?? 'all'}`
     setRetryingKey(key)
@@ -128,7 +135,7 @@ export function AdminSyncDashboard({
             Sync status
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Soccer ingestion jobs (API-Football). Admins only.
+            Ingestion jobs (all sports). Admins only.
           </p>
         </div>
         <Button
@@ -176,27 +183,32 @@ export function AdminSyncDashboard({
         </p>
       ) : (
         <div className="space-y-6">
-          {SYNC_JOB_RETRY_TARGETS.map((target) => {
-            const jobRows = grouped.get(target.jobType) ?? []
+          {sectionJobTypes.map((jobType) => {
+            const target = getSyncJobRetryTarget(jobType)
+            const jobRows = grouped.get(jobType) ?? []
+            const label = formatSyncJobTypeLabel(jobType)
+            const canRetry = Boolean(target)
+            const supportsEventId = target?.supportsEventId ?? false
+
             return (
               <section
-                key={target.jobType}
+                key={jobType}
                 className="rounded-2xl border border-border bg-card/40 p-4 sm:p-5"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-display text-lg tracking-wide text-foreground">
-                    {target.label}
+                    {label}
                   </h2>
-                  {!target.supportsEventId || jobRows.length === 0 ? (
+                  {canRetry && (!supportsEventId || jobRows.length === 0) ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className={cn('gap-1.5', FOCUS_VISIBLE_RING)}
-                      disabled={retryingKey === `${target.jobType}:all`}
-                      onClick={() => void retryJob(target.jobType, null)}
+                      disabled={retryingKey === `${jobType}:all`}
+                      onClick={() => void retryJob(jobType, null)}
                     >
-                      {retryingKey === `${target.jobType}:all` ? (
+                      {retryingKey === `${jobType}:all` ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <RefreshCw className="h-3.5 w-3.5" />
@@ -248,7 +260,7 @@ export function AdminSyncDashboard({
                               </p>
                             )}
                           </div>
-                          {target.supportsEventId ? (
+                          {canRetry && supportsEventId ? (
                             <Button
                               type="button"
                               size="sm"
@@ -259,7 +271,7 @@ export function AdminSyncDashboard({
                               )}
                               disabled={retryingKey === key}
                               onClick={() =>
-                                void retryJob(target.jobType, row.event_id)
+                                void retryJob(jobType, row.event_id)
                               }
                             >
                               {retryingKey === key ? (

@@ -32,6 +32,7 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
+import { matchStartLabelLower } from '@/src/lib/match-status-display'
 
 export type WritableScorePool = {
   poolId: string
@@ -49,6 +50,7 @@ type MatchHubPanelsProps = {
   team2Logo: string | null
   lockedAt: string | null
   phase: GlobalMatchPhase
+  sport?: string | null
   isLoggedIn: boolean
   consensus: MatchConsensus | null
   commonScores: MatchCommonScore[]
@@ -197,6 +199,7 @@ function YourPredictionCard({
   team2Name,
   lockedAt,
   phase,
+  sport,
   myPredictions,
   myPickPoints,
   writablePools,
@@ -207,6 +210,7 @@ function YourPredictionCard({
   team2Name: string
   lockedAt: string | null
   phase: GlobalMatchPhase
+  sport?: string | null
   myPredictions: MyMatchPredictions
   myPickPoints: number | null
   writablePools: WritableScorePool[]
@@ -321,7 +325,7 @@ function YourPredictionCard({
               size="sm"
               onClick={() => setEditing(true)}
             >
-              Edit until kickoff
+              Edit until {matchStartLabelLower(sport)}
             </Button>
           ) : null}
         </div>
@@ -393,14 +397,17 @@ function YourPredictionCard({
 function CompetitionPanel({
   pools,
   phase,
+  sport,
 }: {
   pools: MatchRelatedPool[]
   phase: GlobalMatchPhase
+  sport?: string | null
 }) {
   if (pools.length === 0) return null
 
   // TEMPORARY — mock preview always shows ranks so the design is visible.
   const afterKickoff = USE_MOCK_HUB || phase !== 'upcoming'
+  const startLower = matchStartLabelLower(sport)
   const yours = pools.filter((pool) => pool.isYours)
   const others = pools.filter((pool) => !pool.isYours)
 
@@ -451,7 +458,7 @@ function CompetitionPanel({
                       )
                     ) : (
                       <p className="max-w-[7.5rem] text-[11px] leading-snug text-muted-foreground">
-                        Positions update after kickoff
+                        Positions update after {startLower}
                       </p>
                     )}
                   </div>
@@ -607,10 +614,12 @@ function FriendsPredictionsSection({
   friends,
   postLock,
   isLoggedIn,
+  sport,
 }: {
   friends: FriendMatchPrediction[]
   postLock: boolean
   isLoggedIn: boolean
+  sport?: string | null
 }) {
   if (!isLoggedIn) return null
 
@@ -618,7 +627,7 @@ function FriendsPredictionsSection({
     return (
       <SectionShell title="Friends' predictions">
         <p className="text-sm text-muted-foreground">
-          Friends&apos; picks are revealed after kickoff.
+          Friends&apos; picks are revealed after {matchStartLabelLower(sport)}.
         </p>
       </SectionShell>
     )
@@ -753,6 +762,7 @@ export function MatchHubPanels({
   team2Logo,
   lockedAt,
   phase,
+  sport,
   isLoggedIn,
   consensus,
   commonScores,
@@ -776,6 +786,7 @@ export function MatchHubPanels({
   const showSquads =
     rostersLoading || team1Players.length > 0 || team2Players.length > 0
   const postLock = USE_MOCK_HUB || isMatchLocked(lockedAt)
+  const startLower = matchStartLabelLower(sport)
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -795,6 +806,7 @@ export function MatchHubPanels({
           team2Name={team2Name}
           lockedAt={lockedAt}
           phase={phase}
+          sport={sport}
           myPredictions={myPredictions}
           myPickPoints={myPickPoints}
           writablePools={writablePools}
@@ -824,7 +836,7 @@ export function MatchHubPanels({
       ) : (
         <SectionShell title="PoolCup consensus">
           <p className="text-sm text-muted-foreground">
-            Community prediction split is revealed after kickoff.
+            Community prediction split is revealed after {startLower}.
           </p>
         </SectionShell>
       )}
@@ -855,7 +867,7 @@ export function MatchHubPanels({
       ) : (
         <SectionShell title="Most predicted scorelines">
           <p className="text-sm text-muted-foreground">
-            Popular scorelines are revealed after kickoff.
+            Popular scorelines are revealed after {startLower}.
           </p>
         </SectionShell>
       )}
@@ -864,6 +876,7 @@ export function MatchHubPanels({
         friends={friends}
         postLock={postLock}
         isLoggedIn={isLoggedIn || USE_MOCK_HUB}
+        sport={sport}
       />
 
       <PoolDistributionsSection
@@ -873,7 +886,7 @@ export function MatchHubPanels({
         postLock={postLock}
       />
 
-      <CompetitionPanel pools={competitionPools} phase={phase} />
+      <CompetitionPanel pools={competitionPools} phase={phase} sport={sport} />
 
       <HeadToHeadSection
         team1Name={team1Name}
