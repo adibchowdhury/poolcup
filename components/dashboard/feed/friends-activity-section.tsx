@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Target } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import {
   DashboardFeedSection,
@@ -11,7 +11,7 @@ import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
 import {
-  getFriendActivity,
+  getFriendActivityFeed,
   type FriendActivityRow,
 } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
@@ -39,6 +39,9 @@ function startOfLocalDay(date: Date): Date {
 function activityActionText(item: FriendActivityRow): string {
   if (item.activity_type === 'badge') {
     return `earned the ${item.title?.trim() || 'achievement'} badge`
+  }
+  if (item.activity_type === 'prediction_result') {
+    return item.title?.trim() || 'locked in a prediction result'
   }
   return `joined ${item.title?.trim() || 'a pool'}`
 }
@@ -121,17 +124,27 @@ function ActivityThumbnail({ item }: { item: FriendActivityRow }) {
     )
   }
 
+  if (item.activity_type === 'prediction_result') {
+    return (
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-primary/10">
+        <Target className="h-4 w-4 text-primary" aria-hidden />
+      </div>
+    )
+  }
+
   return null
 }
 
 function FriendsActivityRow({ item }: { item: FriendActivityRow }) {
   const name = item.actor_name?.trim() || 'PoolCup player'
   const action = activityActionText(item)
+  const detail = item.detail?.trim()
 
   return (
     <li className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
       <UserProfileLink
         userId={item.actor_id}
+        username={item.actor_username}
         ariaLabel={`${name}'s profile`}
         className="shrink-0"
       >
@@ -147,22 +160,30 @@ function FriendsActivityRow({ item }: { item: FriendActivityRow }) {
         />
       </UserProfileLink>
 
-      <p className="min-w-0 flex-1 truncate text-sm leading-snug">
-        <UserProfileLink
-          userId={item.actor_id}
-          className="rounded-sm font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          {name}
-        </UserProfileLink>{' '}
-        <span className="font-normal text-muted-foreground">{action}</span>
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm leading-snug">
+          <UserProfileLink
+            userId={item.actor_id}
+            username={item.actor_username}
+            className="rounded-sm font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            {name}
+          </UserProfileLink>{' '}
+          <span className="font-normal text-muted-foreground">{action}</span>
+        </p>
+        {detail ? (
+          <p className="truncate text-[11px] text-muted-foreground/80">
+            {detail}
+          </p>
+        ) : null}
+      </div>
 
       <ActivityThumbnail item={item} />
     </li>
   )
 }
 
-/** Dashboard feed: accepted friends' badge earns + pool joins. */
+/** Dashboard feed: friends' badges, pool joins, and post-lock prediction results. */
 export function FriendsActivitySection() {
   const [rows, setRows] = useState<FriendActivityRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,9 +192,9 @@ export function FriendsActivitySection() {
     let cancelled = false
     setLoading(true)
 
-    void getFriendActivity(supabase, FETCH_LIMIT).then((next) => {
+    void getFriendActivityFeed(supabase, FETCH_LIMIT, 0).then((result) => {
       if (cancelled) return
-      setRows(next)
+      setRows(result.rows)
       setLoading(false)
     })
 

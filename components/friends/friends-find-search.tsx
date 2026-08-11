@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
 import { resolveAvatarFilename } from '@/src/lib/avatars'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   acceptFriendRequest,
   removeFriend,
@@ -33,6 +34,7 @@ import {
   type UserSearchRow,
 } from '@/src/lib/friendships'
 import { emitFriendRequestsChanged } from '@/hooks/use-friend-request-count'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -58,10 +60,12 @@ export const FriendsFindSearch = forwardRef<
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const requestSeqRef = useRef(0)
+  const searchTrackedRef = useRef('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserSearchRow[]>([])
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   useImperativeHandle(ref, () => ({
@@ -77,21 +81,38 @@ export const FriendsFindSearch = forwardRef<
       setResults([])
       setSearching(false)
       setHasSearched(false)
+      setSearchError(null)
       return
     }
 
     const seq = ++requestSeqRef.current
     setSearching(true)
+    setSearchError(null)
     try {
-      const rows = await searchUsers(supabase, trimmed)
+      const { users, error } = await searchUsers(supabase, trimmed)
       if (seq !== requestSeqRef.current) return
-      setResults(rows)
+      if (error && users.length === 0) {
+        setResults([])
+        setSearchError(error)
+        setHasSearched(true)
+        return
+      }
+      setResults(users)
       setHasSearched(true)
+      if (trimmed !== searchTrackedRef.current) {
+        searchTrackedRef.current = trimmed
+        capturePostHog('friend_search', {
+          query: trimmed,
+          query_length: trimmed.length,
+          result_count: users.length,
+        })
+      }
     } catch (error) {
       console.error('Friend search failed:', error)
       if (seq !== requestSeqRef.current) return
       setResults([])
       setHasSearched(true)
+      setSearchError('Search failed')
       toast.error('Search failed — try again')
     } finally {
       if (seq === requestSeqRef.current) setSearching(false)
@@ -104,6 +125,7 @@ export const FriendsFindSearch = forwardRef<
       setResults([])
       setSearching(false)
       setHasSearched(false)
+      setSearchError(null)
       return
     }
 
@@ -131,6 +153,11 @@ export const FriendsFindSearch = forwardRef<
     if (!result.ok) {
       updateRowStatus(userId, status)
       toast.error('Could not send friend request')
+      return
+    }
+    if (result.result === 'blocked') {
+      updateRowStatus(userId, status)
+      toast.error('You can’t add this user')
       return
     }
     const mapped = statusAfterSend(result.result)
@@ -197,7 +224,8 @@ export const FriendsFindSearch = forwardRef<
           Find friends
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Search by display name (at least {MIN_QUERY_CHARS} characters).
+          Search by username or display name (at least {MIN_QUERY_CHARS}{' '}
+          characters).
         </p>
       </div>
 
@@ -212,10 +240,13 @@ export const FriendsFindSearch = forwardRef<
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Find friends by name…"
+          placeholder="Search by username or name…"
           autoComplete="off"
           spellCheck={false}
-          className="h-11 border-border/80 bg-card/80 pl-9 pr-10"
+          className={cn(
+            'h-11 border-border/80 bg-card/80 pl-9 pr-10',
+            FOCUS_VISIBLE_RING,
+          )}
           aria-describedby={`${inputId}-hint`}
         />
         {searching ? (
@@ -226,18 +257,32 @@ export const FriendsFindSearch = forwardRef<
         ) : null}
       </div>
       <p id={`${inputId}-hint`} className="sr-only">
-        Results update as you type after a short pause.
+        Results update as you type after a short pause. Matches username and
+        display name.
       </p>
 
       {showResultsPanel ? (
         <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/60 shadow-[0_10px_28px_rgba(0,0,0,0.22)]">
-          {searching && results.length === 0 ? (
+          {searching && results.length === 0 && !searchError ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
               <Loader2
                 className="h-4 w-4 animate-spin text-primary"
                 aria-hidden
               />
               Searching…
+            </div>
+          ) : searchError ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm text-destructive">Search failed</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn('mt-3', FOCUS_VISIBLE_RING)}
+                onClick={() => void runSearch(query)}
+              >
+                Try again
+              </Button>
             </div>
           ) : hasSearched && results.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
@@ -259,6 +304,7 @@ export const FriendsFindSearch = forwardRef<
                       <div className="flex min-w-0 items-center gap-3">
                         <UserProfileLink
                           userId={row.user_id}
+                          username={row.username}
                           ariaLabel={`${name}'s profile`}
                           className="shrink-0"
                         >
@@ -268,12 +314,20 @@ export const FriendsFindSearch = forwardRef<
                             className="h-10 w-10"
                           />
                         </UserProfileLink>
-                        <UserProfileLink
-                          userId={row.user_id}
-                          className="min-w-0 truncate text-sm font-semibold text-foreground hover:underline"
-                        >
-                          {name}
-                        </UserProfileLink>
+                        <div className="min-w-0">
+                          <UserProfileLink
+                            userId={row.user_id}
+                            username={row.username}
+                            className="block truncate text-sm font-semibold text-foreground hover:underline"
+                          >
+                            {name}
+                          </UserProfileLink>
+                          {row.username ? (
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              @{row.username}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -282,7 +336,7 @@ export const FriendsFindSearch = forwardRef<
                         type="button"
                         size="sm"
                         disabled={busy}
-                        className="h-8 shrink-0 gap-1"
+                        className={cn('h-8 shrink-0 gap-1', FOCUS_VISIBLE_RING)}
                         onClick={() => void handleAdd(row.user_id, status)}
                       >
                         {busy ? (
@@ -303,7 +357,10 @@ export const FriendsFindSearch = forwardRef<
                         size="sm"
                         variant="outline"
                         disabled={busy}
-                        className="h-8 shrink-0 gap-1 text-muted-foreground"
+                        className={cn(
+                          'h-8 shrink-0 gap-1 text-muted-foreground',
+                          FOCUS_VISIBLE_RING,
+                        )}
                         title="Cancel request"
                         onClick={() =>
                           void handleCancelRequest(row.user_id, status)
@@ -326,7 +383,7 @@ export const FriendsFindSearch = forwardRef<
                         type="button"
                         size="sm"
                         disabled={busy}
-                        className="h-8 shrink-0 gap-1"
+                        className={cn('h-8 shrink-0 gap-1', FOCUS_VISIBLE_RING)}
                         onClick={() => void handleAccept(row.user_id, status)}
                       >
                         {busy ? (

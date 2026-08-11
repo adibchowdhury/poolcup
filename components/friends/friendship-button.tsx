@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { useAuth } from '@/src/lib/auth-context'
 import {
   acceptFriendRequest,
@@ -66,7 +67,7 @@ export function FriendshipButton({
         size="sm"
         variant="outline"
         disabled
-        className={cn('h-8 min-w-[8.5rem] gap-1.5', className)}
+        className={cn('h-8 min-w-[8.5rem] gap-1.5', FOCUS_VISIBLE_RING, className)}
       >
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
         Loading…
@@ -101,6 +102,11 @@ export function FriendshipButton({
     if (!result.ok) {
       setStatus(previous)
       toast.error('Could not send friend request')
+      return
+    }
+    if (result.result === 'blocked') {
+      setStatus(previous)
+      toast.error('You can’t add this user')
       return
     }
     const mapped = statusAfterSend(result.result)
@@ -160,7 +166,7 @@ export function FriendshipButton({
         size="sm"
         disabled={busy}
         onClick={() => void handleAdd()}
-        className={cn('h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90', className)}
+        className={cn('h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90', FOCUS_VISIBLE_RING, className)}
       >
         {busy ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -180,7 +186,7 @@ export function FriendshipButton({
         variant="outline"
         disabled={busy}
         onClick={() => void handleRemove('Request cancelled')}
-        className={cn('h-8 gap-1.5 text-muted-foreground', className)}
+        className={cn('h-8 gap-1.5 text-muted-foreground', FOCUS_VISIBLE_RING, className)}
         title="Cancel request"
       >
         {busy ? (
@@ -200,7 +206,7 @@ export function FriendshipButton({
         size="sm"
         disabled={busy}
         onClick={() => void handleAccept()}
-        className={cn('h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90', className)}
+        className={cn('h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90', FOCUS_VISIBLE_RING, className)}
       >
         {busy ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -223,6 +229,7 @@ export function FriendshipButton({
           disabled={busy}
           className={cn(
             'h-8 gap-1.5 border-primary/35 bg-primary/10 text-primary hover:bg-primary/15',
+            FOCUS_VISIBLE_RING,
             className,
           )}
         >

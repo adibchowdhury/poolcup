@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FriendshipButton } from '@/components/friends/friendship-button'
+import { UserModerationMenu } from '@/components/friends/user-moderation-menu'
 import { ReportUserButton } from '@/components/profile/report-user-button'
 import { cn } from '@/lib/utils'
 import {
@@ -62,6 +63,7 @@ import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import { sportDisplayLabel, sportIconPng } from '@/src/lib/sport-display'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { getMutualFriendsCount, isUserBlocked } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
 import { xpToLevel } from '@/src/lib/levels'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
@@ -638,6 +640,10 @@ export function ProfileShowcase({
     favoriteSports,
   )
   const [liveUsername, setLiveUsername] = useState<string | null>(username)
+  const [mutualFriendsCount, setMutualFriendsCount] = useState<number | null>(
+    null,
+  )
+  const [viewerBlocked, setViewerBlocked] = useState(false)
   const badgeUnlock = useBadgeUnlockOptional()
   const viewedRef = useRef(false)
 
@@ -698,6 +704,26 @@ export function ProfileShowcase({
       mode: isPublic ? 'public' : 'self',
     })
   }, [active, userId, isPublic, isOwnPublicProfile])
+
+  useEffect(() => {
+    if (!active || !isPublic || isOwnPublicProfile || !userId) {
+      setMutualFriendsCount(null)
+      setViewerBlocked(false)
+      return
+    }
+    let cancelled = false
+    void Promise.all([
+      getMutualFriendsCount(supabase, userId),
+      isUserBlocked(supabase, userId),
+    ]).then(([mutual, blocked]) => {
+      if (cancelled) return
+      setMutualFriendsCount(mutual.count)
+      setViewerBlocked(blocked)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [active, isPublic, isOwnPublicProfile, userId])
 
   useEffect(() => {
     if (!active || !userId) return
@@ -1099,6 +1125,15 @@ export function ProfileShowcase({
                     ? `${liveFriendsCount} friend${liveFriendsCount === 1 ? '' : 's'}`
                     : 'Friends'}
                 </span>
+                {isPublic &&
+                !isOwnPublicProfile &&
+                mutualFriendsCount != null &&
+                mutualFriendsCount > 0 ? (
+                  <span>
+                    {mutualFriendsCount} mutual friend
+                    {mutualFriendsCount === 1 ? '' : 's'}
+                  </span>
+                ) : null}
                 <span>
                   {predictionsMade.toLocaleString()} prediction
                   {predictionsMade === 1 ? '' : 's'}
@@ -1139,13 +1174,28 @@ export function ProfileShowcase({
 
           {isPublic && !isOwnPublicProfile ? (
             <div className="mt-5 flex flex-wrap items-center gap-2">
-              <FriendshipButton
-                profileUserId={userId}
-                onAction={(action) => {
-                  capturePostHog('friend_action', {
-                    action,
-                    profile_user_id: userId,
-                  })
+              {viewerBlocked ? (
+                <span className="text-xs text-muted-foreground">
+                  You’ve blocked this user
+                </span>
+              ) : (
+                <FriendshipButton
+                  profileUserId={userId}
+                  onAction={(action) => {
+                    capturePostHog('friend_action', {
+                      action,
+                      profile_user_id: userId,
+                    })
+                  }}
+                />
+              )}
+              <UserModerationMenu
+                targetUserId={userId}
+                onBlockedChange={(blocked) => setViewerBlocked(blocked)}
+                onBlocked={() => {
+                  setLiveFriendsCount((prev) =>
+                    prev != null && prev > 0 ? prev - 1 : prev,
+                  )
                 }}
               />
               <ReportUserButton profileUserId={userId} />

@@ -329,7 +329,7 @@ export function ChatsPageView({
     ])
     setPoolItems(pools)
     setDmItems(dms)
-    setFriends(friendRows)
+    setFriends(friendRows.friends)
     setLoading(false)
   }, [userId])
 

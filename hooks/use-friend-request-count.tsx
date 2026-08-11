@@ -52,7 +52,7 @@ function FriendRequestCountProviderContent({
       return
     }
     const incoming = await getIncomingFriendRequests(supabase)
-    setCount(incoming.length)
+    setCount(incoming.requests.length)
   }, [user?.id])
 
   const adjustCount = useCallback((delta: number) => {
