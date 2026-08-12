@@ -22,6 +22,7 @@ import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
+import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -706,6 +707,7 @@ async function runReconcile(): Promise<{
   let stillLive = 0
   let alerted = 0
   const errors: ReconcileError[] = []
+  const scoredMatchIds: string[] = []
 
   for (const match of candidates) {
     const label = `${match.team1_name} v ${match.team2_name}`
@@ -854,6 +856,7 @@ async function runReconcile(): Promise<{
       )
 
       finalized += 1
+      scoredMatchIds.push(match.id)
       const score = `${update.result_team1}-${update.result_team2}`
       try {
         await sendOpsNtfy(
@@ -905,6 +908,7 @@ async function runReconcile(): Promise<{
       }
 
       finalized += 1
+      scoredMatchIds.push(match.id)
       continue
     }
 
@@ -944,6 +948,7 @@ async function runReconcile(): Promise<{
       }
 
       finalized += 1
+      scoredMatchIds.push(match.id)
       continue
     }
 
@@ -1023,6 +1028,13 @@ async function runReconcile(): Promise<{
 
   if (finalized > 0 || finalReverify.corrected > 0) {
     await tryRefreshMatchCrowdPicks(supabase, 'reconcile-stale-matches')
+  }
+  if (scoredMatchIds.length > 0) {
+    await tryNotifyPredictionScoredBatch(
+      supabase,
+      scoredMatchIds,
+      'reconcile-stale-matches',
+    )
   }
 
   return {

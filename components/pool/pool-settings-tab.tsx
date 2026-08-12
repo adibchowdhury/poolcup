@@ -499,6 +499,15 @@ export function PoolSettingsTab({
       setDraftAnnouncement('')
       onManagedAnnouncementChange?.(result.announcement)
       toast.success('Announcement posted')
+      void fetch('/api/notifications/notify-announcement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          poolId,
+          announcementId: result.announcement.id,
+          message: result.announcement.message,
+        }),
+      }).catch(() => {})
     } finally {
       setPostingAnnouncement(false)
     }

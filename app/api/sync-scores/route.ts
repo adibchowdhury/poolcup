@@ -18,6 +18,7 @@ import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
+import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -170,6 +171,7 @@ async function runSync(): Promise<{
   let matchesUpdated = 0
   let matchesSkipped = invalidFixtureSkipped
   let pointsRecalculated = 0
+  const scoredMatchIds: string[] = []
   const errors: SyncError[] = []
   const apiMissingAlerts: string[] = []
 
@@ -315,6 +317,7 @@ async function runSync(): Promise<{
         })
       } else {
         pointsRecalculated += 1
+        scoredMatchIds.push(match.id)
         await tryPostMatchMoments(supabase, match.id, 'sync-scores')
         await tryAwardPredictionXp(supabase, match.id, 'sync-scores')
       }
@@ -333,6 +336,11 @@ async function runSync(): Promise<{
 
   if (pointsRecalculated > 0) {
     await tryRefreshMatchCrowdPicks(supabase, 'sync-scores')
+    await tryNotifyPredictionScoredBatch(
+      supabase,
+      scoredMatchIds,
+      'sync-scores',
+    )
   }
 
   return {

@@ -217,6 +217,15 @@ export default function JoinPoolPage() {
     }
 
     void awardClientXp({ sourceType: 'pool_join', sourceId: pool.id })
+    void fetch('/api/notifications/notify-pool-join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        poolId: pool.id,
+        inviteCode: pool.invite_code,
+        poolName: pool.name,
+      }),
+    }).catch(() => {})
     const refParam =
       typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('ref')

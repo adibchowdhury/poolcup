@@ -306,6 +306,25 @@ export function DashboardAppShell({
 
                   <div className="space-y-2">
                     <h3 className="font-display text-xl tracking-wide">
+                      Notifications
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Choose which updates appear in your notification center.
+                    </p>
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link
+                        href="/settings/notifications"
+                        onClick={() => setSettingsOpen(false)}
+                      >
+                        Notification preferences
+                      </Link>
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <h3 className="font-display text-xl tracking-wide">
                       Account email
                     </h3>
                     <p className="text-sm text-muted-foreground">

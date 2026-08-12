@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { levelFromXp } from '@/src/lib/levels'
+import { tryNotifyLevelUp } from '@/src/lib/notify-user'
 
 export const XP_ACTION_AMOUNTS = {
   prediction_made: 5,
@@ -99,6 +100,7 @@ export async function refreshHighestLevel(
   const next = Math.max(current, level)
   if (next > current) {
     await supabase.from('users').update({ highest_level: next }).eq('id', userId)
+    await tryNotifyLevelUp(supabase, userId, next, 'refreshHighestLevel')
   }
   return next
 }

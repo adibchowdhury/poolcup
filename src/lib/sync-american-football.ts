@@ -23,6 +23,7 @@ import {
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
+import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_AMERICAN_FOOTBALL_PROVIDER = 'api-american-football'
@@ -218,10 +219,11 @@ async function upsertMatchRows(
 async function scoreNewlyFinalGames(
   supabase: SupabaseClient,
   fixtureIds: string[],
-): Promise<{ scored: number; errors: string[] }> {
-  if (fixtureIds.length === 0) return { scored: 0, errors: [] }
+): Promise<{ scored: number; matchIds: string[]; errors: string[] }> {
+  if (fixtureIds.length === 0) return { scored: 0, matchIds: [], errors: [] }
 
   let scored = 0
+  const matchIds: string[] = []
   const errors: string[] = []
 
   for (let i = 0; i < fixtureIds.length; i += LOOKUP_BATCH_SIZE) {
@@ -251,6 +253,7 @@ async function scoreNewlyFinalGames(
             )
           } else {
             scored += 1
+            matchIds.push(match.id)
             await tryAwardPredictionXp(
               supabase,
               match.id,
@@ -262,7 +265,7 @@ async function scoreNewlyFinalGames(
     }
   }
 
-  return { scored, errors }
+  return { scored, matchIds, errors }
 }
 
 export async function listSyncableApiAmericanFootballEvents(
@@ -382,6 +385,11 @@ async function syncOneAmericanFootballEvent(
         if (scored.scored > 0) {
           await tryRefreshMatchCrowdPicks(
             supabase,
+            'sync-american-football:batch',
+          )
+          await tryNotifyPredictionScoredBatch(
+            supabase,
+            scored.matchIds,
             'sync-american-football:batch',
           )
         }
@@ -609,6 +617,7 @@ export async function syncAmericanFootballLiveScores(
   let pointsScored = 0
   let apiMissing = 0
   const errors: string[] = []
+  const scoredMatchIds: string[] = []
 
   for (const match of candidates) {
     const fixtureId = match.fixture_id as string
@@ -713,6 +722,7 @@ export async function syncAmericanFootballLiveScores(
         )
       } else {
         pointsScored += 1
+        scoredMatchIds.push(match.id)
         await tryPostMatchMoments(
           supabase,
           match.id,
@@ -729,6 +739,11 @@ export async function syncAmericanFootballLiveScores(
 
   if (pointsScored > 0) {
     await tryRefreshMatchCrowdPicks(supabase, 'sync-american-football-live')
+    await tryNotifyPredictionScoredBatch(
+      supabase,
+      scoredMatchIds,
+      'sync-american-football-live',
+    )
   }
 
   return {

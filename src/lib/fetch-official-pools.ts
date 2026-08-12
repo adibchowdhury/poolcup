@@ -277,6 +277,11 @@ export async function joinPublicPool(
       void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
         void awardClientXp({ sourceType: 'pool_join', sourceId: poolId })
       })
+      void fetch('/api/notifications/notify-pool-join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ poolId }),
+      }).catch(() => {})
     }
     return { error: null, alreadyMember: false }
   }
