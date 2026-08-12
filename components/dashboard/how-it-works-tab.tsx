@@ -1,6 +1,7 @@
 'use client'
 
-import { Check, Lock, Star, Target, Trophy, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Star, Target, Trophy, Zap } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -10,7 +11,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { PLAYER_LEVEL_TIERS } from '@/src/lib/player-level'
+import { useAuth } from '@/src/lib/auth-context'
+import { MAX_XP_LEVEL, xpForLevel, xpToLevel } from '@/src/lib/levels'
+import { supabase } from '@/src/lib/supabase'
+import { fetchUserXpTotal } from '@/src/lib/xp'
 
 const CLASSIC_GROUP_RULES = [
   'Exact score — 5 points',
@@ -69,7 +73,7 @@ const SCORING_MODES = [
     knockoutRows: CLASSIC_KNOCKOUT_ROWS,
     knockoutKind: 'classic' as const,
     footer:
-      'Picks lock at kickoff. Points are added to your pool total and your cross-pool level.',
+      'Picks lock at kickoff. Points stay in that pool’s leaderboard. XP (a separate currency) is awarded when the match is scored.',
   },
   {
     id: 'winner',
@@ -169,49 +173,22 @@ function WinnerKnockoutPointsTable({
   )
 }
 
-function formatPoints(value: number): string {
-  return value.toLocaleString()
-}
-
-function getLevelProgress(
-  index: number,
-  currentPoints: number,
-): { progressPercent: number; isUnlocked: boolean; isCurrent: boolean } {
-  const level = PLAYER_LEVEL_TIERS[index]!
-  const next = PLAYER_LEVEL_TIERS[index + 1]
-  const isUnlocked = currentPoints >= level.minPoints
-
-  if (!next) {
-    return {
-      progressPercent: isUnlocked ? 100 : 0,
-      isUnlocked,
-      isCurrent: isUnlocked,
-    }
-  }
-
-  if (currentPoints >= next.minPoints) {
-    return { progressPercent: 100, isUnlocked: true, isCurrent: false }
-  }
-
-  if (currentPoints < level.minPoints) {
-    return { progressPercent: 0, isUnlocked: false, isCurrent: false }
-  }
-
-  const span = next.minPoints - level.minPoints
-  const progressPercent =
-    span > 0
-      ? Math.min(100, ((currentPoints - level.minPoints) / span) * 100)
-      : 100
-
-  return { progressPercent, isUnlocked: true, isCurrent: true }
-}
+const XP_MILESTONES = [1, 2, 5, 10, 25, 50] as const
 
 type HowItWorksTabProps = {
-  currentPoints?: number
+  currentXp?: number
 }
 
-export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
-  const totalPoints = Math.max(0, currentPoints)
+export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
+  const { user } = useAuth()
+  const [ledgerXp, setLedgerXp] = useState(Math.max(0, currentXp))
+
+  useEffect(() => {
+    if (!user?.id) return
+    void fetchUserXpTotal(supabase, user.id).then(setLedgerXp)
+  }, [user?.id])
+
+  const level = xpToLevel(ledgerXp)
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-12">
@@ -226,8 +203,9 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
               Each pool uses one scoring style — pick what fits your group
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              You earn points from your predictions — they decide who wins each
-              pool, and your running total across all pools sets your level.
+              You earn pool points from your predictions — they decide who
+              wins each pool. Your PoolCup level is a separate XP total from
+              actions and badges.
             </p>
           </div>
         </div>
@@ -353,78 +331,78 @@ export function HowItWorksTab({ currentPoints = 0 }: HowItWorksTabProps) {
           <Star className="h-5 w-5 text-primary" />
           <div>
             <h2 className="font-display text-2xl tracking-wide text-foreground">
-              Levels &amp; Badges
+              XP, Levels &amp; Badges
             </h2>
             <p className="text-sm text-muted-foreground">
-              Points come from your predictions in every pool (see scoring above).
-              Your total across all pools is your level.
+              XP is recorded on an idempotent ledger (one grant per action).
+              Pool points still decide who wins a pool — they do not set your
+              level. You earn XP from play (predictions, joining/creating
+              pools, friends, chat, daily activity, onboarding) and from
+              unlocking badges. There are {MAX_XP_LEVEL} levels.
             </p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">
-          <h3 className="font-display text-lg tracking-wide text-foreground">
-            All 10 levels
-          </h3>
-          <ul className="mt-3 divide-y divide-border/60">
-            {PLAYER_LEVEL_TIERS.map((level, index) => {
-              const { progressPercent, isUnlocked, isCurrent } = getLevelProgress(
-                index,
-                totalPoints,
-              )
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Your level
+              </p>
+              <p className="mt-0.5 font-display text-4xl tabular-nums text-foreground">
+                {level.level}
+              </p>
+            </div>
+            <p className="font-mono text-sm tabular-nums text-muted-foreground">
+              {ledgerXp.toLocaleString()} XP
+              {level.nextLevelThreshold != null
+                ? ` · ${level.xpToNext.toLocaleString()} to next`
+                : ' · Max'}
+            </p>
+          </div>
+          <div
+            className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-label={`XP progress for Level ${level.level}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={level.progressPct}
+          >
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${level.progressPct}%` }}
+            />
+          </div>
+        </div>
 
+        <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">
+          <h3 className="font-display text-lg tracking-wide text-foreground">
+            Level milestones
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            The curve is quadratic: L2 = 100 XP, L5 = 1,000, L10 = 4,500,
+            L50 = 122,500.
+          </p>
+          <ul className="mt-3 divide-y divide-border/60">
+            {XP_MILESTONES.map((milestone) => {
+              const floor = xpForLevel(milestone)
+              const reached = ledgerXp >= floor
               return (
                 <li
-                  key={level.level}
-                  className={cn(
-                    'flex items-center gap-3 py-2.5 first:pt-0 last:pb-0',
-                    isCurrent && 'rounded-lg bg-primary/5 px-2 -mx-2',
-                  )}
+                  key={milestone}
+                  className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
                 >
-                  <div
+                  <span
                     className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-bold',
-                      isUnlocked
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground',
+                      'text-sm',
+                      reached ? 'text-foreground' : 'text-muted-foreground',
                     )}
                   >
-                    {isUnlocked ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      <Lock className="h-3 w-3" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <p
-                        className={cn(
-                          'truncate',
-                          isCurrent
-                            ? 'font-medium text-foreground'
-                            : 'text-muted-foreground',
-                        )}
-                      >
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {level.level}.
-                        </span>{' '}
-                        {level.title}
-                      </p>
-                      <p className="shrink-0 font-mono text-xs text-muted-foreground">
-                        {formatPoints(level.minPoints)} points
-                      </p>
-                    </div>
-
-                    {isCurrent ? (
-                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
+                    Level {milestone}
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {floor.toLocaleString()} XP
+                  </span>
                 </li>
               )
             })}

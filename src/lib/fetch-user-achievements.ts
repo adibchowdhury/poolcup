@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { achievementBadgeImageSrc } from '@/src/lib/achievement-badge-art'
 import { xpToLevel, type XpLevel } from '@/src/lib/levels'
+import { fetchUserXpTotal } from '@/src/lib/xp'
 
 export { ACHIEVEMENT_PLACEHOLDER_IMAGE } from '@/src/lib/achievement-badge-art'
 
@@ -60,6 +61,9 @@ export type UserAchievementsData = {
   recentlyUnlocked: AchievementWithStatus[]
   newlyAwardedIds: string[]
   error: string | null
+  evalXpAwarded: number
+  evalLevelBefore: number | null
+  evalLevelAfter: number | null
 }
 
 type UserAchievementRow = {
@@ -81,6 +85,9 @@ function emptyData(error: string | null = null): UserAchievementsData {
     recentlyUnlocked: [],
     newlyAwardedIds: [],
     error,
+    evalXpAwarded: 0,
+    evalLevelBefore: null,
+    evalLevelAfter: null,
   }
 }
 
@@ -155,6 +162,12 @@ function buildAchievementsData(
   earnedRows: UserAchievementRow[],
   newlyAwardedIds: string[],
   evalError: string | null,
+  ledgerXp: number,
+  evalMeta?: {
+    evalXpAwarded: number
+    evalLevelBefore: number | null
+    evalLevelAfter: number | null
+  },
 ): UserAchievementsData {
   const earnedAtById = new Map(
     earnedRows.map((row) => [row.achievement_id, row.earned_at] as const),
@@ -163,7 +176,6 @@ function buildAchievementsData(
   const all = mapCatalogueRows(catalogue, earnedAtById)
   const visible = visibleAchievementsForUser(all)
   const earned = all.filter((badge) => badge.earned)
-  const totalXp = earned.reduce((sum, badge) => sum + (badge.xp_value ?? 0), 0)
   const activeCount = all.filter((badge) => badge.is_active).length
 
   const recentlyUnlocked = [...earned]
@@ -177,13 +189,16 @@ function buildAchievementsData(
   return {
     achievements: visible,
     groups: groupByCategory(visible),
-    totalXp,
+    totalXp: ledgerXp,
     earnedCount: earned.length,
     totalCount: activeCount,
-    level: xpToLevel(totalXp),
+    level: xpToLevel(ledgerXp),
     recentlyUnlocked,
     newlyAwardedIds,
     error: evalError,
+    evalXpAwarded: evalMeta?.evalXpAwarded ?? 0,
+    evalLevelBefore: evalMeta?.evalLevelBefore ?? null,
+    evalLevelAfter: evalMeta?.evalLevelAfter ?? null,
   }
 }
 
@@ -197,20 +212,30 @@ export async function fetchUserAchievements(
 ): Promise<UserAchievementsData> {
   if (!userId) return emptyData('Not signed in.')
 
-  const { data: newlyAwardedRaw, error: evalError } = await supabase.rpc(
-    'evaluate_user_achievements',
-    { p_user_id: userId },
-  )
-
-  if (evalError) {
-    console.error('evaluate_user_achievements failed:', evalError.message)
+  let newlyAwardedIds: string[] = []
+  let evalError: string | null = null
+  let evalMeta = {
+    evalXpAwarded: 0,
+    evalLevelBefore: null as number | null,
+    evalLevelAfter: null as number | null,
   }
 
-  const newlyAwardedIds = Array.isArray(newlyAwardedRaw)
-    ? newlyAwardedRaw.map(String)
-    : []
+  if (typeof window !== 'undefined') {
+    const { requestXpEvaluate } = await import('@/src/lib/xp-client')
+    const evaluated = await requestXpEvaluate()
+    if (evaluated?.error && !evaluated.newlyAwardedIds?.length) {
+      evalError = `Could not refresh awards: ${evaluated.error}`
+    } else if (evaluated) {
+      newlyAwardedIds = evaluated.newlyAwardedIds ?? []
+      evalMeta = {
+        evalXpAwarded: evaluated.xpAwarded ?? 0,
+        evalLevelBefore: evaluated.levelBefore ?? null,
+        evalLevelAfter: evaluated.levelAfter ?? null,
+      }
+    }
+  }
 
-  const [catalogueRes, earnedRes] = await Promise.all([
+  const [catalogueRes, earnedRes, ledgerXp] = await Promise.all([
     supabase
       .from('achievements')
       .select(ACHIEVEMENT_SELECT)
@@ -219,6 +244,7 @@ export async function fetchUserAchievements(
       .from('user_achievements')
       .select('achievement_id, earned_at')
       .eq('user_id', userId),
+    fetchUserXpTotal(supabase, userId),
   ])
 
   if (catalogueRes.error) {
@@ -232,7 +258,9 @@ export async function fetchUserAchievements(
     (catalogueRes.data ?? []) as AchievementCatalogueRow[],
     (earnedRes.data ?? []) as UserAchievementRow[],
     newlyAwardedIds,
-    evalError ? `Could not refresh awards: ${evalError.message}` : null,
+    evalError,
+    ledgerXp,
+    evalMeta,
   )
 }
 

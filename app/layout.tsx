@@ -10,6 +10,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { FriendRequestCountProvider } from '@/hooks/use-friend-request-count'
 import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
+import { DailyXpHeartbeat } from '@/components/xp/daily-xp-heartbeat'
+import { XpFeedbackProvider } from '@/components/xp/xp-feedback-provider'
 import { AuthProvider } from '@/src/lib/auth-context'
 import { DashboardTabProvider } from '@/src/lib/dashboard-tab-context'
 import { MobileChatChromeProvider } from '@/src/lib/mobile-chat-chrome-context'
@@ -120,20 +122,23 @@ export default function RootLayout({
             Skip to content
           </a>
           <AuthProvider>
-            <MobileChatChromeProvider>
-              <ReportIssueProvider>
-                <Suspense fallback={null}>
-                  <DashboardTabProvider>
-                    <UnreadChatCountProvider>
-                      <FriendRequestCountProvider>
-                        {children}
-                        <AuthenticatedChrome />
-                      </FriendRequestCountProvider>
-                    </UnreadChatCountProvider>
-                  </DashboardTabProvider>
-                </Suspense>
-              </ReportIssueProvider>
-            </MobileChatChromeProvider>
+            <XpFeedbackProvider>
+              <DailyXpHeartbeat />
+              <MobileChatChromeProvider>
+                <ReportIssueProvider>
+                  <Suspense fallback={null}>
+                    <DashboardTabProvider>
+                      <UnreadChatCountProvider>
+                        <FriendRequestCountProvider>
+                          {children}
+                          <AuthenticatedChrome />
+                        </FriendRequestCountProvider>
+                      </UnreadChatCountProvider>
+                    </DashboardTabProvider>
+                  </Suspense>
+                </ReportIssueProvider>
+              </MobileChatChromeProvider>
+            </XpFeedbackProvider>
           </AuthProvider>
           <Toaster richColors position="top-center" />
           <Analytics />

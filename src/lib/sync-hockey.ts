@@ -18,6 +18,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_HOCKEY_PROVIDER = 'api-hockey'
@@ -253,6 +254,11 @@ async function scoreNewlyFinalGames(
             )
           } else {
             scored += 1
+            await tryAwardPredictionXp(
+              supabase,
+              match.id,
+              'sync-hockey:batch',
+            )
           }
         }),
       )
@@ -680,6 +686,7 @@ export async function syncHockeyLiveScores(
       } else {
         pointsScored += 1
         await tryPostMatchMoments(supabase, match.id, 'sync-hockey-live')
+        await tryAwardPredictionXp(supabase, match.id, 'sync-hockey-live')
       }
     }
   }

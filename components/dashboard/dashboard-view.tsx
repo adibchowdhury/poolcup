@@ -667,7 +667,7 @@ function DashboardViewContent({
             </TabsContent>
 
             <TabsContent value="how-it-works" className="mt-4">
-              <HowItWorksTab currentPoints={liveTotalPoints} />
+              <HowItWorksTab />
             </TabsContent>
           </Tabs>
 

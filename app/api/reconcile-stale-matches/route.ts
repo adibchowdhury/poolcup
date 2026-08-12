@@ -20,6 +20,7 @@ import {
 } from '@/src/lib/match-void-status'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -218,6 +219,11 @@ async function finalizeForceClosedMatch(
   }
 
   await tryPostMatchMoments(
+    supabase,
+    match.id,
+    'reconcile-stale-matches:force-close',
+  )
+  await tryAwardPredictionXp(
     supabase,
     match.id,
     'reconcile-stale-matches:force-close',
@@ -836,6 +842,11 @@ async function runReconcile(): Promise<{
       }
 
       await tryPostMatchMoments(
+        supabase,
+        match.id,
+        'reconcile-stale-matches',
+      )
+      await tryAwardPredictionXp(
         supabase,
         match.id,
         'reconcile-stale-matches',

@@ -115,6 +115,8 @@ type ProfileShowcaseProps = {
   initialActivity?: ProfileActivityItem[]
   initialGlobalRank?: UserGlobalRank | null
   loadError?: string | null
+  /** Peak level from users.highest_level. */
+  highestLevel?: number | null
 }
 
 type ProfileTab = 'overview' | 'progress' | 'achievements' | 'stats'
@@ -603,6 +605,7 @@ export function ProfileShowcase({
   initialActivity,
   initialGlobalRank = null,
   loadError = null,
+  highestLevel: highestLevelProp = null,
 }: ProfileShowcaseProps) {
   const isPublic = mode === 'public'
   const [data, setData] = useState<UserAchievementsData | null>(
@@ -611,6 +614,7 @@ export function ProfileShowcase({
   const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>(
     [],
   )
+  const [peakLevel, setPeakLevel] = useState<number | null>(highestLevelProp)
   const [loading, setLoading] = useState(false)
   const [sectionError, setSectionError] = useState<string | null>(loadError)
   const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(
@@ -803,22 +807,43 @@ export function ProfileShowcase({
     setLoading(true)
 
     void (async () => {
+      const peakPromise = supabase
+        .from('users')
+        .select('highest_level')
+        .eq('id', userId)
+        .maybeSingle()
+
       if (isPublic) {
-        const result = await fetchUserAchievementsReadOnly(supabase, userId)
-        const progress = await fetchUserAchievementProgress(supabase, userId)
+        const [result, progress, peak] = await Promise.all([
+          fetchUserAchievementsReadOnly(supabase, userId),
+          fetchUserAchievementProgress(supabase, userId),
+          peakPromise,
+        ])
         if (cancelled) return
         setData(result)
         setProgressRows(progress)
+        setPeakLevel(
+          Math.max(
+            1,
+            Number(peak.data?.highest_level) || result.level.level,
+          ),
+        )
         setLoading(false)
         return
       }
 
-      const result = await fetchUserAchievements(supabase, userId)
-      const progress = await fetchUserAchievementProgress(supabase, userId)
+      const [result, progress, peak] = await Promise.all([
+        fetchUserAchievements(supabase, userId),
+        fetchUserAchievementProgress(supabase, userId),
+        peakPromise,
+      ])
       if (cancelled) return
       setData(result)
       badgeUnlock?.enqueueFromAchievementsData(result)
       setProgressRows(progress)
+      setPeakLevel(
+        Math.max(1, Number(peak.data?.highest_level) || result.level.level),
+      )
       setLoading(false)
     })()
 
@@ -1457,8 +1482,14 @@ export function ProfileShowcase({
             </div>
             <p className="mt-2 font-mono text-[11px] tabular-nums text-muted-foreground">
               {level?.nextLevelThreshold == null
-                ? `${totalXp.toLocaleString()} XP · Highest level`
+                ? `${totalXp.toLocaleString()} XP · Max level`
                 : `${totalXp.toLocaleString()} / ${level.nextLevelThreshold.toLocaleString()} XP`}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Highest level reached{' '}
+              <span className="font-mono tabular-nums text-foreground">
+                {Math.max(peakLevel ?? 1, level?.level ?? 1)}
+              </span>
             </p>
           </section>
 

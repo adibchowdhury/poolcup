@@ -273,6 +273,11 @@ export async function joinPublicPool(
   })
 
   if (!error) {
+    if (typeof window !== 'undefined') {
+      void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
+        void awardClientXp({ sourceType: 'pool_join', sourceId: poolId })
+      })
+    }
     return { error: null, alreadyMember: false }
   }
 

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * Live XP-based global rank (earned badges' XP). Not pool points.
+ * Live XP-based global rank (xp_transactions ledger). Not pool points.
  * `global_rank` is null when the user has 0 XP / is unranked.
  */
 export type UserGlobalRank = {

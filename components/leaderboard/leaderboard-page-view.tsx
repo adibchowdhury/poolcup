@@ -335,7 +335,7 @@ export function LeaderboardPageView() {
               Leaderboard
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ranked by XP from badges — not pool points.
+              Ranked by XP from the ledger — not pool points.
             </p>
           </div>
         </div>

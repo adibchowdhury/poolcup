@@ -7,6 +7,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { secureCompare } from '@/src/lib/secure-compare'
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
 
     const { data: match, error: findError } = await supabase
       .from('matches')
-      .select('id, round, kickoff_at')
+      .select('id, round, kickoff_at, is_final')
       .eq('fixture_id', fixtureId)
       .maybeSingle()
 
@@ -174,6 +175,9 @@ export async function POST(request: Request) {
     }
 
     await tryPostMatchMoments(supabase, match.id, 'update-match-result')
+    if (!match.is_final) {
+      await tryAwardPredictionXp(supabase, match.id, 'update-match-result')
+    }
 
     return NextResponse.json({ success: true, matchId: match.id })
   } catch (error) {

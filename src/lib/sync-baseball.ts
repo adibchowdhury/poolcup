@@ -16,6 +16,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_BASEBALL_PROVIDER = 'api-baseball'
@@ -251,6 +252,11 @@ async function scoreNewlyFinalGames(
             )
           } else {
             scored += 1
+            await tryAwardPredictionXp(
+              supabase,
+              match.id,
+              'sync-baseball:batch',
+            )
           }
         }),
       )
@@ -688,6 +694,7 @@ export async function syncBaseballLiveScores(
       } else {
         pointsScored += 1
         await tryPostMatchMoments(supabase, match.id, 'sync-baseball-live')
+        await tryAwardPredictionXp(supabase, match.id, 'sync-baseball-live')
       }
     }
   }

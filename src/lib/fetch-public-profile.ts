@@ -6,6 +6,7 @@ import {
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
+import { fetchUserXpTotal } from '@/src/lib/xp'
 import { ONBOARDING_SPORT_OPTIONS } from '@/src/lib/onboarding'
 
 export type PublicProfile = {
@@ -25,6 +26,7 @@ export type PublicProfile = {
   points_total: number | null
   consecutive_correct: number | null
   friends_count: number | null
+  highest_level: number | null
 }
 
 export type PublicProfileCareer = {
@@ -57,6 +59,9 @@ function emptyAchievements(error: string | null = null): UserAchievementsData {
     recentlyUnlocked: [],
     newlyAwardedIds: [],
     error,
+    evalXpAwarded: 0,
+    evalLevelBefore: null,
+    evalLevelAfter: null,
   }
 }
 
@@ -111,6 +116,7 @@ function coercePublicProfile(raw: unknown): PublicProfile | null {
       row.consecutive_correct ?? row.longest_streak ?? row.streak,
     ),
     friends_count: asNumber(row.friends_count),
+    highest_level: asNumber(row.highest_level),
   }
 }
 
@@ -134,10 +140,26 @@ export async function fetchPublicProfile(
     return null
   }
 
-  if (Array.isArray(data)) {
-    return coercePublicProfile(data[0] ?? null)
+  const profile = Array.isArray(data)
+    ? coercePublicProfile(data[0] ?? null)
+    : coercePublicProfile(data)
+  if (!profile) return null
+
+  const [ledgerXp, highestRes] = await Promise.all([
+    fetchUserXpTotal(supabase, userId),
+    supabase
+      .from('users')
+      .select('highest_level')
+      .eq('id', userId)
+      .maybeSingle(),
+  ])
+
+  return {
+    ...profile,
+    total_xp: ledgerXp,
+    highest_level:
+      asNumber(highestRes.data?.highest_level) ?? profile.highest_level,
   }
-  return coercePublicProfile(data)
 }
 
 /** Map achievement progress metrics → career stats (streak from progress). */
@@ -208,7 +230,7 @@ export async function fetchUserAchievementsReadOnly(
 ): Promise<UserAchievementsData> {
   if (!userId) return emptyAchievements('Missing user.')
 
-  const [catalogueRes, earnedRes] = await Promise.all([
+  const [catalogueRes, earnedRes, ledgerXp] = await Promise.all([
     supabase
       .from('achievements')
       .select(ACHIEVEMENT_SELECT)
@@ -217,6 +239,7 @@ export async function fetchUserAchievementsReadOnly(
       .from('user_achievements')
       .select('achievement_id, earned_at')
       .eq('user_id', userId),
+    fetchUserXpTotal(supabase, userId),
   ])
 
   if (catalogueRes.error) {
@@ -231,5 +254,6 @@ export async function fetchUserAchievementsReadOnly(
     (earnedRes.data ?? []) as UserAchievementRow[],
     [],
     null,
+    ledgerXp,
   )
 }

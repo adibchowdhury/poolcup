@@ -225,6 +225,8 @@ export function OnboardingFlow({ bootstrap }: { bootstrap: OnboardingBootstrap }
       capturePostHog(
         mode === 'skipped' ? 'onboarding_skipped' : 'onboarding_completed',
       )
+      const { awardClientXp } = await import('@/src/lib/xp-client')
+      await awardClientXp({ sourceType: 'onboarding_complete' })
       router.replace(redirectTo ?? bootstrap.nextPath)
       return true
     },

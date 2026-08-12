@@ -50,7 +50,7 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
             Friends leaderboard
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ranked by XP (badges &amp; level) — not pool points.
+            Ranked by XP (ledger) — not pool points.
           </p>
         </div>
         <Link

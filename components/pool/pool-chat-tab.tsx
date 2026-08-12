@@ -900,6 +900,9 @@ export function PoolChatTab({
         pool_id: poolId,
         message_id: (data as PoolChatMessage).id,
       })
+      void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
+        void awardClientXp({ sourceType: 'pool_chat_first', sourceId: poolId })
+      })
       void markPoolRead(supabase, poolId, currentUserId).then((ok) => {
         if (ok) emitPoolMarkedRead(poolId)
       })

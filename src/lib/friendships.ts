@@ -35,7 +35,7 @@ export type IncomingFriendRequestRow = {
   requested_at: string
 }
 
-/** You + accepted friends, ranked by live badge XP (not pool points). */
+/** You + accepted friends, ranked by ledger XP (not pool points). */
 export type FriendsLeaderboardRow = {
   user_id: string
   display_name: string | null
@@ -307,6 +307,14 @@ export async function sendFriendRequest(
     result === 'no_user' ||
     result === 'blocked'
   ) {
+    if (result === 'accepted' && typeof window !== 'undefined') {
+      void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
+        void awardClientXp({
+          sourceType: 'friend_added',
+          otherUserId: targetUserId,
+        })
+      })
+    }
     return { ok: true, result }
   }
   return { ok: false, error: 'Unexpected response' }
@@ -325,6 +333,14 @@ export async function acceptFriendRequest(
   }
   const result = asString(data)
   if (result === 'accepted' || result === 'no_request') {
+    if (result === 'accepted' && typeof window !== 'undefined') {
+      void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
+        void awardClientXp({
+          sourceType: 'friend_added',
+          otherUserId: requesterUserId,
+        })
+      })
+    }
     return { ok: true, result }
   }
   return { ok: false, error: 'Unexpected response' }

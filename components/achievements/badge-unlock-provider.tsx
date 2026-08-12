@@ -14,6 +14,8 @@ import {
   type BadgeUnlockItem,
 } from '@/components/achievements/badge-unlock-modal'
 import type { UserAchievementsData } from '@/src/lib/fetch-user-achievements'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import { applyXpAwardFeedback } from '@/src/lib/xp-client'
 
 type BadgeUnlockContextValue = {
   /** Enqueue newly-awarded badges from a fetchUserAchievements result (deduped). */
@@ -69,6 +71,28 @@ export function BadgeUnlockProvider({ children }: { children: ReactNode }) {
   const enqueueFromAchievementsData = useCallback(
     (data: UserAchievementsData) => {
       enqueueBadges(resolveNewlyAwardedBadges(data))
+      for (const id of data.newlyAwardedIds) {
+        capturePostHog('badge_unlocked', { achievement_id: id })
+      }
+      if (
+        data.evalXpAwarded > 0 ||
+        (data.evalLevelAfter != null &&
+          data.evalLevelBefore != null &&
+          data.evalLevelAfter > data.evalLevelBefore)
+      ) {
+        applyXpAwardFeedback(
+          {
+            awarded: data.evalXpAwarded,
+            sourceType: 'achievement',
+            sourceId: data.newlyAwardedIds[0] ?? 'achievement',
+            levelBefore: data.evalLevelBefore ?? data.level.level,
+            levelAfter: data.evalLevelAfter ?? data.level.level,
+            highestLevel: data.level.level,
+            alreadyHad: data.evalXpAwarded === 0,
+          },
+          { silent: true },
+        )
+      }
     },
     [enqueueBadges],
   )

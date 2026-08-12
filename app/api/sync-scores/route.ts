@@ -16,6 +16,7 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -314,6 +315,7 @@ async function runSync(): Promise<{
       } else {
         pointsRecalculated += 1
         await tryPostMatchMoments(supabase, match.id, 'sync-scores')
+        await tryAwardPredictionXp(supabase, match.id, 'sync-scores')
       }
     }
   }

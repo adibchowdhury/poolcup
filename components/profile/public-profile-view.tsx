@@ -31,6 +31,7 @@ type PublicProfileViewProps = {
   initialActivity: ProfileActivityItem[]
   initialGlobalRank: UserGlobalRank | null
   loadError: string | null
+  highestLevel?: number | null
 }
 
 /**
@@ -58,6 +59,7 @@ export function PublicProfileView({
   initialActivity,
   initialGlobalRank,
   loadError,
+  highestLevel = null,
 }: PublicProfileViewProps) {
   return (
     <ProfileShowcase
@@ -83,6 +85,7 @@ export function PublicProfileView({
       initialActivity={initialActivity}
       initialGlobalRank={initialGlobalRank}
       loadError={loadError}
+      highestLevel={highestLevel}
     />
   )
 }

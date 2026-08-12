@@ -21,6 +21,7 @@ import {
   logUpdaterGuardWarning,
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
+import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_AMERICAN_FOOTBALL_PROVIDER = 'api-american-football'
@@ -249,6 +250,11 @@ async function scoreNewlyFinalGames(
             )
           } else {
             scored += 1
+            await tryAwardPredictionXp(
+              supabase,
+              match.id,
+              'sync-american-football:batch',
+            )
           }
         }),
       )
@@ -701,6 +707,11 @@ export async function syncAmericanFootballLiveScores(
       } else {
         pointsScored += 1
         await tryPostMatchMoments(
+          supabase,
+          match.id,
+          'sync-american-football-live',
+        )
+        await tryAwardPredictionXp(
           supabase,
           match.id,
           'sync-american-football-live',

@@ -324,6 +324,9 @@ export default function CreatePoolPage() {
       console.error('award_pool_creation_points failed:', pointsError.message)
     }
 
+    const { awardClientXp } = await import('@/src/lib/xp-client')
+    void awardClientXp({ sourceType: 'pool_create', sourceId: pool.id })
+
     setSubmitting(false)
     setLoadingMessage(null)
     setCreatedPool({

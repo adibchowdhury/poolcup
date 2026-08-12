@@ -11,6 +11,11 @@ import { getJoinPoolErrorMessage } from '@/src/lib/join-pool-errors'
 import { setPendingJoinInvite } from '@/src/lib/join-storage'
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import {
+  isReferralUuid,
+  readPoolcupRefCookieClient,
+} from '@/src/lib/referral'
+import { awardClientXp } from '@/src/lib/xp-client'
 import { trackEvent } from '@/src/lib/track'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
@@ -209,6 +214,26 @@ export default function JoinPoolPage() {
 
     if (referralError) {
       console.error('Referral points award failed:', referralError.message)
+    }
+
+    void awardClientXp({ sourceType: 'pool_join', sourceId: pool.id })
+    const refParam =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('ref')
+        : null
+    const inviter =
+      (isReferralUuid(refParam) ? refParam : null) ??
+      readPoolcupRefCookieClient() ??
+      (pool.creator_id !== user.id ? pool.creator_id : null)
+    if (inviter && inviter !== user.id) {
+      void awardClientXp(
+        {
+          sourceType: 'invite_accepted',
+          sourceId: pool.id,
+          inviterUserId: inviter,
+        },
+        true,
+      )
     }
 
     router.push(`/pool/${inviteCode}`)

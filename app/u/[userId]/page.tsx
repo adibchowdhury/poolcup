@@ -180,6 +180,7 @@ export default async function PublicProfilePage({
             ? breakdown.error || activity.error
             : null
         }
+        highestLevel={profile.highest_level}
       />
     </main>
   )
