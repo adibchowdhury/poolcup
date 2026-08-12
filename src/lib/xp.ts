@@ -29,6 +29,36 @@ export type XpAwardResult = {
   alreadyHad: boolean
 }
 
+export const PREDICTION_XP_SOURCES = [
+  'prediction_made',
+  'prediction_correct',
+  'prediction_exact',
+  'prediction_draw',
+] as const
+
+export type XpReplayResult = {
+  seeded: boolean
+  awarded: number
+  predictionAwarded: number
+  bySource: Record<string, number>
+  levelBefore: number
+  levelAfter: number
+  totalXp: number
+}
+
+type LastSeenRow = {
+  last_seen_xp: number | null
+  last_seen_level: number | null
+}
+
+function isMissingColumnError(error: { code?: string; message?: string } | null) {
+  if (!error) return false
+  return (
+    error.code === '42703' ||
+    /last_seen_xp|last_seen_level/i.test(error.message ?? '')
+  )
+}
+
 export function utcDateStamp(now = new Date()): string {
   return now.toISOString().slice(0, 10)
 }
@@ -73,6 +103,101 @@ export async function refreshHighestLevel(
   return next
 }
 
+export async function fetchLastSeenXp(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LastSeenRow | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('last_seen_xp, last_seen_level')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    if (!isMissingColumnError(error)) {
+      console.error('fetchLastSeenXp failed:', error.message)
+    }
+    return null
+  }
+  if (!data) return { last_seen_xp: null, last_seen_level: null }
+  return {
+    last_seen_xp:
+      data.last_seen_xp == null ? null : Math.max(0, Number(data.last_seen_xp) || 0),
+    last_seen_level:
+      data.last_seen_level == null
+        ? null
+        : Math.max(1, Number(data.last_seen_level) || 1),
+  }
+}
+
+/**
+ * Advance the "XP the user has seen" watermark.
+ * Null last_seen seeds to the current total so historical backfill is not replayed.
+ */
+export async function markLastSeenXp(
+  supabase: SupabaseClient,
+  userId: string,
+  opts: { byAmount?: number; toTotal?: boolean } = {},
+): Promise<void> {
+  if (!userId) return
+  const total = await fetchUserXpTotal(supabase, userId)
+  const seen = await fetchLastSeenXp(supabase, userId)
+  if (seen == null) return
+
+  let nextXp: number
+  if (seen.last_seen_xp == null || opts.toTotal) {
+    nextXp = total
+  } else {
+    const bump = Math.max(0, opts.byAmount ?? 0)
+    nextXp = Math.min(total, Math.max(seen.last_seen_xp, seen.last_seen_xp + bump))
+  }
+
+  const { error } = await supabase
+    .from('users')
+    .update({
+      last_seen_xp: nextXp,
+      last_seen_level: levelFromXp(nextXp),
+    })
+    .eq('id', userId)
+
+  if (error && !isMissingColumnError(error)) {
+    console.error('markLastSeenXp failed:', error.message)
+  }
+}
+
+export async function attributeUnseenXp(
+  supabase: SupabaseClient,
+  userId: string,
+  delta: number,
+): Promise<Record<string, number>> {
+  const bySource: Record<string, number> = {}
+  if (delta <= 0) return bySource
+
+  const { data, error } = await supabase
+    .from('xp_transactions')
+    .select('source_type, amount, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('attributeUnseenXp failed:', error.message)
+    return bySource
+  }
+
+  let remaining = delta
+  for (const row of data ?? []) {
+    if (remaining <= 0) break
+    const amount = Math.max(0, Number(row.amount) || 0)
+    if (amount <= 0) continue
+    const take = Math.min(amount, remaining)
+    const source = String(row.source_type || 'unknown')
+    bySource[source] = (bySource[source] ?? 0) + take
+    remaining -= take
+  }
+  return bySource
+}
+
 export async function awardXpAdmin(
   supabase: SupabaseClient,
   params: {
@@ -100,6 +225,8 @@ export async function awardXpAdmin(
 /**
  * Best-effort prediction XP after a newly-final match is scored.
  * Must never throw into scoring callers. award_prediction_xp is idempotent.
+ * No server PostHog here (posthog-js is browser-only). Missed awards surface
+ * via /api/xp/replay + client xp_earned / level_up.
  */
 export async function tryAwardPredictionXp(
   supabase: SupabaseClient,

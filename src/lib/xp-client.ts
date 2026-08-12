@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import type { XpAwardResult } from '@/src/lib/xp'
+import type { XpAwardResult, XpReplayResult } from '@/src/lib/xp'
 
 export type EvaluateXpResponse = {
   newlyAwardedIds: string[]
@@ -61,6 +61,16 @@ export async function requestXpHeartbeat(): Promise<XpAwardResult | null> {
   }
 }
 
+export async function requestXpReplay(): Promise<XpReplayResult | null> {
+  try {
+    const response = await fetch('/api/xp/replay', { method: 'POST' })
+    if (!response.ok) return null
+    return parseJson<XpReplayResult>(response)
+  } catch {
+    return null
+  }
+}
+
 export async function requestXpEvaluate(): Promise<EvaluateXpResponse | null> {
   try {
     const response = await fetch('/api/xp/evaluate', { method: 'POST' })
@@ -85,7 +95,15 @@ export function applyXpAwardFeedback(
 
   if (result.awarded > 0) {
     if (!options?.silent) {
-      toast.success(`+${result.awarded} XP`, { duration: 2800 })
+      const message =
+        result.sourceType === 'welcome_back'
+          ? result.sourceId === 'predictions'
+            ? `+${result.awarded} XP from your predictions`
+            : `+${result.awarded} XP earned while you were away`
+          : `+${result.awarded} XP`
+      toast.success(message, {
+        duration: result.sourceType === 'welcome_back' ? 4500 : 2800,
+      })
     }
     capturePostHog('xp_earned', {
       source_type: result.sourceType,

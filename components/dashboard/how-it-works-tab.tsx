@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/src/lib/auth-context'
 import { MAX_XP_LEVEL, xpForLevel, xpToLevel } from '@/src/lib/levels'
 import { supabase } from '@/src/lib/supabase'
-import { fetchUserXpTotal } from '@/src/lib/xp'
+import { fetchUserXpTotal, XP_ACTION_AMOUNTS } from '@/src/lib/xp'
 
 const CLASSIC_GROUP_RULES = [
   'Exact score — 5 points',
@@ -174,6 +174,20 @@ function WinnerKnockoutPointsTable({
 }
 
 const XP_MILESTONES = [1, 2, 5, 10, 25, 50] as const
+
+const XP_ACTION_ROWS = [
+  { source: 'prediction_made', label: 'Made a prediction', amount: XP_ACTION_AMOUNTS.prediction_made },
+  { source: 'prediction_correct', label: 'Correct winner', amount: XP_ACTION_AMOUNTS.prediction_correct },
+  { source: 'prediction_exact', label: 'Exact score', amount: XP_ACTION_AMOUNTS.prediction_exact },
+  { source: 'prediction_draw', label: 'Soccer draw', amount: XP_ACTION_AMOUNTS.prediction_draw },
+  { source: 'pool_join', label: 'Join a pool', amount: XP_ACTION_AMOUNTS.pool_join },
+  { source: 'pool_create', label: 'Create a pool', amount: XP_ACTION_AMOUNTS.pool_create },
+  { source: 'invite_accepted', label: 'Someone joins via your invite', amount: XP_ACTION_AMOUNTS.invite_accepted },
+  { source: 'friend_added', label: 'Add a friend (both of you)', amount: XP_ACTION_AMOUNTS.friend_added },
+  { source: 'pool_chat_first', label: 'First message in a pool', amount: XP_ACTION_AMOUNTS.pool_chat_first },
+  { source: 'daily_active', label: 'Daily visit', amount: XP_ACTION_AMOUNTS.daily_active },
+  { source: 'onboarding_complete', label: 'Finish onboarding', amount: XP_ACTION_AMOUNTS.onboarding_complete },
+] as const
 
 type HowItWorksTabProps = {
   currentXp?: number
@@ -373,6 +387,40 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
               style={{ width: `${level.progressPct}%` }}
             />
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">
+          <h3 className="font-display text-lg tracking-wide text-foreground">
+            How you earn XP
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Each action grants once (same source can&apos;t pay twice). Badge
+            unlocks add that badge&apos;s XP on top.
+          </p>
+          <Table className="mt-3">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Action</TableHead>
+                <TableHead className="text-right">XP</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {XP_ACTION_ROWS.map((row) => (
+                <TableRow key={row.source}>
+                  <TableCell className="text-foreground">{row.label}</TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    +{row.amount}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell className="text-foreground">Unlock a badge</TableCell>
+                <TableCell className="text-right font-mono tabular-nums">
+                  +badge XP
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
 
         <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">

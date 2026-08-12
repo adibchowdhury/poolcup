@@ -6,7 +6,7 @@ import {
   friendshipXpSourceId,
   utcDateStamp,
 } from '@/src/lib/xp-award-server'
-import { XP_ACTION_AMOUNTS } from '@/src/lib/xp'
+import { markLastSeenXp, XP_ACTION_AMOUNTS } from '@/src/lib/xp'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -55,6 +55,9 @@ export async function POST(request: Request) {
         sourceId: day,
         description: 'Daily active',
       })
+      if (result.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+      }
       return NextResponse.json(result)
     }
 
@@ -73,6 +76,9 @@ export async function POST(request: Request) {
         sourceId: 'onboarding',
         description: 'Completed onboarding',
       })
+      if (result.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+      }
       return NextResponse.json(result)
     }
 
@@ -95,6 +101,9 @@ export async function POST(request: Request) {
         sourceId,
         description: 'Joined a pool',
       })
+      if (result.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+      }
       return NextResponse.json(result)
     }
 
@@ -116,6 +125,9 @@ export async function POST(request: Request) {
         sourceId,
         description: 'Created a pool',
       })
+      if (result.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+      }
       return NextResponse.json(result)
     }
 
@@ -174,6 +186,9 @@ export async function POST(request: Request) {
         sourceId: pairId,
         description: 'Added a friend',
       })
+      if (selfResult.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: selfResult.awarded })
+      }
       return NextResponse.json(selfResult)
     }
 
@@ -197,6 +212,9 @@ export async function POST(request: Request) {
         sourceId,
         description: 'First message in a pool',
       })
+      if (result.awarded > 0) {
+        await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+      }
       return NextResponse.json(result)
     }
 

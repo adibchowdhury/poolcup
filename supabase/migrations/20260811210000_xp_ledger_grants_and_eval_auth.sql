@@ -2,9 +2,8 @@
 -- XP ledger GRANT surface. Not yet applied to production (do not assume live
 -- REVOKEs). Apply when ready; do NOT mix with scoring deploys.
 --
--- award_xp / award_prediction_xp must be service_role only (SECURITY DEFINER).
--- evaluate_user_achievements is invoked from /api/xp/evaluate as the signed-in
--- user only (app-layer auth.uid() = self).
+-- award_xp / award_prediction_xp / evaluate_user_achievements must be
+-- service_role only (SECURITY DEFINER). Website evaluate route is self-only.
 -- =============================================================================
 
 REVOKE EXECUTE ON FUNCTION public.award_xp(uuid, integer, text, text, text)
@@ -23,3 +22,8 @@ GRANT EXECUTE ON FUNCTION public.level_from_xp(integer)
   TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.xp_for_level(integer)
   TO anon, authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.evaluate_user_achievements(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.evaluate_user_achievements(uuid)
+  TO service_role;

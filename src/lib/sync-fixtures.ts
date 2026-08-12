@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   fetchLeagueSeasonFixtures,
-  isFinalStatus,
   type ApiFootballFixture,
 } from '@/src/lib/api-football'
 import { mapProviderRound } from '@/src/lib/api-football-round-map'
@@ -121,8 +120,6 @@ function buildMatchRow(
   const statusShort = fixture.fixture.status.short?.trim() || null
   const goalsHome = fixture.goals.home
   const goalsAway = fixture.goals.away
-  const isFinal =
-    statusShort != null && isFinalStatus(statusShort) && goalsHome != null && goalsAway != null
 
   const team1Name = fixture.teams.home.name?.trim()
   const team2Name = fixture.teams.away.name?.trim()
@@ -155,11 +152,14 @@ function buildMatchRow(
     }
   }
 
+  // Catalog/schedule sync only. Never set is_final — that would skip
+  // sync-scores / reconcile, which own calculate_match_points + award_prediction_xp.
+  // Scores + status_short still update so the scoring cron can finalize.
   return {
     ...base,
     result_team1: goalsHome,
     result_team2: goalsAway,
-    is_final: isFinal,
+    is_final: false,
     advancing_team: null,
     match_number: null,
     team1_flag: null,

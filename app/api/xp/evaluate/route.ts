@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { awardAchievementXp } from '@/src/lib/xp-award-server'
-import { fetchUserXpTotal } from '@/src/lib/xp'
+import { fetchUserXpTotal, markLastSeenXp, refreshHighestLevel } from '@/src/lib/xp'
 import { levelFromXp } from '@/src/lib/levels'
-import { refreshHighestLevel } from '@/src/lib/xp'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,6 +22,7 @@ export async function POST() {
     const xpBefore = await fetchUserXpTotal(admin, user.id)
     const levelBefore = levelFromXp(xpBefore)
 
+    // Self-only: never accept a client-supplied user id. RPC is service_role only.
     const { data: newlyAwardedRaw, error: evalError } = await admin.rpc(
       'evaluate_user_achievements',
       { p_user_id: user.id },
@@ -70,6 +70,9 @@ export async function POST() {
     const xpAfter = await fetchUserXpTotal(admin, user.id)
     const levelAfter = levelFromXp(xpAfter)
     const highestLevel = await refreshHighestLevel(admin, user.id)
+    if (xpAwarded > 0) {
+      await markLastSeenXp(admin, user.id, { byAmount: xpAwarded })
+    }
 
     return NextResponse.json({
       newlyAwardedIds,

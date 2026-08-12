@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { awardActionXp, utcDateStamp } from '@/src/lib/xp-award-server'
+import { markLastSeenXp } from '@/src/lib/xp'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,6 +24,9 @@ export async function POST() {
       sourceId: utcDateStamp(),
       description: 'Daily active',
     })
+    if (result.awarded > 0) {
+      await markLastSeenXp(admin, user.id, { byAmount: result.awarded })
+    }
     return NextResponse.json(result)
   } catch (error) {
     console.error('xp/heartbeat failed', error)
