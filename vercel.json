@@ -37,6 +37,14 @@
     {
       "path": "/api/cron/sync-american-football-live",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/sync-basketball",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/sync-basketball-live",
+      "schedule": "* * * * *"
     }
   ],
   "headers": [

@@ -45,6 +45,18 @@ export const SYNC_JOB_RETRY_TARGETS = [
     supportsEventId: false,
   },
   {
+    jobType: 'sync_basketball',
+    label: 'Sync basketball / NBA (season)',
+    path: '/api/cron/sync-basketball',
+    supportsEventId: true,
+  },
+  {
+    jobType: 'sync_basketball_live',
+    label: 'Sync basketball / NBA (live scores)',
+    path: '/api/cron/sync-basketball-live',
+    supportsEventId: false,
+  },
+  {
     jobType: 'sync_scores',
     label: 'Sync scores (soccer live + final)',
     path: '/api/sync-scores',
@@ -130,7 +142,8 @@ export function isStaleFixtureSync(row: SyncStatusRow, nowMs = Date.now()): bool
   if (
     row.job_type !== 'sync_fixtures' &&
     row.job_type !== 'sync_baseball' &&
-    row.job_type !== 'sync_american_football'
+    row.job_type !== 'sync_american_football' &&
+    row.job_type !== 'sync_basketball'
   ) {
     return false
   }

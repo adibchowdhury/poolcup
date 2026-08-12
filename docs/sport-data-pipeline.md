@@ -8,7 +8,7 @@ PoolCup ingests fixtures and live scores from **api-sports.io** (All-Sports plan
 
 | Variable | Purpose |
 |----------|---------|
-| `API_FOOTBALL_KEY` | Provider API key for **all** api-sports products (soccer, baseball, …) |
+| `API_FOOTBALL_KEY` | Provider API key for **all** api-sports products (soccer, baseball, NFL, basketball, …) |
 | `CRON_SECRET` | Bearer / `x-cron-secret` auth for cron routes |
 | `NTFY_OPS_TOPIC` / `NTFY_SERVER` / `NTFY_AUTH_TOKEN` | Ops alerts on sync failures (optional) |
 | `NEXT_PUBLIC_SUPABASE_URL` / keys | Database |
@@ -144,6 +144,53 @@ Code: `src/lib/api-american-football.ts`, `src/lib/sync-american-football.ts`.
 | `/api/cron/sync-american-football-live` | Every minute | `sync_american_football_live` | **Cheap** poll: today's games by date (1 call), filter to in-window DB rows |
 
 Live path uses `/games?league&season&date` (american-football does not support football-style `ids` batches), same pattern as baseball.
+
+---
+
+## Basketball / NBA (API-Basketball)
+
+Provider: **`v1.basketball.api-sports.io`** (`provider = 'api-basketball'`).
+
+Auth reuses **`API_FOOTBALL_KEY`**. Store events with `sport = 'basketball'`.
+
+### Competition mapping
+
+| Field | NBA 2026-2027 |
+|-------|---------------|
+| `sport` | `basketball` |
+| `provider` | `api-basketball` |
+| `provider_league_id` | `12` (NBA) |
+| `provider_season` | **`2026-2027`** (YYYY-YYYY **string**, not a year number) |
+| `matches.round` | `regular` |
+
+Code: `src/lib/api-basketball.ts`, `src/lib/sync-basketball.ts`.
+
+Game payload is **flat** (top-level `id` / `date` / `status` / `teams` / `scores`) — not NFL's nested `game` object. `fixture_id` = top-level `id`.
+
+### Status / score
+
+- Final: `FT` / **`AOT`** (finished after overtime) + totals → `is_final` (`AOT` is **not** live)
+- Live: `Q1`–`Q4`, `HT`, `OT`, `LIVE`, `BT`
+- Upcoming: `NS`
+- Postponed: `POST` → `PST`
+- Points: `scores.home.total` / `scores.away.total` → `result_team1` / `result_team2` (OT field is `over_time`)
+- No draws
+
+### NBA crons
+
+| Path | Cadence | Job type | Job |
+|------|---------|----------|-----|
+| `/api/cron/sync-basketball` | Every 6 hours (`0 */6 * * *`) | `sync_basketball` | Full-season fixture upsert + newly final scoring + official pools |
+| `/api/cron/sync-basketball-live` | Every minute (`* * * * *`) | `sync_basketball_live` | **Cheap** poll: today's games by date (1 call), filter to in-window DB rows |
+
+Live path uses `/games?league&season&date` with the **string** season (basketball does not support football-style `ids` batches). Season is passed through as-is (`2026-2027`).
+
+### Basketball lifecycle
+
+1. **Season sync** — upsert all league/season games; stamp `last_fixture_sync_*` on the event.
+2. **Live** — minute cron polls only non-final basketball matches with recent tip-off.
+3. **Final** — `FT` / `AOT` + totals → `is_final` → `calculate_match_points`.
+4. **Official pools** — `ensureOfficialPoolsBestEffort` after season sync.
 
 ---
 

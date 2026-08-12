@@ -2,7 +2,8 @@ import { normalizeSportKey } from '@/src/lib/sport-display'
 
 /**
  * Shared live status shorts for dashboard / matches tab / featured queries.
- * Unions soccer (API-Football), baseball, and american football (NFL) live codes.
+ * Unions soccer (API-Football), baseball, american football (NFL), and
+ * basketball (NBA) live codes. AOT is finished-after-overtime — NOT live.
  */
 export const FEATURED_LIVE_STATUS_SHORTS = [
   // Soccer
@@ -48,6 +49,11 @@ function isBaseballSport(sport: string | null | undefined): boolean {
   return normalizeSportKey(sport) === 'baseball'
 }
 
+function isBasketballSport(sport: string | null | undefined): boolean {
+  if (!sport) return false
+  return normalizeSportKey(sport) === 'basketball'
+}
+
 /** Infer baseball from inning status codes when sport is unknown. */
 function looksLikeBaseballStatus(status: string): boolean {
   return /^IN[0-9]$/.test(status)
@@ -58,6 +64,7 @@ function looksLikeBaseballStatus(status: string): boolean {
  */
 export function matchStartLabel(sport: string | null | undefined): string {
   if (isBaseballSport(sport)) return 'First pitch'
+  if (isBasketballSport(sport)) return 'Tip-off'
   const key = sport ? normalizeSportKey(sport) : ''
   if (key === 'football' || key === 'soccer' || !sport) return 'Kickoff'
   return 'Start'
@@ -70,7 +77,8 @@ export function matchStartLabelLower(sport: string | null | undefined): string {
 
 /** Final-state chip: "Full time" (soccer), "Final" (baseball). */
 export function matchFinalLabel(sport: string | null | undefined): string {
-  return isBaseballSport(sport) ? 'Final' : 'Full time'
+  if (isBaseballSport(sport) || isBasketballSport(sport)) return 'Final'
+  return 'Full time'
 }
 
 function formatBaseballInningLabel(status: string): string {
@@ -83,9 +91,20 @@ function formatBaseballInningLabel(status: string): string {
   return `${n}th inning`
 }
 
+function formatBasketballQuarterLabel(status: string): string {
+  if (status === 'OT') return 'Overtime'
+  if (status === 'HT') return 'Halftime'
+  if (status === 'Q1') return '1st quarter'
+  if (status === 'Q2') return '2nd quarter'
+  if (status === 'Q3') return '3rd quarter'
+  if (status === 'Q4') return '4th quarter'
+  return 'Live'
+}
+
 /**
  * Live / final status chip text. Soccer keeps existing wording; baseball uses
- * Final / inning labels / Live (no soccer minute clock).
+ * Final / inning labels / Live (no soccer minute clock). Basketball uses
+ * Final / quarter labels. AOT is finished (after OT), not live.
  */
 export function formatMatchStatusLabel(
   statusShort: string | null | undefined,
@@ -96,6 +115,7 @@ export function formatMatchStatusLabel(
   const status = (statusShort ?? '').trim().toUpperCase()
   const baseball =
     isBaseballSport(sport) || looksLikeBaseballStatus(status)
+  const basketball = isBasketballSport(sport)
 
   if (status === 'PST') return 'Postponed — no result'
   if (status === 'CANC') return 'Cancelled — no points'
@@ -103,12 +123,34 @@ export function formatMatchStatusLabel(
   if (status === 'AWD') return 'Awarded — no points'
   if (status === 'WO') return 'Walkover — no points'
 
-  if (isFinal || status === 'FT' || status === 'AET' || status === 'PEN') {
-    return baseball ? 'Final' : 'Full time'
+  if (
+    isFinal ||
+    status === 'FT' ||
+    status === 'AET' ||
+    status === 'PEN' ||
+    status === 'AOT'
+  ) {
+    return baseball || basketball ? 'Final' : 'Full time'
   }
 
   if (baseball) {
     if (looksLikeBaseballStatus(status)) return formatBaseballInningLabel(status)
+    if (status === 'LIVE' || status === 'BT') return 'Live'
+    if (status === 'NS') return 'Upcoming'
+    return status || 'Live'
+  }
+
+  if (basketball) {
+    if (
+      status === 'Q1' ||
+      status === 'Q2' ||
+      status === 'Q3' ||
+      status === 'Q4' ||
+      status === 'OT' ||
+      status === 'HT'
+    ) {
+      return formatBasketballQuarterLabel(status)
+    }
     if (status === 'LIVE' || status === 'BT') return 'Live'
     if (status === 'NS') return 'Upcoming'
     return status || 'Live'

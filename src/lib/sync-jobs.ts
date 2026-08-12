@@ -6,6 +6,8 @@ export type SyncJobType =
   | 'sync_baseball_live'
   | 'sync_american_football'
   | 'sync_american_football_live'
+  | 'sync_basketball'
+  | 'sync_basketball_live'
   | 'sync_scores'
   | 'reconcile_stale_matches'
   | 'sync_knockout_round_rows'
