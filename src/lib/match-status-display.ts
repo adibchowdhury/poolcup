@@ -3,7 +3,8 @@ import { normalizeSportKey } from '@/src/lib/sport-display'
 /**
  * Shared live status shorts for dashboard / matches tab / featured queries.
  * Unions soccer (API-Football), baseball, american football (NFL), and
- * basketball (NBA) live codes. AOT is finished-after-overtime — NOT live.
+ * basketball (NBA), and hockey (NHL) live codes.
+ * AOT / AP are finished (OT / shootout) — NOT live.
  */
 export const FEATURED_LIVE_STATUS_SHORTS = [
   // Soccer
@@ -31,6 +32,10 @@ export const FEATURED_LIVE_STATUS_SHORTS = [
   'Q3',
   'Q4',
   'OT',
+  // Hockey (NHL) periods
+  'P1',
+  'P2',
+  'P3',
 ] as const
 
 export type FeaturedLiveStatusShort =
@@ -54,6 +59,11 @@ function isBasketballSport(sport: string | null | undefined): boolean {
   return normalizeSportKey(sport) === 'basketball'
 }
 
+function isHockeySport(sport: string | null | undefined): boolean {
+  if (!sport) return false
+  return normalizeSportKey(sport) === 'hockey'
+}
+
 /** Infer baseball from inning status codes when sport is unknown. */
 function looksLikeBaseballStatus(status: string): boolean {
   return /^IN[0-9]$/.test(status)
@@ -65,6 +75,7 @@ function looksLikeBaseballStatus(status: string): boolean {
 export function matchStartLabel(sport: string | null | undefined): string {
   if (isBaseballSport(sport)) return 'First pitch'
   if (isBasketballSport(sport)) return 'Tip-off'
+  if (isHockeySport(sport)) return 'Puck drop'
   const key = sport ? normalizeSportKey(sport) : ''
   if (key === 'football' || key === 'soccer' || !sport) return 'Kickoff'
   return 'Start'
@@ -77,7 +88,13 @@ export function matchStartLabelLower(sport: string | null | undefined): string {
 
 /** Final-state chip: "Full time" (soccer), "Final" (baseball). */
 export function matchFinalLabel(sport: string | null | undefined): string {
-  if (isBaseballSport(sport) || isBasketballSport(sport)) return 'Final'
+  if (
+    isBaseballSport(sport) ||
+    isBasketballSport(sport) ||
+    isHockeySport(sport)
+  ) {
+    return 'Final'
+  }
   return 'Full time'
 }
 
@@ -101,10 +118,18 @@ function formatBasketballQuarterLabel(status: string): string {
   return 'Live'
 }
 
+function formatHockeyPeriodLabel(status: string): string {
+  if (status === 'OT') return 'Overtime'
+  if (status === 'P1') return '1st period'
+  if (status === 'P2') return '2nd period'
+  if (status === 'P3') return '3rd period'
+  return 'Live'
+}
+
 /**
  * Live / final status chip text. Soccer keeps existing wording; baseball uses
  * Final / inning labels / Live (no soccer minute clock). Basketball uses
- * Final / quarter labels. AOT is finished (after OT), not live.
+ * Final / quarter / period labels. AOT and AP are finished, not live.
  */
 export function formatMatchStatusLabel(
   statusShort: string | null | undefined,
@@ -116,6 +141,7 @@ export function formatMatchStatusLabel(
   const baseball =
     isBaseballSport(sport) || looksLikeBaseballStatus(status)
   const basketball = isBasketballSport(sport)
+  const hockey = isHockeySport(sport)
 
   if (status === 'PST') return 'Postponed — no result'
   if (status === 'CANC') return 'Cancelled — no points'
@@ -128,9 +154,10 @@ export function formatMatchStatusLabel(
     status === 'FT' ||
     status === 'AET' ||
     status === 'PEN' ||
-    status === 'AOT'
+    status === 'AOT' ||
+    status === 'AP'
   ) {
-    return baseball || basketball ? 'Final' : 'Full time'
+    return baseball || basketball || hockey ? 'Final' : 'Full time'
   }
 
   if (baseball) {
@@ -150,6 +177,20 @@ export function formatMatchStatusLabel(
       status === 'HT'
     ) {
       return formatBasketballQuarterLabel(status)
+    }
+    if (status === 'LIVE' || status === 'BT') return 'Live'
+    if (status === 'NS') return 'Upcoming'
+    return status || 'Live'
+  }
+
+  if (hockey) {
+    if (
+      status === 'P1' ||
+      status === 'P2' ||
+      status === 'P3' ||
+      status === 'OT'
+    ) {
+      return formatHockeyPeriodLabel(status)
     }
     if (status === 'LIVE' || status === 'BT') return 'Live'
     if (status === 'NS') return 'Upcoming'

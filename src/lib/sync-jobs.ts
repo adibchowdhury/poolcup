@@ -8,6 +8,8 @@ export type SyncJobType =
   | 'sync_american_football_live'
   | 'sync_basketball'
   | 'sync_basketball_live'
+  | 'sync_hockey'
+  | 'sync_hockey_live'
   | 'sync_scores'
   | 'reconcile_stale_matches'
   | 'sync_knockout_round_rows'

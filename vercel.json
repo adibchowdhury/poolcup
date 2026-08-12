@@ -45,6 +45,14 @@
     {
       "path": "/api/cron/sync-basketball-live",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/sync-hockey",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/sync-hockey-live",
+      "schedule": "* * * * *"
     }
   ],
   "headers": [

@@ -194,6 +194,53 @@ Live path uses `/games?league&season&date` with the **string** season (basketbal
 
 ---
 
+## Hockey / NHL (API-Hockey)
+
+Provider: **`v1.hockey.api-sports.io`** (`provider = 'api-hockey'`).
+
+Auth reuses **`API_FOOTBALL_KEY`**. Store events with `sport = 'hockey'`.
+
+### Competition mapping
+
+| Field | NHL 2026 |
+|-------|----------|
+| `sport` | `hockey` |
+| `provider` | `api-hockey` |
+| `provider_league_id` | `57` (NHL) |
+| `provider_season` | **`2026`** (4-digit **year**, not basketball’s YYYY-YYYY) |
+| `matches.round` | `regular` |
+
+Code: `src/lib/api-hockey.ts`, `src/lib/sync-hockey.ts`.
+
+Game payload is **flat** (top-level `id` / `date` / `status` / `teams` / `scores`). `fixture_id` = top-level `id`. `scores.home` / `scores.away` are **scalar** goal totals (already include OT / shootout winning goals).
+
+### Status / score
+
+- Final: `FT` / **`AOT`** (after overtime) / **`AP`** (after penalties / shootout) + scores → `is_final` (`AOT`/`AP` are **not** live)
+- Live: `P1`–`P3`, `OT`, `LIVE`, `BT`
+- Upcoming: `NS`
+- Postponed: `POST` → `PST`
+- Goals: `scores.home` / `scores.away` (scalars) → `result_team1` / `result_team2`
+- No draws
+
+### NHL crons
+
+| Path | Cadence | Job type | Job |
+|------|---------|----------|-----|
+| `/api/cron/sync-hockey` | Every 6 hours (`0 */6 * * *`) | `sync_hockey` | Full-season fixture upsert + newly final scoring + official pools |
+| `/api/cron/sync-hockey-live` | Every minute (`* * * * *`) | `sync_hockey_live` | **Cheap** poll: today's games by date (1 call), filter to in-window DB rows |
+
+Live path uses `/games?league&season&date` (hockey does not support football-style `ids` batches). Season is the year string `2026`.
+
+### Hockey lifecycle
+
+1. **Season sync** — upsert all league/season games; stamp `last_fixture_sync_*` on the event.
+2. **Live** — minute cron polls only non-final hockey matches with recent puck drop.
+3. **Final** — `FT` / `AOT` / `AP` + scores → `is_final` → `calculate_match_points`.
+4. **Official pools** — `ensureOfficialPoolsBestEffort` after season sync.
+
+---
+
 ## Shared observability
 
 All cron routes require `Authorization: Bearer $CRON_SECRET` (or `x-cron-secret`).
