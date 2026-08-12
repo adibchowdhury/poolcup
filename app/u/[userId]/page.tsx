@@ -21,7 +21,9 @@ import {
   isUserIdSlug,
   resolveUsernameToUserId,
 } from '@/src/lib/resolve-username'
+import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
+import { normalizePredictionStreak } from '@/src/lib/prediction-streak'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 
@@ -123,6 +125,7 @@ export default async function PublicProfilePage({
     breakdown,
     activity,
     globalRank,
+    streakRes,
   ] = await Promise.all([
     supabase.auth.getUser(),
     fetchUserAchievementsReadOnly(supabase, profile.id),
@@ -130,11 +133,17 @@ export default async function PublicProfilePage({
     fetchProfileBreakdownStats(supabase, profile.id),
     fetchProfileRecentActivity(supabase, profile.id, { limit: 12 }),
     fetchUserGlobalRank(supabase, profile.id),
+    createAdminSupabaseClient().rpc('get_prediction_streak', {
+      p_user_id: profile.id,
+    }),
   ])
 
+  const dayStreak = normalizePredictionStreak(streakRes.data)
   const isOwnPublicProfile = viewer?.id === profile.id
   const displayName = profile.display_name?.trim() || 'PoolCup player'
-  const career = careerFromProgress(profile, progress)
+  const career = careerFromProgress(profile, progress, {
+    longestDayStreak: dayStreak.longest_streak,
+  })
   const favorites = favoriteSportChips(profile.favorite_sports)
 
   return (

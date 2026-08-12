@@ -162,7 +162,7 @@ export async function fetchPublicProfile(
   }
 }
 
-/** Map achievement progress metrics → career stats (streak from progress). */
+/** Map achievement progress metrics → career stats. */
 export function careerFromProgress(
   profile: Pick<
     PublicProfile,
@@ -173,6 +173,7 @@ export function careerFromProgress(
     | 'consecutive_correct'
   >,
   progress: Array<{ condition_metric: string; current_value: number }>,
+  options?: { longestDayStreak?: number | null },
 ): PublicProfileCareer {
   const metric = (key: string) => {
     let best = 0
@@ -192,8 +193,11 @@ export function careerFromProgress(
     accuracy: profile.accuracy,
     exactScores: profile.exact_scores ?? metric('exact_scores'),
     totalPoints: profile.points_total ?? metric('points_total'),
-    longestStreak:
-      profile.consecutive_correct ?? metric('consecutive_correct'),
+    // Prefer prediction-day longest from get_prediction_streak when provided.
+    longestStreak: Math.max(
+      0,
+      options?.longestDayStreak ?? 0,
+    ),
   }
 }
 

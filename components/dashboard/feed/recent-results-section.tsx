@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Crown, Flame, Sparkles, TrendingUp } from 'lucide-react'
 import {
@@ -9,6 +9,7 @@ import {
 import { AchievementsFeedContent } from '@/components/dashboard/feed/achievements-section'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { useXpFeedbackOptional } from '@/components/xp/xp-feedback-provider'
 import { cn } from '@/lib/utils'
 import {
   fetchRecentResultsFeed,
@@ -21,7 +22,13 @@ import {
   type UserGlobalRank,
 } from '@/src/lib/global-rank'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import type { PredictionStreak } from '@/src/lib/prediction-streak'
 import type { PredictionOutcomeKind } from '@/src/lib/prediction-scoring'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import {
+  applyStreakSyncFeedback,
+  syncPredictionStreak,
+} from '@/src/lib/streak-client'
 import { supabase } from '@/src/lib/supabase'
 
 type RecentResultsSectionProps = {
@@ -72,17 +79,59 @@ function GlobalRankChip({ rank }: { rank: UserGlobalRank }) {
   )
 }
 
+function StreakStatusLine({ streak }: { streak: PredictionStreak }) {
+  if (streak.today_is_open && streak.today_predicted) {
+    return (
+      <p className="text-[11px] text-primary">
+        Streak secured for today
+      </p>
+    )
+  }
+  if (streak.today_is_open && !streak.today_predicted) {
+    return (
+      <p className="text-[11px] text-amber-300/95">
+        {streak.current_streak > 0
+          ? '🔥 Predict today to keep your streak'
+          : '🔥 Predict today to start a streak'}
+      </p>
+    )
+  }
+  if (streak.current_streak === 0 && streak.longest_streak === 0) {
+    return (
+      <p className="text-[11px] text-muted-foreground">
+        Start your streak — predict today!
+      </p>
+    )
+  }
+  if (streak.current_streak === 0 && streak.longest_streak > 0) {
+    return (
+      <p className="text-[11px] text-muted-foreground">
+        Streak broken — predict on a match day to start again
+      </p>
+    )
+  }
+  return null
+}
+
 function PointsHero({
   points,
   accuracy,
   streak,
+  streakLoading,
+  streakError,
+  onRetryStreak,
   globalRank,
 }: {
   points: number
   accuracy: string
-  streak: string
+  streak: PredictionStreak | null
+  streakLoading: boolean
+  streakError: string | null
+  onRetryStreak: () => void
   globalRank: UserGlobalRank | null
 }) {
+  const current = streak?.current_streak ?? 0
+
   return (
     <div className={cn(SURFACE, 'px-3.5 py-3 sm:px-4')}>
       <div className="flex items-start justify-between gap-3">
@@ -98,7 +147,40 @@ function PointsHero({
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <InlineStat icon={TrendingUp} label="Accuracy" value={accuracy} />
-        <InlineStat icon={Flame} label="Streak" value={streak} />
+        {streakLoading && !streak ? (
+          <ShimmerBlock className="h-7 w-24 rounded-md" />
+        ) : (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-md border border-orange-400/25 bg-orange-400/[0.08] px-2 py-1 text-[11px] text-orange-200"
+            aria-label={`Current prediction streak ${current} days`}
+          >
+            <Flame className="h-3 w-3 shrink-0 text-orange-300" aria-hidden />
+            <span className="font-medium uppercase tracking-[0.08em]">
+              Streak
+            </span>
+            <span className="font-mono tabular-nums text-foreground">
+              {current}
+            </span>
+          </span>
+        )}
+      </div>
+      <div className="mt-2 min-h-[1rem]">
+        {streakError && !streak ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[11px] text-destructive">{streakError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn('h-7 px-2 text-[11px]', FOCUS_VISIBLE_RING)}
+              onClick={onRetryStreak}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : streak ? (
+          <StreakStatusLine streak={streak} />
+        ) : null}
       </div>
     </div>
   )
@@ -232,10 +314,16 @@ function ProgressSkeleton() {
 }
 
 export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
+  const xp = useXpFeedbackOptional()
   const [data, setData] = useState<RecentResultsFeedData | null>(null)
   const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(null)
   const [loading, setLoading] = useState(true)
   const [achievementsEmpty, setAchievementsEmpty] = useState(false)
+  const [streak, setStreak] = useState<PredictionStreak | null>(null)
+  const [streakLoading, setStreakLoading] = useState(true)
+  const [streakError, setStreakError] = useState<string | null>(null)
+  const [streakReloadKey, setStreakReloadKey] = useState(0)
+  const viewedRef = useRef(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -248,6 +336,37 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
     setLoading(false)
   }, [userId])
 
+  const loadStreak = useCallback(async () => {
+    setStreakLoading(true)
+    setStreakError(null)
+    const result = await syncPredictionStreak()
+    if (!result || result.error) {
+      setStreakError(result?.error ?? 'Could not load streak')
+      setStreakLoading(false)
+      return
+    }
+    setStreak({
+      current_streak: result.current_streak,
+      longest_streak: result.longest_streak,
+      last_predicted_day: result.last_predicted_day,
+      today_is_eligible: result.today_is_eligible,
+      today_is_open: result.today_is_open,
+      today_predicted: result.today_predicted,
+    })
+    applyStreakSyncFeedback(result, {
+      onLevelUp: xp?.enqueueLevelUp,
+    })
+    if (!viewedRef.current) {
+      viewedRef.current = true
+      capturePostHog('streak_viewed', {
+        current_streak: result.current_streak,
+        longest_streak: result.longest_streak,
+        surface: 'dashboard',
+      })
+    }
+    setStreakLoading(false)
+  }, [xp?.enqueueLevelUp])
+
   const handleAchievementsEmpty = useCallback((empty: boolean) => {
     setAchievementsEmpty(empty)
   }, [])
@@ -256,34 +375,49 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
     void load()
   }, [load])
 
-  const predictionStreak = data?.currentStreak ?? 0
+  useEffect(() => {
+    void loadStreak()
+  }, [loadStreak, streakReloadKey])
+
+  const predictionStreak = streak?.current_streak ?? 0
   const hasRank =
     globalRank?.global_rank != null && (globalRank.total_ranked ?? 0) > 0
   const recentScored = data?.recentScored ?? []
   const showRecentScored = recentScored.length > 0
-  const showPointsHero = Boolean(data && (!data.isEmpty || hasRank))
+  const showPointsHero = Boolean(
+    (data && (!data.isEmpty || hasRank)) || streak || streakLoading || streakError,
+  )
   const showProgressBody =
     showPointsHero ||
     Boolean(data?.bestPrediction) ||
     showRecentScored ||
     !achievementsEmpty
 
-  if (!loading && data && !data.error && !showProgressBody && !hasRank) {
+  if (
+    !loading &&
+    !streakLoading &&
+    data &&
+    !data.error &&
+    !showProgressBody &&
+    !hasRank &&
+    !streakError
+  ) {
     return null
   }
 
   return (
     <DashboardFeedSection id="your-progress" title="Your Progress">
       <div className="flex flex-col gap-2.5">
-        {loading && !data ? (
+        {loading && !data && streakLoading && !streak ? (
           <ProgressSkeleton />
-        ) : data?.error && data.isEmpty && !hasRank ? (
+        ) : data?.error && data.isEmpty && !hasRank && !streak ? (
           <div className="space-y-2 py-1 text-center">
             <p className="text-sm text-destructive">{data.error}</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className={FOCUS_VISIBLE_RING}
               onClick={() => void load()}
             >
               Try again
@@ -291,11 +425,16 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
           </div>
         ) : (
           <>
-            {showPointsHero && data ? (
+            {showPointsHero && (data || streak || streakLoading || streakError) ? (
               <PointsHero
-                points={data.totalPoints}
-                accuracy={data.winRate != null ? `${data.winRate}%` : '—'}
-                streak={`${data.currentStreak}`}
+                points={data?.totalPoints ?? 0}
+                accuracy={
+                  data?.winRate != null ? `${data.winRate}%` : '—'
+                }
+                streak={streak}
+                streakLoading={streakLoading}
+                streakError={streakError}
+                onRetryStreak={() => setStreakReloadKey((n) => n + 1)}
                 globalRank={hasRank ? globalRank : null}
               />
             ) : hasRank && globalRank ? (

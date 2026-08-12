@@ -19,7 +19,7 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 type AchievementsFeedContentProps = {
   userId: string
-  /** Real prediction streak from Your Progress (not engagement-streak placeholder). */
+  /** Real prediction-day streak from /api/streak (not consecutive-correct). */
   predictionStreak?: number
   /** Report when this block has nothing useful to show (after load). */
   onEmptyChange?: (empty: boolean) => void
