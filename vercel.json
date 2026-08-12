@@ -53,6 +53,10 @@
     {
       "path": "/api/cron/sync-hockey-live",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/capture-standings",
+      "schedule": "0 */6 * * *"
     }
   ],
   "headers": [

@@ -21,6 +21,8 @@ export type AchievementCatalogueRow = {
   list_order: number | null
   art_filename: string | null
   is_active: boolean
+  /** DB column: common | rare | epic | legendary */
+  rarity: string | null
 }
 
 export type AchievementWithStatus = AchievementCatalogueRow & {
@@ -55,7 +57,7 @@ export type UserAchievementsData = {
   groups: AchievementCategoryGroup[]
   totalXp: number
   earnedCount: number
-  /** Active catalogue size (canonical 60), not including retired-only rows. */
+  /** Active catalogue size, not including retired-only rows. */
   totalCount: number
   level: XpLevel
   recentlyUnlocked: AchievementWithStatus[]
@@ -72,7 +74,7 @@ type UserAchievementRow = {
 }
 
 const ACHIEVEMENT_SELECT =
-  'id, name, description, category, condition_metric, threshold, tier, xp_value, buildable, sort_order, list_order, art_filename, is_active'
+  'id, name, description, category, condition_metric, threshold, tier, xp_value, buildable, sort_order, list_order, art_filename, is_active, rarity'
 
 function emptyData(error: string | null = null): UserAchievementsData {
   return {
@@ -137,6 +139,7 @@ function mapCatalogueRows(
       is_active: row.is_active !== false,
       list_order: row.list_order ?? null,
       art_filename: row.art_filename ?? null,
+      rarity: row.rarity ?? null,
       earned: earned_at != null,
       earned_at,
       imageUrl: achievementBadgeImageSrc(row.id, row.art_filename),

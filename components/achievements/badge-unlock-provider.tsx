@@ -44,6 +44,8 @@ function resolveNewlyAwardedBadges(
       xp_value: badge.xp_value ?? 0,
       art_filename: badge.art_filename ?? null,
       imageUrl: badge.imageUrl ?? null,
+      earned_at: badge.earned_at ?? null,
+      rarity: badge.rarity ?? null,
     })
   }
   return items

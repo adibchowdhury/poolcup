@@ -14,6 +14,7 @@ export type SyncJobType =
   | 'reconcile_stale_matches'
   | 'sync_knockout_round_rows'
   | 'refresh_rosters'
+  | 'capture_standings_snapshots'
 
 export type SyncJobStatus = 'success' | 'error' | 'partial'
 

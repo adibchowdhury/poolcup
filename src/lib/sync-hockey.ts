@@ -19,6 +19,7 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_HOCKEY_PROVIDER = 'api-hockey'
@@ -377,6 +378,9 @@ async function syncOneHockeyEvent(
         if (scored.errors.length > 0) {
           base.errors.push(...scored.errors.slice(0, 25))
         }
+        if (scored.scored > 0) {
+          await tryRefreshMatchCrowdPicks(supabase, 'sync-hockey:batch')
+        }
       }
 
       const syncStatus =
@@ -689,6 +693,10 @@ export async function syncHockeyLiveScores(
         await tryAwardPredictionXp(supabase, match.id, 'sync-hockey-live')
       }
     }
+  }
+
+  if (pointsScored > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'sync-hockey-live')
   }
 
   return {

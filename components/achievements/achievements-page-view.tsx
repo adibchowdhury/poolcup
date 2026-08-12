@@ -1,21 +1,28 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Clock, Lock, Loader2 } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
+import { BadgeDetailModal } from '@/components/achievements/badge-detail-modal'
 import {
   BadgeUnlockProvider,
   useBadgeUnlock,
 } from '@/components/achievements/badge-unlock-provider'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/src/lib/auth-context'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import {
   formatAchievementEarnedDate,
   getAchievementUiState,
   groupAchievementsForDisplay,
 } from '@/src/lib/achievement-catalogue-layout'
+import {
+  achievementRarityLabel,
+  ACHIEVEMENT_RARITY_STYLES,
+} from '@/src/lib/achievement-rarity'
 import {
   fetchUserAchievementProgress,
   fetchUserAchievements,
@@ -24,15 +31,20 @@ import {
   type UserAchievementsData,
 } from '@/src/lib/fetch-user-achievements'
 import { xpToLevel } from '@/src/lib/levels'
+import { capturePostHog } from '@/src/lib/posthog-client'
 
 function BadgeCard({
   badge,
   progress,
+  onOpen,
 }: {
   badge: AchievementWithStatus
   progress: UserAchievementProgress | null
+  onOpen: (badge: AchievementWithStatus) => void
 }) {
   const state = getAchievementUiState(badge)
+  const rarity = achievementRarityLabel(badge.rarity)
+  const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
   const progressPct =
     state === 'locked' && progress
       ? Math.min(100, Math.max(0, progress.progress_pct))
@@ -46,7 +58,15 @@ function BadgeCard({
         : `${badge.xp_value} XP`
 
   return (
-    <article className="relative flex w-28 shrink-0 flex-col items-center pt-1 text-center sm:w-32">
+    <button
+      type="button"
+      onClick={() => onOpen(badge)}
+      className={cn(
+        'relative flex w-full flex-col items-center rounded-xl pt-1 text-center transition-colors hover:bg-muted/20',
+        FOCUS_VISIBLE_RING,
+      )}
+      aria-label={`${badge.name}, ${rarity}, ${state === 'earned' ? 'unlocked' : state === 'coming_soon' ? 'coming soon' : 'locked'}`}
+    >
       <div className="relative h-28 w-28 shrink-0 sm:h-32 sm:w-32">
         <div
           className={cn(
@@ -78,26 +98,34 @@ function BadgeCard({
         {state === 'locked' ? (
           <span
             className="absolute -bottom-0.5 -left-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-background/85 text-muted-foreground sm:h-6 sm:w-6"
-            aria-label="Locked"
+            aria-hidden
           >
-            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" aria-hidden />
+            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
           </span>
         ) : null}
 
         {state === 'coming_soon' ? (
           <span
             className="absolute -bottom-0.5 -left-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-background/85 text-muted-foreground sm:h-6 sm:w-6"
-            aria-label="Coming soon"
+            aria-hidden
           >
-            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" aria-hidden />
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
           </span>
         ) : null}
       </div>
 
-      <div className="mt-1 flex w-full min-w-0 max-w-full flex-col items-center overflow-hidden">
+      <div className="mt-1 flex w-full min-w-0 max-w-full flex-col items-center overflow-hidden px-0.5">
+        <span
+          className={cn(
+            'mt-0.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em]',
+            rarityStyle.chip,
+          )}
+        >
+          {rarity}
+        </span>
         <h3
           className={cn(
-            'line-clamp-2 min-h-[1.75rem] w-full max-w-full break-words text-xs font-semibold leading-tight',
+            'mt-1 line-clamp-2 min-h-[1.75rem] w-full max-w-full break-words text-xs font-semibold leading-tight',
             state === 'earned' ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
@@ -136,14 +164,14 @@ function BadgeCard({
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-muted/50">
               <div
-                className="h-full rounded-full bg-primary/80 transition-all"
+                className={cn('h-full rounded-full', rarityStyle.bar)}
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
         ) : null}
       </div>
-    </article>
+    </button>
   )
 }
 
@@ -163,6 +191,33 @@ function AchievementsPageContent() {
     [],
   )
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  const load = useCallback(async () => {
+    if (!user?.id) return
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const [result, progress] = await Promise.all([
+        fetchUserAchievements(supabase, user.id),
+        fetchUserAchievementProgress(supabase, user.id),
+      ])
+      setData(result)
+      setProgressRows(progress)
+      enqueueFromAchievementsData(result)
+      if (result.error && result.achievements.length === 0) {
+        setLoadError(result.error)
+      }
+    } catch (err) {
+      setLoadError(
+        err instanceof Error ? err.message : 'Could not load achievements.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id, enqueueFromAchievementsData])
 
   useEffect(() => {
     if (authLoading) return
@@ -172,26 +227,16 @@ function AchievementsPageContent() {
       setLoading(false)
       return
     }
+    void load()
+  }, [authLoading, user?.id, load, reloadKey])
 
-    let cancelled = false
-    setLoading(true)
-
-    void (async () => {
-      const [result, progress] = await Promise.all([
-        fetchUserAchievements(supabase, user.id),
-        fetchUserAchievementProgress(supabase, user.id),
-      ])
-      if (cancelled) return
-      setData(result)
-      setProgressRows(progress)
-      enqueueFromAchievementsData(result)
-      setLoading(false)
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authLoading, user?.id, enqueueFromAchievementsData])
+  useEffect(() => {
+    if (authLoading || loading || !user?.id) return
+    capturePostHog('achievements_viewed', {
+      earned_count: data?.earnedCount ?? 0,
+      total_count: data?.totalCount ?? 0,
+    })
+  }, [authLoading, loading, user?.id, data?.earnedCount, data?.totalCount])
 
   const progressById = useMemo(
     () =>
@@ -203,6 +248,9 @@ function AchievementsPageContent() {
     () => groupAchievementsForDisplay(data?.achievements ?? []),
     [data?.achievements],
   )
+
+  const selectedBadge =
+    data?.achievements.find((badge) => badge.id === selectedId) ?? null
 
   if (authLoading || loading) {
     return (
@@ -221,7 +269,10 @@ function AchievementsPageContent() {
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
-            className="inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground',
+              FOCUS_VISIBLE_RING,
+            )}
             aria-label="Back to dashboard"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden />
@@ -250,7 +301,10 @@ function AchievementsPageContent() {
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn(
+                'inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground',
+                FOCUS_VISIBLE_RING,
+              )}
               aria-label="Back to dashboard"
             >
               <ArrowLeft className="h-5 w-5" aria-hidden />
@@ -283,15 +337,52 @@ function AchievementsPageContent() {
         </div>
       </div>
 
-      {groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {data?.error ?? 'No achievements found.'}
-        </p>
+      {earned === 0 && groups.length > 0 ? (
+        <div className="mb-6 rounded-2xl border border-dashed border-border bg-card/40 px-4 py-4 text-center sm:text-left">
+          <p className="text-sm font-medium text-foreground">
+            No badges unlocked yet — you&apos;re just getting started
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Make predictions, join a pool, or say hi in chat. Tap any badge to
+            see what it takes.
+          </p>
+        </div>
+      ) : null}
+
+      {loadError && groups.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card/70 px-4 py-8 text-center">
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('mt-4', FOCUS_VISIBLE_RING)}
+            onClick={() => setReloadKey((n) => n + 1)}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-10 text-center">
+          <p className="font-display text-2xl tracking-wide text-foreground">
+            Your badge shelf is ready
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Make predictions, join a pool, and chat with your squad — badges
+            unlock as you play. Tap any badge to see what it takes.
+          </p>
+          <Button
+            type="button"
+            className={cn('mt-5', FOCUS_VISIBLE_RING)}
+            onClick={() => setReloadKey((n) => n + 1)}
+          >
+            Refresh
+          </Button>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-6">
           {groups.map((group) => (
-            <section key={group.id} className="space-y-0.5">
-              <div className="flex items-baseline justify-between gap-3 border-b border-white/8 pb-0.5">
+            <section key={group.id} className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3 border-b border-white/8 pb-1">
                 <h2 className="font-display text-2xl tracking-wide text-foreground">
                   {group.label}
                 </h2>
@@ -300,9 +391,10 @@ function AchievementsPageContent() {
                 </p>
               </div>
 
+              {/* Mobile: horizontal scroller */}
               <div
                 className={cn(
-                  '-mx-4 overflow-x-auto overscroll-x-contain px-4 sm:-mx-6 sm:px-6',
+                  '-mx-4 overflow-x-auto overscroll-x-contain px-4 sm:-mx-6 sm:px-6 md:hidden',
                   'scrollbar-none',
                 )}
                 role="list"
@@ -318,15 +410,43 @@ function AchievementsPageContent() {
                       <BadgeCard
                         badge={badge}
                         progress={progressById.get(badge.id) ?? null}
+                        onOpen={(b) => setSelectedId(b.id)}
                       />
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Desktop: responsive grid */}
+              <div
+                className="hidden grid-cols-3 gap-3 md:grid lg:grid-cols-4 xl:grid-cols-5"
+                role="list"
+                aria-label={`${group.label} badges`}
+              >
+                {group.badges.map((badge) => (
+                  <div key={badge.id} role="listitem" className="min-w-0">
+                    <BadgeCard
+                      badge={badge}
+                      progress={progressById.get(badge.id) ?? null}
+                      onOpen={(b) => setSelectedId(b.id)}
+                    />
+                  </div>
+                ))}
+              </div>
             </section>
           ))}
         </div>
       )}
+
+      <BadgeDetailModal
+        badge={selectedBadge}
+        progress={
+          selectedBadge
+            ? (progressById.get(selectedBadge.id) ?? null)
+            : null
+        }
+        onDismiss={() => setSelectedId(null)}
+      />
     </main>
   )
 }

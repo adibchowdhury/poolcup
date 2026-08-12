@@ -20,12 +20,13 @@ export type AchievementUiState = 'earned' | 'locked' | 'coming_soon'
 
 export type AchievementRarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
 
-export function getAchievementRarity(xpValue: number): AchievementRarity {
-  if (xpValue <= 50) return 'Common'
-  if (xpValue <= 250) return 'Rare'
-  if (xpValue <= 600) return 'Epic'
-  return 'Legendary'
-}
+export {
+  achievementRarityLabel,
+  ACHIEVEMENT_RARITY_STYLES,
+  getAchievementRarityFromXp as getAchievementRarity,
+  normalizeAchievementRarity,
+  type AchievementRarityLabel,
+} from '@/src/lib/achievement-rarity'
 
 export function isComingSoonMetric(conditionMetric: string): boolean {
   return (

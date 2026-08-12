@@ -7,6 +7,13 @@ import { X } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import { HeroConfetti } from '@/components/landing/hero-confetti'
 import { Button } from '@/components/ui/button'
+import { formatAchievementEarnedDate } from '@/src/lib/achievement-catalogue-layout'
+import {
+  achievementRarityLabel,
+  ACHIEVEMENT_RARITY_STYLES,
+} from '@/src/lib/achievement-rarity'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { cn } from '@/lib/utils'
 
 export type BadgeUnlockItem = {
   id: string
@@ -16,6 +23,8 @@ export type BadgeUnlockItem = {
   art_filename: string | null
   /** Precomputed /badges/... URL from fetch helpers. */
   imageUrl: string | null
+  earned_at?: string | null
+  rarity?: string | null
 }
 
 type BadgeUnlockModalProps = {
@@ -262,15 +271,32 @@ export function BadgeUnlockModal({
           >
             New Badge!
           </p>
+          {badge.rarity ? (
+            <p
+              className={cn(
+                'mt-2 text-[11px] font-bold uppercase tracking-[0.14em]',
+                ACHIEVEMENT_RARITY_STYLES[achievementRarityLabel(badge.rarity)]
+                  .text,
+              )}
+            >
+              {achievementRarityLabel(badge.rarity)}
+            </p>
+          ) : null}
           {badge.xp_value > 0 ? (
             <p className="mt-2 text-sm tabular-nums text-primary/85">
               +{badge.xp_value} XP
             </p>
           ) : null}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Unlocked {formatAchievementEarnedDate(badge.earned_at ?? null)}
+          </p>
 
           <Button
             type="button"
-            className="mt-8 min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90"
+            className={cn(
+              'mt-8 min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90',
+              FOCUS_VISIBLE_RING,
+            )}
             onClick={onDismiss}
           >
             {remainingCount > 0 ? 'Next badge' : 'Continue'}

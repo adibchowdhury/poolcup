@@ -21,6 +21,7 @@ import {
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -1018,6 +1019,10 @@ async function runReconcile(): Promise<{
       unchanged: 0,
       errors: [{ fixtureId: 'final-reverify', message }],
     }
+  }
+
+  if (finalized > 0 || finalReverify.corrected > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'reconcile-stale-matches')
   }
 
   return {

@@ -66,6 +66,10 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { getMutualFriendsCount, isUserBlocked } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
 import { xpToLevel } from '@/src/lib/levels'
+import {
+  achievementRarityLabel,
+  ACHIEVEMENT_RARITY_STYLES,
+} from '@/src/lib/achievement-rarity'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 
 export type ProfileShowcaseMode = 'self' | 'public'
@@ -121,50 +125,11 @@ type ProfileShowcaseProps = {
 
 type ProfileTab = 'overview' | 'progress' | 'achievements' | 'stats'
 
-type AchievementRarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
-
 type CareerItem = {
   label: string
   value: string
   icon: typeof Trophy
   accent: string
-}
-
-const RARITY_STYLES: Record<
-  AchievementRarity,
-  { border: string; text: string; bar: string; glow: string }
-> = {
-  Common: {
-    border: 'border-slate-400/25',
-    text: 'text-slate-300',
-    bar: 'bg-slate-400',
-    glow: 'shadow-[0_0_18px_rgba(148,163,184,0.08)]',
-  },
-  Rare: {
-    border: 'border-sky-400/35',
-    text: 'text-sky-300',
-    bar: 'bg-sky-400',
-    glow: 'shadow-[0_0_20px_rgba(56,189,248,0.12)]',
-  },
-  Epic: {
-    border: 'border-purple-400/35',
-    text: 'text-purple-300',
-    bar: 'bg-purple-400',
-    glow: 'shadow-[0_0_20px_rgba(192,132,252,0.13)]',
-  },
-  Legendary: {
-    border: 'border-amber-400/40',
-    text: 'text-amber-300',
-    bar: 'bg-amber-400',
-    glow: 'shadow-[0_0_24px_rgba(251,191,36,0.16)]',
-  },
-}
-
-function getRarity(xpValue: number): AchievementRarity {
-  if (xpValue <= 50) return 'Common'
-  if (xpValue <= 250) return 'Rare'
-  if (xpValue <= 600) return 'Epic'
-  return 'Legendary'
 }
 
 function formatMemberSince(value: string | null | undefined): string | null {
@@ -469,8 +434,8 @@ function BadgeDetailList({
   return (
     <div className="space-y-2">
       {badges.map((badge) => {
-        const rarity = getRarity(badge.xp_value)
-        const rarityStyle = RARITY_STYLES[rarity]
+        const rarity = achievementRarityLabel(badge.rarity)
+        const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
         const progress = progressById.get(badge.id)
         const currentValue = Math.min(
           progress?.current_value ?? 0,
@@ -1288,7 +1253,7 @@ export function ProfileShowcase({
                   Featured Badges
                 </h2>
                 <p className="text-[10px] text-muted-foreground">
-                  Recent unlocks · rarity by XP
+                  Recent unlocks · rarity from catalogue
                 </p>
               </div>
               {showViewAllAchievements ? (
@@ -1319,8 +1284,8 @@ export function ProfileShowcase({
             ) : (
               <div className="grid grid-cols-4 gap-x-2 gap-y-3">
                 {featuredBadges.map((badge) => {
-                  const rarity = getRarity(badge.xp_value)
-                  const rarityStyle = RARITY_STYLES[rarity]
+                  const rarity = achievementRarityLabel(badge.rarity)
+                  const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
                   return (
                     <div
                       key={badge.id}

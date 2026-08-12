@@ -92,6 +92,12 @@ export const SYNC_JOB_RETRY_TARGETS = [
     path: '/api/cron/refresh-rosters',
     supportsEventId: false,
   },
+  {
+    jobType: 'capture_standings_snapshots',
+    label: 'Capture pool standings snapshots',
+    path: '/api/cron/capture-standings',
+    supportsEventId: false,
+  },
 ] as const
 
 export type SyncJobRetryType = (typeof SYNC_JOB_RETRY_TARGETS)[number]['jobType']

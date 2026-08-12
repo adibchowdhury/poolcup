@@ -22,6 +22,7 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_AMERICAN_FOOTBALL_PROVIDER = 'api-american-football'
@@ -378,6 +379,12 @@ async function syncOneAmericanFootballEvent(
         if (scored.errors.length > 0) {
           base.errors.push(...scored.errors.slice(0, 25))
         }
+        if (scored.scored > 0) {
+          await tryRefreshMatchCrowdPicks(
+            supabase,
+            'sync-american-football:batch',
+          )
+        }
       }
 
       const syncStatus =
@@ -718,6 +725,10 @@ export async function syncAmericanFootballLiveScores(
         )
       }
     }
+  }
+
+  if (pointsScored > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'sync-american-football-live')
   }
 
   return {

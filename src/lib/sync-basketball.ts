@@ -19,6 +19,7 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_BASKETBALL_PROVIDER = 'api-basketball'
@@ -379,6 +380,9 @@ async function syncOneBasketballEvent(
         if (scored.errors.length > 0) {
           base.errors.push(...scored.errors.slice(0, 25))
         }
+        if (scored.scored > 0) {
+          await tryRefreshMatchCrowdPicks(supabase, 'sync-basketball:batch')
+        }
       }
 
       const syncStatus =
@@ -702,6 +706,10 @@ export async function syncBasketballLiveScores(
         await tryAwardPredictionXp(supabase, match.id, 'sync-basketball-live')
       }
     }
+  }
+
+  if (pointsScored > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'sync-basketball-live')
   }
 
   return {

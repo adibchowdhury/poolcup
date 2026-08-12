@@ -17,6 +17,7 @@ import {
 } from '@/src/lib/match-updater-guards'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_BASEBALL_PROVIDER = 'api-baseball'
@@ -373,6 +374,9 @@ async function syncOneBaseballEvent(
         if (scored.errors.length > 0) {
           base.errors.push(...scored.errors.slice(0, 25))
         }
+        if (scored.scored > 0) {
+          await tryRefreshMatchCrowdPicks(supabase, 'sync-baseball:batch')
+        }
       }
 
       const syncStatus =
@@ -697,6 +701,10 @@ export async function syncBaseballLiveScores(
         await tryAwardPredictionXp(supabase, match.id, 'sync-baseball-live')
       }
     }
+  }
+
+  if (pointsScored > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'sync-baseball-live')
   }
 
   return {

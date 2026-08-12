@@ -137,6 +137,15 @@ export function AdminSyncDashboard({
           <p className="mt-1 text-sm text-muted-foreground">
             Ingestion jobs (all sports). Admins only.
           </p>
+          <Link
+            href="/admin/badges"
+            className={cn(
+              'mt-2 inline-flex text-sm text-primary hover:underline',
+              FOCUS_VISIBLE_RING,
+            )}
+          >
+            Badge corrections →
+          </Link>
         </div>
         <Button
           type="button"

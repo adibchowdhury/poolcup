@@ -17,6 +17,7 @@ import {
 import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
+import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -328,6 +329,10 @@ async function runSync(): Promise<{
     } catch (notifyError) {
       console.error('sync-scores: ops ntfy failed', notifyError)
     }
+  }
+
+  if (pointsRecalculated > 0) {
+    await tryRefreshMatchCrowdPicks(supabase, 'sync-scores')
   }
 
   return {
