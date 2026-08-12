@@ -285,6 +285,11 @@ function YourPredictionCard({
       match_id: matchId,
       pool_count: writablePools.length,
     })
+    void import('@/components/push/push-nudge-host').then(
+      ({ markFirstPredictionForPushNudge }) => {
+        markFirstPredictionForPushNudge()
+      },
+    )
 
     setEditing(false)
     setSavedFlash(true)

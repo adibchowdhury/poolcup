@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { NotificationPreferencesView } from '@/components/settings/notification-preferences-view'
+import { PushNotificationsSection } from '@/components/settings/push-notifications-section'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -15,5 +16,7 @@ export default async function NotificationSettingsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  return <NotificationPreferencesView />
+  return (
+    <NotificationPreferencesView pushSection={<PushNotificationsSection />} />
+  )
 }

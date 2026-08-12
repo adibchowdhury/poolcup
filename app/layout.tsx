@@ -59,13 +59,24 @@ export async function generateMetadata(): Promise<Metadata> {
     verification: {
       google: 'wUcYdWnVflR1_Y88THjoEWcCYgtCrRWr-BwkzGmoBzs',
     },
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: 'PoolCup',
+    },
     icons: {
       icon: [
         { url: '/favicon.ico' },
         { url: '/icon.svg', type: 'image/svg+xml' },
         { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
       ],
-      apple: '/apple-touch-icon.png',
+      apple: [
+        { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      ],
+    },
+    other: {
+      'mobile-web-app-capable': 'yes',
     },
   }
 }

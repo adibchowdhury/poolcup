@@ -15,6 +15,7 @@ export type SyncJobType =
   | 'sync_knockout_round_rows'
   | 'refresh_rosters'
   | 'capture_standings_snapshots'
+  | 'push_match_reminders'
 
 export type SyncJobStatus = 'success' | 'error' | 'partial'
 

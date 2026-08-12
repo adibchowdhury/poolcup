@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { MobileBottomNav } from '@/components/mobile-bottom-nav'
+import { PushNudgeHost } from '@/components/push/push-nudge-host'
 import { useAuth } from '@/src/lib/auth-context'
 import { isAuthenticatedAppPath } from '@/src/lib/authenticated-paths'
 
@@ -13,5 +14,10 @@ export function AuthenticatedChrome() {
     return null
   }
 
-  return <MobileBottomNav />
+  return (
+    <>
+      <MobileBottomNav />
+      <PushNudgeHost />
+    </>
+  )
 }

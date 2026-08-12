@@ -87,6 +87,7 @@ export async function fetchNotificationPreferences(): Promise<{
         'prediction_scored',
         'leaderboard',
         'announcement',
+        'match_reminder',
       ] as const
     ).map((c) => [c, true]),
   ) as Record<NotificationCategory, boolean>

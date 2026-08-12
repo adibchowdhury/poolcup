@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
@@ -18,7 +19,11 @@ import {
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
 
-export function NotificationPreferencesView() {
+export function NotificationPreferencesView({
+  pushSection,
+}: {
+  pushSection?: ReactNode
+}) {
   const [prefs, setPrefs] = useState<Record<NotificationCategory, boolean> | null>(
     null,
   )
@@ -72,10 +77,13 @@ export function NotificationPreferencesView() {
             Notifications
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose which updates appear in your notification center.
+            Choose which updates appear in your notification center and on this
+            device.
           </p>
         </div>
       </div>
+
+      {pushSection ? <div className="mb-6">{pushSection}</div> : null}
 
       {loading && !prefs ? (
         <div className="flex justify-center py-16">

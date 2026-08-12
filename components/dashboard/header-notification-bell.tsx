@@ -54,6 +54,8 @@ function categoryIcon(category: string) {
       return Flame
     case 'announcement':
       return MessageSquare
+    case 'match_reminder':
+      return Bell
     default:
       return Sparkles
   }

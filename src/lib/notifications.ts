@@ -7,6 +7,7 @@ export const NOTIFICATION_CATEGORIES = [
   'prediction_scored',
   'leaderboard',
   'announcement',
+  'match_reminder',
 ] as const
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number]
@@ -20,6 +21,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
     prediction_scored: 'Predictions scored',
     leaderboard: 'Leaderboard moves',
     announcement: 'Pool announcements',
+    match_reminder: 'Match reminders',
   }
 
 export type NotificationRow = {

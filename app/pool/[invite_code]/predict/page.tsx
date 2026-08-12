@@ -695,6 +695,11 @@ export default function PredictPage() {
           pool_id: pool.id,
           match_id: match.id,
         })
+        void import('@/components/push/push-nudge-host').then(
+          ({ markFirstPredictionForPushNudge }) => {
+            markFirstPredictionForPushNudge()
+          },
+        )
         continue
       }
 
@@ -743,6 +748,11 @@ export default function PredictPage() {
         pool_id: pool.id,
         match_id: match.id,
       })
+      void import('@/components/push/push-nudge-host').then(
+        ({ markFirstPredictionForPushNudge }) => {
+          markFirstPredictionForPushNudge()
+        },
+      )
     }
 
     setSaving(false)

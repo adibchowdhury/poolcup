@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { tryCreateNotification } from '@/src/lib/notify-user'
+import { tryCreateNotificationWithPush } from '@/src/lib/push/notify-and-push'
 
 type Agg = {
   points: number
@@ -74,7 +74,7 @@ export async function tryNotifyPredictionScoredBatch(
           pts > 0
             ? `+${pts} pts across ${matchCount} match${matchCount === 1 ? '' : 'es'}`
             : `${matchCount} match${matchCount === 1 ? '' : 'es'} scored`
-        await tryCreateNotification(
+        await tryCreateNotificationWithPush(
           admin,
           {
             userId,

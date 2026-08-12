@@ -960,6 +960,11 @@ export function WinnerOnlyPredictView({
         pool_id: pool.id,
         match_id: match.matchId,
       })
+      void import('@/components/push/push-nudge-host').then(
+        ({ markFirstPredictionForPushNudge }) => {
+          markFirstPredictionForPushNudge()
+        },
+      )
     }
 
     setSaving(false)
@@ -1194,6 +1199,11 @@ export function WinnerOnlyPredictView({
     }
 
     capturePostHog('prediction_submitted', { pool_id: pool.id })
+    void import('@/components/push/push-nudge-host').then(
+      ({ markFirstPredictionForPushNudge }) => {
+        markFirstPredictionForPushNudge()
+      },
+    )
 
     if (predictionsFullyComplete && !predictionsCompletedTrackedRef.current) {
       capturePostHog('predictions_completed', { pool_id: pool.id })

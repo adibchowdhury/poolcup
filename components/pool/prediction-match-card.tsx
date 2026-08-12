@@ -634,6 +634,11 @@ export function PredictionMatchCard({
         pool_id: poolId,
         match_id: prediction.matchId,
       })
+      void import('@/components/push/push-nudge-host').then(
+        ({ markFirstPredictionForPushNudge }) => {
+          markFirstPredictionForPushNudge()
+        },
+      )
       onPredictionSaved?.(
         prediction.matchId,
         parsed.predTeam1,

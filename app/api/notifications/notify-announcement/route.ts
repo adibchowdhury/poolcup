@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
-import { tryCreateNotification } from '@/src/lib/notify-user'
+import { tryCreateNotificationWithPush } from '@/src/lib/push/notify-and-push'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   for (const row of members ?? []) {
     const userId = row.user_id as string | null
     if (!userId || userId === user.id) continue
-    const id = await tryCreateNotification(
+    const id = await tryCreateNotificationWithPush(
       admin,
       {
         userId,
