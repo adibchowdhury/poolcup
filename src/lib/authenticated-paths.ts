@@ -13,7 +13,11 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/activity') return true
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
   // Onboarding is authenticated but has its own full-screen chrome (no bottom nav).
-  if (pathname.startsWith('/pool/')) return true
+  if (pathname.startsWith('/pool/')) {
+    // Printable export is a chrome-free print surface.
+    if (/\/pool\/[^/]+\/print\/?$/.test(pathname)) return false
+    return true
+  }
   if (pathname.startsWith('/join/')) return true
   if (pathname.startsWith('/match/')) return true
   return false

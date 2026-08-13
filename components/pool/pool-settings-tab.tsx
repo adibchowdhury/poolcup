@@ -19,6 +19,7 @@ import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-a
 import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
 import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
 import { PoolAnnouncementsPanel } from '@/components/pool/pool-announcements-panel'
+import { PoolExportsSection } from '@/components/pool/pool-exports-section'
 import { PoolPollsPanel } from '@/components/pool/pool-polls-panel'
 import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
@@ -1417,6 +1418,17 @@ export function PoolSettingsTab({
               </AlertDialog>
             </div>
           ) : null}
+
+          <div>
+            <SubsectionHeading title="Exports" />
+            {poolId ? (
+              <PoolExportsSection poolId={poolId} inviteCode={inviteCode} />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Pool id unavailable — exports cannot run.
+              </p>
+            )}
+          </div>
 
           <div>
             <SubsectionHeading title="Announcements" />

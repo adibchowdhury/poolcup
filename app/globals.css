@@ -1060,3 +1060,10 @@ html.light .mobile-bottom-nav-home {
     transition: none;
   }
 }
+
+/* Commissioner printable export — clean paper output */
+@media print {
+  body {
+    background: white !important;
+  }
+}
