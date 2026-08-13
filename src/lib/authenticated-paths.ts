@@ -46,6 +46,7 @@ export function isProtectedAppPath(pathname: string): boolean {
   if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
     return true
   }
+  if (pathname.startsWith('/settings/')) return true
   if (pathname.startsWith('/pool/')) return true
   return false
 }

@@ -5,6 +5,7 @@ import { Crown, Loader2, UserMinus, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { messageForCommissionerGate } from '@/src/lib/commissioner-entitlements'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
@@ -106,7 +107,12 @@ export function CommissionerCoAdminsSection({
       })
       toast.success('Co-commissioner added')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not add')
+      toast.error(
+        messageForCommissionerGate(
+          err,
+          err instanceof Error ? err.message : 'Could not add',
+        ),
+      )
     } finally {
       setBusyUserId(null)
     }
@@ -137,7 +143,12 @@ export function CommissionerCoAdminsSection({
       })
       toast.success('Co-commissioner removed')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not remove')
+      toast.error(
+        messageForCommissionerGate(
+          err,
+          err instanceof Error ? err.message : 'Could not remove',
+        ),
+      )
     } finally {
       setBusyUserId(null)
     }

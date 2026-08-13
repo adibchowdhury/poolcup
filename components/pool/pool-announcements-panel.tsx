@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { messageForCommissionerGate } from '@/src/lib/commissioner-entitlements'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import {
   ANNOUNCEMENT_MAX_LENGTH,
@@ -112,8 +113,15 @@ export function PoolAnnouncementsPanel({
         draft,
       )
       if (!result.ok) {
-        setComposerError(result.error)
-        toast.error(result.error)
+        setComposerError(
+          messageForCommissionerGate(result.error, result.error || 'Failed'),
+        )
+        toast.error(
+          messageForCommissionerGate(
+            result.error,
+            result.error || 'Could not post announcement',
+          ),
+        )
         return
       }
       setDraft('')
@@ -154,7 +162,10 @@ export function PoolAnnouncementsPanel({
         error?: string
       } | null
       if (!res.ok) {
-        const msg = data?.error || 'Failed to update announcement'
+        const msg = messageForCommissionerGate(
+          data?.error,
+          data?.error || 'Failed to update announcement',
+        )
         setComposerError(msg)
         toast.error(msg)
         return
@@ -179,7 +190,9 @@ export function PoolAnnouncementsPanel({
       const next = !row.pinned
       const result = await setAnnouncementPinnedApi(poolId, row.id, next)
       if (!result.ok) {
-        toast.error(result.error)
+        toast.error(
+          messageForCommissionerGate(result.error, result.error || 'Failed'),
+        )
         return
       }
       capturePostHog('announcement_pinned', {
@@ -203,7 +216,9 @@ export function PoolAnnouncementsPanel({
         pendingDelete.id,
       )
       if (!result.ok) {
-        toast.error(result.error)
+        toast.error(
+          messageForCommissionerGate(result.error, result.error || 'Failed'),
+        )
         return
       }
       capturePostHog('announcement_deleted', {

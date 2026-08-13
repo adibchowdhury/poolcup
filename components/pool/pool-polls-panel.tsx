@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { messageForCommissionerGate } from '@/src/lib/commissioner-entitlements'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import {
   castPollVoteApi,
@@ -124,7 +125,9 @@ export function PoolPollsPanel({
       })
       if (!result.ok) {
         setComposerError(result.error)
-        toast.error(result.error)
+        toast.error(
+          messageForCommissionerGate(result.error, result.error || 'Failed'),
+        )
         return
       }
       capturePostHog('poll_created', {
@@ -172,7 +175,9 @@ export function PoolPollsPanel({
     const result = await castPollVoteApi(poolId, poll.pollId, optionId)
     setVotingKey(null)
     if (!result.ok) {
-      toast.error(result.error)
+      toast.error(
+        messageForCommissionerGate(result.error, result.error || 'Failed'),
+      )
       await load()
       return
     }
@@ -199,7 +204,9 @@ export function PoolPollsPanel({
     try {
       const result = await deletePollApi(poolId, pendingDelete.pollId)
       if (!result.ok) {
-        toast.error(result.error)
+        toast.error(
+          messageForCommissionerGate(result.error, result.error || 'Failed'),
+        )
         return
       }
       capturePostHog('poll_deleted', {

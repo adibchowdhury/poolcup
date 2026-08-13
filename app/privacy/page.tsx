@@ -34,9 +34,11 @@ export default function PrivacyPage() {
                 related leaderboard information.
               </li>
               <li>
-                <strong className="text-foreground">Billing-related data</strong> —
-                PoolCup is currently free to use. If billing features are added in the
-                future, we will update this policy before they launch.
+                <strong className="text-foreground">Billing-related data</strong>{' '}
+                — if you subscribe to a paid plan (for example, Pool
+                Commissioner), we process payment and subscription details
+                through our payment provider (Stripe). We store subscription
+                status and related identifiers needed to provide paid features.
               </li>
               <li>
                 <strong className="text-foreground">Communications</strong> — if you
@@ -76,6 +78,10 @@ export default function PrivacyPage() {
               <li>
                 <strong className="text-foreground">Supabase</strong> — authentication,
                 database, and application hosting.
+              </li>
+              <li>
+                <strong className="text-foreground">Stripe</strong> — payment
+                processing for optional paid subscriptions.
               </li>
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">

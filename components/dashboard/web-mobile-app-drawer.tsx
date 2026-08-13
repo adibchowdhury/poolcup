@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  CreditCard,
   Flag,
   Heart,
   HelpCircle,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useReportIssue } from '@/components/report-issue-dialog'
 import { cn } from '@/lib/utils'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
 
@@ -107,6 +109,14 @@ export function WebMobileAppDrawer({
       action: onOpenSettings,
     },
     {
+      id: 'billing',
+      label: 'Billing',
+      icon: CreditCard,
+      action: () => {
+        router.push('/settings/billing')
+      },
+    },
+    {
       id: 'help',
       label: 'Help',
       icon: HelpCircle,
@@ -164,7 +174,10 @@ export function WebMobileAppDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            className={cn(
+              'flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground',
+              FOCUS_VISIBLE_RING,
+            )}
             aria-label="Close menu"
           >
             <X className="h-5 w-5" aria-hidden />
@@ -184,6 +197,7 @@ export function WebMobileAppDrawer({
                 onClick={() => navigate(item.action)}
                 className={cn(
                   'flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm transition-colors',
+                  FOCUS_VISIBLE_RING,
                   item.destructive
                     ? 'text-destructive hover:bg-destructive/10'
                     : 'text-foreground hover:bg-muted/50',
@@ -206,7 +220,10 @@ export function WebMobileAppDrawer({
                 openReportIssue()
               })
             }
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground',
+              FOCUS_VISIBLE_RING,
+            )}
           >
             <Flag className="h-4 w-4 shrink-0" aria-hidden />
             <span>Report an issue</span>

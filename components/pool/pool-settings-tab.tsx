@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-admins-section'
 import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
 import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
+import { LockedCommissionerFeature } from '@/components/pool/locked-commissioner-feature'
 import { PoolAnnouncementsPanel } from '@/components/pool/pool-announcements-panel'
 import { PoolExportsSection } from '@/components/pool/pool-exports-section'
 import { PoolPollsPanel } from '@/components/pool/pool-polls-panel'
@@ -79,6 +80,7 @@ import {
   validateClassicScoringPoints,
 } from '@/src/lib/classic-score-points'
 import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
+import { messageForCommissionerGate } from '@/src/lib/commissioner-entitlements'
 import { patchPoolSettings } from '@/src/lib/pool-settings-client'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -106,6 +108,8 @@ type PoolSettingsTabProps = {
   isAdmin?: boolean
   /** Pool owner (creator_id). */
   isOwner?: boolean
+  /** Owner has Commissioner tier — unlocks gated tools for this pool. */
+  poolHasCommissionerTools?: boolean
   /** userIds currently in pool_admins (co-commissioners). */
   coAdminUserIds?: string[]
   onPoolNameChange?: (name: string) => void
@@ -189,6 +193,7 @@ export function PoolSettingsTab({
   currentUserId,
   isAdmin: isAdminProp,
   isOwner: isOwnerProp,
+  poolHasCommissionerTools = false,
   coAdminUserIds = [],
   onPoolNameChange,
   onPoolDescriptionChange,
@@ -206,6 +211,8 @@ export function PoolSettingsTab({
       : Boolean(poolCreatorUserId && currentUserId === poolCreatorUserId)
   const isAdmin =
     typeof isAdminProp === 'boolean' ? isAdminProp : isOwner
+  /** Gated Commissioner tools unlocked when the pool owner has Commissioner. */
+  const toolsUnlocked = Boolean(poolHasCommissionerTools)
   /** @deprecated alias — prefer isOwner */
   const isCreator = isOwner
   const coAdminIdSet = new Set(coAdminUserIds)
@@ -270,7 +277,7 @@ export function PoolSettingsTab({
   const [colorsExpanded, setColorsExpanded] = useState(false)
 
   const isClassicPool = scoringStyle !== 'winner'
-  const canEditScoring = isAdmin && isClassicPool
+  const canEditScoring = isAdmin && toolsUnlocked && isClassicPool
 
   const draftScoringPreview = validateClassicScoringPoints({
     exact: draftExact.trim() === '' ? NaN : Number(draftExact),
@@ -444,8 +451,15 @@ export function PoolSettingsTab({
 
     if (!result.success) {
       onPoolThemeColorChange?.(previous)
-      setThemeError(result.error || 'Failed to update theme color')
-      toast.error('Could not save pool color')
+      setThemeError(
+        messageForCommissionerGate(
+          result.error,
+          result.error || 'Failed to update theme color',
+        ),
+      )
+      toast.error(
+        messageForCommissionerGate(result.error, 'Could not save pool color'),
+      )
       return
     }
 
@@ -513,8 +527,15 @@ export function PoolSettingsTab({
 
     if (!result.success) {
       onPoolEmblemUrlChange?.(previous)
-      setEmblemError(result.error || 'Could not save logo')
-      toast.error('Could not save logo')
+      setEmblemError(
+        messageForCommissionerGate(
+          result.error,
+          result.error || 'Could not save logo',
+        ),
+      )
+      toast.error(
+        messageForCommissionerGate(result.error, 'Could not save logo'),
+      )
       return
     }
 
@@ -537,8 +558,15 @@ export function PoolSettingsTab({
 
     if (!result.success) {
       onPoolEmblemUrlChange?.(previous)
-      setEmblemError(result.error || 'Could not remove logo')
-      toast.error('Could not remove logo')
+      setEmblemError(
+        messageForCommissionerGate(
+          result.error,
+          result.error || 'Could not remove logo',
+        ),
+      )
+      toast.error(
+        messageForCommissionerGate(result.error, 'Could not remove logo'),
+      )
       return
     }
 
@@ -591,8 +619,18 @@ export function PoolSettingsTab({
     }
 
     if (!result.success) {
-      setScoringError(result.error || 'Failed to save scoring rules')
-      toast.error('Could not save scoring rules')
+      setScoringError(
+        messageForCommissionerGate(
+          result.error,
+          result.error || 'Failed to save scoring rules',
+        ),
+      )
+      toast.error(
+        messageForCommissionerGate(
+          result.error,
+          'Could not save scoring rules',
+        ),
+      )
       return
     }
 
@@ -855,7 +893,15 @@ export function PoolSettingsTab({
       {isAdmin ? (
         <section className="min-w-0 space-y-6">
           <SectionHeading title="Pool branding" />
-
+          {!toolsUnlocked ? (
+            <LockedCommissionerFeature
+              title="Pool branding"
+              description="Theme color and pool logo"
+              isOwner={isOwner}
+              poolId={poolId}
+            />
+          ) : (
+          <>
           <div className="space-y-3">
             <SubsectionHeading title="Pool logo" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -1156,6 +1202,8 @@ export function PoolSettingsTab({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </>
+          )}
         </section>
       ) : null}
 
@@ -1163,6 +1211,37 @@ export function PoolSettingsTab({
         <section className="space-y-8">
           <SectionHeading title="Commissioner tools" />
 
+          {!toolsUnlocked ? (
+            <div className="space-y-4">
+              {isClassicPool ? (
+                <LockedCommissionerFeature
+                  title="Custom scoring"
+                  description="Set exact / winner / draw points"
+                  isOwner={isOwner}
+                  poolId={poolId}
+                />
+              ) : null}
+              <LockedCommissionerFeature
+                title="Exports"
+                description="Leaderboard and predictions CSV, printable view"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+              <LockedCommissionerFeature
+                title="Announcements"
+                description="Post, edit, and pin announcements"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+              <LockedCommissionerFeature
+                title="Polls"
+                description="Create and manage pool polls"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+            </div>
+          ) : (
+            <>
           {isClassicPool ? (
             <div>
               <SubsectionHeading title="Custom scoring" />
@@ -1456,6 +1535,8 @@ export function PoolSettingsTab({
               <PoolPollsPanel poolId={poolId} isAdmin showComposer />
             ) : null}
           </div>
+            </>
+          )}
 
           <div>
             <SubsectionHeading title="Membership" />
@@ -1724,6 +1805,31 @@ export function PoolSettingsTab({
 
       {isAdmin && poolId ? (
         <div className="space-y-8">
+          {!toolsUnlocked ? (
+            <div className="space-y-4">
+              {isOwner ? (
+                <LockedCommissionerFeature
+                  title="Co-commissioners"
+                  description="Add co-admins to help run the pool"
+                  isOwner={isOwner}
+                  poolId={poolId}
+                />
+              ) : null}
+              <LockedCommissionerFeature
+                title="Members missing predictions"
+                description="See who still needs to predict"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+              <LockedCommissionerFeature
+                title="Moderation log"
+                description="Audit trail of commissioner actions"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+            </div>
+          ) : (
+            <>
           {isOwner && poolCreatorUserId ? (
             <CommissionerCoAdminsSection
               poolId={poolId}
@@ -1743,6 +1849,8 @@ export function PoolSettingsTab({
             poolName={poolName}
           />
           <CommissionerModerationLog poolId={poolId} />
+            </>
+          )}
         </div>
       ) : null}
 

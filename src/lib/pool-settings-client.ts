@@ -17,6 +17,7 @@ export type PoolSettingsPatchResult = {
   actions?: string[]
   unchanged?: boolean
   error?: string
+  commissionerTierRequired?: boolean
   needsConfirmation?: boolean
   warning?: string
   scoringVersion?: number | null
@@ -62,11 +63,16 @@ export async function patchPoolSettings(
   }
 
   if (!res.ok) {
+    const raw =
+      (data && typeof data.error === 'string' ? data.error : null) ||
+      (data && typeof data.message === 'string' ? data.message : null) ||
+      'Could not save settings'
     return {
       success: false,
-      error:
-        (data && typeof data.error === 'string' ? data.error : null) ||
-        'Could not save settings',
+      error: raw.includes('commissioner_tier_required')
+        ? 'This is a Commissioner feature'
+        : raw,
+      commissionerTierRequired: raw.includes('commissioner_tier_required'),
     }
   }
   return { success: true, ...data }

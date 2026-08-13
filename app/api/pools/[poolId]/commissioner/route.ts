@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { fetchPoolHasCommissionerTools } from '@/src/lib/commissioner-entitlements'
 import {
   fetchPoolCommissionerRole,
   listCoCommissioners,
@@ -12,7 +13,8 @@ export const runtime = 'nodejs'
 type Ctx = { params: Promise<{ poolId: string }> }
 
 /**
- * Bootstrap commissioner panel: role, co-admins, description, activity counts.
+ * Bootstrap commissioner panel: role, co-admins, description, activity counts,
+ * and whether this pool unlocks Commissioner tools (owner tier).
  * Admin-only (owner or co-commissioner).
  */
 export async function GET(_request: Request, context: Ctx) {
@@ -45,12 +47,15 @@ export async function GET(_request: Request, context: Ctx) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const { count: memberCount } = await admin
-    .from('pool_members')
-    .select('id', { count: 'exact', head: true })
-    .eq('pool_id', poolId)
-
-  const coCommissioners = await listCoCommissioners(admin, poolId)
+  const [{ count: memberCount }, poolHasCommissionerTools, coCommissioners] =
+    await Promise.all([
+      admin
+        .from('pool_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('pool_id', poolId),
+      fetchPoolHasCommissionerTools(admin, poolId),
+      listCoCommissioners(admin, poolId),
+    ])
 
   return NextResponse.json({
     role,
@@ -63,5 +68,7 @@ export async function GET(_request: Request, context: Ctx) {
     },
     memberCount: Math.max(0, memberCount ?? 0),
     coCommissioners,
+    poolHasCommissionerTools,
+    canUseCommissionerTools: role.isAdmin && poolHasCommissionerTools,
   })
 }

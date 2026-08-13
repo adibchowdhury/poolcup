@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { messageForCommissionerGate } from '@/src/lib/commissioner-entitlements'
 import { capturePostHog } from '@/src/lib/posthog-client'
 
 type ExportKind = 'leaderboard' | 'predictions'
@@ -100,8 +101,10 @@ export function PoolExportsSection({
           : 'Predictions CSV downloaded',
       )
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Could not generate export'
+      const message = messageForCommissionerGate(
+        err,
+        err instanceof Error ? err.message : 'Could not generate export',
+      )
       setError(message)
       toast.error(message)
     } finally {

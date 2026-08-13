@@ -107,6 +107,8 @@ interface PoolHomeViewProps {
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
   isPoolOwner?: boolean
   isPoolAdmin?: boolean
+  /** Owner has Commissioner tier — unlocks gated commissioner tools for this pool. */
+  poolHasCommissionerTools?: boolean
   coAdminUserIds?: string[]
   onPoolNameChange?: (name: string) => void
   onPoolDescriptionChange?: (description: string | null) => void
@@ -146,6 +148,7 @@ export function PoolHomeView({
   memberProfilesByUserId,
   isPoolOwner,
   isPoolAdmin,
+  poolHasCommissionerTools = false,
   coAdminUserIds,
   onPoolNameChange,
   onPoolDescriptionChange,
@@ -676,6 +679,7 @@ export function PoolHomeView({
                 currentUserId={currentUserId}
                 isOwner={isPoolOwner}
                 isAdmin={isPoolAdmin}
+                poolHasCommissionerTools={poolHasCommissionerTools}
                 coAdminUserIds={coAdminUserIds}
                 onPoolNameChange={onPoolNameChange}
                 onPoolDescriptionChange={onPoolDescriptionChange}

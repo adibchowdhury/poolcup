@@ -67,8 +67,11 @@ export default function TermsPage() {
               4. Pools
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              PoolCup is free to use. Creating a pool and joining a pool do not require
-              any fee through the Service.
+              Creating an account and joining pools on Free does not require a
+              fee. Optional paid subscriptions (such as Pool Commissioner) may
+              unlock additional features for pool owners. Paid plans are billed
+              through our payment provider; manage or cancel from Billing in
+              your account.
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               PoolCup does not operate real-money gambling or wagering. Any prizes or

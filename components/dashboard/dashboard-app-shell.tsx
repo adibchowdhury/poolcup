@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Heart, Mail, Settings, CircleHelp, Users } from 'lucide-react'
+import { Heart, Mail, Settings, CircleHelp, Users, CreditCard } from 'lucide-react'
 import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { Button } from '@/components/ui/button'
 import {
@@ -220,6 +220,12 @@ export function DashboardAppShell({
                         <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
                           <Settings className="h-4 w-4" />
                           Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/settings/billing">
+                            <CreditCard className="h-4 w-4" />
+                            Billing
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <a

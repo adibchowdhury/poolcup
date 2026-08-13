@@ -124,6 +124,8 @@ export function PoolPageClient() {
   const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(null)
   const [isPoolOwner, setIsPoolOwner] = useState(false)
   const [isPoolAdmin, setIsPoolAdmin] = useState(false)
+  const [poolHasCommissionerTools, setPoolHasCommissionerTools] =
+    useState(false)
   const [coAdminUserIds, setCoAdminUserIds] = useState<string[]>([])
   const [poolDescription, setPoolDescription] = useState<string | null>(null)
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
@@ -334,6 +336,7 @@ export function PoolPageClient() {
             setIsPoolAdmin(false)
             setIsPoolOwner(pool.creator_id === userId)
             setCanDelete(pool.creator_id === userId)
+            setPoolHasCommissionerTools(false)
           }
           return
         }
@@ -341,11 +344,13 @@ export function PoolPageClient() {
           role?: { isOwner?: boolean; isAdmin?: boolean }
           coCommissioners?: Array<{ userId: string }>
           pool?: { description?: string | null }
+          poolHasCommissionerTools?: boolean
         }
         const owner = Boolean(data.role?.isOwner)
         const admin = Boolean(data.role?.isAdmin)
         setIsPoolOwner(owner)
         setIsPoolAdmin(admin)
+        setPoolHasCommissionerTools(Boolean(data.poolHasCommissionerTools))
         setCanDelete(owner)
         setCoAdminUserIds(
           (data.coCommissioners ?? []).map((c) => c.userId).filter(Boolean),
@@ -852,6 +857,7 @@ export function PoolPageClient() {
       memberProfilesByUserId={memberProfilesByUserId}
       isPoolOwner={isPoolOwner}
       isPoolAdmin={isPoolAdmin}
+      poolHasCommissionerTools={poolHasCommissionerTools}
       coAdminUserIds={coAdminUserIds}
       onPoolNameChange={handlePoolNameChange}
       onPoolDescriptionChange={handlePoolDescriptionChange}

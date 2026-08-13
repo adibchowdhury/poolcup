@@ -2,7 +2,8 @@
 
 import { useId, useState } from 'react'
 import Link from 'next/link'
-import { Check, Minus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Check, Loader2, Minus } from 'lucide-react'
 import {
   Accordion,
   AccordionContent,
@@ -10,8 +11,14 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/src/lib/auth-context'
+import {
+  startBillingCheckout,
+  type BillingPlan,
+} from '@/src/lib/billing-checkout-client'
 
 const SIGNUP_HREF = '/login?next=/create'
+const LOGIN_FOR_PRICING_HREF = '/login?next=/pricing'
 
 type BillingPeriod = 'monthly' | 'yearly'
 
@@ -28,6 +35,7 @@ type PricingTier = {
   features: string[]
   popular?: boolean
   premium?: boolean
+  comingSoon?: boolean
 }
 
 const TIERS: PricingTier[] = [
@@ -54,8 +62,9 @@ const TIERS: PricingTier[] = [
     audience: 'For superfans.',
     monthlyPrice: '$4.99',
     yearlyPrice: '$49.99',
-    ctaLabel: 'Go Pro',
+    ctaLabel: 'Coming soon',
     popular: true,
+    comingSoon: true,
     features: [
       'Everything in Free',
       'Match insights & prediction trends',
@@ -75,12 +84,12 @@ const TIERS: PricingTier[] = [
     ctaLabel: 'Become a Commissioner',
     premium: true,
     features: [
-      'Everything in Pro',
-      'Unlimited custom pools',
-      'Admin controls & custom scoring',
-      'Announcements, polls & branding',
-      'Money pool tracking & exports',
-      'Scheduling tools',
+      'Everything in Free',
+      'Custom scoring & branding',
+      'Announcements, polls & exports',
+      'Co-commissioners & moderation tools',
+      'Members-missing predictions tools',
+      'Admin controls for your pools',
     ],
   },
 ]
@@ -105,19 +114,19 @@ const COMPARISON_ROWS: {
 const FAQ_ITEMS = [
   {
     q: "What's included in the free plan?",
-    a: 'Free includes predictions, leaderboards, friends, pool chat, badges, and the ability to create or join pools across leagues — everything you need to play with your crew.',
+    a: 'Free includes predictions, leaderboards, friends, pool chat, badges, and the ability to create or join pools across leagues — everything you need to play with your crew. Basic pool admin tools (name, description, open/close, members) are included; advanced Commissioner tools require a paid plan.',
   },
   {
     q: "What's the difference between Pro and Commissioner?",
-    a: 'Pro is built for players who want deeper insights, analytics, and personalization. Commissioner adds admin tools, custom scoring, branding, announcements, and money-pool tracking for people who run leagues.',
+    a: 'Commissioner unlocks pool-admin tools: custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features. PoolCup Pro (player insights and personalization) is coming soon and is not available for purchase yet.',
   },
   {
     q: 'Can I cancel anytime?',
-    a: 'Yes. Paid plans are month-to-month (or yearly if you choose that option). You can cancel anytime — billing is not live yet, and CTAs currently take you to sign up.',
+    a: 'Yes. Commissioner is billed month-to-month (or yearly if you choose that option). You can manage or cancel anytime from Billing in your account.',
   },
   {
     q: 'Do I need a credit card to start?',
-    a: 'No. You can create an account and start on Free with no credit card required.',
+    a: 'No. You can create an account and start on Free with no credit card required. A card is only needed if you upgrade to Commissioner.',
   },
 ]
 
@@ -139,6 +148,79 @@ function ComparisonCell({ value }: { value: boolean | string }) {
   )
 }
 
+function PaidPlanCheckoutButton({
+  plan,
+  label,
+  className,
+}: {
+  plan: BillingPlan
+  label: string
+  className: string
+}) {
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleClick() {
+    if (busy || authLoading) return
+    setError(null)
+
+    if (!user) {
+      router.push(LOGIN_FOR_PRICING_HREF)
+      return
+    }
+
+    setBusy(true)
+    const result = await startBillingCheckout(plan)
+    if (!result.ok) {
+      setBusy(false)
+      if (result.status === 401) {
+        router.push(LOGIN_FOR_PRICING_HREF)
+        return
+      }
+      setError(result.error)
+      return
+    }
+
+    window.location.assign(result.url)
+  }
+
+  return (
+    <div className="mt-8 space-y-2">
+      <button
+        type="button"
+        disabled={busy || authLoading}
+        aria-busy={busy}
+        onClick={() => void handleClick()}
+        className={cn(className, 'disabled:cursor-not-allowed disabled:opacity-70')}
+      >
+        {busy ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            Redirecting…
+          </>
+        ) : (
+          label
+        )}
+      </button>
+      {error ? (
+        <div className="space-y-1" role="alert">
+          <p className="text-center text-xs text-red-400">{error}</p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleClick()}
+            className="mx-auto block text-xs font-semibold text-[#00e676] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function PricingCard({
   tier,
   period,
@@ -149,6 +231,16 @@ function PricingCard({
   const price =
     period === 'monthly' ? tier.monthlyPrice : tier.yearlyPrice
   const periodLabel = period === 'monthly' ? '/month' : '/year'
+
+  const ctaClassName = cn(
+    'mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1620]',
+    tier.popular
+      ? 'bg-[#00e676] text-[#080b0f] hover:bg-[#00e676]/90'
+      : tier.premium
+        ? 'border border-[rgba(255,193,7,0.45)] bg-[rgba(255,193,7,0.1)] text-[#ffc107] hover:bg-[rgba(255,193,7,0.16)]'
+        : 'border border-[#00e676]/40 text-[#00e676] hover:bg-[#00e676]/10',
+  )
 
   return (
     <article
@@ -163,7 +255,11 @@ function PricingCard({
           'border-[rgba(255,255,255,0.1)] bg-[#0f1620]',
       )}
     >
-      {tier.popular ? (
+      {tier.comingSoon ? (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-[rgba(255,255,255,0.2)] bg-[#0f1620] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#728d9c]">
+          Coming soon
+        </span>
+      ) : tier.popular ? (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#00e676] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#080b0f]">
           Most Popular
         </span>
@@ -204,24 +300,29 @@ function PricingCard({
         ))}
       </ul>
 
-      {/*
-        TODO(billing): Wire this CTA to the real Free / Pro / Commissioner
-        Stripe subscription checkout once billing exists.
-      */}
-      <Link
-        href={SIGNUP_HREF}
-        className={cn(
-          'mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1620]',
-          tier.popular
-            ? 'bg-[#00e676] text-[#080b0f] hover:bg-[#00e676]/90'
-            : tier.premium
-              ? 'border border-[rgba(255,193,7,0.45)] bg-[rgba(255,193,7,0.1)] text-[#ffc107] hover:bg-[rgba(255,193,7,0.16)]'
-              : 'border border-[#00e676]/40 text-[#00e676] hover:bg-[#00e676]/10',
-        )}
-      >
-        {tier.ctaLabel}
-      </Link>
+      {tier.id === 'commissioner' ? (
+        <PaidPlanCheckoutButton
+          plan="commissioner"
+          label={tier.ctaLabel}
+          className={cn(ctaClassName, 'mt-0')}
+        />
+      ) : tier.comingSoon ? (
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className={cn(
+            ctaClassName,
+            'mt-0 cursor-not-allowed opacity-60',
+          )}
+        >
+          Coming soon
+        </button>
+      ) : (
+        <Link href={SIGNUP_HREF} className={ctaClassName}>
+          {tier.ctaLabel}
+        </Link>
+      )}
     </article>
   )
 }
@@ -243,14 +344,14 @@ export function LandingPricingSection() {
               id="pricing-heading"
               className="font-display text-4xl leading-[1.1] tracking-wide text-[#f0f4f8] md:text-5xl lg:text-6xl"
             >
-              <span className="block">Free Forever.</span>
+              <span className="block">Play free.</span>
               <span className="mt-1 block text-[#00e676]">
-                Upgrade When You&apos;re Ready.
+                Upgrade to Commissioner when you run the pool.
               </span>
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[#728d9c] md:text-lg">
-              Predict matches, compete with friends, and join public pools at no
-              cost.
+              Predict matches and compete with friends on Free. Unlock scoring,
+              branding, announcements, and more with Commissioner.
             </p>
           </div>
 
@@ -313,7 +414,7 @@ export function LandingPricingSection() {
             Free vs Pro vs Commissioner at a glance
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-[#728d9c] md:text-base">
-            See what&apos;s included in each plan.
+            Free and Commissioner are available now. Pro is coming soon.
           </p>
 
           <div className="mt-10 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0a0e12]">
@@ -325,7 +426,10 @@ export function LandingPricingSection() {
                   </th>
                   <th className="px-3 py-3.5 text-center font-medium">Free</th>
                   <th className="px-3 py-3.5 text-center font-medium text-[#00e676]">
-                    Pro
+                    Pro{' '}
+                    <span className="block text-[10px] font-normal uppercase tracking-wide text-[#5a7080]">
+                      Coming soon
+                    </span>
                   </th>
                   <th className="px-3 py-3.5 text-center font-medium">
                     Commissioner
