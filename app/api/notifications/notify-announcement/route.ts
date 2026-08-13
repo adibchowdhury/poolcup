@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { fetchIsPoolAdmin } from '@/src/lib/pool-admin'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { tryCreateNotificationWithPush } from '@/src/lib/push/notify-and-push'
@@ -35,18 +36,19 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminSupabaseClient()
+  const isAdmin = await fetchIsPoolAdmin(admin, poolId, user.id)
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
   const { data: pool } = await admin
     .from('pools')
-    .select('id, name, invite_code, creator_id')
+    .select('id, name, invite_code')
     .eq('id', poolId)
     .maybeSingle()
 
   if (!pool) {
     return NextResponse.json({ error: 'pool_not_found' }, { status: 404 })
-  }
-
-  if (pool.creator_id !== user.id) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
   const { data: members } = await admin

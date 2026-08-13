@@ -6,7 +6,6 @@ import {
   Crown,
   Loader2,
   Lock,
-  Megaphone,
   MoreHorizontal,
   Pencil,
   UserMinus,
@@ -17,6 +16,7 @@ import { toast } from 'sonner'
 import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-admins-section'
 import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
 import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
+import { PoolAnnouncementsPanel } from '@/components/pool/pool-announcements-panel'
 import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
@@ -72,16 +72,9 @@ import {
   scorePointsForDb,
   validateClassicScoringPoints,
 } from '@/src/lib/classic-score-points'
-import {
-  ANNOUNCEMENT_MAX_LENGTH,
-  clearPoolAnnouncement,
-  getLatestActiveAnnouncement,
-  postPoolAnnouncement,
-  type PoolAnnouncement,
-} from '@/src/lib/pool-announcements'
+import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
 import { patchPoolSettings } from '@/src/lib/pool-settings-client'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import { supabase } from '@/src/lib/supabase'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 type PoolSettingsTabProps = {
@@ -162,32 +155,6 @@ function SubsectionHeading({
             : 'bg-gradient-to-r from-border to-transparent',
         )}
       />
-    </div>
-  )
-}
-
-function AnnouncementPreviewBanner({ message }: { message: string }) {
-  return (
-    <div
-      role="status"
-      className={cn(
-        'relative overflow-hidden rounded-xl border border-primary/35',
-        'bg-gradient-to-r from-primary/15 via-primary/10 to-transparent',
-        'px-3 py-3 sm:px-4',
-      )}
-    >
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-primary"
-        aria-hidden
-      />
-      <div className="flex items-start gap-3 pl-1.5">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/15">
-          <Megaphone className="h-4 w-4 text-primary" aria-hidden />
-        </div>
-        <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-          {message}
-        </p>
-      </div>
     </div>
   )
 }
@@ -275,15 +242,6 @@ export function PoolSettingsTab({
   const [memberPendingRemove, setMemberPendingRemove] =
     useState<LeaderboardMember | null>(null)
   const [removingMember, setRemovingMember] = useState(false)
-  const [draftAnnouncement, setDraftAnnouncement] = useState('')
-  const [managedAnnouncement, setManagedAnnouncement] =
-    useState<PoolAnnouncement | null>(null)
-  const [loadingAnnouncement, setLoadingAnnouncement] = useState(false)
-  const [postingAnnouncement, setPostingAnnouncement] = useState(false)
-  const [clearingAnnouncement, setClearingAnnouncement] = useState(false)
-  const [announcementError, setAnnouncementError] = useState<string | null>(
-    null,
-  )
   const [colorsExpanded, setColorsExpanded] = useState(false)
 
   const isClassicPool = scoringStyle !== 'winner'
@@ -333,25 +291,6 @@ export function PoolSettingsTab({
     setDraftDraw(String(next.draw))
   }, [scoreExactPoints, scoreWinnerPoints, scoreDrawPoints])
 
-  useEffect(() => {
-    if (!isAdmin || !poolId) {
-      setManagedAnnouncement(null)
-      return
-    }
-
-    let cancelled = false
-    setLoadingAnnouncement(true)
-    void getLatestActiveAnnouncement(supabase, poolId).then((row) => {
-      if (cancelled) return
-      setManagedAnnouncement(row)
-      setLoadingAnnouncement(false)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin, poolId])
-
   const validationError = validatePoolName(draftName)
   const canSave =
     Boolean(poolId) &&
@@ -360,8 +299,6 @@ export function PoolSettingsTab({
     !saving
 
   const effectiveTheme = resolvePoolThemeColor(poolThemeColor)
-  const liveAnnouncementPreview =
-    draftAnnouncement.trim() || managedAnnouncement?.message || ''
 
   function startEditing() {
     setDraftName(poolName)
@@ -640,61 +577,6 @@ export function PoolSettingsTab({
     }
   }
 
-  async function handlePostAnnouncement() {
-    if (!poolId || !isAdmin || postingAnnouncement) return
-    setAnnouncementError(null)
-    setPostingAnnouncement(true)
-    try {
-      const result = await postPoolAnnouncement(
-        supabase,
-        poolId,
-        currentUserId,
-        draftAnnouncement,
-      )
-      if (!result.ok) {
-        setAnnouncementError(result.error)
-        toast.error(result.error)
-        return
-      }
-      setManagedAnnouncement(result.announcement)
-      setDraftAnnouncement('')
-      onManagedAnnouncementChange?.(result.announcement)
-      toast.success('Announcement posted')
-      void fetch('/api/notifications/notify-announcement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          poolId,
-          announcementId: result.announcement.id,
-          message: result.announcement.message,
-        }),
-      }).catch(() => {})
-    } finally {
-      setPostingAnnouncement(false)
-    }
-  }
-
-  async function handleClearAnnouncement() {
-    if (!managedAnnouncement || clearingAnnouncement) return
-    setAnnouncementError(null)
-    setClearingAnnouncement(true)
-    try {
-      const result = await clearPoolAnnouncement(
-        supabase,
-        managedAnnouncement.id,
-      )
-      if (!result.ok) {
-        setAnnouncementError(result.error)
-        toast.error(result.error)
-        return
-      }
-      setManagedAnnouncement(null)
-      onManagedAnnouncementChange?.(null)
-      toast.success('Announcement cleared')
-    } finally {
-      setClearingAnnouncement(false)
-    }
-  }
 
   return (
     <div className="w-full min-w-0 space-y-8">
@@ -1264,82 +1146,18 @@ export function PoolSettingsTab({
           <div>
             <SubsectionHeading title="Announcements" />
             <p className="mb-3 text-xs text-muted-foreground">
-              Members see this as a banner at the top of the pool until they
-              dismiss it.
+              Post updates for the pool. Pin one to feature it in the banner.
+              Members are notified when you post a new announcement.
             </p>
-            <div className="space-y-3">
-              {loadingAnnouncement ? (
-                <p className="text-xs text-muted-foreground">Loading…</p>
-              ) : liveAnnouncementPreview ? (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                    {draftAnnouncement.trim()
-                      ? 'Live preview'
-                      : 'Active announcement'}
-                  </p>
-                  <AnnouncementPreviewBanner
-                    message={liveAnnouncementPreview}
-                  />
-                  {managedAnnouncement && !draftAnnouncement.trim() ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-1 h-8"
-                      disabled={clearingAnnouncement || postingAnnouncement}
-                      onClick={() => void handleClearAnnouncement()}
-                    >
-                      {clearingAnnouncement
-                        ? 'Clearing…'
-                        : 'Clear announcement'}
-                    </Button>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No active announcement — start typing to preview.
-                </p>
-              )}
-
-              <Textarea
-                id="pool-announcement-message"
-                value={draftAnnouncement}
-                onChange={(e) => {
-                  setDraftAnnouncement(
-                    e.target.value.slice(0, ANNOUNCEMENT_MAX_LENGTH),
-                  )
-                  setAnnouncementError(null)
-                }}
-                placeholder="e.g. Lock in your picks before Friday kickoff"
-                rows={3}
-                maxLength={ANNOUNCEMENT_MAX_LENGTH}
-                disabled={postingAnnouncement || !poolId}
-                className="min-h-[4.5rem] resize-y"
+            {poolId ? (
+              <PoolAnnouncementsPanel
+                poolId={poolId}
+                currentUserId={currentUserId}
+                isAdmin
+                showComposer
+                onBannerChange={onManagedAnnouncementChange}
               />
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs tabular-nums text-muted-foreground">
-                  {draftAnnouncement.trim().length}/{ANNOUNCEMENT_MAX_LENGTH}
-                </p>
-                <Button
-                  type="button"
-                  size="lg"
-                  className="h-11 w-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto sm:min-w-[12rem]"
-                  disabled={
-                    postingAnnouncement ||
-                    !poolId ||
-                    draftAnnouncement.trim().length === 0
-                  }
-                  onClick={() => void handlePostAnnouncement()}
-                >
-                  {postingAnnouncement ? 'Posting…' : 'Post Announcement'}
-                </Button>
-              </div>
-              {announcementError ? (
-                <p className="text-xs text-destructive" role="alert">
-                  {announcementError}
-                </p>
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
           <div>
@@ -1435,6 +1253,17 @@ export function PoolSettingsTab({
                 </ul>
               </div>
               {poolId ? <PoolScoringHistory poolId={poolId} /> : null}
+            </section>
+          ) : null}
+          {poolId ? (
+            <section className="space-y-3">
+              <SectionHeading title="Announcements" />
+              <PoolAnnouncementsPanel
+                poolId={poolId}
+                currentUserId={currentUserId}
+                isAdmin={false}
+                showComposer={false}
+              />
             </section>
           ) : null}
           <p

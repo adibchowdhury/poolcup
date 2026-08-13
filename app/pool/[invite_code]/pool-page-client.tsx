@@ -36,7 +36,7 @@ import {
   type MemberAvatarRecord,
 } from '@/src/lib/pool-leaderboard'
 import {
-  getActiveAnnouncement,
+  fetchPoolAnnouncementsApi,
   type PoolAnnouncement,
 } from '@/src/lib/pool-announcements'
 
@@ -231,11 +231,20 @@ export function PoolPageClient() {
     [userId],
   )
 
-  const handleAnnouncementDismissed = useCallback((announcementId: string) => {
-    setActiveAnnouncement((previous) =>
-      previous?.id === announcementId ? null : previous,
-    )
-  }, [])
+  const handleAnnouncementDismissed = useCallback(
+    (announcementId: string) => {
+      setActiveAnnouncement((previous) =>
+        previous?.id === announcementId ? null : previous,
+      )
+      if (!poolId) return
+      void fetchPoolAnnouncementsApi(poolId).then((result) => {
+        if (!result.error) {
+          setActiveAnnouncement(result.banner)
+        }
+      })
+    },
+    [poolId],
+  )
 
   const handleManagedAnnouncementChange = useCallback(
     (announcement: PoolAnnouncement | null) => {
@@ -349,7 +358,9 @@ export function PoolPageClient() {
         /* keep creator-based fallback */
       })
 
-    const activeAnnouncementPromise = getActiveAnnouncement(supabase, pool.id)
+    const activeAnnouncementPromise = fetchPoolAnnouncementsApi(pool.id).then(
+      (result) => result.banner,
+    )
 
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
