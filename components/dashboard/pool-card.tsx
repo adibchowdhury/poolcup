@@ -200,13 +200,31 @@ export function PoolCard({
       pool.inviteCode,
       user?.id,
     )
-    navigator.clipboard.writeText(joinUrl)
-    trackEvent('invite_link_copied', {
-      poolId: pool.id,
-      metadata: { source: 'dashboard_card' },
+    void import('@/src/lib/share-client').then(({ shareOrCopy }) => {
+      void import('@/src/lib/posthog-client').then(({ capturePostHog }) => {
+        capturePostHog('share_card_generated', { type: 'pool_invite' })
+      })
+      void shareOrCopy({
+        title: `Join ${pool.name} on PoolCup`,
+        text: 'Join my prediction pool on PoolCup',
+        url: joinUrl,
+        imageUrl: `/api/share/pool/${encodeURIComponent(pool.inviteCode)}`,
+        type: 'pool_invite',
+      })
+        .then(() => {
+          trackEvent('invite_link_copied', {
+            poolId: pool.id,
+            metadata: { source: 'dashboard_card' },
+          })
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 2000)
+        })
+        .catch(() => {
+          void navigator.clipboard.writeText(joinUrl)
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 2000)
+        })
     })
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2000)
   }
 
   const openDeleteDialog = () => {

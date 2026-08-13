@@ -30,6 +30,7 @@ import {
   syncPredictionStreak,
 } from '@/src/lib/streak-client'
 import { supabase } from '@/src/lib/supabase'
+import { SignedShareButton } from '@/components/share/signed-share-button'
 
 type RecentResultsSectionProps = {
   userId: string
@@ -242,11 +243,11 @@ function OutcomePill({ kind }: { kind: PredictionOutcomeKind }) {
 
 function RecentScoredRow({ item }: { item: RecentScoredPrediction }) {
   return (
-    <li>
+    <li className="flex min-w-0 items-center gap-1.5 px-1.5 py-1 sm:gap-2 sm:px-2">
       <Link
         href={`/match/${item.matchId}`}
         className={cn(
-          'flex min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/40',
+          'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-2 transition-colors hover:bg-muted/40 sm:px-2.5',
           FOCUS_VISIBLE_RING,
         )}
       >
@@ -275,6 +276,17 @@ function RecentScoredRow({ item }: { item: RecentScoredPrediction }) {
           {item.points > 0 ? `+${item.points}` : '0'}
         </span>
       </Link>
+      <SignedShareButton
+        type="prediction"
+        poolId={item.poolId}
+        matchId={item.matchId}
+        destinationUrl={`/match/${encodeURIComponent(item.matchId)}`}
+        title={`${item.team1Name} vs ${item.team2Name} on PoolCup`}
+        text={`My pick ${item.predTeam1}–${item.predTeam2} · Final ${item.resultTeam1}–${item.resultTeam2} · ${item.points > 0 ? `+${item.points}` : '0'} pts`}
+        label="Share"
+        variant="ghost"
+        className="shrink-0"
+      />
     </li>
   )
 }

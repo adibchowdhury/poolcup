@@ -146,6 +146,15 @@ export function AdminSyncDashboard({
           >
             Badge corrections →
           </Link>
+          <Link
+            href="/admin/referrals"
+            className={cn(
+              'mt-1 inline-flex text-sm text-primary hover:underline',
+              FOCUS_VISIBLE_RING,
+            )}
+          >
+            Referral performance →
+          </Link>
         </div>
         <Button
           type="button"

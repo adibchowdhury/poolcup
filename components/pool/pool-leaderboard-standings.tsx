@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
+import { SignedShareButton } from '@/components/share/signed-share-button'
 
 const CLIMB_STREAK_FIRE_MIN = 3
 
@@ -447,6 +448,9 @@ export type PoolLeaderboardStandingsProps = {
   onInvite: () => void
   showPreMatchNote?: boolean
   className?: string
+  /** Enables "Share my rank" for the current user's standing. */
+  poolId?: string
+  inviteCode?: string
   /**
    * Marketing / landing preview: render names & avatars as static chrome
    * (no `/u/[id]` links). Does not fetch or poll — data still comes from props.
@@ -470,6 +474,8 @@ export function PoolLeaderboardStandings({
   onInvite,
   showPreMatchNote = false,
   className,
+  poolId,
+  inviteCode,
   disableProfileLinks = false,
   firstPlaceFigureSrc,
 }: PoolLeaderboardStandingsProps) {
@@ -508,10 +514,15 @@ export function PoolLeaderboardStandings({
   const ordered = flattenStandings(members)
   const podiumSlots = ordered.slice(0, Math.min(3, ordered.length))
   const rest = ordered.slice(3)
+  const youStanding = ordered.find((row) => row.member.isYou) ?? null
 
   const first = podiumSlots[0] ?? null
   const second = podiumSlots[1] ?? null
   const third = podiumSlots[2] ?? null
+
+  const shareRankDestination = inviteCode
+    ? `/pool/${encodeURIComponent(inviteCode)}?tab=leaderboard`
+    : '/dashboard'
 
   return (
     <div
@@ -554,6 +565,18 @@ export function PoolLeaderboardStandings({
           ) : null}
         </div>
       </section>
+
+      {youStanding && poolId ? (
+        <div className="mx-auto flex w-full max-w-4xl justify-center px-4 pt-3">
+          <SignedShareButton
+            type="leaderboard"
+            poolId={poolId}
+            destinationUrl={shareRankDestination}
+            title={`I'm #${youStanding.place} on PoolCup`}
+            text={`${youStanding.member.points} pts · ${ordinalPlace(youStanding.place)} in the pool`}
+          />
+        </div>
+      ) : null}
 
       {rest.length > 0 ? (
         <section

@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
+import { PoolInviteCard } from '@/components/pool/pool-invite-card'
 import { TransferOwnershipDialog } from '@/components/pool/transfer-ownership-dialog'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import {
@@ -76,6 +77,7 @@ import { supabase } from '@/src/lib/supabase'
 type PoolSettingsTabProps = {
   poolId?: string
   poolName: string
+  inviteCode?: string
   poolThemeColor: string | null
   scoringStyle: string
   scoreExactPoints: number | null
@@ -181,6 +183,7 @@ function AnnouncementPreviewBanner({ message }: { message: string }) {
 export function PoolSettingsTab({
   poolId,
   poolName,
+  inviteCode,
   poolThemeColor,
   scoringStyle,
   scoreExactPoints,
@@ -1030,6 +1033,19 @@ export function PoolSettingsTab({
                 <Lock className="h-3.5 w-3.5" aria-hidden />
                 Close to new members
               </Button>
+            ) : null}
+            {acceptingMembers && inviteCode ? (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Invite link
+                </p>
+                <PoolInviteCard
+                  inviteCode={inviteCode}
+                  poolId={poolId}
+                  poolName={poolName}
+                  source="pool_settings"
+                />
+              </div>
             ) : null}
           </div>
         </section>

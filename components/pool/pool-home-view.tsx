@@ -21,6 +21,8 @@ import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
+import { PoolInviteCard } from '@/components/pool/pool-invite-card'
+import { SoloInviteNudge } from '@/components/pool/solo-invite-nudge'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
@@ -45,6 +47,7 @@ import {
 import { trackEvent } from '@/src/lib/track'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
+import { shareOrCopy } from '@/src/lib/share-client'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
 import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
@@ -184,29 +187,34 @@ export function PoolHomeView({
       pool.inviteCode,
       currentUserId,
     )
-    navigator.clipboard.writeText(joinUrl)
-    trackEvent('invite_link_copied', {
-      poolId: poolId ?? null,
-      metadata: { source: 'pool_page' },
+    capturePostHog('share_card_generated', { type: 'pool_invite' })
+    void shareOrCopy({
+      title: `Join ${pool.name} on PoolCup`,
+      text: 'Join my prediction pool on PoolCup',
+      url: joinUrl,
+      imageUrl: `/api/share/pool/${encodeURIComponent(pool.inviteCode)}`,
+      type: 'pool_invite',
     })
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2000)
+      .then(() => {
+        trackEvent('invite_link_copied', {
+          poolId: poolId ?? null,
+          metadata: { source: 'pool_page' },
+        })
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {
+        /* abort / ignore */
+      })
   }
 
   const inviteFromLeaderboard = () => {
     if (!pool.acceptingMembers) return
-    const joinUrl = buildJoinInviteUrl(
-      window.location.origin,
-      pool.inviteCode,
-      currentUserId,
-    )
-    navigator.clipboard.writeText(joinUrl)
+    copyInviteLink()
     trackEvent('invite_link_copied', {
       poolId: poolId ?? null,
       metadata: { source: 'pool_leaderboard' },
     })
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2000)
   }
 
   // TEMPORARY — mock standings for design preview; flip USE_MOCK_LEADERBOARD off to restore.
@@ -447,6 +455,24 @@ export function PoolHomeView({
             </div>
           ) : null}
 
+          {!isChatView && poolId ? (
+            <div
+              className={cn(
+                'mb-4',
+                isLeaderboardTab && 'mx-auto max-w-4xl px-4',
+                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
+              )}
+            >
+              <SoloInviteNudge
+                inviteCode={pool.inviteCode}
+                poolId={poolId}
+                poolName={pool.name}
+                memberCount={pool.memberCount}
+                acceptingMembers={pool.acceptingMembers}
+              />
+            </div>
+          ) : null}
+
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -551,44 +577,26 @@ export function PoolHomeView({
                 onToggleShare={() => setShareOpen((o) => !o)}
                 inviteCopySlot={
                   pool.acceptingMembers ? (
-                  <div className="rounded-2xl border border-border bg-card p-6">
-                    <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted px-4 py-3">
-                        <span className="text-sm text-muted-foreground">/join/</span>
-                        <span className="font-mono font-medium text-primary">
-                          {pool.inviteCode}
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={copyInviteLink}
-                        variant={copied ? 'default' : 'outline'}
-                        className="gap-2"
-                      >
-                        {copied ? (
-                          <>
-                            <Check className="h-4 w-4" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4" />
-                            Copy
-                          </>
-                        )}
-                      </Button>
+                    <div className="rounded-2xl border border-border bg-card p-6">
+                      <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
+                      <PoolInviteCard
+                        inviteCode={pool.inviteCode}
+                        poolId={poolId}
+                        poolName={pool.name}
+                        source="pool_predictions_share"
+                      />
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        Share this link with friends so they can join your prediction
+                        pool
+                      </p>
                     </div>
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      Share this link with friends so they can join your prediction pool
-                    </p>
-                  </div>
                   ) : (
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
                       <p className="font-medium text-foreground">Invites closed</p>
                       <p className="mt-2 text-sm text-muted-foreground">
                         New members cannot join while invites are closed. Turn accepting
-                        new members back on in Pool Settings to share your invite link again.
+                        new members back on in Pool Settings to share your invite link
+                        again.
                       </p>
                     </div>
                   )
@@ -631,6 +639,8 @@ export function PoolHomeView({
                     copied={copied}
                     onInvite={inviteFromLeaderboard}
                     showPreMatchNote={showPreMatchLeaderboardNote}
+                    poolId={poolId}
+                    inviteCode={pool.inviteCode}
                     className="min-h-0 flex-1"
                   />
                 </div>
@@ -641,6 +651,7 @@ export function PoolHomeView({
               <PoolSettingsTab
                 poolId={poolId}
                 poolName={pool.name}
+                inviteCode={pool.inviteCode}
                 poolThemeColor={pool.themeColor}
                 scoringStyle={pool.scoringStyle}
                 scoreExactPoints={pool.scoreExactPoints}

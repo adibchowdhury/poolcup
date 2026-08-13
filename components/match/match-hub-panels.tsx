@@ -33,6 +33,7 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
 import { matchStartLabelLower } from '@/src/lib/match-status-display'
+import { SignedShareButton } from '@/components/share/signed-share-button'
 
 export type WritableScorePool = {
   poolId: string
@@ -298,6 +299,13 @@ function YourPredictionCard({
   }
 
   if (!editing) {
+    const sharePoolId = writablePools[0]?.poolId
+    const canShareResult =
+      !USE_MOCK_HUB &&
+      locked &&
+      Boolean(sharePoolId) &&
+      (phase === 'final' || phase === 'live' || isMatchLocked(lockedAt))
+
     return (
       <SectionShell title="Your prediction">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -323,16 +331,32 @@ function YourPredictionCard({
               <p className="mt-1 text-xs text-primary">Saved</p>
             ) : null}
           </div>
-          {!locked ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(true)}
-            >
-              Edit until {matchStartLabelLower(sport)}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {canShareResult && sharePoolId ? (
+              <SignedShareButton
+                type="prediction"
+                poolId={sharePoolId}
+                matchId={matchId}
+                destinationUrl={`/match/${encodeURIComponent(matchId)}`}
+                title={`${team1Name} vs ${team2Name} on PoolCup`}
+                text={`My pick ${primaryPick.team1}–${primaryPick.team2}${
+                  showPickPoints
+                    ? ` · ${myPickPoints! > 0 ? `+${myPickPoints}` : '0'} pts`
+                    : ''
+                }`}
+              />
+            ) : null}
+            {!locked ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(true)}
+              >
+                Edit until {matchStartLabelLower(sport)}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </SectionShell>
     )

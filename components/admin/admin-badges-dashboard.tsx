@@ -178,6 +178,16 @@ export function AdminBadgesDashboard() {
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Sync status
         </Link>
+        {' · '}
+        <Link
+          href="/admin/referrals"
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground',
+            FOCUS_VISIBLE_RING,
+          )}
+        >
+          Referrals
+        </Link>
         <h1 className="mt-3 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
           Badge corrections
         </h1>

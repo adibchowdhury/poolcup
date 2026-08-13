@@ -12,7 +12,11 @@ import {
   achievementRarityLabel,
   ACHIEVEMENT_RARITY_STYLES,
 } from '@/src/lib/achievement-rarity'
+import { useAuth } from '@/src/lib/auth-context'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { capturePostHog } from '@/src/lib/posthog-client'
+import { shareOrCopy } from '@/src/lib/share-client'
+import { siteUrl } from '@/src/lib/site'
 import { cn } from '@/lib/utils'
 
 export type BadgeUnlockItem = {
@@ -96,10 +100,53 @@ export function BadgeUnlockModal({
   onDismiss,
   remainingCount = 0,
 }: BadgeUnlockModalProps) {
+  const { user } = useAuth()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const [portalReady, setPortalReady] = useState(false)
   const [showRain, setShowRain] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+
+  const rarityLabel = badge?.rarity
+    ? achievementRarityLabel(badge.rarity)
+    : null
+  const isRareShareable =
+    rarityLabel === 'Epic' || rarityLabel === 'Legendary'
+
+  async function shareBadge() {
+    if (!badge) return
+    setSharing(true)
+    setShareError(null)
+    capturePostHog('badge_share_clicked', {
+      achievement_id: badge.id,
+      rarity: rarityLabel,
+    })
+    const imageUrl = `/api/share/badge/${encodeURIComponent(badge.id)}${
+      user?.id ? `?userId=${encodeURIComponent(user.id)}` : ''
+    }`
+    const url = user?.id
+      ? `${siteUrl}/u/${encodeURIComponent(user.id)}`
+      : `${siteUrl}/achievements`
+    try {
+      capturePostHog('share_card_generated', { type: 'badge' })
+      await shareOrCopy({
+        title: `I earned ${badge.name} on PoolCup`,
+        text: rarityLabel
+          ? `Just unlocked a ${rarityLabel} badge on PoolCup`
+          : 'Just unlocked a badge on PoolCup',
+        url,
+        imageUrl,
+        type: 'badge',
+      })
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        setShareError('Could not share badge')
+      }
+    } finally {
+      setSharing(false)
+    }
+  }
 
   useLayoutEffect(() => {
     setPortalReady(true)
@@ -291,16 +338,34 @@ export function BadgeUnlockModal({
             Unlocked {formatAchievementEarnedDate(badge.earned_at ?? null)}
           </p>
 
-          <Button
-            type="button"
-            className={cn(
-              'mt-8 min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90',
-              FOCUS_VISIBLE_RING,
-            )}
-            onClick={onDismiss}
-          >
-            {remainingCount > 0 ? 'Next badge' : 'Continue'}
-          </Button>
+          <div className="mt-8 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+            {isRareShareable ? (
+              <Button
+                type="button"
+                variant="outline"
+                className={cn('min-w-[10rem]', FOCUS_VISIBLE_RING)}
+                disabled={sharing}
+                onClick={() => void shareBadge()}
+              >
+                {sharing ? 'Preparing…' : 'Share this badge'}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              className={cn(
+                'min-w-[10rem] bg-primary text-primary-foreground hover:bg-primary/90',
+                FOCUS_VISIBLE_RING,
+              )}
+              onClick={onDismiss}
+            >
+              {remainingCount > 0 ? 'Next badge' : 'Continue'}
+            </Button>
+          </div>
+          {shareError ? (
+            <p className="mt-2 text-sm text-destructive" role="alert">
+              {shareError}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>,

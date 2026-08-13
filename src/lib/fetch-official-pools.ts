@@ -282,6 +282,11 @@ export async function joinPublicPool(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ poolId }),
       }).catch(() => {})
+      void fetch('/api/pool-join-attribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ poolId, source: 'official_join' }),
+      }).catch(() => {})
     }
     return { error: null, alreadyMember: false }
   }

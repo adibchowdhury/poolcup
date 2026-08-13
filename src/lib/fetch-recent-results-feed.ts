@@ -40,6 +40,8 @@ export type BestPrediction =
 /** Settled match prediction for the home "Recent results" list (most recent first). */
 export type RecentScoredPrediction = {
   matchId: string
+  /** Pool that owns this pick (needed to mint a signed share card). */
+  poolId: string
   team1Name: string
   team2Name: string
   predTeam1: number
@@ -88,6 +90,7 @@ type PredictionBestRow = {
   pred_team2: number
   advance_pick: number | null
   match_id?: string
+  pool_id?: string
   matches: MatchJoin | MatchJoin[] | null
 }
 
@@ -188,8 +191,9 @@ function buildRecentScoredPrediction(
   row: PredictionBestRow,
 ): RecentScoredPrediction | null {
   const matchId = typeof row.match_id === 'string' ? row.match_id : ''
+  const poolId = typeof row.pool_id === 'string' ? row.pool_id : ''
   const match = unwrapMatch(row.matches)
-  if (!matchId || !match) return null
+  if (!matchId || !poolId || !match) return null
   if (match.result_team1 == null || match.result_team2 == null) return null
   if (!match.is_final) return null
 
@@ -209,6 +213,7 @@ function buildRecentScoredPrediction(
 
   return {
     matchId,
+    poolId,
     team1Name: match.team1_name,
     team2Name: match.team2_name,
     predTeam1: row.pred_team1,
@@ -379,6 +384,7 @@ export async function fetchRecentResultsFeed(
             pred_team2,
             advance_pick,
             match_id,
+            pool_id,
             matches!inner (
               team1_name,
               team2_name,

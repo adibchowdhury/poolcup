@@ -152,11 +152,43 @@ function DiscoverPoolCardView({
         <p className="mt-2 text-xs text-destructive">{joinError}</p>
       ) : null}
 
-      <div className="mt-auto pt-4">
+      <div className="mt-auto flex flex-col gap-2 pt-4">
         {pool.isMember ? (
-          <Button asChild className={cn('w-full', FOCUS_VISIBLE_RING)}>
-            <Link href={`/pool/${pool.inviteCode}`}>Open pool</Link>
-          </Button>
+          <>
+            <Button asChild className={cn('w-full', FOCUS_VISIBLE_RING)}>
+              <Link href={`/pool/${pool.inviteCode}`}>Open pool</Link>
+            </Button>
+            {pool.inviteCode ? (
+              <Button
+                type="button"
+                variant="outline"
+                className={cn('w-full', FOCUS_VISIBLE_RING)}
+                onClick={() => {
+                  const url = `${window.location.origin}/join/${pool.inviteCode}`
+                  void import('@/src/lib/share-client').then(({ shareOrCopy }) => {
+                    void import('@/src/lib/posthog-client').then(
+                      ({ capturePostHog }) => {
+                        capturePostHog('share_card_generated', {
+                          type: 'pool_invite',
+                        })
+                      },
+                    )
+                    void shareOrCopy({
+                      title: `Join ${pool.name} on PoolCup`,
+                      text: 'Join this prediction pool on PoolCup',
+                      url,
+                      imageUrl: `/api/share/pool/${encodeURIComponent(pool.inviteCode)}`,
+                      type: 'pool_invite',
+                    }).catch(() => {
+                      void navigator.clipboard.writeText(url)
+                    })
+                  })
+                }}
+              >
+                Share invite
+              </Button>
+            ) : null}
+          </>
         ) : (
           <Button
             type="button"
