@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Check,
   Crown,
@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-admins-section'
 import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
 import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
+import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
@@ -67,9 +68,9 @@ import {
   CLASSIC_DEFAULT_WINNER_POINTS,
   CLASSIC_SCORE_POINTS_MAX,
   CLASSIC_SCORE_POINTS_MIN,
-  parseScorePointsInput,
   resolveClassicScorePoints,
   scorePointsForDb,
+  validateClassicScoringPoints,
 } from '@/src/lib/classic-score-points'
 import {
   ANNOUNCEMENT_MAX_LENGTH,
@@ -266,6 +267,11 @@ export function PoolSettingsTab({
   const [draftDraw, setDraftDraw] = useState(String(resolvedScoring.draw))
   const [savingScoring, setSavingScoring] = useState(false)
   const [scoringError, setScoringError] = useState<string | null>(null)
+  const [scoringConfirmOpen, setScoringConfirmOpen] = useState(false)
+  const [scoringHistoryKey, setScoringHistoryKey] = useState(0)
+  const [lastRecalcResult, setLastRecalcResult] = useState<string | null>(null)
+  const scoringPreviewedRef = useRef(false)
+  const scoringFormId = useId()
   const [memberPendingRemove, setMemberPendingRemove] =
     useState<LeaderboardMember | null>(null)
   const [removingMember, setRemovingMember] = useState(false)
@@ -281,7 +287,26 @@ export function PoolSettingsTab({
   const [colorsExpanded, setColorsExpanded] = useState(false)
 
   const isClassicPool = scoringStyle !== 'winner'
-  const canEditScoring = isAdmin && isClassicPool && !scoringLocked
+  const canEditScoring = isAdmin && isClassicPool
+
+  const draftScoringPreview = validateClassicScoringPoints({
+    exact: draftExact.trim() === '' ? NaN : Number(draftExact),
+    winner: draftWinner.trim() === '' ? NaN : Number(draftWinner),
+    draw: draftDraw.trim() === '' ? NaN : Number(draftDraw),
+  })
+
+  useEffect(() => {
+    if (!canEditScoring || !draftScoringPreview.ok || scoringPreviewedRef.current) {
+      return
+    }
+    scoringPreviewedRef.current = true
+    capturePostHog('scoring_previewed', {
+      pool_id: poolId,
+      exact: draftScoringPreview.exact,
+      winner: draftScoringPreview.winner,
+      draw: draftScoringPreview.draw,
+    })
+  }, [canEditScoring, draftScoringPreview, poolId])
 
   useEffect(() => {
     if (!isEditingName) {
@@ -463,33 +488,48 @@ export function PoolSettingsTab({
     toast.success(normalized ? 'Pool color saved' : 'Pool color reset to default')
   }
 
-  async function handleSaveScoring() {
+  async function persistScoring(opts: { confirmRecalculate: boolean }) {
     if (!poolId || !canEditScoring || savingScoring) return
 
-    const exact = parseScorePointsInput(draftExact)
-    const winner = parseScorePointsInput(draftWinner)
-    const draw = parseScorePointsInput(draftDraw)
-
-    if (exact == null || winner == null || draw == null) {
-      setScoringError(
-        `Enter whole numbers from ${CLASSIC_SCORE_POINTS_MIN}–${CLASSIC_SCORE_POINTS_MAX}`,
-      )
+    const validated = validateClassicScoringPoints({
+      exact: draftExact.trim() === '' ? NaN : Number(draftExact),
+      winner: draftWinner.trim() === '' ? NaN : Number(draftWinner),
+      draw: draftDraw.trim() === '' ? NaN : Number(draftDraw),
+    })
+    if (!validated.ok) {
+      setScoringError(validated.error)
       return
     }
 
-    const nextExact = scorePointsForDb(exact, CLASSIC_DEFAULT_EXACT_POINTS)
-    const nextWinner = scorePointsForDb(winner, CLASSIC_DEFAULT_WINNER_POINTS)
-    const nextDraw = scorePointsForDb(draw, CLASSIC_DEFAULT_DRAW_POINTS)
+    const nextExact = scorePointsForDb(
+      validated.exact,
+      CLASSIC_DEFAULT_EXACT_POINTS,
+    )
+    const nextWinner = scorePointsForDb(
+      validated.winner,
+      CLASSIC_DEFAULT_WINNER_POINTS,
+    )
+    const nextDraw = scorePointsForDb(
+      validated.draw,
+      CLASSIC_DEFAULT_DRAW_POINTS,
+    )
 
     setSavingScoring(true)
     setScoringError(null)
+    setLastRecalcResult(null)
 
     const result = await patchPoolSettings(poolId, {
       scoreExactPoints: nextExact,
       scoreWinnerPoints: nextWinner,
       scoreDrawPoints: nextDraw,
+      confirmRecalculate: opts.confirmRecalculate || undefined,
     })
     setSavingScoring(false)
+
+    if (result.needsConfirmation) {
+      setScoringConfirmOpen(true)
+      return
+    }
 
     if (!result.success) {
       setScoringError(result.error || 'Failed to save scoring rules')
@@ -497,16 +537,64 @@ export function PoolSettingsTab({
       return
     }
 
+    if (result.warning === 'scoring_saved_recalc_failed') {
+      setScoringError(
+        'Scoring saved, but recalculation failed. Retry save to rescore.',
+      )
+      toast.error('Saved, but recalculation failed')
+    }
+
     onPoolScoringChange?.({
       scoreExactPoints: result.pool?.scoreExactPoints ?? nextExact,
       scoreWinnerPoints: result.pool?.scoreWinnerPoints ?? nextWinner,
       scoreDrawPoints: result.pool?.scoreDrawPoints ?? nextDraw,
     })
+    setScoringHistoryKey((k) => k + 1)
+    setScoringConfirmOpen(false)
+
+    capturePostHog('scoring_config_saved', {
+      pool_id: poolId,
+      exact: validated.exact,
+      winner: validated.winner,
+      draw: validated.draw,
+      recalculated: Boolean(result.recalculated),
+    })
     capturePostHog('commissioner_action', {
       action: 'scoring_edited',
       pool_id: poolId,
     })
-    toast.success('Scoring rules saved')
+
+    if (result.recalculated) {
+      const n = result.matchesRescored ?? 0
+      const message = `Rescored ${n} match${n === 1 ? '' : 'es'}; leaderboard updated`
+      setLastRecalcResult(message)
+      capturePostHog('scoring_recalculated', {
+        pool_id: poolId,
+        matches_rescored: n,
+      })
+      toast.success(message)
+    } else {
+      toast.success('Scoring rules saved')
+    }
+  }
+
+  function handleSaveScoringClick() {
+    if (!poolId || !canEditScoring || savingScoring) return
+    const validated = validateClassicScoringPoints({
+      exact: draftExact.trim() === '' ? NaN : Number(draftExact),
+      winner: draftWinner.trim() === '' ? NaN : Number(draftWinner),
+      draw: draftDraw.trim() === '' ? NaN : Number(draftDraw),
+    })
+    if (!validated.ok) {
+      setScoringError(validated.error)
+      return
+    }
+    setScoringError(null)
+    if (scoringLocked) {
+      setScoringConfirmOpen(true)
+      return
+    }
+    void persistScoring({ confirmRecalculate: false })
   }
 
   function resetScoringDraftsToDefaults() {
@@ -924,99 +1012,156 @@ export function PoolSettingsTab({
                 Points for exact scores, winners, and draws in this pool.
               </p>
               {scoringLocked ? (
-                <p className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                  Scoring is locked because matches have started.
+                <p
+                  className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+                  role="status"
+                >
+                  Matches have started. You can still change scoring, but
+                  everyone’s points will be recalculated.
                 </p>
               ) : null}
 
               {canEditScoring ? (
-                <div className="space-y-3">
+                <div
+                  className="space-y-3"
+                  role="group"
+                  aria-labelledby={`${scoringFormId}-heading`}
+                >
+                  <p id={`${scoringFormId}-heading`} className="sr-only">
+                    Custom scoring points
+                  </p>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="space-y-1">
                       <Label
-                        htmlFor="score-exact-points"
+                        htmlFor={`${scoringFormId}-exact`}
                         className="text-xs text-muted-foreground"
                       >
                         Exact score
                       </Label>
                       <Input
-                        id="score-exact-points"
+                        id={`${scoringFormId}-exact`}
                         type="number"
                         min={CLASSIC_SCORE_POINTS_MIN}
                         max={CLASSIC_SCORE_POINTS_MAX}
+                        step={1}
                         inputMode="numeric"
                         value={draftExact}
                         onChange={(event) => {
                           setDraftExact(event.target.value)
                           setScoringError(null)
+                          setLastRecalcResult(null)
                         }}
                         placeholder={String(CLASSIC_DEFAULT_EXACT_POINTS)}
-                        className="h-9 tabular-nums"
+                        className={cn('h-9 tabular-nums', FOCUS_VISIBLE_RING)}
                         disabled={savingScoring}
+                        aria-invalid={Boolean(scoringError)}
+                        aria-describedby={
+                          draftScoringPreview.ok
+                            ? `${scoringFormId}-preview`
+                            : undefined
+                        }
                       />
                     </div>
                     <div className="space-y-1">
                       <Label
-                        htmlFor="score-winner-points"
+                        htmlFor={`${scoringFormId}-winner`}
                         className="text-xs text-muted-foreground"
                       >
                         Correct winner
                       </Label>
                       <Input
-                        id="score-winner-points"
+                        id={`${scoringFormId}-winner`}
                         type="number"
                         min={CLASSIC_SCORE_POINTS_MIN}
                         max={CLASSIC_SCORE_POINTS_MAX}
+                        step={1}
                         inputMode="numeric"
                         value={draftWinner}
                         onChange={(event) => {
                           setDraftWinner(event.target.value)
                           setScoringError(null)
+                          setLastRecalcResult(null)
                         }}
                         placeholder={String(CLASSIC_DEFAULT_WINNER_POINTS)}
-                        className="h-9 tabular-nums"
+                        className={cn('h-9 tabular-nums', FOCUS_VISIBLE_RING)}
                         disabled={savingScoring}
                       />
                     </div>
                     <div className="space-y-1">
                       <Label
-                        htmlFor="score-draw-points"
+                        htmlFor={`${scoringFormId}-draw`}
                         className="text-xs text-muted-foreground"
                       >
                         Correct draw
                       </Label>
                       <Input
-                        id="score-draw-points"
+                        id={`${scoringFormId}-draw`}
                         type="number"
                         min={CLASSIC_SCORE_POINTS_MIN}
                         max={CLASSIC_SCORE_POINTS_MAX}
+                        step={1}
                         inputMode="numeric"
                         value={draftDraw}
                         onChange={(event) => {
                           setDraftDraw(event.target.value)
                           setScoringError(null)
+                          setLastRecalcResult(null)
                         }}
                         placeholder={String(CLASSIC_DEFAULT_DRAW_POINTS)}
-                        className="h-9 tabular-nums"
+                        className={cn('h-9 tabular-nums', FOCUS_VISIBLE_RING)}
                         disabled={savingScoring}
                       />
                     </div>
                   </div>
+
+                  {draftScoringPreview.ok ? (
+                    <div
+                      id={`${scoringFormId}-preview`}
+                      className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      <p>
+                        With these values: exact score ={' '}
+                        <span className="font-medium text-foreground">
+                          {draftScoringPreview.exact} pts
+                        </span>
+                        , correct winner ={' '}
+                        <span className="font-medium text-foreground">
+                          {draftScoringPreview.winner} pts
+                        </span>
+                        , correct draw ={' '}
+                        <span className="font-medium text-foreground">
+                          {draftScoringPreview.draw} pts
+                        </span>
+                        .
+                      </p>
+                      <p className="mt-1">
+                        Example: Predict 2-1, actual 2-1 →{' '}
+                        {draftScoringPreview.exact} pts; predict a win, actual
+                        win but wrong score → {draftScoringPreview.winner} pts.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
-                      className="h-8"
+                      className={cn('h-8', FOCUS_VISIBLE_RING)}
                       disabled={savingScoring || !poolId}
-                      onClick={() => void handleSaveScoring()}
+                      onClick={handleSaveScoringClick}
                     >
-                      {savingScoring ? 'Saving…' : 'Save scoring'}
+                      {savingScoring
+                        ? scoringLocked
+                          ? 'Saving & recalculating…'
+                          : 'Saving…'
+                        : 'Save scoring'}
                     </Button>
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8"
+                      className={cn('h-8', FOCUS_VISIBLE_RING)}
                       disabled={savingScoring}
                       onClick={resetScoringDraftsToDefaults}
                     >
@@ -1024,8 +1169,25 @@ export function PoolSettingsTab({
                     </Button>
                   </div>
                   {scoringError ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {scoringError}
+                    <div className="space-y-2">
+                      <p className="text-sm text-destructive" role="alert">
+                        {scoringError}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={cn('h-8', FOCUS_VISIBLE_RING)}
+                        disabled={savingScoring || !poolId}
+                        onClick={handleSaveScoringClick}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  ) : null}
+                  {lastRecalcResult ? (
+                    <p className="text-sm text-primary" role="status">
+                      {lastRecalcResult}
                     </p>
                   ) : null}
                 </div>
@@ -1051,6 +1213,51 @@ export function PoolSettingsTab({
                   </li>
                 </ul>
               )}
+
+              {poolId ? (
+                <div className="mt-6">
+                  <PoolScoringHistory
+                    poolId={poolId}
+                    refreshKey={scoringHistoryKey}
+                  />
+                </div>
+              ) : null}
+
+              <AlertDialog
+                open={scoringConfirmOpen}
+                onOpenChange={(open) => {
+                  if (savingScoring) return
+                  setScoringConfirmOpen(open)
+                }}
+              >
+                <AlertDialogContent className={FOCUS_VISIBLE_RING}>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Recalculate pool scoring?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Changing scoring after matches have been played will
+                      recalculate everyone&apos;s points for this pool. This
+                      affects the leaderboard. Are you sure?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={savingScoring}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={savingScoring}
+                      className={FOCUS_VISIBLE_RING}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        void persistScoring({ confirmRecalculate: true })
+                      }}
+                    >
+                      {savingScoring
+                        ? 'Recalculating…'
+                        : 'Change & recalculate'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : null}
 
@@ -1203,28 +1410,31 @@ export function PoolSettingsTab({
       ) : (
         <>
           {isClassicPool ? (
-            <section>
-              <SectionHeading title="Scoring rules" />
-              <ul className="space-y-1.5 text-sm text-foreground">
-                <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
-                  <span className="text-muted-foreground">Exact score</span>
-                  <span className="font-display tabular-nums text-primary">
-                    {resolvedScoring.exact} pts
-                  </span>
-                </li>
-                <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
-                  <span className="text-muted-foreground">Correct winner</span>
-                  <span className="font-display tabular-nums text-primary">
-                    {resolvedScoring.winner} pts
-                  </span>
-                </li>
-                <li className="flex justify-between gap-3 py-1.5">
-                  <span className="text-muted-foreground">Correct draw</span>
-                  <span className="font-display tabular-nums text-primary">
-                    {resolvedScoring.draw} pts
-                  </span>
-                </li>
-              </ul>
+            <section className="space-y-6">
+              <div>
+                <SectionHeading title="Scoring rules" />
+                <ul className="space-y-1.5 text-sm text-foreground">
+                  <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
+                    <span className="text-muted-foreground">Exact score</span>
+                    <span className="font-display tabular-nums text-primary">
+                      {resolvedScoring.exact} pts
+                    </span>
+                  </li>
+                  <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
+                    <span className="text-muted-foreground">Correct winner</span>
+                    <span className="font-display tabular-nums text-primary">
+                      {resolvedScoring.winner} pts
+                    </span>
+                  </li>
+                  <li className="flex justify-between gap-3 py-1.5">
+                    <span className="text-muted-foreground">Correct draw</span>
+                    <span className="font-display tabular-nums text-primary">
+                      {resolvedScoring.draw} pts
+                    </span>
+                  </li>
+                </ul>
+              </div>
+              {poolId ? <PoolScoringHistory poolId={poolId} /> : null}
             </section>
           ) : null}
           <p

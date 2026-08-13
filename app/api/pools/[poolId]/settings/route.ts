@@ -13,7 +13,9 @@ import {
   CLASSIC_DEFAULT_DRAW_POINTS,
   CLASSIC_DEFAULT_EXACT_POINTS,
   CLASSIC_DEFAULT_WINNER_POINTS,
+  resolveClassicScorePoints,
   scorePointsForDb,
+  validateClassicScoringPoints,
 } from '@/src/lib/classic-score-points'
 import {
   isValidPoolThemeHex,
@@ -35,6 +37,8 @@ type PatchBody = {
   scoreExactPoints?: number | null
   scoreWinnerPoints?: number | null
   scoreDrawPoints?: number | null
+  /** Required when competition has started and scoring values change. */
+  confirmRecalculate?: boolean
 }
 
 /**
@@ -158,6 +162,10 @@ export async function PATCH(request: Request, context: Ctx) {
     body.scoreWinnerPoints !== undefined ||
     body.scoreDrawPoints !== undefined
 
+  let scoringRecalcNeeded = false
+  let scoringVersion: number | null = null
+  let matchesRescored: number | null = null
+
   if (scoringTouched) {
     if (pool.scoring_style === 'winner') {
       return NextResponse.json(
@@ -165,33 +173,92 @@ export async function PATCH(request: Request, context: Ctx) {
         { status: 400 },
       )
     }
-    if (pool.scoring_locked_at) {
-      return NextResponse.json(
-        { error: 'scoring_locked' },
-        { status: 403 },
-      )
+
+    const coerceOrDefault = (
+      incoming: number | null | undefined,
+      stored: unknown,
+      fallback: number,
+    ): unknown => {
+      if (incoming !== undefined) {
+        return incoming == null ? fallback : incoming
+      }
+      return stored == null ? fallback : stored
     }
 
-    const exact = scorePointsForDb(
-      body.scoreExactPoints ?? pool.score_exact_points,
-      CLASSIC_DEFAULT_EXACT_POINTS,
-    )
+    const validated = validateClassicScoringPoints({
+      exact: coerceOrDefault(
+        body.scoreExactPoints,
+        pool.score_exact_points,
+        CLASSIC_DEFAULT_EXACT_POINTS,
+      ),
+      winner: coerceOrDefault(
+        body.scoreWinnerPoints,
+        pool.score_winner_points,
+        CLASSIC_DEFAULT_WINNER_POINTS,
+      ),
+      draw: coerceOrDefault(
+        body.scoreDrawPoints,
+        pool.score_draw_points,
+        CLASSIC_DEFAULT_DRAW_POINTS,
+      ),
+    })
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 })
+    }
+
+    const exact = scorePointsForDb(validated.exact, CLASSIC_DEFAULT_EXACT_POINTS)
     const winner = scorePointsForDb(
-      body.scoreWinnerPoints ?? pool.score_winner_points,
+      validated.winner,
       CLASSIC_DEFAULT_WINNER_POINTS,
     )
-    const draw = scorePointsForDb(
-      body.scoreDrawPoints ?? pool.score_draw_points,
-      CLASSIC_DEFAULT_DRAW_POINTS,
-    )
+    const draw = scorePointsForDb(validated.draw, CLASSIC_DEFAULT_DRAW_POINTS)
 
-    updates.score_exact_points = exact
-    updates.score_winner_points = winner
-    updates.score_draw_points = draw
-    logs.push({
-      action: 'scoring_edited',
-      detail: { exact, winner, draw },
+    const prevResolved = resolveClassicScorePoints({
+      scoreExactPoints: pool.score_exact_points,
+      scoreWinnerPoints: pool.score_winner_points,
+      scoreDrawPoints: pool.score_draw_points,
     })
+    const scoringChanged =
+      prevResolved.exact !== validated.exact ||
+      prevResolved.winner !== validated.winner ||
+      prevResolved.draw !== validated.draw
+
+    if (scoringChanged) {
+      const { count: awardedCount } = await admin
+        .from('predictions')
+        .select('id', { count: 'exact', head: true })
+        .eq('pool_id', poolId)
+        .gt('points_awarded', 0)
+
+      const competitionStarted =
+        Boolean(pool.scoring_locked_at) || (awardedCount ?? 0) > 0
+
+      if (competitionStarted && !body.confirmRecalculate) {
+        return NextResponse.json(
+          {
+            error: 'scoring_recalc_confirmation_required',
+            needsConfirmation: true,
+            message:
+              'Changing scoring after matches have been played will recalculate everyone\'s points for this pool.',
+          },
+          { status: 409 },
+        )
+      }
+
+      updates.score_exact_points = exact
+      updates.score_winner_points = winner
+      updates.score_draw_points = draw
+      scoringRecalcNeeded = competitionStarted
+      logs.push({
+        action: 'scoring_edited',
+        detail: {
+          exact: validated.exact,
+          winner: validated.winner,
+          draw: validated.draw,
+          recalculate: competitionStarted,
+        },
+      })
+    }
   }
 
   if (Object.keys(updates).length === 0) {
@@ -218,7 +285,7 @@ export async function PATCH(request: Request, context: Ctx) {
     .update(updates)
     .eq('id', poolId)
     .select(
-      'name, description, accepting_members, theme_color, score_exact_points, score_winner_points, score_draw_points',
+      'name, description, accepting_members, theme_color, score_exact_points, score_winner_points, score_draw_points, scoring_style',
     )
     .maybeSingle()
 
@@ -236,9 +303,85 @@ export async function PATCH(request: Request, context: Ctx) {
     })
   }
 
+  if (scoringTouched && logs.some((l) => l.action === 'scoring_edited')) {
+    const resolved = resolveClassicScorePoints({
+      scoreExactPoints: updated.score_exact_points,
+      scoreWinnerPoints: updated.score_winner_points,
+      scoreDrawPoints: updated.score_draw_points,
+    })
+    const { data: versionRaw, error: versionError } = await admin.rpc(
+      'record_scoring_version',
+      {
+        p_actor_id: user.id,
+        p_pool_id: poolId,
+        p_style: updated.scoring_style ?? 'classic',
+        p_exact: resolved.exact,
+        p_winner: resolved.winner,
+        p_draw: resolved.draw,
+      },
+    )
+    if (versionError) {
+      console.error('record_scoring_version failed:', versionError.message)
+    } else if (typeof versionRaw === 'number') {
+      scoringVersion = versionRaw
+    } else if (versionRaw != null) {
+      const n = Number(versionRaw)
+      scoringVersion = Number.isFinite(n) ? n : null
+    }
+
+    if (scoringRecalcNeeded) {
+      const { data: recalcRaw, error: recalcError } = await admin.rpc(
+        'recalculate_pool_scoring',
+        {
+          p_actor_id: user.id,
+          p_pool_id: poolId,
+        },
+      )
+      if (recalcError) {
+        console.error('recalculate_pool_scoring failed:', recalcError.message)
+        return NextResponse.json(
+          {
+            success: true,
+            warning: 'scoring_saved_recalc_failed',
+            error: recalcError.message,
+            scoringVersion,
+            pool: {
+              name: updated.name,
+              description: updated.description ?? null,
+              acceptingMembers: updated.accepting_members ?? true,
+              themeColor: updated.theme_color ?? null,
+              scoreExactPoints: updated.score_exact_points ?? null,
+              scoreWinnerPoints: updated.score_winner_points ?? null,
+              scoreDrawPoints: updated.score_draw_points ?? null,
+            },
+          },
+          { status: 200 },
+        )
+      }
+      if (typeof recalcRaw === 'number') {
+        matchesRescored = recalcRaw
+      } else if (recalcRaw && typeof recalcRaw === 'object') {
+        const row = recalcRaw as Record<string, unknown>
+        const n =
+          row.matches_rescored ??
+          row.matchesRescored ??
+          row.count ??
+          recalcRaw
+        matchesRescored = typeof n === 'number' ? n : Number(n) || 0
+      } else if (recalcRaw != null) {
+        matchesRescored = Number(recalcRaw) || 0
+      } else {
+        matchesRescored = 0
+      }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     actions: logs.map((l) => l.action),
+    scoringVersion,
+    matchesRescored,
+    recalculated: scoringRecalcNeeded,
     pool: {
       name: updated.name,
       description: updated.description ?? null,

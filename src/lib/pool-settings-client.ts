@@ -8,6 +8,7 @@ export type PoolSettingsPatch = {
   scoreExactPoints?: number | null
   scoreWinnerPoints?: number | null
   scoreDrawPoints?: number | null
+  confirmRecalculate?: boolean
 }
 
 export type PoolSettingsPatchResult = {
@@ -15,6 +16,11 @@ export type PoolSettingsPatchResult = {
   actions?: string[]
   unchanged?: boolean
   error?: string
+  needsConfirmation?: boolean
+  warning?: string
+  scoringVersion?: number | null
+  matchesRescored?: number | null
+  recalculated?: boolean
   pool?: {
     name: string
     description: string | null
@@ -38,14 +44,27 @@ export async function patchPoolSettings(
       body: JSON.stringify(body),
     },
   )
-  const data = (await res.json().catch(() => null)) as PoolSettingsPatchResult | null
+  const data = (await res.json().catch(() => null)) as
+    | (PoolSettingsPatchResult & { message?: string })
+    | null
+
+  if (res.status === 409 && data?.needsConfirmation) {
+    return {
+      success: false,
+      needsConfirmation: true,
+      error:
+        data.message ||
+        data.error ||
+        'Confirmation required to recalculate scoring',
+    }
+  }
+
   if (!res.ok) {
     return {
       success: false,
       error:
-        (data && 'error' in data && typeof (data as { error?: string }).error === 'string'
-          ? (data as { error: string }).error
-          : null) || 'Could not save settings',
+        (data && typeof data.error === 'string' ? data.error : null) ||
+        'Could not save settings',
     }
   }
   return { success: true, ...data }

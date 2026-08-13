@@ -58,3 +58,54 @@ export function scorePointsForDb(
   const clamped = clampScorePoints(value)
   return clamped === defaultValue ? null : clamped
 }
+
+/**
+ * Strict server-side validation for classic pool scoring config.
+ * Exact must be > 0; winner/draw may be 0; all integers in [0, 100].
+ */
+export function validateClassicScoringPoints(input: {
+  exact: unknown
+  winner: unknown
+  draw: unknown
+}): { ok: true; exact: number; winner: number; draw: number } | { ok: false; error: string } {
+  function parseOne(
+    value: unknown,
+    label: string,
+    opts: { allowZero: boolean },
+  ): number | string {
+    if (typeof value === 'string' && value.trim() === '') {
+      return `${label} is required`
+    }
+    const n =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value)
+          : NaN
+    if (!Number.isFinite(n) || Number.isNaN(n)) {
+      return `${label} must be a number`
+    }
+    if (!Number.isInteger(n)) {
+      return `${label} must be a whole number`
+    }
+    if (n < CLASSIC_SCORE_POINTS_MIN || n > CLASSIC_SCORE_POINTS_MAX) {
+      return `${label} must be between ${CLASSIC_SCORE_POINTS_MIN} and ${CLASSIC_SCORE_POINTS_MAX}`
+    }
+    if (!opts.allowZero && n <= 0) {
+      return `${label} must be greater than 0`
+    }
+    if (n < 0) {
+      return `${label} cannot be negative`
+    }
+    return n
+  }
+
+  const exact = parseOne(input.exact, 'Exact score points', { allowZero: false })
+  if (typeof exact === 'string') return { ok: false, error: exact }
+  const winner = parseOne(input.winner, 'Winner points', { allowZero: true })
+  if (typeof winner === 'string') return { ok: false, error: winner }
+  const draw = parseOne(input.draw, 'Draw points', { allowZero: true })
+  if (typeof draw === 'string') return { ok: false, error: draw }
+
+  return { ok: true, exact, winner, draw }
+}
