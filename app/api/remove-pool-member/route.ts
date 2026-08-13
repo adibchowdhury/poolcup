@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server'
+import {
+  fetchIsPoolAdmin,
+  fetchIsPoolOwner,
+  logPoolModeration,
+} from '@/src/lib/pool-admin'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 /**
- * Creator-only: remove a member from a pool.
- * Deletes the pool_members row; predictions / group_predictions /
- * leaderboard_cache / related rows cascade via FK ON DELETE CASCADE.
+ * Admin (owner or co-commissioner): remove a member from a pool.
+ *
+ * Co-commissioners may remove ONLY regular members (not owner, not other admins).
+ * Owner may remove any non-owner member; if target is a co-commissioner,
+ * demote via remove_co_commissioner first, then delete membership.
+ *
+ * Cascades predictions / group_predictions / leaderboard_cache via FK.
  */
 export async function POST(request: Request) {
   try {
@@ -37,30 +46,12 @@ export async function POST(request: Request) {
 
     const admin = createAdminSupabaseClient()
 
-    const { data: pool, error: poolError } = await admin
-      .from('pools')
-      .select('id, creator_id')
-      .eq('id', poolId)
-      .maybeSingle()
-
-    if (poolError) {
-      console.error('remove-pool-member: failed to load pool', {
-        poolId,
-        error: poolError,
-      })
-      return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 },
-      )
-    }
-
-    if (!pool) {
-      return NextResponse.json({ error: 'Pool not found' }, { status: 404 })
-    }
-
-    if (pool.creator_id !== user.id) {
+    const actorIsAdmin = await fetchIsPoolAdmin(admin, poolId, user.id)
+    if (!actorIsAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+
+    const actorIsOwner = await fetchIsPoolOwner(admin, poolId, user.id)
 
     const { data: member, error: memberError } = await admin
       .from('pool_members')
@@ -85,11 +76,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
-    if (member.user_id === pool.creator_id) {
+    const targetUserId = member.user_id as string
+    const targetIsOwner = await fetchIsPoolOwner(admin, poolId, targetUserId)
+    if (targetIsOwner) {
       return NextResponse.json(
-        { error: 'Cannot remove the pool creator' },
+        { error: 'Cannot remove the pool owner' },
         { status: 400 },
       )
+    }
+
+    const targetIsAdmin = await fetchIsPoolAdmin(admin, poolId, targetUserId)
+
+    if (!actorIsOwner) {
+      // Co-commissioner: regular members only.
+      if (targetIsAdmin) {
+        return NextResponse.json(
+          {
+            error:
+              'Co-commissioners cannot remove the owner or other co-commissioners',
+          },
+          { status: 403 },
+        )
+      }
+    } else if (targetIsAdmin) {
+      // Owner removing a co-commissioner: demote first.
+      const { error: demoteError } = await admin.rpc('remove_co_commissioner', {
+        p_actor_id: user.id,
+        p_pool_id: poolId,
+        p_user_id: targetUserId,
+      })
+      if (demoteError) {
+        console.error('remove-pool-member: demote failed', demoteError.message)
+        return NextResponse.json(
+          { error: demoteError.message || 'Could not demote co-commissioner' },
+          { status: 400 },
+        )
+      }
     }
 
     // Not FK-cascaded from pool_members (keyed by user_id + pool_id).
@@ -97,7 +119,7 @@ export async function POST(request: Request) {
       .from('third_place_rankings')
       .delete()
       .eq('pool_id', poolId)
-      .eq('user_id', member.user_id)
+      .eq('user_id', targetUserId)
 
     if (thirdPlaceError) {
       console.error('remove-pool-member: failed to clear third_place_rankings', {
@@ -111,7 +133,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Cascades predictions, group_predictions, leaderboard_cache, pool_activity.
     const { error: deleteError } = await admin
       .from('pool_members')
       .delete()
@@ -129,6 +150,14 @@ export async function POST(request: Request) {
         { status: 500 },
       )
     }
+
+    await logPoolModeration(admin, {
+      poolId,
+      actorId: user.id,
+      action: 'member_removed',
+      targetUserId,
+      detail: { memberId },
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

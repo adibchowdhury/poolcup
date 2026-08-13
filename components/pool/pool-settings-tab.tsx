@@ -14,6 +14,9 @@ import {
   Trophy,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-admins-section'
+import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
+import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
@@ -45,7 +48,10 @@ import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
 import {
   isPoolNameUnchanged,
+  normalizePoolDescription,
   normalizePoolName,
+  POOL_DESCRIPTION_MAX_LENGTH,
+  validatePoolDescription,
   validatePoolName,
 } from '@/src/lib/pool-name'
 import {
@@ -72,11 +78,15 @@ import {
   postPoolAnnouncement,
   type PoolAnnouncement,
 } from '@/src/lib/pool-announcements'
+import { patchPoolSettings } from '@/src/lib/pool-settings-client'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 type PoolSettingsTabProps = {
   poolId?: string
   poolName: string
+  poolDescription?: string | null
   inviteCode?: string
   poolThemeColor: string | null
   scoringStyle: string
@@ -88,7 +98,14 @@ type PoolSettingsTabProps = {
   members: LeaderboardMember[]
   poolCreatorUserId?: string
   currentUserId: string
+  /** Owner or co-commissioner (server-verified when possible). */
+  isAdmin?: boolean
+  /** Pool owner (creator_id). */
+  isOwner?: boolean
+  /** userIds currently in pool_admins (co-commissioners). */
+  coAdminUserIds?: string[]
   onPoolNameChange?: (name: string) => void
+  onPoolDescriptionChange?: (description: string | null) => void
   onPoolThemeColorChange?: (themeColor: string | null) => void
   onPoolScoringChange?: (scoring: {
     scoreExactPoints: number | null
@@ -96,14 +113,8 @@ type PoolSettingsTabProps = {
     scoreDrawPoints: number | null
   }) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
-  /** After a member is removed (cascade deletes their pool predictions). */
   onMemberRemoved?: (memberId: string) => void
-  /** After creator transfers ownership to another member. */
   onOwnershipTransferred?: (newOwnerUserId: string) => void
-  /**
-   * Sync banner after commissioner posts or clears.
-   * `null` = cleared / no active announcement for management.
-   */
   onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
 }
 
@@ -183,6 +194,7 @@ function AnnouncementPreviewBanner({ message }: { message: string }) {
 export function PoolSettingsTab({
   poolId,
   poolName,
+  poolDescription = null,
   inviteCode,
   poolThemeColor,
   scoringStyle,
@@ -194,7 +206,11 @@ export function PoolSettingsTab({
   members,
   poolCreatorUserId,
   currentUserId,
+  isAdmin: isAdminProp,
+  isOwner: isOwnerProp,
+  coAdminUserIds = [],
   onPoolNameChange,
+  onPoolDescriptionChange,
   onPoolThemeColorChange,
   onPoolScoringChange,
   onAcceptingMembersChange,
@@ -202,18 +218,33 @@ export function PoolSettingsTab({
   onOwnershipTransferred,
   onManagedAnnouncementChange,
 }: PoolSettingsTabProps) {
-  const isCreator = Boolean(
-    poolCreatorUserId && currentUserId === poolCreatorUserId,
-  )
+  const isOwner =
+    typeof isOwnerProp === 'boolean'
+      ? isOwnerProp
+      : Boolean(poolCreatorUserId && currentUserId === poolCreatorUserId)
+  const isAdmin =
+    typeof isAdminProp === 'boolean' ? isAdminProp : isOwner
+  /** @deprecated alias — prefer isOwner */
+  const isCreator = isOwner
+  const coAdminIdSet = new Set(coAdminUserIds)
   const [transferOpen, setTransferOpen] = useState(false)
   const roster = [...members].sort((a, b) => {
     if (a.rank !== b.rank) return a.rank - b.rank
     return a.name.localeCompare(b.name)
   })
   const playerLabel = members.length === 1 ? 'player' : 'players'
+  const missingPredictionCount = members.filter((m) => {
+    // Soft activity: members with 0 exact scores and 0 points look inactive.
+    return m.points <= 0
+  }).length
 
   const [isEditingName, setIsEditingName] = useState(false)
   const [draftName, setDraftName] = useState(poolName)
+  const [draftDescription, setDraftDescription] = useState(
+    poolDescription ?? '',
+  )
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
+  const [savingDescription, setSavingDescription] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [acceptingMembersError, setAcceptingMembersError] = useState<
@@ -250,13 +281,17 @@ export function PoolSettingsTab({
   const [colorsExpanded, setColorsExpanded] = useState(false)
 
   const isClassicPool = scoringStyle !== 'winner'
-  const canEditScoring = isCreator && isClassicPool && !scoringLocked
+  const canEditScoring = isAdmin && isClassicPool && !scoringLocked
 
   useEffect(() => {
     if (!isEditingName) {
       setDraftName(poolName)
     }
   }, [poolName, isEditingName])
+
+  useEffect(() => {
+    setDraftDescription(poolDescription ?? '')
+  }, [poolDescription])
 
   useEffect(() => {
     setCustomHex(poolThemeColor ?? DEFAULT_POOL_THEME_COLOR)
@@ -274,7 +309,7 @@ export function PoolSettingsTab({
   }, [scoreExactPoints, scoreWinnerPoints, scoreDrawPoints])
 
   useEffect(() => {
-    if (!isCreator || !poolId) {
+    if (!isAdmin || !poolId) {
       setManagedAnnouncement(null)
       return
     }
@@ -290,7 +325,7 @@ export function PoolSettingsTab({
     return () => {
       cancelled = true
     }
-  }, [isCreator, poolId])
+  }, [isAdmin, poolId])
 
   const validationError = validatePoolName(draftName)
   const canSave =
@@ -316,7 +351,7 @@ export function PoolSettingsTab({
   }
 
   async function handleSaveName() {
-    if (!poolId || !canSave) return
+    if (!poolId || !canSave || !isAdmin) return
 
     const trimmed = normalizePoolName(draftName)
     const errorMessage = validatePoolName(draftName)
@@ -328,48 +363,76 @@ export function PoolSettingsTab({
     setSaving(true)
     setSaveError(null)
 
-    const { error } = await supabase
-      .from('pools')
-      .update({ name: trimmed })
-      .eq('id', poolId)
-
+    const result = await patchPoolSettings(poolId, { name: trimmed })
     setSaving(false)
 
-    if (error) {
-      setSaveError(error.message || 'Failed to rename pool')
+    if (!result.success) {
+      setSaveError(result.error || 'Failed to rename pool')
       return
     }
 
-    onPoolNameChange?.(trimmed)
+    onPoolNameChange?.(result.pool?.name ?? trimmed)
     setIsEditingName(false)
+    capturePostHog('commissioner_action', {
+      action: 'name_edited',
+      pool_id: poolId,
+    })
     toast.success('Pool name updated')
   }
 
+  async function handleSaveDescription() {
+    if (!poolId || !isAdmin || savingDescription) return
+    const errorMessage = validatePoolDescription(draftDescription)
+    if (errorMessage) {
+      setDescriptionError(errorMessage)
+      return
+    }
+    setSavingDescription(true)
+    setDescriptionError(null)
+    const next = normalizePoolDescription(draftDescription) || null
+    const result = await patchPoolSettings(poolId, { description: next })
+    setSavingDescription(false)
+    if (!result.success) {
+      setDescriptionError(result.error || 'Failed to save description')
+      return
+    }
+    onPoolDescriptionChange?.(result.pool?.description ?? next)
+    capturePostHog('commissioner_action', {
+      action: 'description_edited',
+      pool_id: poolId,
+    })
+    toast.success('Description saved')
+  }
+
   async function handleAcceptingMembersToggle(checked: boolean) {
-    if (!poolId || savingAcceptingMembers) return
+    if (!poolId || savingAcceptingMembers || !isAdmin) return
 
     setSavingAcceptingMembers(true)
     setAcceptingMembersError(null)
 
-    const { error } = await supabase
-      .from('pools')
-      .update({ accepting_members: checked })
-      .eq('id', poolId)
-
+    const result = await patchPoolSettings(poolId, {
+      acceptingMembers: checked,
+    })
     setSavingAcceptingMembers(false)
 
-    if (error) {
+    if (!result.success) {
       setAcceptingMembersError(
-        error.message || 'Failed to update invite settings',
+        result.error || 'Failed to update invite settings',
       )
       return
     }
 
-    onAcceptingMembersChange?.(checked)
+    onAcceptingMembersChange?.(
+      result.pool?.acceptingMembers ?? checked,
+    )
+    capturePostHog('commissioner_action', {
+      action: checked ? 'pool_opened' : 'pool_closed',
+      pool_id: poolId,
+    })
   }
 
   async function handleSaveThemeColor(next: string | null) {
-    if (!poolId || savingTheme) return
+    if (!poolId || savingTheme || !isAdmin) return
 
     const normalized = next == null ? null : normalizePoolThemeColor(next)
     if (next != null && !normalized) {
@@ -382,20 +445,21 @@ export function PoolSettingsTab({
     setSavingTheme(true)
     setThemeError(null)
 
-    const { error } = await supabase
-      .from('pools')
-      .update({ theme_color: normalized })
-      .eq('id', poolId)
-
+    const result = await patchPoolSettings(poolId, { themeColor: normalized })
     setSavingTheme(false)
 
-    if (error) {
+    if (!result.success) {
       onPoolThemeColorChange?.(previous)
-      setThemeError(error.message || 'Failed to update theme color')
+      setThemeError(result.error || 'Failed to update theme color')
       toast.error('Could not save pool color')
       return
     }
 
+    onPoolThemeColorChange?.(result.pool?.themeColor ?? normalized)
+    capturePostHog('commissioner_action', {
+      action: 'theme_edited',
+      pool_id: poolId,
+    })
     toast.success(normalized ? 'Pool color saved' : 'Pool color reset to default')
   }
 
@@ -420,27 +484,27 @@ export function PoolSettingsTab({
     setSavingScoring(true)
     setScoringError(null)
 
-    const { error } = await supabase
-      .from('pools')
-      .update({
-        score_exact_points: nextExact,
-        score_winner_points: nextWinner,
-        score_draw_points: nextDraw,
-      })
-      .eq('id', poolId)
-
+    const result = await patchPoolSettings(poolId, {
+      scoreExactPoints: nextExact,
+      scoreWinnerPoints: nextWinner,
+      scoreDrawPoints: nextDraw,
+    })
     setSavingScoring(false)
 
-    if (error) {
-      setScoringError(error.message || 'Failed to save scoring rules')
+    if (!result.success) {
+      setScoringError(result.error || 'Failed to save scoring rules')
       toast.error('Could not save scoring rules')
       return
     }
 
     onPoolScoringChange?.({
-      scoreExactPoints: nextExact,
-      scoreWinnerPoints: nextWinner,
-      scoreDrawPoints: nextDraw,
+      scoreExactPoints: result.pool?.scoreExactPoints ?? nextExact,
+      scoreWinnerPoints: result.pool?.scoreWinnerPoints ?? nextWinner,
+      scoreDrawPoints: result.pool?.scoreDrawPoints ?? nextDraw,
+    })
+    capturePostHog('commissioner_action', {
+      action: 'scoring_edited',
+      pool_id: poolId,
     })
     toast.success('Scoring rules saved')
   }
@@ -455,6 +519,8 @@ export function PoolSettingsTab({
   async function handleConfirmRemoveMember() {
     if (!poolId || !memberPendingRemove || removingMember) return
     if (memberPendingRemove.userId === poolCreatorUserId) return
+    const targetIsCoAdmin = coAdminIdSet.has(memberPendingRemove.userId)
+    if (!isOwner && targetIsCoAdmin) return
 
     setRemovingMember(true)
     try {
@@ -471,6 +537,10 @@ export function PoolSettingsTab({
         throw new Error(data.error ?? 'Failed to remove member')
       }
       onMemberRemoved?.(memberPendingRemove.id)
+      capturePostHog('commissioner_action', {
+        action: 'member_removed',
+        pool_id: poolId,
+      })
       toast.success(`${memberPendingRemove.name} removed from the pool`)
       setMemberPendingRemove(null)
     } catch (error) {
@@ -483,7 +553,7 @@ export function PoolSettingsTab({
   }
 
   async function handlePostAnnouncement() {
-    if (!poolId || !isCreator || postingAnnouncement) return
+    if (!poolId || !isAdmin || postingAnnouncement) return
     setAnnouncementError(null)
     setPostingAnnouncement(true)
     try {
@@ -593,7 +663,7 @@ export function PoolSettingsTab({
             <p className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
               {poolName}
             </p>
-            {isCreator ? (
+            {isAdmin ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -609,7 +679,88 @@ export function PoolSettingsTab({
         )}
       </section>
 
-      {isCreator ? (
+      {isAdmin ? (
+        <section className="space-y-3">
+          <SectionHeading title="Description" />
+          <Textarea
+            value={draftDescription}
+            onChange={(e) => {
+              setDraftDescription(e.target.value)
+              setDescriptionError(null)
+            }}
+            maxLength={POOL_DESCRIPTION_MAX_LENGTH}
+            rows={3}
+            placeholder="Optional short description for this pool"
+            className={FOCUS_VISIBLE_RING}
+            aria-invalid={Boolean(descriptionError)}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {draftDescription.trim().length}/{POOL_DESCRIPTION_MAX_LENGTH}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              disabled={savingDescription}
+              className={FOCUS_VISIBLE_RING}
+              onClick={() => void handleSaveDescription()}
+            >
+              {savingDescription ? 'Saving…' : 'Save description'}
+            </Button>
+          </div>
+          {descriptionError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {descriptionError}
+            </p>
+          ) : null}
+        </section>
+      ) : poolDescription ? (
+        <section>
+          <SectionHeading title="Description" />
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+            {poolDescription}
+          </p>
+        </section>
+      ) : null}
+
+      {isAdmin && poolId ? (
+        <section className="rounded-2xl border border-border bg-card/50 px-4 py-4">
+          <SectionHeading title="Activity summary" />
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Members
+              </dt>
+              <dd className="font-display text-2xl tabular-nums text-foreground">
+                {members.length}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                With points
+              </dt>
+              <dd className="font-display text-2xl tabular-nums text-foreground">
+                {members.length - missingPredictionCount}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Still at 0 pts
+              </dt>
+              <dd className="font-display text-2xl tabular-nums text-foreground">
+                {missingPredictionCount}
+              </dd>
+            </div>
+          </dl>
+          {isAdmin ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {isOwner ? 'You are the pool owner.' : 'You are a co-commissioner.'}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {isAdmin ? (
         <section>
           <SectionHeading title="Pool color" />
           <div className="flex flex-wrap items-center gap-3">
@@ -762,7 +913,7 @@ export function PoolSettingsTab({
         </section>
       ) : null}
 
-      {isCreator ? (
+      {isAdmin ? (
         <section className="space-y-8">
           <SectionHeading title="Commissioner tools" />
 
@@ -1089,17 +1240,20 @@ export function PoolSettingsTab({
 
       <section className="space-y-3">
         <SectionHeading
-          title={isCreator ? 'Manage members' : 'Members'}
+          title={isAdmin ? 'Manage members' : 'Members'}
           trailing={
             <p className="shrink-0 text-sm text-muted-foreground">
               {members.length} {playerLabel}
             </p>
           }
         />
-        {isCreator ? (
+        {isAdmin ? (
           <p className="text-xs leading-relaxed text-muted-foreground">
             Removing a member permanently deletes their predictions and standing
             in this pool.
+            {!isOwner
+              ? ' Co-commissioners can only remove regular members.'
+              : ''}
           </p>
         ) : null}
 
@@ -1112,9 +1266,13 @@ export function PoolSettingsTab({
           <ul className="grid gap-2.5 sm:grid-cols-2">
             {roster.map((member) => {
               const memberIsCreator = member.userId === poolCreatorUserId
+              const memberIsCoAdmin = coAdminIdSet.has(member.userId)
               const isFirst = member.rank === 1
               const canRemove =
-                isCreator && !memberIsCreator && Boolean(poolId)
+                isAdmin &&
+                !memberIsCreator &&
+                Boolean(poolId) &&
+                (isOwner || !memberIsCoAdmin)
 
               return (
                 <li
@@ -1170,7 +1328,11 @@ export function PoolSettingsTab({
                       {memberIsCreator ? (
                         <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffb300]">
                           <Crown className="h-3 w-3" aria-hidden />
-                          Creator
+                          Owner
+                        </span>
+                      ) : memberIsCoAdmin ? (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          Co-commissioner
                         </span>
                       ) : null}
                     </div>
@@ -1214,16 +1376,42 @@ export function PoolSettingsTab({
         )}
       </section>
 
+      {isAdmin && poolId ? (
+        <div className="space-y-8">
+          {isOwner && poolCreatorUserId ? (
+            <CommissionerCoAdminsSection
+              poolId={poolId}
+              ownerUserId={poolCreatorUserId}
+              members={members}
+              initialCoAdmins={coAdminUserIds.map((userId) => ({
+                userId,
+                displayName:
+                  members.find((m) => m.userId === userId)?.name ?? null,
+                username: null,
+              }))}
+            />
+          ) : null}
+          <CommissionerMissingPredictions
+            poolId={poolId}
+            inviteCode={inviteCode}
+            poolName={poolName}
+          />
+          <CommissionerModerationLog poolId={poolId} />
+        </div>
+      ) : null}
+
       {poolId ? (
         <section className="space-y-4">
           <SubsectionHeading title="Your membership" />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {isCreator
-              ? 'As host you can transfer ownership to another member, or leave after transferring. Delete only if you want the pool gone for everyone.'
-              : 'Leave this pool to remove yourself and your predictions here.'}
+            {isOwner
+              ? 'As owner you can transfer ownership to another member, or leave after transferring. Delete only if you want the pool gone for everyone.'
+              : isAdmin
+                ? 'As co-commissioner you can manage settings and members. Only the owner can transfer or delete the pool.'
+                : 'Leave this pool to remove yourself and your predictions here.'}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {isCreator ? (
+            {isOwner ? (
               <Button
                 type="button"
                 variant="outline"
@@ -1238,13 +1426,16 @@ export function PoolSettingsTab({
               poolId={poolId}
               poolName={poolName}
               currentUserId={currentUserId}
-              isCreator={isCreator}
+              isCreator={isOwner}
               members={members}
-              onOwnershipTransferred={onOwnershipTransferred}
+              onOwnershipTransferred={(newOwnerUserId) => {
+                capturePostHog('ownership_transferred', { pool_id: poolId })
+                onOwnershipTransferred?.(newOwnerUserId)
+              }}
             />
           </div>
 
-          {isCreator ? (
+          {isOwner ? (
             <div className="pt-2">
               <SubsectionHeading title="Danger Zone" tone="danger" />
               <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
@@ -1257,11 +1448,18 @@ export function PoolSettingsTab({
                 redirectTo="/dashboard"
                 triggerVariant="outline"
                 triggerClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                onDeleted={() => {
+                  capturePostHog('pool_deleted', { pool_id: poolId })
+                  capturePostHog('commissioner_action', {
+                    action: 'pool_deleted',
+                    pool_id: poolId,
+                  })
+                }}
               />
             </div>
           ) : null}
 
-          {isCreator ? (
+          {isOwner ? (
             <TransferOwnershipDialog
               open={transferOpen}
               onOpenChange={setTransferOpen}
@@ -1270,6 +1468,11 @@ export function PoolSettingsTab({
               currentUserId={currentUserId}
               members={members}
               onTransferred={(newOwnerUserId) => {
+                capturePostHog('ownership_transferred', { pool_id: poolId })
+                capturePostHog('commissioner_action', {
+                  action: 'ownership_transferred',
+                  pool_id: poolId,
+                })
                 onOwnershipTransferred?.(newOwnerUserId)
               }}
             />

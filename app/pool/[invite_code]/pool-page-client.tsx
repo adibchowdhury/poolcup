@@ -54,6 +54,7 @@ type LeaderboardRefreshContext = {
 type Pool = {
   id: string
   name: string
+  description: string | null
   invite_code: string
   creator_id: string
   scoring_style: string
@@ -121,6 +122,10 @@ export function PoolPageClient() {
     () => new Map<string, MemberAvatarRecord>(),
   )
   const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(null)
+  const [isPoolOwner, setIsPoolOwner] = useState(false)
+  const [isPoolAdmin, setIsPoolAdmin] = useState(false)
+  const [coAdminUserIds, setCoAdminUserIds] = useState<string[]>([])
+  const [poolDescription, setPoolDescription] = useState<string | null>(null)
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
     () => new Map<string, PoolChatMemberProfile>(),
   )
@@ -183,6 +188,16 @@ export function PoolPageClient() {
   const handlePoolNameChange = useCallback((name: string) => {
     setPoolMeta((previous) => (previous ? { ...previous, name } : previous))
   }, [])
+
+  const handlePoolDescriptionChange = useCallback(
+    (description: string | null) => {
+      setPoolDescription(description)
+      setPoolMeta((previous) =>
+        previous ? { ...previous, description } : previous,
+      )
+    },
+    [],
+  )
 
   const handleAcceptingMembersChange = useCallback((acceptingMembers: boolean) => {
     setPoolMeta((previous) =>
@@ -275,7 +290,7 @@ export function PoolPageClient() {
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
       .select(
-        'id, name, invite_code, creator_id, scoring_style, accepting_members, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
+        'id, name, description, invite_code, creator_id, scoring_style, accepting_members, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
       )
       .eq('invite_code', inviteCode)
       .maybeSingle()
@@ -295,6 +310,44 @@ export function PoolPageClient() {
     setPoolId(pool.id)
     setPoolCreatorUserId(pool.creator_id)
     setCanDelete(pool.creator_id === userId)
+    setIsPoolOwner(pool.creator_id === userId)
+    setIsPoolAdmin(pool.creator_id === userId)
+    setPoolDescription(
+      typeof pool.description === 'string' ? pool.description : null,
+    )
+    setCoAdminUserIds([])
+
+    // Refine role via commissioner bootstrap (owner OR co-commissioner).
+    void fetch(`/api/pools/${encodeURIComponent(pool.id)}/commissioner`)
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 403) {
+            setIsPoolAdmin(false)
+            setIsPoolOwner(pool.creator_id === userId)
+            setCanDelete(pool.creator_id === userId)
+          }
+          return
+        }
+        const data = (await res.json()) as {
+          role?: { isOwner?: boolean; isAdmin?: boolean }
+          coCommissioners?: Array<{ userId: string }>
+          pool?: { description?: string | null }
+        }
+        const owner = Boolean(data.role?.isOwner)
+        const admin = Boolean(data.role?.isAdmin)
+        setIsPoolOwner(owner)
+        setIsPoolAdmin(admin)
+        setCanDelete(owner)
+        setCoAdminUserIds(
+          (data.coCommissioners ?? []).map((c) => c.userId).filter(Boolean),
+        )
+        if (data.pool && 'description' in data.pool) {
+          setPoolDescription(data.pool.description ?? null)
+        }
+      })
+      .catch(() => {
+        /* keep creator-based fallback */
+      })
 
     const activeAnnouncementPromise = getActiveAnnouncement(supabase, pool.id)
 
@@ -474,6 +527,8 @@ export function PoolPageClient() {
     setPoolMeta({
       inviteCode: pool.invite_code,
       name: pool.name,
+      description:
+        typeof pool.description === 'string' ? pool.description : null,
       scoringStyle: pool.scoring_style,
       stage: currentStage,
       memberCount: poolMembers.length,
@@ -784,7 +839,11 @@ export function PoolPageClient() {
       avatarsByMemberId={avatarByMemberId}
       poolCreatorUserId={poolCreatorUserId ?? undefined}
       memberProfilesByUserId={memberProfilesByUserId}
+      isPoolOwner={isPoolOwner}
+      isPoolAdmin={isPoolAdmin}
+      coAdminUserIds={coAdminUserIds}
       onPoolNameChange={handlePoolNameChange}
+      onPoolDescriptionChange={handlePoolDescriptionChange}
       onAcceptingMembersChange={handleAcceptingMembersChange}
       onPoolAvatarChange={handlePoolAvatarChange}
       onPoolThemeColorChange={handlePoolThemeColorChange}

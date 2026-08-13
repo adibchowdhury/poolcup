@@ -55,6 +55,7 @@ import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
 export type PoolHomeMeta = {
   inviteCode: string
   name: string
+  description: string | null
   scoringStyle: string
   stage: string
   memberCount: number
@@ -104,7 +105,11 @@ interface PoolHomeViewProps {
   avatarsByMemberId: Map<string, MemberAvatarRecord>
   poolCreatorUserId?: string
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
+  isPoolOwner?: boolean
+  isPoolAdmin?: boolean
+  coAdminUserIds?: string[]
   onPoolNameChange?: (name: string) => void
+  onPoolDescriptionChange?: (description: string | null) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
   onPoolAvatarChange?: (avatar: string) => void
   onPoolThemeColorChange?: (themeColor: string | null) => void
@@ -139,7 +144,11 @@ export function PoolHomeView({
   avatarsByMemberId,
   poolCreatorUserId,
   memberProfilesByUserId,
+  isPoolOwner,
+  isPoolAdmin,
+  coAdminUserIds,
   onPoolNameChange,
+  onPoolDescriptionChange,
   onAcceptingMembersChange,
   onPoolAvatarChange,
   onPoolThemeColorChange,
@@ -651,6 +660,7 @@ export function PoolHomeView({
               <PoolSettingsTab
                 poolId={poolId}
                 poolName={pool.name}
+                poolDescription={pool.description}
                 inviteCode={pool.inviteCode}
                 poolThemeColor={pool.themeColor}
                 scoringStyle={pool.scoringStyle}
@@ -662,7 +672,11 @@ export function PoolHomeView({
                 members={members}
                 poolCreatorUserId={poolCreatorUserId}
                 currentUserId={currentUserId}
+                isOwner={isPoolOwner}
+                isAdmin={isPoolAdmin}
+                coAdminUserIds={coAdminUserIds}
                 onPoolNameChange={onPoolNameChange}
+                onPoolDescriptionChange={onPoolDescriptionChange}
                 onPoolThemeColorChange={onPoolThemeColorChange}
                 onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}

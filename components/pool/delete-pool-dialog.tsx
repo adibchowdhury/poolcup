@@ -50,7 +50,10 @@ export function DeletePoolDialog({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canDelete = useMemo(() => typed.trim().toUpperCase() === 'DELETE', [typed])
+  const canDelete = useMemo(
+    () => typed.trim() === poolName.trim(),
+    [typed, poolName],
+  )
 
   async function handleDelete() {
     setSubmitting(true)
@@ -138,20 +141,23 @@ export function DeletePoolDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete “{poolName}”?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently deletes the pool, members, and predictions. To confirm, type{' '}
-            <span className="font-mono font-semibold text-foreground">DELETE</span> below.
+            This permanently deletes the pool, members, and predictions. To confirm, type the
+            pool name{' '}
+            <span className="font-mono font-semibold text-foreground">{poolName}</span>{' '}
+            exactly below.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-2">
           <label htmlFor="delete-confirm" className="text-sm font-medium">
-            Type DELETE to enable deletion
+            Type the pool name to enable deletion
           </label>
           <input
             id="delete-confirm"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            placeholder="DELETE"
+            placeholder={poolName}
+            autoComplete="off"
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           />
           {error && (
