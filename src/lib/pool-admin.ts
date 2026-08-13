@@ -56,6 +56,8 @@ export type PoolModerationAction =
   | 'pool_closed'
   | 'member_removed'
   | 'theme_edited'
+  | 'emblem_uploaded'
+  | 'emblem_removed'
   | 'scoring_edited'
   | string
 

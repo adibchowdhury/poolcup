@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ImageResponse } from 'next/og'
+import { DEFAULT_POOL_THEME_COLOR } from '@/src/lib/pool-theme'
 
 export const SHARE_CARD_SIZE = { width: 1080, height: 1350 }
 
@@ -9,7 +10,10 @@ type ShareCardChromeProps = {
   subtitle?: string | null
   footerUrl: string
   children?: ReactNode
+  /** Pool accent; defaults to PoolCup green. */
   accent?: string
+  /** Optional pool emblem shown next to the PoolCup mark. */
+  emblemUrl?: string | null
 }
 
 /** Shared branded layout for downloadable / shareable cards. */
@@ -19,8 +23,14 @@ export function ShareCardChrome({
   subtitle,
   footerUrl,
   children,
-  accent = '#00e676',
+  accent = DEFAULT_POOL_THEME_COLOR,
+  emblemUrl,
 }: ShareCardChromeProps) {
+  const trimmedEmblem =
+    typeof emblemUrl === 'string' && /^https?:\/\//i.test(emblemUrl.trim())
+      ? emblemUrl.trim()
+      : null
+
   return (
     <div
       style={{
@@ -54,9 +64,42 @@ export function ShareCardChrome({
           P
         </div>
         <div style={{ fontSize: 26, fontWeight: 700 }}>PoolCup</div>
+        {trimmedEmblem ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 6 }}>
+            <div
+              style={{
+                width: 1,
+                height: 32,
+                background: '#1e2d3d',
+              }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={trimmedEmblem}
+              width={44}
+              height={44}
+              alt=""
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                objectFit: 'cover',
+                border: '2px solid rgba(255,255,255,0.2)',
+              }}
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1, justifyContent: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          flex: 1,
+          justifyContent: 'center',
+        }}
+      >
         <div
           style={{
             fontSize: 22,
@@ -68,7 +111,9 @@ export function ShareCardChrome({
         >
           {eyebrow}
         </div>
-        <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.08 }}>{title}</div>
+        <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.08 }}>
+          {title}
+        </div>
         {subtitle ? (
           <div style={{ fontSize: 28, color: '#9fb2c3' }}>{subtitle}</div>
         ) : null}
@@ -85,7 +130,9 @@ export function ShareCardChrome({
         }}
       >
         <div style={{ fontSize: 22, color: '#5a7080' }}>getpoolcup.com</div>
-        <div style={{ fontSize: 20, color: '#9fb2c3', maxWidth: 520 }}>{footerUrl}</div>
+        <div style={{ fontSize: 20, color: '#9fb2c3', maxWidth: 520 }}>
+          {footerUrl}
+        </div>
       </div>
     </div>
   )

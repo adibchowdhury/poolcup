@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import type { PoolOgData } from '@/src/lib/og/pool-og-data'
+import { DEFAULT_POOL_THEME_COLOR } from '@/src/lib/pool-theme'
 
 export const POOL_OG_SIZE = { width: 1200, height: 630 }
 
@@ -8,6 +9,8 @@ export function renderPoolOgImage(pool: PoolOgData): ImageResponse {
     pool.memberCount === 1
       ? '1 member'
       : `${pool.memberCount} members`
+  const accent = pool.themeColor ?? DEFAULT_POOL_THEME_COLOR
+  const emblemUrl = pool.emblemUrl
 
   return new ImageResponse(
     (
@@ -31,7 +34,7 @@ export function renderPoolOgImage(pool: PoolOgData): ImageResponse {
               width: 48,
               height: 48,
               borderRadius: 12,
-              background: '#00e676',
+              background: accent,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -45,13 +48,45 @@ export function renderPoolOgImage(pool: PoolOgData): ImageResponse {
           <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: 1 }}>
             PoolCup
           </div>
+          {emblemUrl ? (
+            <div
+              style={{
+                marginLeft: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 1,
+                  height: 36,
+                  background: '#1e2d3d',
+                }}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={emblemUrl}
+                width={48}
+                height={48}
+                alt=""
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  objectFit: 'cover',
+                  border: '2px solid rgba(255,255,255,0.2)',
+                }}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div
             style={{
               fontSize: 22,
-              color: '#00e676',
+              color: accent,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: 3,
@@ -88,7 +123,7 @@ export function renderPoolOgImage(pool: PoolOgData): ImageResponse {
               display: 'flex',
               padding: '14px 22px',
               borderRadius: 999,
-              background: '#00e676',
+              background: accent,
               color: '#080b0f',
               fontSize: 24,
               fontWeight: 800,

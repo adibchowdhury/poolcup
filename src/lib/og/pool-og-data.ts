@@ -1,4 +1,5 @@
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { normalizePoolThemeColor } from '@/src/lib/pool-theme'
 
 export type PoolOgData = {
   id: string
@@ -7,6 +8,10 @@ export type PoolOgData = {
   eventName: string | null
   memberCount: number
   scoringStyle: string | null
+  /** Normalized #rrggbb or null (caller falls back to default accent). */
+  themeColor: string | null
+  /** Public emblem URL when set. */
+  emblemUrl: string | null
 }
 
 export async function fetchPoolOgData(
@@ -19,7 +24,9 @@ export async function fetchPoolOgData(
     const admin = createAdminSupabaseClient()
     const { data: pool } = await admin
       .from('pools')
-      .select('id, name, invite_code, event_id, scoring_style, event_name')
+      .select(
+        'id, name, invite_code, event_id, scoring_style, event_name, theme_color, emblem_url',
+      )
       .eq('invite_code', code)
       .maybeSingle()
 
@@ -44,6 +51,11 @@ export async function fetchPoolOgData(
       eventName = event?.name?.trim() || null
     }
 
+    const emblemRaw =
+      typeof pool.emblem_url === 'string' ? pool.emblem_url.trim() : ''
+    const emblemUrl =
+      emblemRaw && /^https?:\/\//i.test(emblemRaw) ? emblemRaw : null
+
     return {
       id: pool.id as string,
       name: String(pool.name ?? 'Pool'),
@@ -52,6 +64,10 @@ export async function fetchPoolOgData(
       memberCount: Math.max(0, count ?? 0),
       scoringStyle:
         typeof pool.scoring_style === 'string' ? pool.scoring_style : null,
+      themeColor: normalizePoolThemeColor(
+        typeof pool.theme_color === 'string' ? pool.theme_color : null,
+      ),
+      emblemUrl,
     }
   } catch {
     return null

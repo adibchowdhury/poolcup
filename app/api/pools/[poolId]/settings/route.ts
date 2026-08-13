@@ -29,11 +29,24 @@ export const runtime = 'nodejs'
 
 type Ctx = { params: Promise<{ poolId: string }> }
 
+function normalizeEmblemUrl(
+  value: string | null | undefined,
+): { ok: true; url: string | null } | { ok: false } {
+  if (value == null) return { ok: true, url: null }
+  const trimmed = String(value).trim()
+  if (!trimmed) return { ok: true, url: null }
+  if (trimmed.length > 2048) return { ok: false }
+  if (!/^https?:\/\//i.test(trimmed)) return { ok: false }
+  return { ok: true, url: trimmed }
+}
+
 type PatchBody = {
   name?: string
   description?: string | null
   acceptingMembers?: boolean
   themeColor?: string | null
+  /** Custom uploaded emblem public URL, or null to clear. */
+  emblemUrl?: string | null
   scoreExactPoints?: number | null
   scoreWinnerPoints?: number | null
   scoreDrawPoints?: number | null
@@ -74,7 +87,7 @@ export async function PATCH(request: Request, context: Ctx) {
   const { data: pool, error: poolError } = await admin
     .from('pools')
     .select(
-      'id, name, description, accepting_members, theme_color, score_exact_points, score_winner_points, score_draw_points, scoring_style, scoring_locked_at',
+      'id, name, description, accepting_members, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style, scoring_locked_at',
     )
     .eq('id', poolId)
     .maybeSingle()
@@ -153,6 +166,27 @@ export async function PATCH(request: Request, context: Ctx) {
       logs.push({
         action: 'theme_edited',
         detail: { from: prev, to: normalized },
+      })
+    }
+  }
+
+  if (body.emblemUrl !== undefined) {
+    const parsed = normalizeEmblemUrl(body.emblemUrl)
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { error: 'invalid_emblem_url' },
+        { status: 400 },
+      )
+    }
+    const prev =
+      typeof pool.emblem_url === 'string' && pool.emblem_url.trim()
+        ? pool.emblem_url.trim()
+        : null
+    if (parsed.url !== prev) {
+      updates.emblem_url = parsed.url
+      logs.push({
+        action: parsed.url ? 'emblem_uploaded' : 'emblem_removed',
+        detail: { from: prev, to: parsed.url },
       })
     }
   }
@@ -270,6 +304,10 @@ export async function PATCH(request: Request, context: Ctx) {
         description: pool.description ?? null,
         acceptingMembers: pool.accepting_members ?? true,
         themeColor: pool.theme_color ?? null,
+        emblemUrl:
+          typeof pool.emblem_url === 'string' && pool.emblem_url.trim()
+            ? pool.emblem_url.trim()
+            : null,
         scoreExactPoints: pool.score_exact_points ?? null,
         scoreWinnerPoints: pool.score_winner_points ?? null,
         scoreDrawPoints: pool.score_draw_points ?? null,
@@ -285,7 +323,7 @@ export async function PATCH(request: Request, context: Ctx) {
     .update(updates)
     .eq('id', poolId)
     .select(
-      'name, description, accepting_members, theme_color, score_exact_points, score_winner_points, score_draw_points, scoring_style',
+      'name, description, accepting_members, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style',
     )
     .maybeSingle()
 
@@ -350,6 +388,11 @@ export async function PATCH(request: Request, context: Ctx) {
               description: updated.description ?? null,
               acceptingMembers: updated.accepting_members ?? true,
               themeColor: updated.theme_color ?? null,
+              emblemUrl:
+                typeof updated.emblem_url === 'string' &&
+                updated.emblem_url.trim()
+                  ? updated.emblem_url.trim()
+                  : null,
               scoreExactPoints: updated.score_exact_points ?? null,
               scoreWinnerPoints: updated.score_winner_points ?? null,
               scoreDrawPoints: updated.score_draw_points ?? null,
@@ -387,6 +430,10 @@ export async function PATCH(request: Request, context: Ctx) {
       description: updated.description ?? null,
       acceptingMembers: updated.accepting_members ?? true,
       themeColor: updated.theme_color ?? null,
+      emblemUrl:
+        typeof updated.emblem_url === 'string' && updated.emblem_url.trim()
+          ? updated.emblem_url.trim()
+          : null,
       scoreExactPoints: updated.score_exact_points ?? null,
       scoreWinnerPoints: updated.score_winner_points ?? null,
       scoreDrawPoints: updated.score_draw_points ?? null,

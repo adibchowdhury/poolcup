@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react'
 import {
   Check,
   Crown,
+  ImagePlus,
   Loader2,
   Lock,
   MoreHorizontal,
   Pencil,
+  Trash2,
   UserMinus,
   Users,
   Trophy,
@@ -22,6 +24,7 @@ import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
+import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { TransferOwnershipDialog } from '@/components/pool/transfer-ownership-dialog'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import {
@@ -58,6 +61,7 @@ import {
 } from '@/src/lib/pool-name'
 import {
   DEFAULT_POOL_THEME_COLOR,
+  evaluateThemeContrast,
   isValidPoolThemeHex,
   normalizePoolThemeColor,
   POOL_THEME_COLOR_PRESETS,
@@ -77,6 +81,8 @@ import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
 import { patchPoolSettings } from '@/src/lib/pool-settings-client'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { supabase } from '@/src/lib/supabase'
+import { uploadPoolEmblem } from '@/src/lib/upload-pool-emblem'
 
 type PoolSettingsTabProps = {
   poolId?: string
@@ -84,6 +90,8 @@ type PoolSettingsTabProps = {
   poolDescription?: string | null
   inviteCode?: string
   poolThemeColor: string | null
+  poolAvatar?: string | null
+  poolEmblemUrl?: string | null
   scoringStyle: string
   scoreExactPoints: number | null
   scoreWinnerPoints: number | null
@@ -102,6 +110,7 @@ type PoolSettingsTabProps = {
   onPoolNameChange?: (name: string) => void
   onPoolDescriptionChange?: (description: string | null) => void
   onPoolThemeColorChange?: (themeColor: string | null) => void
+  onPoolEmblemUrlChange?: (emblemUrl: string | null) => void
   onPoolScoringChange?: (scoring: {
     scoreExactPoints: number | null
     scoreWinnerPoints: number | null
@@ -166,6 +175,8 @@ export function PoolSettingsTab({
   poolDescription = null,
   inviteCode,
   poolThemeColor,
+  poolAvatar = null,
+  poolEmblemUrl = null,
   scoringStyle,
   scoreExactPoints,
   scoreWinnerPoints,
@@ -181,6 +192,7 @@ export function PoolSettingsTab({
   onPoolNameChange,
   onPoolDescriptionChange,
   onPoolThemeColorChange,
+  onPoolEmblemUrlChange,
   onPoolScoringChange,
   onAcceptingMembersChange,
   onMemberRemoved,
@@ -225,6 +237,17 @@ export function PoolSettingsTab({
   )
   const [savingTheme, setSavingTheme] = useState(false)
   const [themeError, setThemeError] = useState<string | null>(null)
+  const [contrastConfirmOpen, setContrastConfirmOpen] = useState(false)
+  const [pendingThemeColor, setPendingThemeColor] = useState<string | null>(
+    null,
+  )
+  const [contrastWarningFiredFor, setContrastWarningFiredFor] = useState<
+    string | null
+  >(null)
+  const emblemInputRef = useRef<HTMLInputElement>(null)
+  const [emblemBusy, setEmblemBusy] = useState(false)
+  const [emblemError, setEmblemError] = useState<string | null>(null)
+  const emblemFileInputId = useId()
   const resolvedScoring = resolveClassicScorePoints({
     scoreExactPoints,
     scoreWinnerPoints,
@@ -300,6 +323,13 @@ export function PoolSettingsTab({
     !saving
 
   const effectiveTheme = resolvePoolThemeColor(poolThemeColor)
+  const draftThemeForContrast = (() => {
+    const candidate = customHex.startsWith('#') ? customHex : `#${customHex}`
+    return isValidPoolThemeHex(candidate)
+      ? normalizePoolThemeColor(candidate)
+      : poolThemeColor
+  })()
+  const themeContrast = evaluateThemeContrast(draftThemeForContrast)
 
   function startEditing() {
     setDraftName(poolName)
@@ -394,7 +424,7 @@ export function PoolSettingsTab({
     })
   }
 
-  async function handleSaveThemeColor(next: string | null) {
+  async function persistThemeColor(next: string | null) {
     if (!poolId || savingTheme || !isAdmin) return
 
     const normalized = next == null ? null : normalizePoolThemeColor(next)
@@ -423,7 +453,97 @@ export function PoolSettingsTab({
       action: 'theme_edited',
       pool_id: poolId,
     })
+    capturePostHog('branding_color_changed', {
+      pool_id: poolId,
+      theme_color: normalized,
+    })
     toast.success(normalized ? 'Pool color saved' : 'Pool color reset to default')
+  }
+
+  function handleSaveThemeColor(next: string | null) {
+    if (!poolId || savingTheme || !isAdmin) return
+
+    const normalized = next == null ? null : normalizePoolThemeColor(next)
+    if (next != null && !normalized) {
+      setThemeError('Enter a valid hex color like #00e676')
+      return
+    }
+
+    const contrast = evaluateThemeContrast(normalized)
+    if (!contrast.ok) {
+      const key = normalized ?? 'default'
+      if (contrastWarningFiredFor !== key) {
+        capturePostHog('branding_contrast_warning_shown', {
+          pool_id: poolId,
+          theme_color: normalized,
+        })
+        setContrastWarningFiredFor(key)
+      }
+      setPendingThemeColor(normalized)
+      setContrastConfirmOpen(true)
+      return
+    }
+
+    void persistThemeColor(normalized)
+  }
+
+  async function handleEmblemFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !poolId || !isAdmin || emblemBusy) return
+
+    setEmblemBusy(true)
+    setEmblemError(null)
+
+    const upload = await uploadPoolEmblem(supabase, poolId, file)
+    if (upload.error || !upload.publicUrl) {
+      setEmblemBusy(false)
+      setEmblemError(upload.error || 'Upload failed')
+      toast.error('Could not upload logo')
+      return
+    }
+
+    const previous = poolEmblemUrl
+    onPoolEmblemUrlChange?.(upload.publicUrl)
+    const result = await patchPoolSettings(poolId, {
+      emblemUrl: upload.publicUrl,
+    })
+    setEmblemBusy(false)
+
+    if (!result.success) {
+      onPoolEmblemUrlChange?.(previous)
+      setEmblemError(result.error || 'Could not save logo')
+      toast.error('Could not save logo')
+      return
+    }
+
+    const saved = result.pool?.emblemUrl ?? upload.publicUrl
+    onPoolEmblemUrlChange?.(saved)
+    capturePostHog('branding_logo_uploaded', { pool_id: poolId })
+    toast.success('Pool logo saved')
+  }
+
+  async function handleRemoveEmblem() {
+    if (!poolId || !isAdmin || emblemBusy || !poolEmblemUrl) return
+
+    setEmblemBusy(true)
+    setEmblemError(null)
+    const previous = poolEmblemUrl
+    onPoolEmblemUrlChange?.(null)
+
+    const result = await patchPoolSettings(poolId, { emblemUrl: null })
+    setEmblemBusy(false)
+
+    if (!result.success) {
+      onPoolEmblemUrlChange?.(previous)
+      setEmblemError(result.error || 'Could not remove logo')
+      toast.error('Could not remove logo')
+      return
+    }
+
+    onPoolEmblemUrlChange?.(result.pool?.emblemUrl ?? null)
+    capturePostHog('branding_logo_removed', { pool_id: poolId })
+    toast.success('Pool logo removed')
   }
 
   async function persistScoring(opts: { confirmRecalculate: boolean }) {
@@ -732,155 +852,309 @@ export function PoolSettingsTab({
       ) : null}
 
       {isAdmin ? (
-        <section>
-          <SectionHeading title="Pool color" />
-          <div className="flex flex-wrap items-center gap-3">
-            <div
-              className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border-2 border-white/25 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_35%,transparent)]"
-              style={{
-                background: `linear-gradient(160deg, ${effectiveTheme} 0%, color-mix(in srgb, ${effectiveTheme} 50%, #0a0a0a) 100%)`,
-              }}
-              title={poolThemeColor == null ? 'Default' : effectiveTheme}
-              aria-label={`Current pool color ${effectiveTheme}`}
-            >
-              <span
-                className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent"
-                aria-hidden
+        <section className="min-w-0 space-y-6">
+          <SectionHeading title="Pool branding" />
+
+          <div className="space-y-3">
+            <SubsectionHeading title="Pool logo" />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <PoolAvatarImage
+                avatar={poolAvatar}
+                emblemUrl={poolEmblemUrl}
+                size="md"
+                className="mx-auto sm:mx-0"
               />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-mono text-sm text-muted-foreground">
-                {effectiveTheme}
-                {poolThemeColor == null ? ' · default' : ''}
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8"
-              aria-expanded={colorsExpanded}
-              onClick={() => setColorsExpanded((open) => !open)}
-            >
-              {colorsExpanded ? 'Done' : 'Customize'}
-            </Button>
-          </div>
-
-          {colorsExpanded ? (
-            <div className="mt-4 space-y-3">
-              <div className="flex flex-wrap gap-2.5">
-                <button
-                  type="button"
-                  disabled={savingTheme}
-                  onClick={() => void handleSaveThemeColor(null)}
-                  className={cn(
-                    'relative h-11 min-w-[4.5rem] overflow-hidden rounded-xl border px-3 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    poolThemeColor == null
-                      ? 'scale-[1.03] border-primary shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_40%,transparent)]'
-                      : 'border-white/15 hover:scale-[1.03]',
-                  )}
-                  style={{
-                    background: `linear-gradient(160deg, ${DEFAULT_POOL_THEME_COLOR} 0%, color-mix(in srgb, ${DEFAULT_POOL_THEME_COLOR} 55%, #111) 100%)`,
-                  }}
-                  title="Default PoolCup green"
-                >
-                  <span className="relative z-10 text-[#080b0f] drop-shadow-sm">
-                    Default
-                  </span>
-                  <span
-                    className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent"
-                    aria-hidden
-                  />
-                  {poolThemeColor == null ? (
-                    <Check
-                      className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-[#080b0f]"
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-
-                {POOL_THEME_COLOR_PRESETS.map((preset) => {
-                  const selected =
-                    normalizePoolThemeColor(poolThemeColor) === preset.hex
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      disabled={savingTheme}
-                      onClick={() => void handleSaveThemeColor(preset.hex)}
-                      className={cn(
-                        'relative h-11 w-11 overflow-hidden rounded-xl border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                        selected
-                          ? 'scale-[1.08] border-white shadow-[0_0_20px_color-mix(in_srgb,var(--primary)_50%,transparent)]'
-                          : 'border-white/20 hover:scale-[1.06]',
-                      )}
-                      style={{
-                        background: `linear-gradient(160deg, ${preset.hex} 0%, color-mix(in srgb, ${preset.hex} 50%, #0a0a0a) 100%)`,
-                      }}
-                      aria-label={preset.label}
-                      aria-pressed={selected}
-                      title={preset.label}
-                    >
-                      <span
-                        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent"
-                        aria-hidden
-                      />
-                      {selected ? (
-                        <Check
-                          className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow"
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {poolEmblemUrl
+                    ? 'Shown in the pool header and on share cards.'
+                    : 'Add a pool logo to personalize this squad.'}
+                </p>
+                <input
+                  ref={emblemInputRef}
+                  id={emblemFileInputId}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  disabled={emblemBusy}
+                  onChange={(event) => void handleEmblemFileChange(event)}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={cn('h-9', FOCUS_VISIBLE_RING)}
+                    disabled={emblemBusy}
+                    aria-controls={emblemFileInputId}
+                    onClick={() => emblemInputRef.current?.click()}
+                  >
+                    {emblemBusy ? (
+                      <>
+                        <Loader2
+                          className="mr-2 h-4 w-4 animate-spin"
                           aria-hidden
                         />
-                      ) : null}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <Label
-                    htmlFor="pool-theme-hex"
-                    className="text-xs text-muted-foreground"
-                  >
-                    Custom hex
-                  </Label>
-                  <Input
-                    id="pool-theme-hex"
-                    value={customHex}
-                    onChange={(event) => {
-                      setCustomHex(event.target.value)
-                      setThemeError(null)
-                    }}
-                    placeholder="#00e676"
-                    className="h-9 font-mono text-sm"
-                    disabled={savingTheme}
-                  />
+                        Uploading…
+                      </>
+                    ) : (
+                      <>
+                        <ImagePlus className="mr-2 h-4 w-4" aria-hidden />
+                        {poolEmblemUrl ? 'Replace logo' : 'Add a pool logo'}
+                      </>
+                    )}
+                  </Button>
+                  {poolEmblemUrl ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className={cn(
+                        'h-9 text-destructive hover:text-destructive',
+                        FOCUS_VISIBLE_RING,
+                      )}
+                      disabled={emblemBusy}
+                      onClick={() => void handleRemoveEmblem()}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                      Remove
+                    </Button>
+                  ) : null}
+                  {emblemError ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className={cn('h-9', FOCUS_VISIBLE_RING)}
+                      disabled={emblemBusy}
+                      onClick={() => {
+                        setEmblemError(null)
+                        emblemInputRef.current?.click()
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  ) : null}
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-9"
-                  disabled={
-                    savingTheme ||
-                    !isValidPoolThemeHex(
-                      customHex.startsWith('#')
-                        ? customHex
-                        : `#${customHex}`,
-                    )
-                  }
-                  onClick={() => void handleSaveThemeColor(customHex)}
-                >
-                  {savingTheme ? 'Saving…' : 'Apply'}
-                </Button>
-              </div>
-              {themeError ? (
-                <p className="text-sm text-destructive" role="alert">
-                  {themeError}
+                {emblemError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {emblemError}
+                  </p>
+                ) : null}
+                <p className="text-[11px] text-muted-foreground">
+                  JPEG, PNG, or WebP. Images are resized automatically.
                 </p>
-              ) : null}
+              </div>
             </div>
-          ) : null}
+          </div>
+
+          <div className="space-y-3">
+            <SubsectionHeading title="Pool color" />
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border-2 border-white/25 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_35%,transparent)]"
+                style={{
+                  background: `linear-gradient(160deg, ${effectiveTheme} 0%, color-mix(in srgb, ${effectiveTheme} 50%, #0a0a0a) 100%)`,
+                }}
+                title={poolThemeColor == null ? 'Default' : effectiveTheme}
+                aria-label={`Current pool color ${effectiveTheme}`}
+              >
+                <span
+                  className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent"
+                  aria-hidden
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-sm text-muted-foreground">
+                  {effectiveTheme}
+                  {poolThemeColor == null ? ' · default' : ''}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className={cn('h-8', FOCUS_VISIBLE_RING)}
+                aria-expanded={colorsExpanded}
+                onClick={() => setColorsExpanded((open) => !open)}
+              >
+                {colorsExpanded ? 'Done' : 'Customize'}
+              </Button>
+            </div>
+
+            {colorsExpanded ? (
+              <div className="mt-4 space-y-3">
+                <div
+                  className="flex flex-wrap gap-2.5"
+                  role="group"
+                  aria-label="Theme color presets"
+                >
+                  <button
+                    type="button"
+                    disabled={savingTheme}
+                    onClick={() => handleSaveThemeColor(null)}
+                    className={cn(
+                      'relative h-11 min-w-[4.5rem] overflow-hidden rounded-xl border px-3 text-xs font-semibold transition-all',
+                      FOCUS_VISIBLE_RING,
+                      poolThemeColor == null
+                        ? 'scale-[1.03] border-primary shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_40%,transparent)]'
+                        : 'border-white/15 hover:scale-[1.03]',
+                    )}
+                    style={{
+                      background: `linear-gradient(160deg, ${DEFAULT_POOL_THEME_COLOR} 0%, color-mix(in srgb, ${DEFAULT_POOL_THEME_COLOR} 55%, #111) 100%)`,
+                    }}
+                    title="Default PoolCup green"
+                  >
+                    <span className="relative z-10 text-[#080b0f] drop-shadow-sm">
+                      Default
+                    </span>
+                    <span
+                      className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent"
+                      aria-hidden
+                    />
+                    {poolThemeColor == null ? (
+                      <Check
+                        className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-[#080b0f]"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
+
+                  {POOL_THEME_COLOR_PRESETS.map((preset) => {
+                    const selected =
+                      normalizePoolThemeColor(poolThemeColor) === preset.hex
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        disabled={savingTheme}
+                        onClick={() => handleSaveThemeColor(preset.hex)}
+                        className={cn(
+                          'relative h-11 w-11 overflow-hidden rounded-xl border-2 transition-all',
+                          FOCUS_VISIBLE_RING,
+                          selected
+                            ? 'scale-[1.08] border-white shadow-[0_0_20px_color-mix(in_srgb,var(--primary)_50%,transparent)]'
+                            : 'border-white/20 hover:scale-[1.06]',
+                        )}
+                        style={{
+                          background: `linear-gradient(160deg, ${preset.hex} 0%, color-mix(in srgb, ${preset.hex} 50%, #0a0a0a) 100%)`,
+                        }}
+                        aria-label={preset.label}
+                        aria-pressed={selected}
+                        title={preset.label}
+                      >
+                        <span
+                          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent"
+                          aria-hidden
+                        />
+                        {selected ? (
+                          <Check
+                            className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Label
+                      htmlFor="pool-theme-hex"
+                      className="text-xs text-muted-foreground"
+                    >
+                      Custom hex
+                    </Label>
+                    <Input
+                      id="pool-theme-hex"
+                      value={customHex}
+                      onChange={(event) => {
+                        setCustomHex(event.target.value)
+                        setThemeError(null)
+                      }}
+                      placeholder="#00e676"
+                      className={cn('h-9 font-mono text-sm', FOCUS_VISIBLE_RING)}
+                      disabled={savingTheme}
+                      aria-invalid={
+                        themeContrast.warning != null &&
+                        isValidPoolThemeHex(
+                          customHex.startsWith('#')
+                            ? customHex
+                            : `#${customHex}`,
+                        )
+                      }
+                      aria-describedby={
+                        themeContrast.warning
+                          ? 'pool-theme-contrast-warning'
+                          : undefined
+                      }
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={cn('h-9', FOCUS_VISIBLE_RING)}
+                    disabled={
+                      savingTheme ||
+                      !isValidPoolThemeHex(
+                        customHex.startsWith('#')
+                          ? customHex
+                          : `#${customHex}`,
+                      )
+                    }
+                    onClick={() => handleSaveThemeColor(customHex)}
+                  >
+                    {savingTheme ? 'Saving…' : 'Apply'}
+                  </Button>
+                </div>
+                {themeContrast.warning ? (
+                  <p
+                    id="pool-theme-contrast-warning"
+                    className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+                    role="status"
+                  >
+                    {themeContrast.warning}
+                  </p>
+                ) : null}
+                {themeError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {themeError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <AlertDialog
+            open={contrastConfirmOpen}
+            onOpenChange={setContrastConfirmOpen}
+          >
+            <AlertDialogContent className={FOCUS_VISIBLE_RING}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Low contrast color</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This color may make text hard to read on buttons and accents.
+                  Save it anyway?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className={FOCUS_VISIBLE_RING}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className={FOCUS_VISIBLE_RING}
+                  onClick={() => {
+                    setContrastConfirmOpen(false)
+                    void persistThemeColor(pendingThemeColor)
+                  }}
+                >
+                  Save anyway
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </section>
       ) : null}
 

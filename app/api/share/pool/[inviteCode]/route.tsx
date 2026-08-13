@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { fetchPoolOgData } from '@/src/lib/og/pool-og-data'
 import { renderShareCard } from '@/src/lib/og/share-card'
+import { DEFAULT_POOL_THEME_COLOR } from '@/src/lib/pool-theme'
 import { siteUrl } from '@/src/lib/site'
 
 export const runtime = 'nodejs'
@@ -15,6 +16,7 @@ export async function GET(_request: Request, context: Ctx) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
+  const accent = pool.themeColor ?? DEFAULT_POOL_THEME_COLOR
   const joinUrl = `${siteUrl}/join/${encodeURIComponent(pool.inviteCode)}`
   const image = renderShareCard({
     eyebrow: 'Pool invite',
@@ -27,6 +29,8 @@ export async function GET(_request: Request, context: Ctx) {
       .filter(Boolean)
       .join(' · '),
     footerUrl: joinUrl,
+    accent,
+    emblemUrl: pool.emblemUrl,
     children: (
       <div
         style={{
@@ -34,7 +38,7 @@ export async function GET(_request: Request, context: Ctx) {
           display: 'flex',
           padding: '16px 28px',
           borderRadius: 999,
-          background: '#00e676',
+          background: accent,
           color: '#080b0f',
           fontSize: 26,
           fontWeight: 800,

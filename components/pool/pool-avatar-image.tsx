@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -25,6 +28,30 @@ function isRemoteUrl(value: string): boolean {
   return /^https?:\/\//i.test(value) || value.startsWith('//')
 }
 
+function Placeholder({
+  size,
+  className,
+}: {
+  size: 'sm' | 'md' | 'lg'
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex size-full items-center justify-center bg-muted/60 text-muted-foreground',
+        className,
+      )}
+    >
+      <Shield
+        className={cn(
+          size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-8 w-8' : 'h-12 w-12',
+        )}
+        aria-hidden
+      />
+    </div>
+  )
+}
+
 export function PoolAvatarImage({
   avatar,
   emblemUrl,
@@ -36,7 +63,14 @@ export function PoolAvatarImage({
   const px = pixelSize ?? SIZE_PX[size]
   const trimmedEmblem = emblemUrl?.trim() || null
   const presetSrc = getPoolAvatarSrc(avatar)
-  const remoteEmblem = trimmedEmblem && isRemoteUrl(trimmedEmblem)
+  const remoteEmblem = Boolean(trimmedEmblem && isRemoteUrl(trimmedEmblem))
+  const [emblemFailed, setEmblemFailed] = useState(false)
+
+  useEffect(() => {
+    setEmblemFailed(false)
+  }, [trimmedEmblem])
+
+  const showRemote = remoteEmblem && !emblemFailed
 
   return (
     <div
@@ -46,14 +80,15 @@ export function PoolAvatarImage({
       )}
       style={{ width: px, height: px }}
     >
-      {remoteEmblem ? (
+      {showRemote ? (
         // eslint-disable-next-line @next/next/no-img-element -- Supabase public emblem URL
         <img
-          src={trimmedEmblem}
+          src={trimmedEmblem!}
           alt=""
           width={px}
           height={px}
           className={cn('size-full object-cover', imgClassName)}
+          onError={() => setEmblemFailed(true)}
         />
       ) : presetSrc ? (
         <Image
@@ -64,14 +99,7 @@ export function PoolAvatarImage({
           className={cn('size-full object-cover object-top', imgClassName)}
         />
       ) : (
-        <div className="flex size-full items-center justify-center bg-muted/60 text-muted-foreground">
-          <Shield
-            className={cn(
-              size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-8 w-8' : 'h-12 w-12',
-            )}
-            aria-hidden
-          />
-        </div>
+        <Placeholder size={size} />
       )}
     </div>
   )

@@ -6,8 +6,8 @@ type UploadResult =
   | { publicUrl: null; error: string }
 
 /**
- * Upload a squad emblem to the avatars bucket (user-scoped path), then
- * persist the public URL on pools.emblem_url. Creator-only via RLS on update.
+ * Compress + upload a pool emblem to the avatars bucket (user-scoped path).
+ * Does NOT write pools.emblem_url — callers must persist via admin PATCH /settings.
  */
 export async function uploadPoolEmblem(
   supabase: SupabaseClient,
@@ -53,30 +53,5 @@ export async function uploadPoolEmblem(
   }
 
   const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-  const publicUrl = urlData.publicUrl
-
-  const { error: updateError } = await supabase
-    .from('pools')
-    .update({ emblem_url: publicUrl })
-    .eq('id', poolId)
-
-  if (updateError) {
-    return { publicUrl: null, error: updateError.message }
-  }
-
-  return { publicUrl, error: null }
-}
-
-export async function clearPoolEmblem(
-  supabase: SupabaseClient,
-  poolId: string,
-): Promise<{ error: string | null }> {
-  if (!poolId) return { error: 'Missing pool' }
-
-  const { error } = await supabase
-    .from('pools')
-    .update({ emblem_url: null })
-    .eq('id', poolId)
-
-  return { error: error?.message ?? null }
+  return { publicUrl: urlData.publicUrl, error: null }
 }

@@ -28,7 +28,7 @@ export async function GET(request: Request, context: Ctx) {
   const admin = createAdminSupabaseClient()
   const { data: pool } = await admin
     .from('pools')
-    .select('id, name')
+    .select('id, name, theme_color, emblem_url')
     .eq('id', poolId)
     .maybeSingle()
 
@@ -64,15 +64,27 @@ export async function GET(request: Request, context: Ctx) {
   const points = Math.max(0, Number(cacheRow?.total_points) || 0)
   // No invite_code on rank cards — invite is a separate share surface.
   const dest = siteUrl
+  const accent =
+    typeof pool.theme_color === 'string' &&
+    /^#[0-9a-fA-F]{6}$/.test(pool.theme_color.trim())
+      ? pool.theme_color.trim().toLowerCase()
+      : '#00e676'
+  const emblemUrl =
+    typeof pool.emblem_url === 'string' &&
+    /^https?:\/\//i.test(pool.emblem_url.trim())
+      ? pool.emblem_url.trim()
+      : null
 
   return renderShareCard({
     eyebrow: 'Leaderboard',
     title: `#${rank} of ${total}`,
     subtitle: `${member.display_name} in ${pool.name}`,
     footerUrl: dest,
+    accent,
+    emblemUrl,
     children: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 24 }}>
-        <div style={{ fontSize: 32, color: '#00e676', fontWeight: 700 }}>
+        <div style={{ fontSize: 32, color: accent, fontWeight: 700 }}>
           {points} pts
         </div>
         <div style={{ fontSize: 24, color: '#9fb2c3' }}>

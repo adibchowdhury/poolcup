@@ -663,6 +663,8 @@ export function PoolHomeView({
                 poolDescription={pool.description}
                 inviteCode={pool.inviteCode}
                 poolThemeColor={pool.themeColor}
+                poolAvatar={pool.avatar}
+                poolEmblemUrl={pool.emblemUrl}
                 scoringStyle={pool.scoringStyle}
                 scoreExactPoints={pool.scoreExactPoints}
                 scoreWinnerPoints={pool.scoreWinnerPoints}
@@ -678,6 +680,7 @@ export function PoolHomeView({
                 onPoolNameChange={onPoolNameChange}
                 onPoolDescriptionChange={onPoolDescriptionChange}
                 onPoolThemeColorChange={onPoolThemeColorChange}
+                onPoolEmblemUrlChange={onPoolEmblemUrlChange}
                 onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}
                 onMemberRemoved={onMemberRemoved}
