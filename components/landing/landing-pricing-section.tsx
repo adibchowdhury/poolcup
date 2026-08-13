@@ -51,7 +51,8 @@ const TIERS: PricingTier[] = [
       'Predictions & leaderboards',
       'Friends & pool chat',
       'Badges & multi-sport',
-      'Create or join pools',
+      'Create up to 3 pools',
+      'Join unlimited pools',
       'Works across every league',
     ],
   },
@@ -85,10 +86,10 @@ const TIERS: PricingTier[] = [
     premium: true,
     features: [
       'Everything in Free',
+      'Unlimited custom pools',
       'Custom scoring & branding',
       'Announcements, polls & exports',
       'Co-commissioners & moderation tools',
-      'Members-missing predictions tools',
       'Admin controls for your pools',
     ],
   },
@@ -105,7 +106,7 @@ const COMPARISON_ROWS: {
   { feature: 'Badges & multi-sport', free: true, pro: true, commissioner: true },
   { feature: 'Advanced analytics & AI insights', free: false, pro: true, commissioner: true },
   { feature: 'Custom profile & premium badges', free: false, pro: true, commissioner: true },
-  { feature: 'Unlimited custom pools', free: false, pro: true, commissioner: true },
+  { feature: 'Unlimited custom pools', free: '3 owned', pro: '3 owned', commissioner: true },
   { feature: 'Admin tools & custom scoring', free: false, pro: false, commissioner: true },
   { feature: 'Announcements, polls & branding', free: false, pro: false, commissioner: true },
   { feature: 'Money pool tracking & exports', free: false, pro: false, commissioner: true },
@@ -114,11 +115,11 @@ const COMPARISON_ROWS: {
 const FAQ_ITEMS = [
   {
     q: "What's included in the free plan?",
-    a: 'Free includes predictions, leaderboards, friends, pool chat, badges, and the ability to create or join pools across leagues — everything you need to play with your crew. Basic pool admin tools (name, description, open/close, members) are included; advanced Commissioner tools require a paid plan.',
+    a: 'Free includes predictions, leaderboards, friends, pool chat, badges, joining unlimited pools, and creating up to 3 pools you own. Basic pool admin tools (name, description, open/close, members) are included; advanced Commissioner tools and unlimited pool creation require a paid plan.',
   },
   {
     q: "What's the difference between Pro and Commissioner?",
-    a: 'Commissioner unlocks pool-admin tools: custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features. PoolCup Pro (player insights and personalization) is coming soon and is not available for purchase yet.',
+    a: 'Commissioner unlocks unlimited owned pools plus pool-admin tools: custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features. PoolCup Pro (player insights and personalization) is coming soon and is not available for purchase yet.',
   },
   {
     q: 'Can I cancel anytime?',
