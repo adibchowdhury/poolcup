@@ -17,6 +17,7 @@ import { CommissionerCoAdminsSection } from '@/components/pool/commissioner-co-a
 import { CommissionerMissingPredictions } from '@/components/pool/commissioner-missing-predictions'
 import { CommissionerModerationLog } from '@/components/pool/commissioner-moderation-log'
 import { PoolAnnouncementsPanel } from '@/components/pool/pool-announcements-panel'
+import { PoolPollsPanel } from '@/components/pool/pool-polls-panel'
 import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
@@ -1161,6 +1162,16 @@ export function PoolSettingsTab({
           </div>
 
           <div>
+            <SubsectionHeading title="Polls" />
+            <p className="mb-3 text-xs text-muted-foreground">
+              Create polls for members to vote on. Results update live.
+            </p>
+            {poolId ? (
+              <PoolPollsPanel poolId={poolId} isAdmin showComposer />
+            ) : null}
+          </div>
+
+          <div>
             <SubsectionHeading title="Membership" />
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1 space-y-1">
@@ -1261,6 +1272,16 @@ export function PoolSettingsTab({
               <PoolAnnouncementsPanel
                 poolId={poolId}
                 currentUserId={currentUserId}
+                isAdmin={false}
+                showComposer={false}
+              />
+            </section>
+          ) : null}
+          {poolId ? (
+            <section className="space-y-3">
+              <SectionHeading title="Polls" />
+              <PoolPollsPanel
+                poolId={poolId}
                 isAdmin={false}
                 showComposer={false}
               />
