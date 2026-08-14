@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarRange, Lock } from 'lucide-react'
+import { CalendarRange } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -189,7 +190,11 @@ export function HistoricalPerformancePage() {
       </div>
 
       {locked && !loading ? (
-        <LockedState />
+        <LockedProFeature
+          title="Historical Performance is a Pro feature"
+          description="Unlock all-time summaries, season and year tables, and season-over-season comparisons."
+          source="locked_historical_performance"
+        />
       ) : error ? (
         <div
           className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-6 text-center"
@@ -304,39 +309,6 @@ export function HistoricalPerformancePage() {
           )}
         </div>
       ) : null}
-    </div>
-  )
-}
-
-function LockedState() {
-  return (
-    <div
-      className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-10 text-center sm:px-8"
-      role="group"
-      aria-label="Historical performance is a Pro feature, locked"
-    >
-      <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground">
-        <Lock className="h-5 w-5" aria-hidden />
-      </span>
-      <h2 className="font-display text-2xl tracking-wide text-foreground">
-        Historical Performance is a Pro feature
-      </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        Unlock all-time summaries, season and year tables, and season-over-season
-        comparisons.
-      </p>
-      <Button asChild className={cn('mt-5', FOCUS_VISIBLE_RING)}>
-        <Link
-          href="/settings/billing"
-          onClick={() => {
-            capturePostHog('historical_upgrade_prompt_clicked', {
-              source: 'locked_page',
-            })
-          }}
-        >
-          Upgrade to Pro
-        </Link>
-      </Button>
     </div>
   )
 }

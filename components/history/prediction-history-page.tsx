@@ -13,13 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   History,
-  Lock,
   Search,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { formatKickoffCompact } from '@/src/lib/match-kickoff-display'
@@ -257,28 +257,15 @@ export function PredictionHistoryPage() {
         aria-label="History filters"
       >
         {!isPro && !loading ? (
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5">
-            <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-              Upgrade to Pro to filter and search your history
-            </p>
-            <Button
-              asChild
-              size="sm"
-              className={cn('h-8 shrink-0', FOCUS_VISIBLE_RING)}
-            >
-              <Link
-                href="/settings/billing"
-                onClick={() => {
-                  capturePostHog('prediction_history_upgrade_prompt_clicked', {
-                    source: 'filter_bar',
-                  })
-                }}
-              >
-                Upgrade
-              </Link>
-            </Button>
-          </div>
+          <LockedProFeature
+            variant="banner"
+            className="mb-3"
+            title="History filters"
+            description="Upgrade to Pro to filter and search your history"
+            source="prediction_history_filter_bar"
+            ctaText="Upgrade"
+            modalHeadline="Unlock history filters"
+          />
         ) : null}
 
         <fieldset

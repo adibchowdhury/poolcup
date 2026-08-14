@@ -7,8 +7,8 @@ import {
   coerceUserAnalytics,
   parseAnalyticsRange,
 } from '@/src/lib/analytics'
+import { requireProUser } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
-import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -19,45 +19,21 @@ export const runtime = 'nodejs'
  * Whole dashboard is Pro-gated (user_has_pro); non-Pro get 403 + no data.
  */
 export async function GET(request: Request) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
-
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
-
-  if (!isPro) {
-    return NextResponse.json(
-      {
-        error: 'pro_required',
-        isPro: false,
-        locked: true,
-      },
-      { status: 403 },
-    )
-  }
+  const gate = await requireProUser()
+  if (!gate.ok) return gate.response
+  const { supabase, userId } = gate
 
   const url = new URL(request.url)
   const range = parseAnalyticsRange(url.searchParams.get('range'))
   const { dateFrom, dateTo, seasonOnly } = analyticsRangeToBounds(range)
 
   const analyticsArgs = {
-    p_user_id: user.id,
+    p_user_id: userId,
     p_date_from: dateFrom,
     p_date_to: dateTo,
     p_season_only: seasonOnly,
   }
-  const userOnly = { p_user_id: user.id }
+  const userOnly = { p_user_id: userId }
 
   const [analytics, comparisons, timeseries, rank] = await Promise.all([
     callRpc(supabase, 'get_user_analytics', analyticsArgs),

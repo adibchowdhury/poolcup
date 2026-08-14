@@ -1,12 +1,12 @@
 'use client'
 
-import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useEffect, useId, useState } from 'react'
 import { Check, Lock, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { useUserAccent } from '@/components/user-accent-provider'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -98,31 +98,15 @@ export function ThemeAppearanceSetting() {
         </div>
 
         {!isPro && !accentLoading ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border bg-background/40 px-3 py-2.5">
-            <Lock
-              className="h-4 w-4 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-              Upgrade to Pro to change your app accent
-            </p>
-            <Button
-              asChild
-              size="sm"
-              className={cn('h-8 shrink-0', FOCUS_VISIBLE_RING)}
-            >
-              <Link
-                href="/settings/billing"
-                onClick={() => {
-                  capturePostHog('accent_theme_upgrade_prompt_clicked', {
-                    source: 'appearance_settings',
-                  })
-                }}
-              >
-                Upgrade
-              </Link>
-            </Button>
-          </div>
+          <LockedProFeature
+            variant="banner"
+            className="mt-3 bg-background/40"
+            title="App accent"
+            description="Upgrade to Pro to change your app accent"
+            source="appearance_settings"
+            ctaText="Upgrade"
+            modalHeadline="Unlock premium accent themes"
+          />
         ) : null}
 
         {accentLoading ? (

@@ -4,6 +4,7 @@ import {
   parseAccentTheme,
   type AccentThemeKey,
 } from '@/src/lib/accent-theme'
+import { requireProUser, userHasPro } from '@/src/lib/require-pro'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -23,14 +24,7 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
+  const isPro = await userHasPro(supabase, user.id)
 
   const { data: row, error } = await supabase
     .from('users')
@@ -56,31 +50,14 @@ type PatchBody = {
 /**
  * Persist accent_theme. Pro-gated: free users get 403; value must be a
  * known preset key or null (reset to default green).
+ * Payload preserves prior shape (no `locked` field).
  */
 export async function PATCH(request: Request) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
-
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
-
-  if (!isPro) {
-    return NextResponse.json(
-      { error: 'pro_required', isPro: false },
-      { status: 403 },
-    )
-  }
+  const gate = await requireProUser({
+    forbiddenBody: { error: 'pro_required', isPro: false },
+  })
+  if (!gate.ok) return gate.response
+  const { supabase, userId } = gate
 
   let body: PatchBody
   try {
@@ -105,7 +82,7 @@ export async function PATCH(request: Request) {
   const { error } = await supabase
     .from('users')
     .update({ accent_theme: next })
-    .eq('id', user.id)
+    .eq('id', userId)
 
   if (error) {
     console.error('accent_theme update failed:', error.message)

@@ -7,6 +7,7 @@ import {
   type HistoryFilterOptions,
   type PredictionHistoryRow,
 } from '@/src/lib/prediction-history'
+import { userHasPro } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -30,14 +31,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const parsed = parseHistoryFilters(url.searchParams)
 
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
+  // Soft gate: list always returned; Pro only enables filter params.
+  const isPro = await userHasPro(supabase, user.id)
 
   const limit = HISTORY_PAGE_SIZE
   const offset = (parsed.page - 1) * limit

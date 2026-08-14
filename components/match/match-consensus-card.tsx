@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Lock, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ProUpgradeModal } from '@/components/pro/pro-upgrade-modal'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { cn } from '@/lib/utils'
 import {
@@ -335,73 +336,115 @@ function LockedConsensusTeaser({
   source: string
   unauthenticated: boolean
 }) {
-  const href = unauthenticated
-    ? `/login?next=${encodeURIComponent(`/match/${matchId}`)}`
-    : '/settings/billing'
+  const [modalOpen, setModalOpen] = useState(false)
+  const loginHref = `/login?next=${encodeURIComponent(`/match/${matchId}`)}`
 
-  const onClick = () => {
-    if (!unauthenticated) {
-      capturePostHog('match_consensus_upgrade_prompt_clicked', {
-        match_id: matchId,
-        source,
-      })
-    }
+  const onUpgradeClick = () => {
+    capturePostHog('match_consensus_upgrade_prompt_clicked', {
+      match_id: matchId,
+      source,
+    })
+    setModalOpen(true)
   }
 
   if (variant === 'compact') {
     return (
-      <div
-        className="flex flex-wrap items-center justify-between gap-2"
-        role="group"
-        aria-label="Crowd Win Chance is a Pro feature, locked"
-      >
-        <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Lock className="h-3 w-3 shrink-0" aria-hidden />
-          <span className="truncate">
-            Pro: see how the crowd is predicting this match
-          </span>
-        </p>
-        <Link
-          href={href}
-          onClick={onClick}
-          className={cn(
-            'shrink-0 text-[11px] font-semibold text-primary underline-offset-2 hover:underline',
-            FOCUS_VISIBLE_RING,
-            'rounded-sm',
-          )}
+      <>
+        <div
+          className="flex flex-wrap items-center justify-between gap-2"
+          role="group"
+          aria-label="Crowd Win Chance is a Pro feature, locked"
         >
-          {unauthenticated ? 'Sign in' : 'Upgrade'}
-        </Link>
-      </div>
+          <p className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Lock className="h-3 w-3 shrink-0" aria-hidden />
+            <span className="truncate">
+              Pro: see how the crowd is predicting this match
+            </span>
+          </p>
+          {unauthenticated ? (
+            <Link
+              href={loginHref}
+              className={cn(
+                'shrink-0 text-[11px] font-semibold text-primary underline-offset-2 hover:underline',
+                FOCUS_VISIBLE_RING,
+                'rounded-sm',
+              )}
+            >
+              Sign in
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className={cn(
+                'shrink-0 text-[11px] font-semibold text-primary underline-offset-2 hover:underline',
+                FOCUS_VISIBLE_RING,
+                'rounded-sm',
+              )}
+            >
+              Upgrade
+            </button>
+          )}
+        </div>
+        {!unauthenticated ? (
+          <ProUpgradeModal
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            source={`match_consensus_${source}`}
+            headline="Unlock Crowd Win Chance"
+            description="See the crowd outcome split and top scorelines before kickoff — the Pro pre-lock advantage."
+          />
+        ) : null}
+      </>
     )
   }
 
   return (
-    <div
-      className="relative overflow-hidden rounded-lg border border-dashed border-border bg-muted/25 px-4 py-6 text-center"
-      role="group"
-      aria-label="Crowd Win Chance is a Pro feature, locked"
-    >
+    <>
       <div
-        className="pointer-events-none absolute inset-x-4 top-3 h-2 rounded-full bg-gradient-to-r from-primary/40 via-muted-foreground/30 to-sky-400/40 blur-[0.5px]"
-        aria-hidden
-      />
-      <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground">
-        <Lock className="h-4 w-4" aria-hidden />
-      </span>
-      <p className="text-sm font-medium text-foreground">
-        Pro: see how the crowd is predicting this match
-      </p>
-      <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-        Unlock the crowd outcome split and top scorelines before kickoff — the
-        Pro pre-lock advantage. After lock, consensus is free for everyone.
-      </p>
-      <Button asChild size="sm" className={cn('mt-4', FOCUS_VISIBLE_RING)}>
-        <Link href={href} onClick={onClick}>
-          {unauthenticated ? 'Sign in' : 'Upgrade to Pro'}
-        </Link>
-      </Button>
-    </div>
+        className="relative overflow-hidden rounded-lg border border-dashed border-border bg-muted/25 px-4 py-6 text-center"
+        role="group"
+        aria-label="Crowd Win Chance is a Pro feature, locked"
+      >
+        <div
+          className="pointer-events-none absolute inset-x-4 top-3 h-2 rounded-full bg-gradient-to-r from-primary/40 via-muted-foreground/30 to-sky-400/40 blur-[0.5px]"
+          aria-hidden
+        />
+        <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground">
+          <Lock className="h-4 w-4" aria-hidden />
+        </span>
+        <p className="text-sm font-medium text-foreground">
+          Pro: see how the crowd is predicting this match
+        </p>
+        <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+          Unlock the crowd outcome split and top scorelines before kickoff — the
+          Pro pre-lock advantage. After lock, consensus is free for everyone.
+        </p>
+        {unauthenticated ? (
+          <Button asChild size="sm" className={cn('mt-4', FOCUS_VISIBLE_RING)}>
+            <Link href={loginHref}>Sign in</Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className={cn('mt-4', FOCUS_VISIBLE_RING)}
+            onClick={onUpgradeClick}
+          >
+            Upgrade to Pro
+          </Button>
+        )}
+      </div>
+      {!unauthenticated ? (
+        <ProUpgradeModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          source={`match_consensus_${source}`}
+          headline="Unlock Crowd Win Chance"
+          description="See the crowd outcome split and top scorelines before kickoff — the Pro pre-lock advantage."
+        />
+      ) : null}
+    </>
   )
 }
 

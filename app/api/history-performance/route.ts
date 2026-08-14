@@ -5,8 +5,8 @@ import {
   coerceHistoricalByYear,
   coerceHistoricalRankBySeason,
 } from '@/src/lib/historical-performance'
+import { requireProUser } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
-import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -17,35 +17,11 @@ export const runtime = 'nodejs'
  * Whole page is Pro-gated (user_has_pro); non-Pro get 403 + no data.
  */
 export async function GET() {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const gate = await requireProUser()
+  if (!gate.ok) return gate.response
+  const { supabase, userId } = gate
 
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
-
-  if (!isPro) {
-    return NextResponse.json(
-      {
-        error: 'pro_required',
-        isPro: false,
-        locked: true,
-      },
-      { status: 403 },
-    )
-  }
-
-  const args = { p_user_id: user.id }
+  const args = { p_user_id: userId }
 
   const [bySeasonRaw, byYearRaw, allTimeRaw, rankRaw] = await Promise.all([
     callRpc(supabase, 'get_historical_by_season', args),

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseMatchConsensusPayload } from '@/src/lib/match-consensus'
 import { isMatchLocked } from '@/src/lib/match-lock'
+import { userHasPro } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
@@ -52,14 +53,7 @@ export async function GET(_request: Request, context: RouteContext) {
     (matchRow.locked_at as string | null) ?? null,
   )
 
-  const { data: isProRaw, error: proError } = await supabase.rpc(
-    'user_has_pro',
-    { p_user_id: user.id },
-  )
-  if (proError) {
-    console.error('user_has_pro failed:', proError.message)
-  }
-  const isPro = isProRaw === true
+  const isPro = await userHasPro(supabase, user.id)
 
   // Pre-lock advantage: Pro only. Post-lock: any authed user.
   if (!matchLocked && !isPro) {

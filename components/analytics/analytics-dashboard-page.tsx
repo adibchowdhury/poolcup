@@ -7,7 +7,6 @@ import {
   ArrowDown,
   ArrowUp,
   BarChart3,
-  Lock,
   Trophy,
 } from 'lucide-react'
 import {
@@ -27,6 +26,7 @@ import {
 } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -213,7 +213,11 @@ export function AnalyticsDashboardPage() {
       </div>
 
       {locked && !loading ? (
-        <LockedAnalyticsState />
+        <LockedProFeature
+          title="Advanced Analytics is a Pro feature"
+          description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
+          source="locked_analytics_dashboard"
+        />
       ) : (
         <>
           <div
@@ -289,39 +293,6 @@ export function AnalyticsDashboardPage() {
           ) : null}
         </>
       )}
-    </div>
-  )
-}
-
-function LockedAnalyticsState() {
-  return (
-    <div
-      className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-10 text-center sm:px-8"
-      role="group"
-      aria-label="Advanced Analytics is a Pro feature, locked"
-    >
-      <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground">
-        <Lock className="h-5 w-5" aria-hidden />
-      </span>
-      <h2 className="font-display text-2xl tracking-wide text-foreground">
-        Advanced Analytics is a Pro feature
-      </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        Unlock accuracy trends, sport and competition breakdowns, recent form,
-        and comparisons vs PoolCup and friends.
-      </p>
-      <Button asChild className={cn('mt-5', FOCUS_VISIBLE_RING)}>
-        <Link
-          href="/settings/billing"
-          onClick={() => {
-            capturePostHog('analytics_upgrade_prompt_clicked', {
-              source: 'locked_dashboard',
-            })
-          }}
-        >
-          Upgrade to Pro
-        </Link>
-      </Button>
     </div>
   )
 }
