@@ -113,8 +113,28 @@ export type AdminAuditLogRow = {
   created_at: string | null
 }
 
+export type AdminReportType = 'user' | 'message' | 'pool'
+export type AdminReportStatusFilter = 'open' | 'resolved' | 'all'
+export type AdminReportTypeFilter = 'all' | AdminReportType
+
+export type AdminReportQueueRow = {
+  report_type: AdminReportType | string
+  report_id: string
+  reporter_id: string | null
+  reporter_name: string | null
+  target_id: string | null
+  target_label: string | null
+  reason: string | null
+  context: string | null
+  status: string | null
+  resolution_note: string | null
+  resolved_at: string | null
+  created_at: string | null
+}
+
 export const ADMIN_NAV = [
   { href: '/admin', label: 'Overview' },
+  { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/users', label: 'Users' },
   { href: '/admin/pools', label: 'Pools' },
   { href: '/admin/matches', label: 'Matches' },

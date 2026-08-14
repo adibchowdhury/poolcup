@@ -42,6 +42,7 @@ import {
 } from '@/src/lib/upload-user-avatar'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { supabase } from '@/src/lib/supabase'
+import { DISPLAY_NAME_MAX_LENGTH } from '@/src/lib/ugc-limits'
 import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
 import {
   DASHBOARD_NAV_ID_TO_TAB_VALUE,
@@ -405,12 +406,19 @@ function DashboardViewContent({
     try {
       if (fullName.trim()) {
         const trimmed = fullName.trim()
-        const { error } = await supabase
-          .from('users')
-          .update({ display_name: trimmed })
-          .eq('id', userId)
-        if (error) throw error
-        setHeaderName(trimmed)
+        const res = await fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ displayName: trimmed }),
+        })
+        const json = (await res.json()) as {
+          error?: string
+          displayName?: string
+        }
+        if (!res.ok) {
+          throw new Error(json.error ?? 'Failed to save profile')
+        }
+        setHeaderName(json.displayName ?? trimmed)
       }
 
       setEditProfileMessage('Saved.')
@@ -498,6 +506,7 @@ function DashboardViewContent({
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder="John Doe"
+                          maxLength={DISPLAY_NAME_MAX_LENGTH}
                         />
                       </div>
 

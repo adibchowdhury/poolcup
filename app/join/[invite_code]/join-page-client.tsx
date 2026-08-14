@@ -20,6 +20,10 @@ import { trackEvent } from '@/src/lib/track'
 import { cn } from '@/lib/utils'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import { UserProfileLink } from '@/components/user-profile-link'
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  validateDisplayName,
+} from '@/src/lib/ugc-limits'
 
 type Pool = {
   id: string
@@ -56,6 +60,7 @@ export function JoinPoolPageClient() {
   const [members, setMembers] = useState<PoolMember[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
+  const [rateLimited, setRateLimited] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [joining, setJoining] = useState(false)
@@ -65,35 +70,50 @@ export function JoinPoolPageClient() {
   const loadPoolData = useCallback(async () => {
     setPageLoading(true)
     setUnavailable(false)
+    setRateLimited(false)
     setError(null)
 
-    const { data: poolData, error: poolError } = await supabase
-      .from('pools')
-      .select('id, name, invite_code, creator_id, created_at, accepting_members')
-      .eq('invite_code', inviteCode)
-      .maybeSingle()
+    try {
+      const qs = new URLSearchParams({ code: inviteCode })
+      const res = await fetch(`/api/join/lookup?${qs.toString()}`, {
+        cache: 'no-store',
+      })
+      const json = (await res.json()) as {
+        pool?: Pool
+        members?: PoolMember[]
+        error?: string
+        message?: string
+      }
 
-    if (poolError || !poolData) {
+      if (res.status === 429) {
+        setPool(null)
+        setMembers([])
+        setRateLimited(true)
+        capturePostHog('invite_attempt_rate_limited', {
+          invite_code_length: inviteCode.length,
+        })
+        setPageLoading(false)
+        return
+      }
+
+      if (!res.ok || !json.pool) {
+        setPool(null)
+        setMembers([])
+        setUnavailable(true)
+        setPageLoading(false)
+        return
+      }
+
+      setPool(json.pool)
+      setMembers(Array.isArray(json.members) ? json.members : [])
+      setPageLoading(false)
+    } catch (err) {
+      console.error('Join lookup failed:', err)
       setPool(null)
       setMembers([])
       setUnavailable(true)
       setPageLoading(false)
-      return
     }
-
-    const { data: membersData, error: membersError } = await supabase
-      .from('pool_members')
-      .select('id, user_id, display_name')
-      .eq('pool_id', poolData.id)
-      .order('display_name')
-
-    if (membersError) {
-      console.error('Failed to load members:', membersError.message)
-    }
-
-    setPool(poolData as Pool)
-    setMembers((membersData ?? []) as PoolMember[])
-    setPageLoading(false)
   }, [inviteCode])
 
   useEffect(() => {
@@ -179,9 +199,9 @@ export function JoinPoolPageClient() {
     }
 
     const displayName = `${firstName.trim()} ${lastName.trim()}`.trim()
-
-    if (!displayName) {
-      setError('First name and last name are required')
+    const nameError = validateDisplayName(displayName)
+    if (nameError) {
+      setError(nameError)
       setJoining(false)
       return
     }
@@ -189,7 +209,7 @@ export function JoinPoolPageClient() {
     const { error: joinError } = await supabase.from('pool_members').insert({
       pool_id: pool.id,
       user_id: user.id,
-      display_name: displayName,
+      display_name: displayName.slice(0, DISPLAY_NAME_MAX_LENGTH),
     })
 
     setJoining(false)
@@ -282,6 +302,36 @@ export function JoinPoolPageClient() {
         )}
       >
         <p className="text-[#5a7080]">Loading…</p>
+      </main>
+    )
+  }
+
+  if (rateLimited) {
+    return (
+      <main
+        className={cn(
+          'min-h-screen bg-background flex items-center justify-center px-4',
+          MOBILE_BOTTOM_NAV_PAD_CLASS,
+        )}
+      >
+        <div className="w-full max-w-md rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 text-center">
+          <p className="text-lg font-semibold text-[#f0f4f8]">
+            Too many attempts
+          </p>
+          <p className="mt-2 text-sm text-[#5a7080]">
+            Try again later.
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadPoolData()}
+            className={cn(
+              'mt-6 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm font-semibold text-[#f0f4f8] transition-colors hover:border-[#00e676]/50',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+            )}
+          >
+            Try again
+          </button>
+        </div>
       </main>
     )
   }

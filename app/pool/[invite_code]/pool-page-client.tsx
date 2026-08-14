@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/src/lib/auth-context'
 import { supabase } from '@/src/lib/supabase'
@@ -311,14 +310,11 @@ export function PoolPageClient() {
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
+    // Private invite holders (non-members) no longer pass pools_read RLS —
+    // send them through the rate-limited service-role join flow instead of
+    // a dead "not found" page. Invalid codes also land on /join (unavailable).
     if (poolError || !poolData) {
-      setPoolMeta(null)
-      setMembers([])
-      setAvatarByMemberId(new Map())
-      setActiveAnnouncement(null)
-      setNotFound(true)
-      setPageLoading(false)
-      setLeaderboardLoading(false)
+      router.replace(`/join/${encodeURIComponent(inviteCode)}`)
       return
     }
 
@@ -666,7 +662,7 @@ export function PoolPageClient() {
 
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)
-  }, [inviteCode, userId])
+  }, [inviteCode, router, userId])
   const softRefreshLeaderboard = useCallback(async () => {
     const ctx = leaderboardRefreshCtxRef.current
     if (!ctx || !userId || leaderboardRefreshInFlightRef.current) return
@@ -790,6 +786,22 @@ export function PoolPageClient() {
     loadPoolData()
   }, [authLoading, userId, router, loadPoolData])
 
+  // Safety net if pool bootstrap fails after RLS tighten.
+  useEffect(() => {
+    if (pageLoading || authLoading || !userId) return
+    if (notFound || !poolMeta) {
+      router.replace(`/join/${encodeURIComponent(inviteCode)}`)
+    }
+  }, [
+    pageLoading,
+    authLoading,
+    userId,
+    notFound,
+    poolMeta,
+    inviteCode,
+    router,
+  ])
+
   // Gated live refresh: cheap activity check every 35s; full soft-refetch only
   // when the event has a live or recently-finalized match.
   useEffect(() => {
@@ -846,16 +858,12 @@ export function PoolPageClient() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
-          <p className="text-lg font-semibold text-foreground">Pool not found</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This invite link may be invalid.
+          <p className="text-lg font-semibold text-foreground">
+            Taking you to join…
           </p>
-          <Link
-            href="/dashboard"
-            className="mt-6 inline-block text-sm text-primary hover:underline"
-          >
-            Back to dashboard
-          </Link>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You’ll need to join this pool before you can view it.
+          </p>
         </div>
       </div>
     )

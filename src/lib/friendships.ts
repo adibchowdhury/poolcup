@@ -169,7 +169,7 @@ function coerceFriendsLeaderboardRow(raw: unknown): FriendsLeaderboardRow | null
   }
 }
 
-function coerceUserSearchRow(raw: unknown): UserSearchRow | null {
+export function coerceUserSearchRow(raw: unknown): UserSearchRow | null {
   if (!raw || typeof raw !== 'object') return null
   const row = raw as Record<string, unknown>
   const userId = asString(row.user_id)
@@ -448,6 +448,63 @@ export async function searchUsers(
       .map(coerceUserSearchRow)
       .filter((row): row is UserSearchRow => row != null),
     error: null,
+  }
+}
+
+/**
+ * Rate-limited friends search via /api/users/search (app-level throttle).
+ * Prefer this from client UI; use searchUsers(rpc) for admin/server callers.
+ */
+export async function searchUsersApi(
+  query: string,
+  limit = 20,
+): Promise<{
+  users: UserSearchRow[]
+  error: string | null
+  rateLimited?: boolean
+}> {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) return { users: [], error: null }
+
+  try {
+    const qs = new URLSearchParams({
+      q: trimmed,
+      limit: String(Math.max(1, Math.min(limit, 50))),
+    })
+    const res = await fetch(`/api/users/search?${qs.toString()}`, {
+      cache: 'no-store',
+    })
+    const json = (await res.json()) as {
+      users?: UserSearchRow[]
+      error?: string
+      message?: string
+    }
+
+    if (res.status === 429) {
+      return {
+        users: [],
+        error: json.message ?? json.error ?? 'Slow down. Try again shortly.',
+        rateLimited: true,
+      }
+    }
+
+    if (!res.ok) {
+      return {
+        users: [],
+        error: json.message ?? json.error ?? 'Search failed',
+      }
+    }
+
+    return {
+      users: Array.isArray(json.users) ? json.users : [],
+      error: null,
+    }
+  } catch (err) {
+    console.error('searchUsersApi failed:', err)
+    return {
+      users: [],
+      error: err instanceof Error ? err.message : 'Search failed',
+    }
   }
 }
 

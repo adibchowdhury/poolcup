@@ -29,7 +29,6 @@ import {
   formatChatTimestamp,
   isDuplicateReactionError,
   isOptimisticChatMessageId,
-  isPoolChatRateLimitError,
   POOL_CHAT_PAGE_SIZE,
   type AggregatedReaction,
   type MessageReactionRow,
@@ -39,6 +38,10 @@ import { supabase } from '@/src/lib/supabase'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
 import { ChatSystemMoment } from '@/components/pool/chat-system-moment'
+import {
+  AbuseReportDialog,
+  type AbuseReportSubmitResult,
+} from '@/components/abuse/abuse-report-dialog'
 
 export type PoolChatMemberProfile = {
   displayName: string
@@ -505,6 +508,9 @@ export function PoolChatTab({
   fullBleedMobile = false,
 }: PoolChatTabProps) {
   const [messages, setMessages] = useState<PoolChatMessage[]>([])
+  const [hiddenAuthorIds, setHiddenAuthorIds] = useState(() => new Set<string>())
+  const [reportTarget, setReportTarget] = useState<PoolChatMessage | null>(null)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [reactionRows, setReactionRows] = useState<MessageReactionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingOlder, setLoadingOlder] = useState(false)
@@ -545,14 +551,55 @@ export function PoolChatTab({
     capturePostHog('chat_opened', { pool_id: poolId, surface: 'pool' })
   }, [poolId])
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/me/chat-visibility', { cache: 'no-store' })
+        if (!res.ok || cancelled) return
+        const json = (await res.json()) as {
+          mutedUserIds?: string[]
+          blockedPeerIds?: string[]
+        }
+        const next = new Set<string>()
+        for (const id of json.mutedUserIds ?? []) next.add(id)
+        for (const id of json.blockedPeerIds ?? []) next.add(id)
+        if (!cancelled) {
+          setHiddenAuthorIds(next)
+          if ((json.mutedUserIds?.length ?? 0) > 0) {
+            capturePostHog('user_muted_chat_applied', {
+              muted_count: json.mutedUserIds!.length,
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load chat visibility filters:', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const reactionsByMessageId = useMemo(
     () => aggregateReactions(reactionRows, currentUserId),
     [reactionRows, currentUserId],
   )
 
+  const visibleMessages = useMemo(
+    () =>
+      messages.filter((message) => {
+        if (message.message_type === 'system') return true
+        if (!message.user_id) return true
+        if (message.user_id === currentUserId) return true
+        return !hiddenAuthorIds.has(message.user_id)
+      }),
+    [messages, hiddenAuthorIds, currentUserId],
+  )
+
   const chatListItems = useMemo(
-    () => buildChatListItems(messages, { firstUnreadMessageId }),
-    [messages, firstUnreadMessageId],
+    () => buildChatListItems(visibleMessages, { firstUnreadMessageId }),
+    [visibleMessages, firstUnreadMessageId],
   )
 
   const focusInput = useCallback(() => {
@@ -576,27 +623,38 @@ export function PoolChatTab({
     setShowNewMessagesPill(false)
   }, [])
 
-  const appendMessage = useCallback((message: PoolChatMessage) => {
-    setMessages((previous) => {
-      if (previous.some((entry) => entry.id === message.id)) return previous
-      // Reconcile optimistic bubble for the same author+content still sending.
-      if (message.user_id) {
-        const optimisticIndex = previous.findIndex(
-          (entry) =>
-            isOptimisticChatMessageId(entry.id) &&
-            entry.user_id === message.user_id &&
-            entry.content === message.content &&
-            entry.clientStatus === 'sending',
-        )
-        if (optimisticIndex >= 0) {
-          const next = [...previous]
-          next[optimisticIndex] = { ...message, clientStatus: null }
-          return next
-        }
+  const appendMessage = useCallback(
+    (message: PoolChatMessage) => {
+      if (
+        message.message_type !== 'system' &&
+        message.user_id &&
+        message.user_id !== currentUserId &&
+        hiddenAuthorIds.has(message.user_id)
+      ) {
+        return
       }
-      return [...previous, message]
-    })
-  }, [])
+      setMessages((previous) => {
+        if (previous.some((entry) => entry.id === message.id)) return previous
+        // Reconcile optimistic bubble for the same author+content still sending.
+        if (message.user_id) {
+          const optimisticIndex = previous.findIndex(
+            (entry) =>
+              isOptimisticChatMessageId(entry.id) &&
+              entry.user_id === message.user_id &&
+              entry.content === message.content &&
+              entry.clientStatus === 'sending',
+          )
+          if (optimisticIndex >= 0) {
+            const next = [...previous]
+            next[optimisticIndex] = { ...message, clientStatus: null }
+            return next
+          }
+        }
+        return [...previous, message]
+      })
+    },
+    [currentUserId, hiddenAuthorIds],
+  )
 
   const loadReactions = useCallback(async () => {
     const { data, error } = await supabase
@@ -859,18 +917,68 @@ export function PoolChatTab({
 
   const persistMessage = useCallback(
     async (optimisticId: string, content: string) => {
-      const { data, error } = await supabase
-        .from('pool_messages')
-        .insert({
-          pool_id: poolId,
-          user_id: currentUserId,
-          content,
-        })
-        .select(MESSAGE_SELECT)
-        .single()
+      try {
+        const res = await fetch(
+          `/api/pools/${encodeURIComponent(poolId)}/messages`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content }),
+          },
+        )
+        const json = (await res.json()) as {
+          message?: PoolChatMessage
+          error?: string
+        }
 
-      if (error) {
-        console.error('Failed to send message:', error.message)
+        if (!res.ok || !json.message) {
+          console.error('Failed to send message:', json.error ?? res.status)
+          setMessages((previous) =>
+            previous.map((entry) =>
+              entry.id === optimisticId
+                ? { ...entry, clientStatus: 'failed' }
+                : entry,
+            ),
+          )
+          if (res.status === 429) {
+            const msg = json.error ?? RATE_LIMIT_MESSAGE
+            setSendError(msg)
+            toast.error(msg)
+          } else {
+            const msg =
+              typeof json.error === 'string'
+                ? json.error
+                : 'Could not send message.'
+            setSendError(msg)
+            toast.error(msg)
+          }
+          return
+        }
+
+        const data = json.message as PoolChatMessage
+        setSendError(null)
+        setMessages((previous) =>
+          previous.map((entry) =>
+            entry.id === optimisticId
+              ? { ...data, clientStatus: null }
+              : entry,
+          ),
+        )
+        capturePostHog('chat_message_sent', {
+          pool_id: poolId,
+          message_id: data.id,
+        })
+        void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
+          void awardClientXp({
+            sourceType: 'pool_chat_first',
+            sourceId: poolId,
+          })
+        })
+        void markPoolRead(supabase, poolId, currentUserId).then((ok) => {
+          if (ok) emitPoolMarkedRead(poolId)
+        })
+      } catch (err) {
+        console.error('Failed to send message:', err)
         setMessages((previous) =>
           previous.map((entry) =>
             entry.id === optimisticId
@@ -878,34 +986,9 @@ export function PoolChatTab({
               : entry,
           ),
         )
-        if (isPoolChatRateLimitError(error)) {
-          setSendError(RATE_LIMIT_MESSAGE)
-          toast.error(RATE_LIMIT_MESSAGE)
-        } else {
-          setSendError('Could not send message.')
-          toast.error('Could not send message.')
-        }
-        return
+        setSendError('Could not send message.')
+        toast.error('Could not send message.')
       }
-
-      setSendError(null)
-      setMessages((previous) =>
-        previous.map((entry) =>
-          entry.id === optimisticId
-            ? { ...(data as PoolChatMessage), clientStatus: null }
-            : entry,
-        ),
-      )
-      capturePostHog('chat_message_sent', {
-        pool_id: poolId,
-        message_id: (data as PoolChatMessage).id,
-      })
-      void import('@/src/lib/xp-client').then(({ awardClientXp }) => {
-        void awardClientXp({ sourceType: 'pool_chat_first', sourceId: poolId })
-      })
-      void markPoolRead(supabase, poolId, currentUserId).then((ok) => {
-        if (ok) emitPoolMarkedRead(poolId)
-      })
     },
     [currentUserId, poolId],
   )
@@ -1006,40 +1089,61 @@ export function PoolChatTab({
     })
   }
 
-  async function handleReport(message: PoolChatMessage) {
-    if (isOptimisticChatMessageId(message.id)) return
+  async function submitMessageReport(payload: {
+    reason: string
+    context: string | null
+    reasonPreset: string
+  }): Promise<AbuseReportSubmitResult> {
+    if (!reportTarget || isOptimisticChatMessageId(reportTarget.id)) {
+      return { ok: false, code: 'error', message: 'Invalid message' }
+    }
 
-    setReportingId(message.id)
+    setReportingId(reportTarget.id)
     setReportNotice(null)
 
     const { error } = await supabase.from('message_reports').insert({
       pool_id: poolId,
-      message_id: message.id,
+      message_id: reportTarget.id,
       reporter_id: currentUserId,
-      reported_author_id: message.user_id,
-      reported_content: message.content,
+      reported_author_id: reportTarget.user_id,
+      reported_content: reportTarget.content,
+      reason: payload.reason,
     })
 
     setReportingId(null)
 
     if (error) {
       console.error('Failed to report message:', error.message)
-      toast.error('Could not report message', {
-        action: {
-          label: 'Retry',
-          onClick: () => void handleReport(message),
-        },
-      })
-      return
+      const msg = error.message.toLowerCase()
+      if (msg.includes('already') || msg.includes('duplicate')) {
+        return { ok: false, code: 'already_reported' }
+      }
+      return { ok: false, code: 'error', message: error.message }
     }
 
-    setReportedIds((previous) => new Set(previous).add(message.id))
+    setReportedIds((previous) => new Set(previous).add(reportTarget.id))
     setReportNotice('Thanks — this message has been reported.')
+    capturePostHog('message_reported', {
+      pool_id: poolId,
+      message_id: reportTarget.id,
+      reason_preset: payload.reasonPreset,
+      reported_author_id: reportTarget.user_id,
+    })
+    // Keep legacy event for existing dashboards.
     capturePostHog('chat_message_reported', {
       pool_id: poolId,
-      message_id: message.id,
+      message_id: reportTarget.id,
+      reason_preset: payload.reasonPreset,
     })
     window.setTimeout(() => setReportNotice(null), 4000)
+    setReportTarget(null)
+    return { ok: true }
+  }
+
+  function openReportDialog(message: PoolChatMessage) {
+    if (isOptimisticChatMessageId(message.id)) return
+    setReportTarget(message)
+    setReportDialogOpen(true)
   }
 
   const handleToggleReaction = useCallback(
@@ -1199,7 +1303,7 @@ export function PoolChatTab({
                   Try again
                 </Button>
               </div>
-            ) : messages.length === 0 ? (
+            ) : visibleMessages.length === 0 ? (
               <div className="flex h-full min-h-[12rem] flex-col items-center justify-center py-8 text-center">
                 <MessageCircle className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
                 <p className="font-medium text-foreground">No messages yet</p>
@@ -1229,7 +1333,7 @@ export function PoolChatTab({
                     deletingId={deletingId}
                     reportingId={reportingId}
                     onDelete={(messageId) => void handleDelete(messageId)}
-                    onReport={(message) => void handleReport(message)}
+                    onReport={(message) => openReportDialog(message)}
                     onToggleReaction={(messageId, emoji) =>
                       void handleToggleReaction(messageId, emoji)
                     }
@@ -1302,6 +1406,18 @@ export function PoolChatTab({
           ) : null}
         </div>
       </div>
+
+      <AbuseReportDialog
+        open={reportDialogOpen}
+        onOpenChange={(next) => {
+          setReportDialogOpen(next)
+          if (!next) setReportTarget(null)
+        }}
+        title="Report message"
+        description="Tell us what's wrong with this message. Reports are reviewed by the PoolCup team."
+        alreadyReportedMessage="You already reported this message."
+        onSubmit={submitMessageReport}
+      />
     </div>
   )
 }

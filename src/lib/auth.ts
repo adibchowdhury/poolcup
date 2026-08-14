@@ -7,6 +7,7 @@ import {
 } from './auth-form'
 import { fireRecordReferralBestEffort } from './referral'
 import { supabase } from './supabase'
+import { validateDisplayName } from './ugc-limits'
 
 export type SignUpProfile = {
   firstName: string
@@ -59,6 +60,10 @@ export async function signUpWithPassword(
   const firstName = profile.firstName.trim()
   const lastName = profile.lastName.trim()
   const displayName = buildDisplayName(firstName, lastName)
+  const displayNameError = validateDisplayName(displayName)
+  if (displayNameError) {
+    return { error: new Error(displayNameError) }
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),

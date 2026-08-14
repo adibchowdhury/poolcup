@@ -20,6 +20,7 @@ import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
+import { ReportPoolControl } from '@/components/pool/report-pool-control'
 import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
 import { SoloInviteNudge } from '@/components/pool/solo-invite-nudge'
@@ -166,6 +167,7 @@ export function PoolHomeView({
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [shareOpen, setShareOpen] = useState(false)
+  const [reportPoolOpen, setReportPoolOpen] = useState(false)
   const searchParams = useSearchParams()
   const normalizeTab = (tab: string | null) => {
     if (tab === 'squad') return 'settings'
@@ -370,8 +372,26 @@ export function PoolHomeView({
                       >
                         Pool settings
                       </DropdownMenuItem>
+                      {poolId ? (
+                        <DropdownMenuItem
+                          onSelect={(event) => {
+                            event.preventDefault()
+                            setReportPoolOpen(true)
+                          }}
+                        >
+                          Report pool
+                        </DropdownMenuItem>
+                      ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  {poolId ? (
+                    <ReportPoolControl
+                      poolId={poolId}
+                      open={reportPoolOpen}
+                      onOpenChange={setReportPoolOpen}
+                      showTrigger={false}
+                    />
+                  ) : null}
                 </>
               ) : (
                 <>

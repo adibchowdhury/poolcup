@@ -19,6 +19,10 @@ export type {
   AdminMatchLookupRow,
   AdminFailedWebhookRow,
   AdminAuditLogRow,
+  AdminReportQueueRow,
+  AdminReportType,
+  AdminReportStatusFilter,
+  AdminReportTypeFilter,
 } from '@/src/lib/admin-console-shared'
 
 export { ADMIN_NAV } from '@/src/lib/admin-console-shared'

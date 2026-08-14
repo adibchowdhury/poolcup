@@ -27,7 +27,7 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   acceptFriendRequest,
   removeFriend,
-  searchUsers,
+  searchUsersApi,
   sendFriendRequest,
   statusAfterSend,
   type FriendshipStatus,
@@ -89,8 +89,18 @@ export const FriendsFindSearch = forwardRef<
     setSearching(true)
     setSearchError(null)
     try {
-      const { users, error } = await searchUsers(supabase, trimmed)
+      const { users, error, rateLimited } = await searchUsersApi(trimmed)
       if (seq !== requestSeqRef.current) return
+      if (rateLimited) {
+        setResults([])
+        setSearchError(error ?? 'Slow down. Try again shortly.')
+        setHasSearched(true)
+        capturePostHog('user_search_rate_limited', {
+          query_length: trimmed.length,
+        })
+        toast.error(error ?? 'Slow down. Try again shortly.')
+        return
+      }
       if (error && users.length === 0) {
         setResults([])
         setSearchError(error)

@@ -378,8 +378,6 @@ export default function PredictPage() {
   const [savedMatchIds, setSavedMatchIds] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<ClassicRoundTabId>('group')
   const [pageLoading, setPageLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
-  const [notMember, setNotMember] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -391,8 +389,6 @@ export default function PredictPage() {
     if (!userId) return
 
     setPageLoading(true)
-    setNotFound(false)
-    setNotMember(false)
     setError(null)
 
     const { data: poolData, error: poolError } = await supabase
@@ -401,9 +397,9 @@ export default function PredictPage() {
       .eq('invite_code', inviteCode)
       .maybeSingle()
 
+    // Unreadable under pools_read (private non-member / bad code) → join flow.
     if (poolError || !poolData) {
-      setNotFound(true)
-      setPageLoading(false)
+      router.replace(`/join/${encodeURIComponent(inviteCode)}`)
       return
     }
 
@@ -414,10 +410,9 @@ export default function PredictPage() {
       .eq('user_id', userId)
       .maybeSingle()
 
+    // Readable pool (e.g. public) but user hasn't joined — join before predict.
     if (memberError || !memberData) {
-      setPool(poolData as Pool)
-      setNotMember(true)
-      setPageLoading(false)
+      router.replace(`/join/${encodeURIComponent(inviteCode)}`)
       return
     }
 
@@ -497,7 +492,7 @@ export default function PredictPage() {
     setSavedMatchIds(initialSaved)
     setActiveTab(defaultTab)
     setPageLoading(false)
-  }, [inviteCode, userId])
+  }, [inviteCode, router, userId])
 
   useEffect(() => {
     if (authLoading) return
@@ -796,7 +791,7 @@ export default function PredictPage() {
     }
   }, [pageLoading, pool, inviteCode, router])
 
-  if (authLoading || (!user && !notFound)) {
+  if (authLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-muted-foreground">Loading…</p>
@@ -804,39 +799,12 @@ export default function PredictPage() {
     )
   }
 
-  if (pageLoading) {
+  if (pageLoading || !pool) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading matches…</p>
-      </div>
-    )
-  }
-
-  if (notFound || !pool) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
-          <p className="text-lg font-semibold text-foreground">Pool not found</p>
-          <Link href="/dashboard" className="mt-6 inline-block text-sm text-primary hover:underline">
-            Back to dashboard
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  if (notMember) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
-          <p className="text-lg font-semibold text-foreground">Join this pool first</p>
-          <Link
-            href={`/join/${inviteCode}`}
-            className="mt-6 inline-block rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
-          >
-            Join pool
-          </Link>
-        </div>
+        <p className="text-muted-foreground">
+          {pageLoading ? 'Loading matches…' : 'Taking you to join…'}
+        </p>
       </div>
     )
   }

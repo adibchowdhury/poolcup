@@ -143,28 +143,37 @@ export async function postPoolAnnouncement(
     }
   }
 
-  const { data, error } = await supabase
-    .from('pool_announcements')
-    .insert({
-      pool_id: poolId,
-      author_id: authorId,
-      message: trimmed,
-      is_active: true,
-      pinned: false,
-    })
-    .select('id, message, author_id, created_at, updated_at, pinned, is_active')
-    .single()
-
-  if (error || !data) {
-    console.error('postPoolAnnouncement failed:', error?.message)
-    return { ok: false, error: error?.message ?? 'Failed to post announcement' }
-  }
-
-  const announcement = parseAnnouncementRow(data)
-  if (!announcement) {
+  try {
+    const res = await fetch(
+      `/api/pools/${encodeURIComponent(poolId)}/announcements`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: trimmed }),
+      },
+    )
+    const data = (await res.json()) as {
+      announcement?: PoolAnnouncement | Record<string, unknown>
+      error?: string
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: data.error || 'Failed to post announcement',
+      }
+    }
+    const announcement =
+      data.announcement && 'id' in data.announcement && 'message' in data.announcement
+        ? (data.announcement as PoolAnnouncement)
+        : parseAnnouncementRow(data.announcement)
+    if (!announcement) {
+      return { ok: false, error: 'Failed to post announcement' }
+    }
+    return { ok: true, announcement }
+  } catch (err) {
+    console.error('postPoolAnnouncement failed:', err)
     return { ok: false, error: 'Failed to post announcement' }
   }
-  return { ok: true, announcement }
 }
 
 export async function updatePoolAnnouncementMessage(

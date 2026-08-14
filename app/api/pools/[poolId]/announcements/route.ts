@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 import {
+  fetchIsPoolAdmin,
+  logPoolModeration,
+} from '@/src/lib/pool-admin'
+import {
+  ANNOUNCEMENT_MAX_LENGTH,
   parseAnnouncementRow,
   sortAnnouncements,
   type PoolAnnouncement,
@@ -117,4 +122,83 @@ export async function GET(_request: Request, context: Ctx) {
   const banner = pinned ?? undismissed[0] ?? null
 
   return NextResponse.json({ rows, banner })
+}
+
+type CreateBody = {
+  message?: string
+}
+
+/** Admin-gated announcement create with server max-length. */
+export async function POST(request: Request, context: Ctx) {
+  const { poolId } = await context.params
+  if (!poolId) {
+    return NextResponse.json({ error: 'poolId_required' }, { status: 400 })
+  }
+
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  let body: CreateBody
+  try {
+    body = (await request.json()) as CreateBody
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  const raw = typeof body.message === 'string' ? body.message : ''
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return NextResponse.json({ error: 'Write a message first' }, { status: 400 })
+  }
+  if (trimmed.length > ANNOUNCEMENT_MAX_LENGTH) {
+    return NextResponse.json(
+      {
+        error: `Keep it under ${ANNOUNCEMENT_MAX_LENGTH} characters`,
+      },
+      { status: 400 },
+    )
+  }
+
+  const admin = createAdminSupabaseClient()
+  const isAdmin = await fetchIsPoolAdmin(admin, poolId, user.id)
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const { data, error } = await admin
+    .from('pool_announcements')
+    .insert({
+      pool_id: poolId,
+      author_id: user.id,
+      message: trimmed,
+      is_active: true,
+      pinned: false,
+    })
+    .select('id, message, author_id, created_at, updated_at, pinned, is_active')
+    .single()
+
+  if (error || !data) {
+    console.error('announcement create failed:', error?.message)
+    return NextResponse.json(
+      { error: error?.message ?? 'Failed to post announcement' },
+      { status: 500 },
+    )
+  }
+
+  await logPoolModeration(admin, {
+    poolId,
+    actorId: user.id,
+    action: 'announcement_posted',
+    detail: { announcement_id: data.id },
+  }).catch(() => {})
+
+  return NextResponse.json({
+    success: true,
+    announcement: parseAnnouncementRow(data),
+  })
 }

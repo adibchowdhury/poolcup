@@ -25,6 +25,7 @@ import { PoolPollsPanel } from '@/components/pool/pool-polls-panel'
 import { PoolScoringHistory } from '@/components/pool/pool-scoring-history'
 import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
+import { ReportPoolControl } from '@/components/pool/report-pool-control'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { TransferOwnershipDialog } from '@/components/pool/transfer-ownership-dialog'
@@ -1887,6 +1888,7 @@ export function PoolSettingsTab({
                 onOwnershipTransferred?.(newOwnerUserId)
               }}
             />
+            <ReportPoolControl poolId={poolId} />
           </div>
 
           {isOwner ? (

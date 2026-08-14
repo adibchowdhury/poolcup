@@ -7,6 +7,12 @@ export type ReportUserResult =
   | 'not_authenticated'
   | 'error'
 
+export {
+  REPORT_REASON_PRESETS,
+  buildAbuseReportReason,
+  type ReportReasonPreset,
+} from '@/src/lib/abuse-report'
+
 /**
  * Report another user via `report_user(p_reported_user_id, p_reason, p_context)`.
  */
@@ -59,11 +65,3 @@ export async function reportUser(
   // Unknown payload — treat as success if no error.
   return { result: 'ok', error: null }
 }
-
-export const REPORT_REASON_PRESETS = [
-  'Spam or scam',
-  'Harassment or abuse',
-  'Inappropriate content',
-  'Impersonation',
-  'Other',
-] as const

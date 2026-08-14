@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { validateChatMessage } from '@/src/lib/ugc-limits'
 
 export const DM_MARKED_READ_EVENT = 'dm-marked-read'
 
@@ -188,9 +189,14 @@ export async function sendDm(
   conversationId: string,
   content: string,
 ): Promise<{ messageId: string | null; notFriends: boolean; error: string | null }> {
+  const lengthError = validateChatMessage(content)
+  if (lengthError) {
+    return { messageId: null, notFriends: false, error: lengthError }
+  }
+
   const { data, error } = await supabase.rpc('send_dm', {
     p_conversation_id: conversationId,
-    p_content: content,
+    p_content: content.trim(),
   })
 
   if (error) {
