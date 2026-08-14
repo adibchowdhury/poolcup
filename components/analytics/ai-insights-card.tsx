@@ -8,6 +8,7 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { cn } from '@/lib/utils'
@@ -23,7 +24,9 @@ type InsightsApiOk = {
   isPro: true
   empty: boolean
   cached: boolean
-  generatedAt: string | null
+  generatedAt?: string | null
+  /** Tolerate snake_case if ever returned. */
+  generated_at?: string | null
   model: string | null
   insights: InsightItem[]
   feedback: InsightFeedback | null
@@ -34,34 +37,51 @@ type InsightsApiErr = {
   message?: string
 }
 
+function readGeneratedAt(json: InsightsApiOk): string | null {
+  const raw = json.generatedAt ?? json.generated_at ?? null
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  const t = new Date(raw).getTime()
+  if (!Number.isFinite(t)) return null
+  return raw
+}
+
 /**
  * Pro AI Insights panel for the analytics dashboard.
  * Lazy-loads GET /api/insights on mount; supports regen + feedback.
+ *
+ * Failed / rate-limited regenerate must never clear already-shown insights.
  */
 export function AiInsightsCard({ className }: { className?: string }) {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [feedbackBusy, setFeedbackBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  /** Fatal load error (no insights to show). */
+  const [loadError, setLoadError] = useState<string | null>(null)
+  /** Non-destructive notice (regen 429 / regen failure) — insights stay. */
+  const [notice, setNotice] = useState<string | null>(null)
+  const [rateLimited, setRateLimited] = useState(false)
   const [empty, setEmpty] = useState(false)
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<InsightFeedback | null>(null)
-  const [agoLabel, setAgoLabel] = useState<string | null>(null)
+  /** Bumps so relative "Generated X ago" refreshes every minute. */
+  const [agoTick, setAgoTick] = useState(0)
 
   const viewedOnce = useRef(false)
 
   const applyPayload = useCallback((json: InsightsApiOk) => {
     setEmpty(json.empty === true)
     setInsights(Array.isArray(json.insights) ? json.insights : [])
-    setGeneratedAt(json.generatedAt)
+    setGeneratedAt(readGeneratedAt(json))
     setFeedback(json.feedback)
-    setError(null)
+    setLoadError(null)
+    setNotice(null)
   }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
-    setError(null)
+    setLoadError(null)
+    setNotice(null)
     try {
       const res = await fetch('/api/insights')
       const json = (await res.json().catch(() => null)) as
@@ -70,15 +90,15 @@ export function AiInsightsCard({ className }: { className?: string }) {
         | null
 
       if (res.status === 401) {
-        setError('Sign in to view insights.')
+        setLoadError('Sign in to view insights.')
         return
       }
       if (res.status === 403) {
-        setError('Pro required to view insights.')
+        setLoadError('Pro required to view insights.')
         return
       }
       if (!res.ok || !json || !('isPro' in json)) {
-        setError(
+        setLoadError(
           (json && 'message' in json && json.message) ||
             'Could not load insights.',
         )
@@ -95,7 +115,7 @@ export function AiInsightsCard({ className }: { className?: string }) {
         })
       }
     } catch {
-      setError('Could not load insights.')
+      setLoadError('Could not load insights.')
     } finally {
       setLoading(false)
     }
@@ -106,20 +126,15 @@ export function AiInsightsCard({ className }: { className?: string }) {
   }, [load])
 
   useEffect(() => {
-    if (!generatedAt) {
-      setAgoLabel(null)
-      return
-    }
-    const tick = () => setAgoLabel(formatGeneratedAgo(generatedAt))
-    tick()
-    const id = window.setInterval(tick, 60_000)
+    if (!generatedAt) return
+    const id = window.setInterval(() => setAgoTick((n) => n + 1), 60_000)
     return () => window.clearInterval(id)
   }, [generatedAt])
 
   async function handleRegenerate() {
-    if (regenerating || loading) return
+    if (regenerating || loading || rateLimited) return
     setRegenerating(true)
-    setError(null)
+    setNotice(null)
     try {
       const res = await fetch('/api/insights', { method: 'POST' })
       const json = (await res.json().catch(() => null)) as
@@ -128,27 +143,34 @@ export function AiInsightsCard({ className }: { className?: string }) {
         | null
 
       if (res.status === 429) {
-        setError(
+        const message =
           (json && 'message' in json && json.message) ||
-            "You've regenerated your insights a few times today. Try again tomorrow.",
-        )
+          "You've regenerated your insights a few times today. Try again tomorrow."
+        // Keep existing insights — notice only.
+        setRateLimited(true)
+        setNotice(message)
+        toast.message(message)
         return
       }
       if (!res.ok || !json || !('isPro' in json)) {
-        setError(
+        const message =
           (json && 'message' in json && json.message) ||
-            'Could not regenerate insights.',
-        )
+          'Could not regenerate insights. Please try again.'
+        setNotice(message)
+        toast.error(message)
         return
       }
 
       applyPayload(json)
+      setRateLimited(false)
       capturePostHog('insights_regenerated', {
         empty: json.empty === true,
         insight_count: json.insights?.length ?? 0,
       })
     } catch {
-      setError('Could not regenerate insights.')
+      const message = 'Could not regenerate insights. Please try again.'
+      setNotice(message)
+      toast.error(message)
     } finally {
       setRegenerating(false)
     }
@@ -165,19 +187,25 @@ export function AiInsightsCard({ className }: { className?: string }) {
       })
       if (!res.ok) {
         const json = (await res.json().catch(() => null)) as InsightsApiErr | null
-        setError(json?.message || 'Could not save feedback.')
+        const message = json?.message || 'Could not save feedback.'
+        setNotice(message)
+        toast.error(message)
         return
       }
       setFeedback(next)
       capturePostHog('insights_feedback_given', { feedback: next })
     } catch {
-      setError('Could not save feedback.')
+      const message = 'Could not save feedback.'
+      setNotice(message)
+      toast.error(message)
     } finally {
       setFeedbackBusy(false)
     }
   }
 
   const busy = loading || regenerating
+  const hasInsights = !empty && insights.length > 0
+  const agoLabel = generatedAt ? formatGeneratedAgo(generatedAt) : null
 
   return (
     <section
@@ -200,21 +228,32 @@ export function AiInsightsCard({ className }: { className?: string }) {
             Personalized tips from your prediction stats — Claude Haiku, on demand.
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className={cn('h-9 shrink-0', FOCUS_VISIBLE_RING)}
-          disabled={busy || empty}
-          onClick={() => void handleRegenerate()}
-        >
-          {regenerating ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
-          )}
-          Regenerate
-        </Button>
+        <div className="flex min-w-0 flex-col items-stretch gap-1 sm:items-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={cn('h-9 shrink-0', FOCUS_VISIBLE_RING)}
+            disabled={busy || empty || rateLimited}
+            aria-disabled={busy || empty || rateLimited}
+            onClick={() => void handleRegenerate()}
+          >
+            {regenerating ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            {rateLimited ? 'Limit reached' : 'Regenerate'}
+          </Button>
+          {notice ? (
+            <p
+              className="max-w-[16rem] text-right text-[11px] text-muted-foreground"
+              role="status"
+            >
+              {notice}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {loading ? (
@@ -230,9 +269,9 @@ export function AiInsightsCard({ className }: { className?: string }) {
         </div>
       ) : null}
 
-      {!loading && error ? (
+      {!loading && loadError && !hasInsights ? (
         <div className="mt-4 space-y-3" role="alert">
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-destructive">{loadError}</p>
           <Button
             type="button"
             size="sm"
@@ -245,19 +284,20 @@ export function AiInsightsCard({ className }: { className?: string }) {
         </div>
       ) : null}
 
-      {!loading && !error && empty ? (
+      {!loading && !loadError && empty ? (
         <p className="mt-4 text-sm text-muted-foreground" role="status">
           Make some predictions to unlock insights
         </p>
       ) : null}
 
-      {!loading && !error && !empty && insights.length > 0 ? (
+      {!loading && hasInsights ? (
         <>
-          {agoLabel ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Generated {agoLabel}
-            </p>
-          ) : null}
+          <p
+            className="mt-3 text-xs text-muted-foreground"
+            key={`ago-${agoTick}-${generatedAt ?? 'none'}`}
+          >
+            {agoLabel ? `Generated ${agoLabel}` : 'Generated recently'}
+          </p>
 
           <ul className="mt-3 grid gap-3 sm:grid-cols-2">
             {insights.map((item) => (
