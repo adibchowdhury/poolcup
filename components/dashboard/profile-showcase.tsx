@@ -1460,6 +1460,15 @@ export function ProfileShowcase({
                   >
                     Analytics
                   </Link>
+                  <Link
+                    href="/history-performance"
+                    className={cn(
+                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
+                      FOCUS_VISIBLE_RING,
+                    )}
+                  >
+                    Historical
+                  </Link>
                 </div>
               ) : null}
             </div>
