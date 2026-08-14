@@ -22,6 +22,8 @@ export type LockedProFeatureProps = {
   children?: ReactNode
   /** Modal headline override. */
   modalHeadline?: string
+  /** Extra click hook (e.g. feature-specific PostHog). */
+  onCtaClick?: () => void
 }
 
 /**
@@ -38,6 +40,7 @@ export function LockedProFeature({
   className,
   children,
   modalHeadline,
+  onCtaClick,
 }: LockedProFeatureProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -53,6 +56,7 @@ export function LockedProFeature({
       source,
       feature: title,
     })
+    onCtaClick?.()
     setModalOpen(true)
   }
 

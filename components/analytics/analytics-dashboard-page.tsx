@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
 import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -213,11 +214,24 @@ export function AnalyticsDashboardPage() {
       </div>
 
       {locked && !loading ? (
-        <LockedProFeature
-          title="Advanced Analytics is a Pro feature"
-          description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
-          source="locked_analytics_dashboard"
-        />
+        <div className="space-y-4">
+          <LockedProFeature
+            title="AI Insights is a Pro feature"
+            description="Get four personalized coaching tips from your own prediction stats — weekly summary, strengths, weak spots, and recent form."
+            source="analytics_ai_insights"
+            modalHeadline="Unlock AI Insights"
+            onCtaClick={() => {
+              capturePostHog('insights_upgrade_prompt_clicked', {
+                source: 'analytics_ai_insights',
+              })
+            }}
+          />
+          <LockedProFeature
+            title="Advanced Analytics is a Pro feature"
+            description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
+            source="locked_analytics_dashboard"
+          />
+        </div>
       ) : (
         <>
           <div
@@ -345,6 +359,8 @@ function AnalyticsBody({
 
   return (
     <div className="space-y-6">
+      <AiInsightsCard />
+
       <p className="text-xs text-muted-foreground">
         Based on{' '}
         <span className="font-medium tabular-nums text-foreground">
