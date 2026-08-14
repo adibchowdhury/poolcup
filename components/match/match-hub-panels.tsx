@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Check, Target, Users } from 'lucide-react'
 import { PredictScoreInput } from '@/components/predict/predict-match-row-shared'
+import { MatchConsensusCard } from '@/components/match/match-consensus-card'
+import { PoolMatchConsensusCard } from '@/components/match/pool-match-consensus-card'
 import { MatchTeamRosters } from '@/components/match/match-team-rosters'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { Button } from '@/components/ui/button'
@@ -14,10 +16,7 @@ import {
   USE_MOCK_HUB,
   type FriendMatchPrediction,
   type HeadToHeadData,
-  type MatchCommonScore,
-  type MatchConsensus,
   type MatchRelatedPool,
-  type PoolMatchDistribution,
   type TeamFormEntry,
 } from '@/src/lib/match-hub-data'
 import { isMatchLocked } from '@/src/lib/match-lock'
@@ -53,14 +52,13 @@ type MatchHubPanelsProps = {
   phase: GlobalMatchPhase
   sport?: string | null
   isLoggedIn: boolean
-  consensus: MatchConsensus | null
-  commonScores: MatchCommonScore[]
   friends: FriendMatchPrediction[]
   myPredictions: MyMatchPredictions | null
   myPickPoints: number | null
   writablePools: WritableScorePool[]
   competitionPools: MatchRelatedPool[]
-  poolDistributions: PoolMatchDistribution[]
+  /** Preferred pool invite code from ?pool= (pool match deep link). */
+  preferredPoolInvite?: string | null
   team1Form: TeamFormEntry[]
   team2Form: TeamFormEntry[]
   headToHead: HeadToHeadData | null
@@ -91,47 +89,6 @@ function SectionShell({
       </h3>
       {children}
     </section>
-  )
-}
-
-function ConsensusBars({
-  consensus,
-  team1Name,
-  team2Name,
-}: {
-  consensus: MatchConsensus
-  team1Name: string
-  team2Name: string
-}) {
-  const rows = [
-    { key: 'home', label: team1Name, pct: consensus.homePct, bar: 'bg-primary' },
-    { key: 'draw', label: 'Draw', pct: consensus.drawPct, bar: 'bg-muted-foreground/70' },
-    { key: 'away', label: team2Name, pct: consensus.awayPct, bar: 'bg-sky-400' },
-  ] as const
-
-  return (
-    <div className="space-y-3">
-      {rows.map((row) => (
-        <div key={row.key} className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="truncate font-medium text-foreground">{row.label}</span>
-            <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
-              {Math.round(row.pct)}%
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-muted/60">
-            <div
-              className={cn('h-full rounded-full transition-all', row.bar)}
-              style={{ width: `${Math.max(0, Math.min(100, row.pct))}%` }}
-            />
-          </div>
-        </div>
-      ))}
-      <p className="text-xs text-muted-foreground">
-        {consensus.total.toLocaleString()} prediction
-        {consensus.total === 1 ? '' : 's'} across PoolCup
-      </p>
-    </div>
   )
 }
 
@@ -695,92 +652,6 @@ function FriendsPredictionsSection({
   )
 }
 
-function PoolDistributionsSection({
-  distributions,
-  team1Name,
-  team2Name,
-  postLock,
-}: {
-  distributions: PoolMatchDistribution[]
-  team1Name: string
-  team2Name: string
-  postLock: boolean
-}) {
-  if (!postLock) return null
-  if (distributions.length === 0) return null
-
-  return (
-    <div className="space-y-4">
-      {distributions.map((dist) => (
-        <SectionShell
-          key={dist.poolId}
-          title={`Pool picks · ${dist.poolName}`}
-        >
-          <p className="mb-3 text-xs text-muted-foreground">
-            {dist.total} prediction{dist.total === 1 ? '' : 's'} in this pool
-          </p>
-          <div className="space-y-2">
-            {(
-              [
-                { label: team1Name, pct: dist.homePct, bar: 'bg-primary' },
-                {
-                  label: 'Draw',
-                  pct: dist.drawPct,
-                  bar: 'bg-muted-foreground/70',
-                },
-                { label: team2Name, pct: dist.awayPct, bar: 'bg-sky-400' },
-              ] as const
-            ).map((row) => (
-              <div key={row.label} className="space-y-1">
-                <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="truncate font-medium text-foreground">
-                    {row.label}
-                  </span>
-                  <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
-                    {row.pct}%
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
-                  <div
-                    className={cn('h-full rounded-full', row.bar)}
-                    style={{ width: `${Math.max(0, Math.min(100, row.pct))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          {dist.topScores.length > 0 ? (
-            <ul className="mt-3 space-y-1.5 border-t border-white/[0.06] pt-3">
-              {dist.topScores.map((row) => (
-                <li
-                  key={row.score}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="font-mono font-semibold tabular-nums text-foreground">
-                    {row.score}
-                  </span>
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {row.pct}% ({row.count})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <Link
-            href={`/pool/${dist.inviteCode}`}
-            className={cn(
-              'mt-3 inline-flex text-xs font-medium text-primary hover:underline',
-              FOCUS_VISIBLE_RING,
-            )}
-          >
-            Open pool
-          </Link>
-        </SectionShell>
-      ))}
-    </div>
-  )
-}
-
 export function MatchHubPanels({
   matchId,
   team1Name,
@@ -793,14 +664,12 @@ export function MatchHubPanels({
   phase,
   sport,
   isLoggedIn,
-  consensus,
-  commonScores,
   friends,
   myPredictions,
   myPickPoints,
   writablePools,
   competitionPools,
-  poolDistributions,
+  preferredPoolInvite = null,
   team1Form,
   team2Form,
   headToHead,
@@ -815,7 +684,16 @@ export function MatchHubPanels({
   const showSquads =
     rostersLoading || team1Players.length > 0 || team2Players.length > 0
   const postLock = USE_MOCK_HUB || isMatchLocked(lockedAt)
-  const startLower = matchStartLabelLower(sport)
+  const preferredInviteRaw = preferredPoolInvite?.trim() ?? ''
+  const preferredInvite = preferredInviteRaw.toLowerCase()
+  const contextPool =
+    preferredInvite.length > 0
+      ? competitionPools.find(
+          (pool) =>
+            pool.isYours &&
+            pool.inviteCode.trim().toLowerCase() === preferredInvite,
+        ) ?? null
+      : null
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -852,67 +730,46 @@ export function MatchHubPanels({
         team2Form={team2Form}
       />
 
-      {postLock ? (
-        consensus && consensus.total > 0 ? (
-          <SectionShell title="PoolCup consensus">
-            <ConsensusBars
-              consensus={consensus}
-              team1Name={team1Name}
-              team2Name={team2Name}
-            />
-          </SectionShell>
-        ) : null
-      ) : (
-        <SectionShell title="PoolCup consensus">
-          <p className="text-sm text-muted-foreground">
-            Community prediction split is revealed after {startLower}.
+      {!postLock ? (
+        <MatchConsensusCard
+          matchId={matchId}
+          team1Name={team1Name}
+          team2Name={team2Name}
+          variant="full"
+          source="match_hub"
+        />
+      ) : contextPool ? (
+        <PoolMatchConsensusCard
+          poolId={contextPool.id}
+          matchId={matchId}
+          team1Name={team1Name}
+          team2Name={team2Name}
+          poolName={contextPool.name}
+          inviteCode={contextPool.inviteCode}
+          source="match_hub_post_lock"
+        />
+      ) : preferredInvite ? (
+        <section className="rounded-xl border border-border/90 bg-card/50 p-4 sm:p-5">
+          <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
+            PoolCup consensus
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Join this pool to see its post-lock consensus, or open the match
+            from a pool you belong to.
           </p>
-        </SectionShell>
-      )}
-
-      {postLock ? (
-        commonScores.length > 0 ? (
-          <SectionShell title="Most predicted scorelines">
-            <ul className="space-y-2">
-              {commonScores.map((row) => (
-                <li
-                  key={row.score}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5"
-                >
-                  <span className="font-mono text-base font-semibold tabular-nums text-foreground">
-                    {row.score}
-                  </span>
-                  <span className="text-sm tabular-nums text-muted-foreground">
-                    {Math.round(row.pct)}%
-                    <span className="ml-2 text-[11px]">
-                      ({row.count.toLocaleString()})
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </SectionShell>
-        ) : null
-      ) : (
-        <SectionShell title="Most predicted scorelines">
-          <p className="text-sm text-muted-foreground">
-            Popular scorelines are revealed after {startLower}.
-          </p>
-        </SectionShell>
-      )}
+          <Button asChild className={cn('mt-3', FOCUS_VISIBLE_RING)}>
+            <Link href={`/pool/${encodeURIComponent(preferredInviteRaw)}`}>
+              Open pool
+            </Link>
+          </Button>
+        </section>
+      ) : null}
 
       <FriendsPredictionsSection
         friends={friends}
         postLock={postLock}
         isLoggedIn={isLoggedIn || USE_MOCK_HUB}
         sport={sport}
-      />
-
-      <PoolDistributionsSection
-        distributions={poolDistributions}
-        team1Name={team1Name}
-        team2Name={team2Name}
-        postLock={postLock}
       />
 
       <CompetitionPanel pools={competitionPools} phase={phase} sport={sport} />

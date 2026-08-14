@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { GlobalMatchDetailPage } from '@/components/match/global-match-detail-page'
 import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
@@ -65,5 +66,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function GlobalMatchPage({ params }: PageProps) {
   const { matchId } = await params
 
-  return <GlobalMatchDetailPage matchId={matchId} />
+  return (
+    <Suspense fallback={null}>
+      <GlobalMatchDetailPage matchId={matchId} />
+    </Suspense>
+  )
 }

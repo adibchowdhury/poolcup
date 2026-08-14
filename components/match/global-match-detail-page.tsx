@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -13,14 +14,11 @@ import type { ClassicMatchRow } from '@/src/lib/merge-classic-match-predictions'
 import { deriveGlobalMatchPhase } from '@/src/lib/global-match-phase'
 import { isMatchLocked } from '@/src/lib/match-lock'
 import {
-  buildPoolMatchDistribution,
   buildMockMatchHub,
   fetchAdjacentEventMatches,
   fetchFriendsMatchPredictions,
   fetchHeadToHead,
-  fetchMatchCommonScores,
   fetchMatchCompetitionPools,
-  fetchMatchConsensus,
   fetchMatchEventInfo,
   fetchMyMatchPickPoints,
   fetchTeamForm,
@@ -29,19 +27,14 @@ import {
   type AdjacentMatchNav,
   type FriendMatchPrediction,
   type HeadToHeadData,
-  type MatchCommonScore,
-  type MatchConsensus,
   type MatchEventInfo,
   type MatchRelatedPool,
-  type PoolMatchDistribution,
   type TeamFormEntry,
 } from '@/src/lib/match-hub-data'
-import { fetchMatchPoolPicks } from '@/src/lib/match-pool-picks'
 import {
   fetchMyMatchPredictions,
   type MyMatchPredictions,
 } from '@/src/lib/my-match-predictions'
-import { normalizeMatchScoringStyle } from '@/src/lib/prediction-scoring'
 import {
   fetchRosterForTeamLogo,
   type TeamRosterPlayer,
@@ -62,14 +55,11 @@ type MatchRowWithEvent = ClassicMatchRow & {
 }
 
 type HubBundle = {
-  consensus: MatchConsensus | null
-  commonScores: MatchCommonScore[]
   friends: FriendMatchPrediction[]
   myPredictions: MyMatchPredictions | null
   myPickPoints: number | null
   writablePools: WritableScorePool[]
   competitionPools: MatchRelatedPool[]
-  poolDistributions: PoolMatchDistribution[]
   team1Form: TeamFormEntry[]
   team2Form: TeamFormEntry[]
   headToHead: HeadToHeadData | null
@@ -77,14 +67,11 @@ type HubBundle = {
 }
 
 const EMPTY_HUB: HubBundle = {
-  consensus: null,
-  commonScores: [],
   friends: [],
   myPredictions: null,
   myPickPoints: null,
   writablePools: [],
   competitionPools: [],
-  poolDistributions: [],
   team1Form: [],
   team2Form: [],
   headToHead: null,
@@ -129,36 +116,6 @@ function toGlobalMatchDisplay(match: MatchRowWithEvent): GlobalMatchDisplay {
   }
 }
 
-async function loadPoolDistributions(
-  matchRow: MatchRowWithEvent,
-  competitionPools: MatchRelatedPool[],
-): Promise<PoolMatchDistribution[]> {
-  const yours = competitionPools.filter((pool) => pool.isYours && pool.memberId)
-  if (yours.length === 0) return []
-
-  const results = await Promise.all(
-    yours.map(async (pool) => {
-      const { picks, error } = await fetchMatchPoolPicks(
-        supabase,
-        pool.id,
-        matchRow.id,
-        {
-          isFinal: Boolean(matchRow.is_final),
-          resultTeam1: matchRow.result_team1,
-          resultTeam2: matchRow.result_team2,
-          scoringStyle: normalizeMatchScoringStyle(pool.scoringStyle),
-          round: matchRow.round,
-          advancingTeam: matchRow.advancing_team,
-        },
-      )
-      if (error || picks.length === 0) return null
-      return buildPoolMatchDistribution(pool, picks)
-    }),
-  )
-
-  return results.filter((row): row is PoolMatchDistribution => row != null)
-}
-
 async function loadHubBundle(
   matchId: string,
   matchRow: MatchRowWithEvent,
@@ -168,14 +125,11 @@ async function loadHubBundle(
     const mock = buildMockMatchHub(matchRow.team1_name, matchRow.team2_name)
     return {
       hub: {
-        consensus: mock.consensus,
-        commonScores: mock.commonScores,
         friends: mock.friends,
         myPredictions: mock.myPredictions,
         myPickPoints: 5,
         writablePools: mock.writablePools,
         competitionPools: mock.competitionPools,
-        poolDistributions: [],
         team1Form: mock.team1Form,
         team2Form: mock.team2Form,
         headToHead: mock.headToHead,
@@ -195,8 +149,6 @@ async function loadHubBundle(
       team2Form,
       headToHead,
       adjacent,
-      consensus,
-      commonScores,
       friends,
     ] = await Promise.all([
       fetchMatchCompetitionPools(supabase, userId, matchRow.event_id),
@@ -217,12 +169,6 @@ async function loadHubBundle(
         matchId,
         matchRow.kickoff_at,
       ),
-      postLock
-        ? fetchMatchConsensus(supabase, matchId)
-        : Promise.resolve(null),
-      postLock
-        ? fetchMatchCommonScores(supabase, matchId, 3)
-        : Promise.resolve([]),
       postLock && userId
         ? fetchFriendsMatchPredictions(supabase, matchId)
         : Promise.resolve([]),
@@ -231,25 +177,18 @@ async function loadHubBundle(
     const writablePools = writableScorePoolsFromCompetition(competitionPools)
     const memberIds = writablePools.map((pool) => pool.memberId)
 
-    const [myPickPoints, poolDistributions] = await Promise.all([
+    const myPickPoints =
       userId && memberIds.length > 0
-        ? fetchMyMatchPickPoints(supabase, matchId, memberIds)
-        : Promise.resolve(null),
-      postLock
-        ? loadPoolDistributions(matchRow, competitionPools)
-        : Promise.resolve([]),
-    ])
+        ? await fetchMyMatchPickPoints(supabase, matchId, memberIds)
+        : null
 
     return {
       hub: {
-        consensus,
-        commonScores,
         friends,
         myPredictions,
         myPickPoints,
         writablePools,
         competitionPools,
-        poolDistributions,
         team1Form,
         team2Form,
         headToHead,
@@ -269,6 +208,8 @@ async function loadHubBundle(
 export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
   const { user } = useAuth()
   const userId = user?.id ?? null
+  const searchParams = useSearchParams()
+  const preferredPoolInvite = searchParams.get('pool')
 
   const [match, setMatch] = useState<MatchRowWithEvent | null>(null)
   const [eventInfo, setEventInfo] = useState<MatchEventInfo | null>(null)
@@ -389,16 +330,10 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
   const reloadPredictions = useCallback(async () => {
     if (!match || !userId) return
     const postLock = isMatchLocked(match.locked_at ?? null)
-    const [myPredictions, competitionPools, consensus, commonScores, friends] =
+    const [myPredictions, competitionPools, friends] =
       await Promise.all([
         fetchMyMatchPredictions(supabase, matchId),
         fetchMatchCompetitionPools(supabase, userId, match.event_id),
-        postLock
-          ? fetchMatchConsensus(supabase, matchId)
-          : Promise.resolve(null),
-        postLock
-          ? fetchMatchCommonScores(supabase, matchId, 3)
-          : Promise.resolve([]),
         postLock
           ? fetchFriendsMatchPredictions(supabase, matchId)
           : Promise.resolve([]),
@@ -409,20 +344,14 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       matchId,
       writablePools.map((pool) => pool.memberId),
     )
-    const poolDistributions = postLock
-      ? await loadPoolDistributions(match, competitionPools)
-      : []
 
     setHub((prev) => ({
       ...prev,
       myPredictions,
       competitionPools,
       writablePools,
-      consensus,
-      commonScores,
       friends,
       myPickPoints,
-      poolDistributions,
     }))
   }, [match, matchId, userId])
 
@@ -486,14 +415,12 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       phase={phase}
       eventInfo={eventInfo}
       isLoggedIn={Boolean(userId)}
-      consensus={hub.consensus}
-      commonScores={hub.commonScores}
       friends={hub.friends}
       myPredictions={hub.myPredictions}
       myPickPoints={hub.myPickPoints}
       writablePools={hub.writablePools}
       competitionPools={hub.competitionPools}
-      poolDistributions={hub.poolDistributions}
+      preferredPoolInvite={preferredPoolInvite}
       team1Form={hub.team1Form}
       team2Form={hub.team2Form}
       headToHead={hub.headToHead}

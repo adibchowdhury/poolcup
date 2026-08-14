@@ -33,11 +33,8 @@ import type {
   AdjacentMatchNav,
   FriendMatchPrediction,
   HeadToHeadData,
-  MatchCommonScore,
-  MatchConsensus,
   MatchEventInfo,
   MatchRelatedPool,
-  PoolMatchDistribution,
   TeamFormEntry,
 } from '@/src/lib/match-hub-data'
 import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
@@ -106,14 +103,12 @@ type GlobalMatchDetailViewProps = {
   phase: GlobalMatchPhase
   eventInfo: MatchEventInfo | null
   isLoggedIn: boolean
-  consensus: MatchConsensus | null
-  commonScores: MatchCommonScore[]
   friends: FriendMatchPrediction[]
   myPredictions: MyMatchPredictions | null
   myPickPoints: number | null
   writablePools: WritableScorePool[]
   competitionPools: MatchRelatedPool[]
-  poolDistributions: PoolMatchDistribution[]
+  preferredPoolInvite?: string | null
   team1Form: TeamFormEntry[]
   team2Form: TeamFormEntry[]
   headToHead: HeadToHeadData | null
@@ -180,14 +175,12 @@ export function GlobalMatchDetailView({
   phase,
   eventInfo,
   isLoggedIn,
-  consensus,
-  commonScores,
   friends,
   myPredictions,
   myPickPoints,
   writablePools,
   competitionPools,
-  poolDistributions,
+  preferredPoolInvite = null,
   team1Form,
   team2Form,
   headToHead,
@@ -519,14 +512,12 @@ export function GlobalMatchDetailView({
             phase={phase}
             sport={sport}
             isLoggedIn={isLoggedIn}
-            consensus={consensus}
-            commonScores={commonScores}
             friends={friends}
             myPredictions={myPredictions}
             myPickPoints={myPickPoints}
             writablePools={writablePools}
             competitionPools={competitionPools}
-            poolDistributions={poolDistributions}
+            preferredPoolInvite={preferredPoolInvite}
             team1Form={team1Form}
             team2Form={team2Form}
             headToHead={headToHead}

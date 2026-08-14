@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MatchConsensusCard } from '@/components/match/match-consensus-card'
 import { CompactMatchRow, type CompactTeam } from './compact-match-row'
 import {
   WinnerOnlyMatchRow,
@@ -94,29 +95,45 @@ export function MatchSection({
           <div className="flex flex-col gap-2 border-t border-border/60 p-3 sm:p-4">
             {matches.map((match) =>
               winnerOnly && onWinnerPickChange ? (
-                <WinnerOnlyMatchRow
-                  key={match.id}
-                  homeTeam={match.homeTeam}
-                  awayTeam={match.awayTeam}
-                  selected={match.winnerPick ?? null}
-                  isLocked={match.isLocked}
-                  isPredicted={match.isPredicted}
-                  onSelect={(pick) => onWinnerPickChange(match.id, pick)}
-                />
+                <div key={match.id} className="space-y-2">
+                  <WinnerOnlyMatchRow
+                    homeTeam={match.homeTeam}
+                    awayTeam={match.awayTeam}
+                    selected={match.winnerPick ?? null}
+                    isLocked={match.isLocked}
+                    isPredicted={match.isPredicted}
+                    onSelect={(pick) => onWinnerPickChange(match.id, pick)}
+                  />
+                  <MatchConsensusCard
+                    matchId={match.id}
+                    team1Name={match.homeTeam.name}
+                    team2Name={match.awayTeam.name}
+                    variant="compact"
+                    source="predict_row"
+                  />
+                </div>
               ) : (
-                <CompactMatchRow
-                  key={match.id}
-                  homeTeam={match.homeTeam}
-                  awayTeam={match.awayTeam}
-                  homeScore={match.homeScore}
-                  awayScore={match.awayScore}
-                  kickoffAt={match.kickoffAt}
-                  statusNote={match.statusNote}
-                  isLocked={match.isLocked}
-                  isPredicted={match.isPredicted}
-                  onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}
-                  onAwayScoreChange={(v) => onAwayScoreChange(match.id, v)}
-                />
+                <div key={match.id} className="space-y-2">
+                  <CompactMatchRow
+                    homeTeam={match.homeTeam}
+                    awayTeam={match.awayTeam}
+                    homeScore={match.homeScore}
+                    awayScore={match.awayScore}
+                    kickoffAt={match.kickoffAt}
+                    statusNote={match.statusNote}
+                    isLocked={match.isLocked}
+                    isPredicted={match.isPredicted}
+                    onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}
+                    onAwayScoreChange={(v) => onAwayScoreChange(match.id, v)}
+                  />
+                  <MatchConsensusCard
+                    matchId={match.id}
+                    team1Name={match.homeTeam.name}
+                    team2Name={match.awayTeam.name}
+                    variant="compact"
+                    source="predict_row"
+                  />
+                </div>
               ),
             )}
           </div>
