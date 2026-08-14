@@ -11,6 +11,8 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/create') return true
   if (pathname === '/achievements') return true
   if (pathname === '/activity') return true
+  if (pathname === '/history') return true
+  if (pathname === '/analytics') return true
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
   // Onboarding is authenticated but has its own full-screen chrome (no bottom nav).
   if (pathname.startsWith('/pool/')) {
@@ -42,6 +44,8 @@ export function isProtectedAppPath(pathname: string): boolean {
   if (pathname === '/create') return true
   if (pathname === '/achievements') return true
   if (pathname === '/activity') return true
+  if (pathname === '/history') return true
+  if (pathname === '/analytics') return true
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
   if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
     return true

@@ -7,6 +7,8 @@ import {
   Flag,
   Heart,
   HelpCircle,
+  History,
+  BarChart3,
   LogOut,
   Mail,
   Settings,
@@ -88,6 +90,22 @@ export function WebMobileAppDrawer({
       icon: Trophy,
       action: () => {
         router.push('/leaderboard')
+      },
+    },
+    {
+      id: 'history',
+      label: 'Prediction history',
+      icon: History,
+      action: () => {
+        router.push('/history')
+      },
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: BarChart3,
+      action: () => {
+        router.push('/analytics')
       },
     },
     {

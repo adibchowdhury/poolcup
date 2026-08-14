@@ -1436,9 +1436,33 @@ export function ProfileShowcase({
           />
 
           <section>
-            <h2 className="mb-2.5 font-display text-xl tracking-wide text-foreground">
-              Recent activity
-            </h2>
+            <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
+              <h2 className="font-display text-xl tracking-wide text-foreground">
+                Recent activity
+              </h2>
+              {!isPublic || isOwnPublicProfile ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/history"
+                    className={cn(
+                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
+                      FOCUS_VISIBLE_RING,
+                    )}
+                  >
+                    View all history
+                  </Link>
+                  <Link
+                    href="/analytics"
+                    className={cn(
+                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
+                      FOCUS_VISIBLE_RING,
+                    )}
+                  >
+                    Analytics
+                  </Link>
+                </div>
+              ) : null}
+            </div>
             {activityLoading && activity.length === 0 ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
