@@ -64,30 +64,60 @@ export function hashInsightPayload(payload: unknown): string {
 }
 
 /**
- * Detect whether the leakage-safe payload has enough finalized predictions
- * to generate insights. Supports a few likely top-level shapes from
- * build_insight_payload without inventing extra user data.
+ * All-time finalized count from build_insight_payload.
+ * Live shape: `{ all_time: { finalized_predictions: N, ... }, last_7_days, ... }`.
+ * Must NOT use range windows (last_7_days / last_30_days) — insights are all-time.
  */
-export function payloadHasFinalizedPredictions(payload: unknown): boolean {
+export const AI_INSIGHTS_MIN_FINALIZED = 1
+
+export function getAllTimeFinalizedCount(payload: unknown): number | null {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return false
+    return null
   }
   const row = payload as Record<string, unknown>
-  const candidates = [
+
+  const allTime = row.all_time
+  if (allTime && typeof allTime === 'object' && !Array.isArray(allTime)) {
+    const at = allTime as Record<string, unknown>
+    const nested = [
+      at.finalized_predictions,
+      at.finalized,
+      at.total_finalized,
+    ]
+    for (const c of nested) {
+      const n = typeof c === 'number' ? c : Number(c)
+      if (Number.isFinite(n) && n >= 0) return n
+    }
+  }
+
+  // Legacy / flat shapes (if payload ever flattens).
+  const topLevel = [
     row.finalized_predictions,
     row.finalized,
     row.total_finalized,
     row.all_time_finalized,
   ]
-  for (const c of candidates) {
+  for (const c of topLevel) {
     const n = typeof c === 'number' ? c : Number(c)
-    if (Number.isFinite(n) && n > 0) return true
+    if (Number.isFinite(n) && n >= 0) return n
   }
-  const allTime = row.all_time
-  if (allTime && typeof allTime === 'object' && !Array.isArray(allTime)) {
-    const at = allTime as Record<string, unknown>
-    const n = typeof at.finalized === 'number' ? at.finalized : Number(at.finalized)
-    if (Number.isFinite(n) && n > 0) return true
+
+  return null
+}
+
+/**
+ * Empty ONLY when all-time finalized is known and below the minimum.
+ * Unknown shapes with a non-empty payload proceed to generation (do not
+ * false-empty on missing field names or range-scoped windows).
+ */
+export function payloadHasFinalizedPredictions(payload: unknown): boolean {
+  const count = getAllTimeFinalizedCount(payload)
+  if (count != null) {
+    return count >= AI_INSIGHTS_MIN_FINALIZED
+  }
+  // Payload present but count field unknown — prefer generate over empty.
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return Object.keys(payload as object).length > 0
   }
   return false
 }
