@@ -78,7 +78,7 @@ function WinnerTeamButton({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         prominent && 'min-h-[100px] sm:min-h-[108px]',
         selected
-          ? 'border-primary bg-primary/15 shadow-[0_0_16px_rgba(0,230,118,0.15)]'
+          ? 'border-primary bg-primary/15 shadow-[0_0_16px_color-mix(in_srgb,var(--primary)_15%,transparent)]'
           : 'border-border/80 bg-card/80 hover:border-primary/35 hover:bg-card',
         dimmed && !selected && 'opacity-50',
         disabled && 'pointer-events-none opacity-55',
@@ -184,7 +184,7 @@ export function WinnerOnlyMatchRow({
       )}
 
       {isPredicted && hasSelection && !isLocked && (
-        <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.5)]">
+        <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary shadow-[0_0_8px_color-mix(in_srgb,var(--primary)_50%,transparent)]">
           <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3} />
         </div>
       )}

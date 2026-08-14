@@ -345,7 +345,7 @@ export function FriendsPageView() {
           ) : (
             <>
               {incoming.length > 0 ? (
-                <section className="mt-6 space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]">
+                <section className="mt-6 space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_8%,transparent)_inset]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">

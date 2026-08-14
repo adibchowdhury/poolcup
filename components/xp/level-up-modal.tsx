@@ -14,7 +14,12 @@ type LevelUpModalProps = {
   onDismiss: () => void
 }
 
-const CONFETTI_COLORS = ['#00e676', '#ffb300', '#f0f4f8', '#34d399']
+function confettiColors(): string[] {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary')
+    .trim()
+  return [primary, '#ffb300', '#f0f4f8', '#34d399'].filter(Boolean)
+}
 
 function fireBurst(fire: confetti.CreateTypes) {
   void fire({
@@ -22,7 +27,7 @@ function fireBurst(fire: confetti.CreateTypes) {
     spread: 70,
     startVelocity: 34,
     origin: { x: 0.5, y: 0.32 },
-    colors: CONFETTI_COLORS,
+    colors: confettiColors(),
     ticks: 90,
     disableForReducedMotion: true,
   })

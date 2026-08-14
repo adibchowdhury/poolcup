@@ -38,9 +38,15 @@ type BadgeUnlockModalProps = {
   remainingCount?: number
 }
 
-const CONFETTI_COLORS = ['#00e676', '#ffb300', '#f0f4f8', '#34d399']
 /** Brief celebratory pop, then hand off to the hero-style continuous rain. */
 const INITIAL_BURST_MS = 550
+
+function confettiColors(): string[] {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary')
+    .trim()
+  return [primary, '#ffb300', '#f0f4f8', '#34d399'].filter(Boolean)
+}
 
 /**
  * Mount: createPortal → document.body (single fixed root).
@@ -49,12 +55,13 @@ const INITIAL_BURST_MS = 550
  * (that shifts fixed body-children and mis-centers on scrolling tabs).
  */
 function fireShortBurst(fire: confetti.CreateTypes) {
+  const colors = confettiColors()
   void fire({
     particleCount: 70,
     spread: 68,
     startVelocity: 32,
     origin: { x: 0.5, y: 0.3 },
-    colors: CONFETTI_COLORS,
+    colors,
     ticks: 90,
     disableForReducedMotion: true,
   })
@@ -65,7 +72,7 @@ function fireShortBurst(fire: confetti.CreateTypes) {
       spread: 48,
       startVelocity: 26,
       origin: { x: 0.15, y: 0.45 },
-      colors: CONFETTI_COLORS,
+      colors,
       ticks: 80,
       disableForReducedMotion: true,
     })
@@ -75,7 +82,7 @@ function fireShortBurst(fire: confetti.CreateTypes) {
       spread: 48,
       startVelocity: 26,
       origin: { x: 0.85, y: 0.45 },
-      colors: CONFETTI_COLORS,
+      colors,
       ticks: 80,
       disableForReducedMotion: true,
     })
@@ -297,7 +304,7 @@ export function BadgeUnlockModal({
               className="pointer-events-none absolute inset-[-18%] rounded-full bg-primary/25 blur-3xl"
               aria-hidden
             />
-            <div className="relative h-full w-full drop-shadow-[0_0_28px_rgba(0,230,118,0.35)]">
+            <div className="relative h-full w-full drop-shadow-[0_0_28px_color-mix(in_srgb,var(--primary)_35%,transparent)]">
               <AchievementBadgeArt
                 achievementId={badge.id}
                 artFilename={badge.art_filename}

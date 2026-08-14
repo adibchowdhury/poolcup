@@ -48,7 +48,7 @@ import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 const TOTAL_STEPS = 4
 
 const FOCUS_RING_CLASS =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
 
 type SportId = 'soccer' | 'basketball' | 'baseball' | 'football' | 'hockey'
 
@@ -100,7 +100,7 @@ const SHARE_BUTTON_CLASS = cn(
 )
 
 const PRIMARY_CTA_CLASS = cn(
-  'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90',
+  'w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90',
   FOCUS_RING_CLASS,
 )
 
@@ -126,7 +126,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'text-sm text-[#5a7080] transition-colors hover:text-[#00e676]',
+        'text-sm text-[#5a7080] transition-colors hover:text-primary',
         FOCUS_RING_CLASS,
         'rounded-md',
       )}
@@ -583,7 +583,7 @@ export default function CreatePoolPage() {
             <Link
               href="/dashboard"
               className={cn(
-                'text-sm text-[#5a7080] hover:text-[#00e676] transition-colors rounded-md',
+                'text-sm text-[#5a7080] hover:text-primary transition-colors rounded-md',
                 FOCUS_RING_CLASS,
               )}
             >
@@ -617,7 +617,7 @@ export default function CreatePoolPage() {
                   <Link
                     href="/settings/billing"
                     className={cn(
-                      'inline-flex rounded-md text-sm font-semibold text-[#00e676] underline-offset-4 hover:underline',
+                      'inline-flex rounded-md text-sm font-semibold text-primary underline-offset-4 hover:underline',
                       FOCUS_RING_CLASS,
                     )}
                     onClick={() => {
@@ -656,7 +656,7 @@ export default function CreatePoolPage() {
                     onClick={() => handleSportSelect(sport.id)}
                     className={cn(
                       'relative flex flex-col items-center gap-3 rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-6 text-center transition-all',
-                      'cursor-pointer text-[#f0f4f8] hover:border-[#00e676]/50 hover:bg-[#00e676]/5',
+                      'cursor-pointer text-[#f0f4f8] hover:border-primary/50 hover:bg-primary/5',
                       FOCUS_RING_CLASS,
                     )}
                   >
@@ -699,7 +699,7 @@ export default function CreatePoolPage() {
                       type="button"
                       onClick={() => void loadCreatableEvents()}
                       className={cn(
-                        'mt-4 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm text-[#f0f4f8] hover:border-[#00e676]/50',
+                        'mt-4 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm text-[#f0f4f8] hover:border-primary/50',
                         FOCUS_RING_CLASS,
                       )}
                     >
@@ -720,14 +720,14 @@ export default function CreatePoolPage() {
                       type="button"
                       onClick={() => handleEventSelect(event.id)}
                       className={cn(
-                        'w-full rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-5 text-left transition-all hover:border-[#00e676]/50 hover:bg-[#00e676]/5',
+                        'w-full rounded-xl border border-[#1e2d3d] bg-[#080b0f] px-4 py-5 text-left transition-all hover:border-primary/50 hover:bg-primary/5',
                         FOCUS_RING_CLASS,
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-medium text-[#f0f4f8]">{event.name}</p>
                         {event.status === 'live' ? (
-                          <span className="shrink-0 rounded-full border border-[#00e676]/40 bg-[#00e676]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#00e676]">
+                          <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                             Live
                           </span>
                         ) : null}
@@ -784,7 +784,7 @@ export default function CreatePoolPage() {
                   {normalizePoolName(poolName) ? (
                     <div className="flex justify-between gap-3 border-t border-[#1e2d3d] pt-1.5">
                       <dt className="text-[#5a7080]">Pool name</dt>
-                      <dd className="text-right font-medium text-[#00e676]">
+                      <dd className="text-right font-medium text-primary">
                         {normalizePoolName(poolName)}
                       </dd>
                     </div>
@@ -816,7 +816,7 @@ export default function CreatePoolPage() {
                       nameError ? 'pool-name-error' : 'pool-name-hint'
                     }
                     className={cn(
-                      'w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+                      'w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     )}
                   />
                   <p
@@ -863,7 +863,7 @@ export default function CreatePoolPage() {
                         : 'pool-description-hint'
                     }
                     className={cn(
-                      'w-full resize-y rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50',
+                      'w-full resize-y rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     )}
                   />
                   <p
@@ -898,7 +898,7 @@ export default function CreatePoolPage() {
                           'flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                           FOCUS_RING_CLASS,
                           scoringStyle === style.id
-                            ? 'border-2 border-[#00e676] bg-[#00e676]/5 text-[#00e676]'
+                            ? 'border-2 border-primary bg-primary/5 text-primary'
                             : 'border border-[#1e2d3d] text-[#5a7080] hover:text-[#f0f4f8]',
                         )}
                       >
@@ -913,7 +913,7 @@ export default function CreatePoolPage() {
                           <li key={rule}>{rule}</li>
                         ))}
                       </ul>
-                      <p className="mt-2 text-xs font-medium text-[#00e676]">
+                      <p className="mt-2 text-xs font-medium text-primary">
                         {selectedScoring.tagline}
                       </p>
                     </div>
@@ -935,7 +935,7 @@ export default function CreatePoolPage() {
                       <Link
                         href="/settings/billing"
                         className={cn(
-                          'mt-2 inline-flex rounded-md text-sm font-semibold text-[#00e676] underline-offset-4 hover:underline',
+                          'mt-2 inline-flex rounded-md text-sm font-semibold text-primary underline-offset-4 hover:underline',
                           FOCUS_RING_CLASS,
                         )}
                         onClick={() => {
@@ -954,7 +954,7 @@ export default function CreatePoolPage() {
                         disabled={submitting}
                         onClick={() => void createPool()}
                         className={cn(
-                          'mt-2 text-sm font-semibold text-[#00e676] underline-offset-4 hover:underline',
+                          'mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline',
                           FOCUS_RING_CLASS,
                           'rounded-md',
                         )}
@@ -972,7 +972,7 @@ export default function CreatePoolPage() {
                     (creationQuota != null && !creationQuota.canCreateMore)
                   }
                   className={cn(
-                    'w-full rounded-lg bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#080b0f] transition-colors hover:bg-[#00e676]/90 disabled:cursor-not-allowed disabled:opacity-50',
+                    'w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50',
                     FOCUS_RING_CLASS,
                   )}
                 >
@@ -995,7 +995,7 @@ export default function CreatePoolPage() {
                 Pools are no fun solo. Invite people to play against you.
               </p>
 
-              <div className="mt-6 flex items-center justify-center gap-2 text-[#00e676]">
+              <div className="mt-6 flex items-center justify-center gap-2 text-primary">
                 <Zap className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="text-sm font-semibold">+5 points earned!</span>
               </div>
@@ -1009,7 +1009,7 @@ export default function CreatePoolPage() {
                   type="button"
                   onClick={downloadInviteQr}
                   className={cn(
-                    'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-[#00e676]/50 hover:bg-[#080b0f] hover:text-[#00e676]',
+                    'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
                     FOCUS_RING_CLASS,
                   )}
                 >
@@ -1038,7 +1038,7 @@ export default function CreatePoolPage() {
                   readOnly
                   value={inviteLink}
                   onFocus={(e) => e.target.select()}
-                  className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-[#00e676] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]/50"
+                  className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 />
               </div>
 
@@ -1092,7 +1092,7 @@ export default function CreatePoolPage() {
                 ref={goToPoolRef}
                 href={`/pool/${createdPool.inviteCode}`}
                 className={cn(
-                  'mt-6 flex w-full items-center justify-center rounded-lg border-2 border-[#00e676] bg-[#00e676]/10 px-4 py-3 text-sm font-semibold text-[#00e676] transition-colors hover:bg-[#00e676]/20',
+                  'mt-6 flex w-full items-center justify-center rounded-lg border-2 border-primary bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/20',
                   FOCUS_RING_CLASS,
                 )}
               >

@@ -87,7 +87,7 @@ export function DashboardDesktopNav({
         linkDashboardTabs={linkDashboardTabs}
         className={cn(
           'data-[state=active]:bg-primary data-[state=active]:text-[#0A0E0E]',
-          'data-[state=active]:shadow-[0_6px_18px_rgba(0,230,118,0.28)]',
+          'data-[state=active]:shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_28%,transparent)]',
         )}
       >
         <Home className="h-4 w-4 shrink-0" />

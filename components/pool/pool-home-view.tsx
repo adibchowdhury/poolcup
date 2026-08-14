@@ -68,7 +68,7 @@ export type PoolHomeMeta = {
   avatar: string | null
   /** Custom uploaded emblem URL (nullable). */
   emblemUrl: string | null
-  /** Hex accent e.g. #00e676; null = default green. */
+  /** Hex accent; null = default primary. */
   themeColor: string | null
   eventId: string | null
   /** Classic custom scoring; null field → engine default. */

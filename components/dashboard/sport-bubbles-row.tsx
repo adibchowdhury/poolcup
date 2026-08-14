@@ -90,7 +90,7 @@ function SportBubbleItem({
             'border bg-card/70',
             BALL_SIZE,
             selected
-              ? 'border-primary shadow-[0_0_16px_rgba(0,230,118,0.35)]'
+              ? 'border-primary shadow-[0_0_16px_color-mix(in_srgb,var(--primary)_35%,transparent)]'
               : 'border-border/70',
           )}
         >
@@ -113,7 +113,7 @@ function SportBubbleItem({
             BALL_SIZE,
             'object-contain transition-[filter,opacity]',
             selected
-              ? 'drop-shadow-[0_0_10px_rgba(0,230,118,0.55)]'
+              ? 'drop-shadow-[0_0_10px_color-mix(in_srgb,var(--primary)_55%,transparent)]'
               : 'opacity-90',
           )}
           draggable={false}

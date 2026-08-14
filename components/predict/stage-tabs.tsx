@@ -51,7 +51,7 @@ export function StageTabs({ tabs, activeId, onChange }: StageTabsProps) {
                 'rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-all duration-200 sm:px-4 sm:text-sm',
                 FOCUS_VISIBLE_RING,
                 active
-                  ? 'bg-primary text-primary-foreground shadow-[0_0_16px_rgba(0,230,118,0.25)]'
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_16px_color-mix(in_srgb,var(--primary)_25%,transparent)]'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
               )}
             >

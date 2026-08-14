@@ -1071,7 +1071,7 @@ export function ProfileShowcase({
             sizes="(max-width: 512px) 100vw, 512px"
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.12),transparent_55%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_55%)]" />
 
           {/* Global rank — top-right corner of hero */}
           <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,15rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[18rem]">
@@ -1236,7 +1236,7 @@ export function ProfileShowcase({
               aria-valuenow={level?.progressPct ?? 0}
             >
               <div
-                className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(0,230,118,0.4)] transition-[width] duration-500"
+                className="h-full rounded-full bg-primary shadow-[0_0_8px_color-mix(in_srgb,var(--primary)_40%,transparent)] transition-[width] duration-500"
                 style={{ width: `${level?.progressPct ?? 0}%` }}
               />
             </div>

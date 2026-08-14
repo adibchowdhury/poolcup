@@ -72,7 +72,7 @@ export function SaveBar({
             'inline-flex min-h-[44px] items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-300 sm:px-6 sm:text-base',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
             (success || showComplete) &&
-              'bg-primary text-primary-foreground shadow-[0_0_24px_rgba(0,230,118,0.45)]',
+              'bg-primary text-primary-foreground shadow-[0_0_24px_color-mix(in_srgb,var(--primary)_45%,transparent)]',
             canRetry &&
               'bg-destructive text-destructive-foreground shadow-none hover:bg-destructive/90',
             !success &&
@@ -80,7 +80,7 @@ export function SaveBar({
               !canRetry &&
               hasChanges &&
               !saving &&
-              'bg-primary text-primary-foreground shadow-[0_4px_24px_rgba(0,230,118,0.35)] hover:bg-primary/90 hover:shadow-[0_6px_28px_rgba(0,230,118,0.45)]',
+              'bg-primary text-primary-foreground shadow-[0_4px_24px_color-mix(in_srgb,var(--primary)_35%,transparent)] hover:bg-primary/90 hover:shadow-[0_6px_28px_color-mix(in_srgb,var(--primary)_45%,transparent)]',
             !success &&
               !showComplete &&
               !canRetry &&

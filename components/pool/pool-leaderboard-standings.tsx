@@ -16,8 +16,8 @@ import { SignedShareButton } from '@/components/share/signed-share-button'
 
 const CLIMB_STREAK_FIRE_MIN = 3
 
-/** Brand vivid green (matches reference accents). */
-const ACCENT_GREEN = '#00e676'
+/** Active primary accent (follows Pro theme / pool scope). */
+const ACCENT_GREEN = 'var(--primary)'
 const RING_SILVER = '#c0c6d0'
 const RING_BRONZE = '#c47a3d'
 
@@ -167,7 +167,7 @@ function PodiumPedestal({
     place === 1 ? ACCENT_GREEN : place === 2 ? RING_SILVER : RING_BRONZE
   const ringShadow =
     place === 1
-      ? `0 0 22px rgba(0,230,118,0.65), 0 0 6px rgba(0,230,118,0.9)`
+      ? `0 0 22px color-mix(in srgb, var(--primary) 65%, transparent), 0 0 6px color-mix(in srgb, var(--primary) 90%, transparent)`
       : place === 2
         ? `0 0 10px rgba(192,198,208,0.3)`
         : `0 0 10px rgba(196,122,61,0.3)`
@@ -322,7 +322,8 @@ function PodiumPedestal({
         style={{
           background:
             'linear-gradient(180deg, #15201c 0%, #101616 45%, #0d1212 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(0,230,118,0.35)',
+          boxShadow:
+            'inset 0 1px 0 color-mix(in srgb, var(--primary) 35%, transparent)',
         }}
         aria-hidden
       >
@@ -360,7 +361,7 @@ function StandingListRow({
       className={cn(
         'relative flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
         member.isYou
-          ? 'bg-[color-mix(in_srgb,#00e676_18%,var(--app-background))]'
+          ? 'bg-[color-mix(in_srgb,var(--primary)_18%,var(--app-background))]'
           : !disableProfileLinks && 'hover:bg-white/[0.04]',
       )}
     >
@@ -390,7 +391,7 @@ function StandingListRow({
           customAvatarUrl={member.customAvatarUrl}
           className={cn(
             'h-9 w-9',
-            member.isYou && 'ring-2 ring-[#00e676]/60',
+            member.isYou && 'ring-2 ring-primary/60',
           )}
         />
       </MemberIdentity>

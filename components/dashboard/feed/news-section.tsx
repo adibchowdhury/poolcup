@@ -51,7 +51,7 @@ function NewsCard({ item }: { item: FootballNewsItem }) {
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="hue-card-surface flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(0,230,118,0.16),transparent_55%),linear-gradient(160deg,#111a27,#080b0f)]">
+          <div className="hue-card-surface flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--primary)_16%,transparent),transparent_55%),linear-gradient(160deg,#111a27,#080b0f)]">
             <Newspaper className="h-8 w-8 text-primary/70" aria-hidden />
           </div>
         )}

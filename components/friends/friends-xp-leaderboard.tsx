@@ -101,7 +101,7 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
                   className={cn(
                     'flex items-center gap-3 rounded-xl px-3 py-3',
                     row.is_me &&
-                      'border border-primary/35 bg-primary/10 shadow-[0_0_0_1px_rgba(0,230,118,0.08)_inset]',
+                      'border border-primary/35 bg-primary/10 shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_8%,transparent)_inset]',
                   )}
                 >
                   <div

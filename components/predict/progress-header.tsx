@@ -46,7 +46,7 @@ export function ProgressHeader({
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-primary/15">
         <div
-          className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out shadow-[0_0_12px_rgba(0,230,118,0.4)]"
+          className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out shadow-[0_0_12px_color-mix(in_srgb,var(--primary)_40%,transparent)]"
           style={{ width: `${pct}%` }}
         />
       </div>

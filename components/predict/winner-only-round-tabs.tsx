@@ -84,7 +84,7 @@ export function WinnerOnlyRoundTabs({
               >
                 {tab.label}
                 {active && (
-                  <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[#00e676]" />
+                  <span className="absolute inset-x-0 bottom-0 h-[2px] bg-primary" />
                 )}
               </button>
             )

@@ -272,7 +272,7 @@ export function PremiumMatchCard({
         <path
           d={SCULPTED_BOTTOM_EDGE_PATH}
           fill="none"
-          stroke="#00e676"
+          stroke="var(--primary)"
           strokeOpacity="0.12"
           strokeWidth="4"
           vectorEffect="non-scaling-stroke"
@@ -281,7 +281,7 @@ export function PremiumMatchCard({
         <path
           d={SCULPTED_BOTTOM_EDGE_PATH}
           fill="none"
-          stroke="#00e676"
+          stroke="var(--primary)"
           strokeOpacity="0.48"
           strokeWidth="0.8"
           vectorEffect="non-scaling-stroke"
