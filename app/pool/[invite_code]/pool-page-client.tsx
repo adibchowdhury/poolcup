@@ -36,6 +36,10 @@ import {
   type MemberAvatarRecord,
 } from '@/src/lib/pool-leaderboard'
 import {
+  excludeBannedFromPoolLeaderboardInputs,
+  fetchPoolBannedUserIdsClient,
+} from '@/src/lib/banned-users'
+import {
   fetchPoolAnnouncementsApi,
   type PoolAnnouncement,
 } from '@/src/lib/pool-announcements'
@@ -49,6 +53,7 @@ type LeaderboardRefreshContext = {
   scoringStyle: string
   creatorUserId: string
   poolMembers: PoolMember[]
+  bannedUserIds: string[]
 }
 
 type Pool = {
@@ -582,6 +587,16 @@ export function PoolPageClient() {
       setLeaderboardError(null)
     }
 
+    const bannedUserIds = await fetchPoolBannedUserIdsClient(pool.id)
+    const {
+      poolMembers: activePoolMembers,
+      cacheRows: activeCacheRows,
+    } = excludeBannedFromPoolLeaderboardInputs(
+      poolMembers,
+      cacheData ?? null,
+      bannedUserIds,
+    )
+
     let breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]> | undefined
 
     if (isWinnerPool) {
@@ -608,9 +623,9 @@ export function PoolPageClient() {
     }
 
     const leaderboardMembers = buildPoolLeaderboardMembers({
-      poolMembers,
+      poolMembers: activePoolMembers,
       creatorUserId: pool.creator_id,
-      cacheRows: cacheData ?? null,
+      cacheRows: activeCacheRows,
       matchesPlayedCount,
       currentUserId: userId,
       predictionsByMember,
@@ -646,12 +661,12 @@ export function PoolPageClient() {
       scoringStyle: pool.scoring_style,
       creatorUserId: pool.creator_id,
       poolMembers,
+      bannedUserIds: [...bannedUserIds],
     }
 
     setMembers(leaderboardMembers)
     setLeaderboardLoading(false)
   }, [inviteCode, userId])
-
   const softRefreshLeaderboard = useCallback(async () => {
     const ctx = leaderboardRefreshCtxRef.current
     if (!ctx || !userId || leaderboardRefreshInFlightRef.current) return
@@ -730,10 +745,20 @@ export function PoolPageClient() {
         breakdownByMember = loadedBreakdown
       }
 
+      const bannedUserIds = new Set(ctx.bannedUserIds)
+      const {
+        poolMembers: activePoolMembers,
+        cacheRows: activeCacheRows,
+      } = excludeBannedFromPoolLeaderboardInputs(
+        ctx.poolMembers,
+        cacheData ?? null,
+        bannedUserIds,
+      )
+
       const leaderboardMembers = buildPoolLeaderboardMembers({
-        poolMembers: ctx.poolMembers,
+        poolMembers: activePoolMembers,
         creatorUserId: ctx.creatorUserId,
-        cacheRows: cacheData ?? null,
+        cacheRows: activeCacheRows,
         matchesPlayedCount,
         currentUserId: userId,
         predictionsByMember,

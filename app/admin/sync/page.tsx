@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { AdminShell } from '@/components/admin/admin-shell'
 import { AdminSyncDashboard } from '@/components/admin/admin-sync-dashboard'
 import { fetchSyncStatus, requireAdminUser } from '@/src/lib/admin-sync'
 
@@ -15,6 +16,8 @@ export default async function AdminSyncPage() {
   const { rows, error } = await fetchSyncStatus(admin.supabase)
 
   return (
-    <AdminSyncDashboard initialRows={rows} initialError={error} />
+    <AdminShell title="Ingestion">
+      <AdminSyncDashboard initialRows={rows} initialError={error} />
+    </AdminShell>
   )
 }

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { AdminReferralsDashboard } from '@/components/admin/admin-referrals-dashboard'
+import { AdminShell } from '@/components/admin/admin-shell'
 import { requireAdminUser } from '@/src/lib/admin-sync'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 
@@ -31,9 +32,11 @@ export default async function AdminReferralsPage() {
   const rows = (Array.isArray(data) ? data : []) as ReferralPerformanceRow[]
 
   return (
-    <AdminReferralsDashboard
-      initialRows={rows}
-      initialError={error?.message ?? null}
-    />
+    <AdminShell title="Referrals">
+      <AdminReferralsDashboard
+        initialRows={rows}
+        initialError={error?.message ?? null}
+      />
+    </AdminShell>
   )
 }

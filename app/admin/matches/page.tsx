@@ -1,21 +1,21 @@
 import { notFound } from 'next/navigation'
-import { AdminBadgesDashboard } from '@/components/admin/admin-badges-dashboard'
+import { AdminMatchesDashboard } from '@/components/admin/admin-matches-dashboard'
 import { AdminShell } from '@/components/admin/admin-shell'
 import { requireAdminUser } from '@/src/lib/admin-sync'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
-  title: 'Badge corrections | PoolCup Admin',
+  title: 'Matches | PoolCup Admin',
   robots: { index: false, follow: false },
 }
 
-export default async function AdminBadgesPage() {
+export default async function AdminMatchesPage() {
   const admin = await requireAdminUser()
   if (!admin) notFound()
 
   return (
-    <AdminShell title="Badges">
-      <AdminBadgesDashboard />
+    <AdminShell title="Matches">
+      <AdminMatchesDashboard />
     </AdminShell>
   )
 }

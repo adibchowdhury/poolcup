@@ -1,8 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { AlertTriangle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   formatSyncJobTypeLabel,
@@ -118,47 +117,15 @@ export function AdminSyncDashboard({
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl bg-background px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/dashboard"
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground',
-              FOCUS_VISIBLE_RING,
-            )}
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Dashboard
-          </Link>
-          <h1 className="mt-3 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-            Sync status
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Ingestion jobs (all sports). Admins only.
-          </p>
-          <Link
-            href="/admin/badges"
-            className={cn(
-              'mt-2 inline-flex text-sm text-primary hover:underline',
-              FOCUS_VISIBLE_RING,
-            )}
-          >
-            Badge corrections →
-          </Link>
-          <Link
-            href="/admin/referrals"
-            className={cn(
-              'mt-1 inline-flex text-sm text-primary hover:underline',
-              FOCUS_VISIBLE_RING,
-            )}
-          >
-            Referral performance →
-          </Link>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Ingestion jobs (all sports). Admins only.
+        </p>
         <Button
           type="button"
           variant="outline"
+          size="sm"
           className={cn('gap-2', FOCUS_VISIBLE_RING)}
           disabled={loading}
           onClick={() => void reload()}
@@ -310,6 +277,6 @@ export function AdminSyncDashboard({
           })}
         </div>
       )}
-    </main>
+    </div>
   )
 }

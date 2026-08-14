@@ -1,8 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Loader2, Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +12,7 @@ import {
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
+import { AdminErrorState } from '@/components/admin/admin-shell'
 
 type SearchUser = {
   user_id: string
@@ -46,10 +46,12 @@ export function AdminBadgesDashboard() {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchErrorRetryable, setSearchErrorRetryable] = useState(false)
   const [results, setResults] = useState<SearchUser[]>([])
   const [selected, setSelected] = useState<SelectedUser | null>(null)
   const [badges, setBadges] = useState<AdminBadgeRow[]>([])
   const [loadingUser, setLoadingUser] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'earned' | 'missing'>('all')
@@ -57,6 +59,7 @@ export function AdminBadgesDashboard() {
   const loadUser = useCallback(async (userId: string) => {
     setLoadingUser(true)
     setMessage(null)
+    setLoadError(null)
     try {
       const res = await fetch(
         `/api/admin/badges?userId=${encodeURIComponent(userId)}`,
@@ -68,14 +71,15 @@ export function AdminBadgesDashboard() {
         error?: string
       }
       if (!res.ok) {
-        setMessage(json.error ?? 'Failed to load user badges')
+        setLoadError(json.error ?? 'Failed to load user badges')
         setBadges([])
         return
       }
       setSelected(json.user ?? null)
       setBadges(json.badges ?? [])
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Failed to load')
+      setLoadError(err instanceof Error ? err.message : 'Failed to load')
+      setBadges([])
     } finally {
       setLoadingUser(false)
     }
@@ -85,10 +89,12 @@ export function AdminBadgesDashboard() {
     const q = query.trim()
     if (q.length < 2) {
       setSearchError('Enter at least 2 characters')
+      setSearchErrorRetryable(false)
       return
     }
     setSearching(true)
     setSearchError(null)
+    setSearchErrorRetryable(false)
     try {
       const res = await fetch(
         `/api/admin/badges?q=${encodeURIComponent(q)}`,
@@ -100,12 +106,15 @@ export function AdminBadgesDashboard() {
       }
       if (!res.ok) {
         setSearchError(json.error ?? 'Search failed')
+        setSearchErrorRetryable(true)
         setResults([])
       } else {
         setResults(json.users ?? [])
       }
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'Search failed')
+      setSearchErrorRetryable(true)
+      setResults([])
     } finally {
       setSearching(false)
     }
@@ -166,35 +175,10 @@ export function AdminBadgesDashboard() {
   }, [badges, filter])
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl bg-background px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6">
-        <Link
-          href="/admin/sync"
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground',
-            FOCUS_VISIBLE_RING,
-          )}
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Sync status
-        </Link>
-        {' · '}
-        <Link
-          href="/admin/referrals"
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground',
-            FOCUS_VISIBLE_RING,
-          )}
-        >
-          Referrals
-        </Link>
-        <h1 className="mt-3 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-          Badge corrections
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Award or revoke badges for a user. Ledger-safe admin RPCs.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Award or revoke badges for a user. Ledger-safe admin RPCs.
+      </p>
 
       <form
         className="flex flex-col gap-2 sm:flex-row"
@@ -225,7 +209,12 @@ export function AdminBadgesDashboard() {
       </form>
 
       {searchError ? (
-        <p className="mt-3 text-sm text-destructive">{searchError}</p>
+        <AdminErrorState
+          message={searchError}
+          onRetry={
+            searchErrorRetryable ? () => void runSearch() : undefined
+          }
+        />
       ) : null}
 
       {results.length > 0 ? (
@@ -240,6 +229,12 @@ export function AdminBadgesDashboard() {
                 )}
                 onClick={() => {
                   setResults([])
+                  setLoadError(null)
+                  setSelected({
+                    id: user.user_id,
+                    display_name: user.display_name,
+                    username: user.username,
+                  })
                   void loadUser(user.user_id)
                 }}
               >
@@ -266,11 +261,18 @@ export function AdminBadgesDashboard() {
         </p>
       ) : null}
 
+      {loadError && selected ? (
+        <AdminErrorState
+          message={loadError}
+          onRetry={() => void loadUser(selected.id)}
+        />
+      ) : null}
+
       {loadingUser ? (
         <div className="mt-8 flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
-      ) : selected ? (
+      ) : selected && !loadError ? (
         <section className="mt-6 space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -373,6 +375,6 @@ export function AdminBadgesDashboard() {
           </ul>
         </section>
       ) : null}
-    </main>
+    </div>
   )
 }

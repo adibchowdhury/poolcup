@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fetchBannedUserIdsAmong } from '@/src/lib/banned-users'
 import { buildCsv } from '@/src/lib/csv'
 import {
   resolveClassicScorePoints,
@@ -229,7 +230,60 @@ export async function fetchLeaderboardExportRows(
   if (error) {
     return { rows: [], error: error.message }
   }
-  return { rows: parseLeaderboardExportRows(data), error: null }
+
+  const rows = parseLeaderboardExportRows(data)
+  if (rows.length === 0) {
+    return { rows, error: null }
+  }
+
+  const { data: members } = await admin
+    .from('pool_members')
+    .select('user_id')
+    .eq('pool_id', poolId)
+
+  const memberUserIds = (members ?? [])
+    .map((row) => row.user_id)
+    .filter((id): id is string => typeof id === 'string')
+
+  const bannedIds = await fetchBannedUserIdsAmong(admin, memberUserIds)
+  if (bannedIds.size === 0) {
+    return { rows, error: null }
+  }
+
+  const { data: bannedProfiles } = await admin
+    .from('users')
+    .select('username, display_name')
+    .in('id', [...bannedIds])
+
+  const bannedUsernames = new Set(
+    (bannedProfiles ?? [])
+      .map((row) => row.username?.trim().toLowerCase())
+      .filter((value): value is string => Boolean(value)),
+  )
+  const bannedDisplayNames = new Set(
+    (bannedProfiles ?? [])
+      .map((row) => row.display_name?.trim().toLowerCase())
+      .filter((value): value is string => Boolean(value)),
+  )
+
+  const filtered = rows.filter((row) => {
+    const username = row.username?.trim().toLowerCase() ?? ''
+    const displayName = row.displayName.trim().toLowerCase()
+    if (username && bannedUsernames.has(username)) return false
+    if (!username && displayName && bannedDisplayNames.has(displayName)) {
+      return false
+    }
+    return true
+  })
+
+  const reranked = filtered
+    .slice()
+    .sort(
+      (a, b) => a.rank - b.rank || a.displayName.localeCompare(b.displayName),
+    )
+    .map((row, index) => ({ ...row, rank: index + 1 }))
+
+  return { rows: reranked, error: null }
 }
 
 export async function fetchPredictionExportRows(

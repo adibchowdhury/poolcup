@@ -1,14 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ArrowUpDown, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+import { ArrowUpDown, Loader2 } from 'lucide-react'
 import type { ReferralPerformanceRow } from '@/app/admin/referrals/page'
+import { AdminErrorState } from '@/components/admin/admin-shell'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
-import { useEffect } from 'react'
 
 type SortKey =
   | 'signups_referred'
@@ -23,15 +23,28 @@ export function AdminReferralsDashboard({
   initialRows: ReferralPerformanceRow[]
   initialError: string | null
 }) {
-  const [rows] = useState(initialRows)
-  const [error] = useState(initialError)
+  const router = useRouter()
+  const [rows, setRows] = useState(initialRows)
+  const [error, setError] = useState(initialError)
+  const [loading, setLoading] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('signups_referred')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [loading] = useState(false)
 
   useEffect(() => {
     capturePostHog('referral_admin_viewed', { row_count: initialRows.length })
   }, [initialRows.length])
+
+  useEffect(() => {
+    setRows(initialRows)
+    setError(initialError)
+    setLoading(false)
+  }, [initialRows, initialError])
+
+  const reload = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    router.refresh()
+  }, [router])
 
   const sorted = useMemo(() => {
     const copy = [...rows]
@@ -61,47 +74,25 @@ export function AdminReferralsDashboard({
   }
 
   return (
-    <main className="mx-auto min-h-[70vh] w-full max-w-5xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/sync"
-            className={cn(
-              'inline-flex rounded-md p-1 text-muted-foreground hover:text-foreground',
-              FOCUS_VISIBLE_RING,
-            )}
-            aria-label="Back to admin sync"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden />
-          </Link>
-          <div>
-            <h1 className="font-display text-3xl tracking-wide">Referrals</h1>
-            <p className="text-sm text-muted-foreground">
-              Signups referred, pool joins driven, and invite XP.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" className={FOCUS_VISIBLE_RING}>
-            <Link href="/admin/sync">Sync</Link>
-          </Button>
-          <Button asChild variant="outline" className={FOCUS_VISIBLE_RING}>
-            <Link href="/admin/badges">Badges</Link>
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Signups referred, pool joins driven, and invite XP.
+      </p>
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" aria-label="Loading" />
+          <Loader2
+            className="h-7 w-7 animate-spin text-primary"
+            aria-label="Loading"
+          />
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-border bg-card/70 px-4 py-8 text-center">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
+        <AdminErrorState message={error} onRetry={reload} />
       ) : sorted.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card/70 px-4 py-10 text-center">
-          <p className="text-sm text-muted-foreground">No referral activity yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No referral activity yet.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border">
@@ -138,7 +129,10 @@ export function AdminReferralsDashboard({
                   <td className="px-3 py-2.5">
                     <Link
                       href={`/u/${row.referrer_id}`}
-                      className={cn('text-primary hover:underline', FOCUS_VISIBLE_RING)}
+                      className={cn(
+                        'text-primary hover:underline',
+                        FOCUS_VISIBLE_RING,
+                      )}
                     >
                       {row.referrer_name ||
                         row.referrer_username ||
@@ -160,6 +154,6 @@ export function AdminReferralsDashboard({
           </table>
         </div>
       )}
-    </main>
+    </div>
   )
 }

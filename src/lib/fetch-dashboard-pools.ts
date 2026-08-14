@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import {
+  excludeBannedFromPoolLeaderboardInputs,
+  fetchBannedUserIdsAmong,
+} from '@/src/lib/banned-users'
 import { resolveCurrentEventId } from '@/src/lib/current-event'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 import {
@@ -9,6 +13,7 @@ import {
   type LeaderboardCacheRow,
   type PoolLeaderboardMember,
 } from '@/src/lib/pool-leaderboard'
+import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { getUpcomingHorizonEndIso } from '@/src/lib/upcoming-match-horizon'
 import {
   computeWinnerOnlyDashboardProgress,
@@ -316,6 +321,36 @@ export async function fetchDashboardPools(
         correct_winners: row.correct_winners,
       })
       cacheRowsByPool.set(row.pool_id, cacheRows)
+    }
+
+    const allMemberUserIds = [...poolMembersByPool.values()].flatMap((members) =>
+      members.map((member) => member.user_id),
+    )
+    let bannedUserIds = new Set<string>()
+    try {
+      const admin = createAdminSupabaseClient()
+      bannedUserIds = await fetchBannedUserIdsAmong(admin, allMemberUserIds)
+    } catch (err) {
+      console.error(
+        'fetchDashboardPools: banned lookup failed',
+        err instanceof Error ? err.message : err,
+      )
+    }
+
+    if (bannedUserIds.size > 0) {
+      for (const poolId of poolIds) {
+        const filtered = excludeBannedFromPoolLeaderboardInputs(
+          poolMembersByPool.get(poolId) ?? [],
+          cacheRowsByPool.get(poolId) ?? null,
+          bannedUserIds,
+        )
+        poolMembersByPool.set(poolId, filtered.poolMembers)
+        if (filtered.cacheRows) {
+          cacheRowsByPool.set(poolId, filtered.cacheRows)
+        } else {
+          cacheRowsByPool.delete(poolId)
+        }
+      }
     }
   }
 
