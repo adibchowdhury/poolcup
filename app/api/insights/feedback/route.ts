@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { persistInsightFeedback } from '@/src/lib/ai-insights'
 import { requireProUser } from '@/src/lib/require-pro'
+import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,11 +12,12 @@ type FeedbackBody = {
 
 /**
  * Persist useful / not_useful feedback for the current user's AI insights.
+ * Identity from session; ai_insights write via service role (RLS blocks user).
  */
 export async function POST(request: Request) {
   const gate = await requireProUser()
   if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
+  const { userId } = gate
 
   let body: FeedbackBody
   try {
@@ -34,13 +37,10 @@ export async function POST(request: Request) {
     )
   }
 
-  const { error } = await supabase.rpc('set_insight_feedback', {
-    p_user_id: userId,
-    p_feedback: feedback,
-  })
+  const admin = createAdminSupabaseClient()
+  const { error } = await persistInsightFeedback(admin, userId, feedback)
 
   if (error) {
-    console.error('set_insight_feedback failed:', error.message)
     return NextResponse.json(
       {
         error: 'feedback_failed',

@@ -64,8 +64,11 @@ function okResponse(args: {
   return NextResponse.json(body)
 }
 
-async function loadPayloadOrError(supabase: SupabaseClient, userId: string) {
-  const { payload, error } = await fetchInsightPayload(supabase, userId)
+/**
+ * build_insight_payload is EXECUTE service_role only — must use admin client.
+ */
+async function loadPayloadOrError(admin: SupabaseClient, userId: string) {
+  const { payload, error } = await fetchInsightPayload(admin, userId)
   if (error) {
     return {
       ok: false as const,
@@ -79,7 +82,7 @@ async function loadPayloadOrError(supabase: SupabaseClient, userId: string) {
 }
 
 async function forceGenerate(args: {
-  supabase: SupabaseClient
+  admin: SupabaseClient
   userId: string
   payload: unknown
   statsHash: string
@@ -98,13 +101,15 @@ async function forceGenerate(args: {
     )
   }
 
-  const admin = createAdminSupabaseClient()
-  const { error: upsertError } = await upsertAiInsights(args.supabase, admin, {
-    userId: args.userId,
-    insights,
-    statsHash: args.statsHash,
-    model: AI_INSIGHTS_MODEL,
-  })
+  const { error: upsertError, generatedAt } = await upsertAiInsights(
+    args.admin,
+    {
+      userId: args.userId,
+      insights,
+      statsHash: args.statsHash,
+      model: AI_INSIGHTS_MODEL,
+    },
+  )
   if (upsertError) {
     return NextResponse.json(
       {
@@ -118,7 +123,7 @@ async function forceGenerate(args: {
   return okResponse({
     insights,
     cached: false,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     model: AI_INSIGHTS_MODEL,
     feedback: null,
   })
@@ -126,14 +131,15 @@ async function forceGenerate(args: {
 
 /**
  * Lazy on-view insights: return 7-day matching cache, else generate.
- * No background jobs — LLM only when this endpoint is hit.
+ * All ai_insights / payload DB access uses service role; session is auth only.
  */
 export async function GET() {
   const gate = await requireProUser()
   if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
+  const { userId } = gate
+  const admin = createAdminSupabaseClient()
 
-  const loaded = await loadPayloadOrError(supabase, userId)
+  const loaded = await loadPayloadOrError(admin, userId)
   if (!loaded.ok) return loaded.response
   const { payload } = loaded
 
@@ -142,7 +148,7 @@ export async function GET() {
   }
 
   const statsHash = hashInsightPayload(payload)
-  const cached = await fetchCachedInsights(supabase, userId)
+  const cached = await fetchCachedInsights(admin, userId)
   if (cached && isFreshCache(cached, statsHash)) {
     const insights = coerceStoredInsights(cached.insights)
     if (insights) {
@@ -156,7 +162,7 @@ export async function GET() {
     }
   }
 
-  return forceGenerate({ supabase, userId, payload, statsHash })
+  return forceGenerate({ admin, userId, payload, statsHash })
 }
 
 /**
@@ -165,9 +171,9 @@ export async function GET() {
 export async function POST() {
   const gate = await requireProUser()
   if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
-
+  const { userId } = gate
   const admin = createAdminSupabaseClient()
+
   const allowed = await checkDbRateLimit(admin, {
     action: 'insight_regen',
     subject: userId,
@@ -184,7 +190,7 @@ export async function POST() {
     )
   }
 
-  const loaded = await loadPayloadOrError(supabase, userId)
+  const loaded = await loadPayloadOrError(admin, userId)
   if (!loaded.ok) return loaded.response
   const { payload } = loaded
 
@@ -193,5 +199,5 @@ export async function POST() {
   }
 
   const statsHash = hashInsightPayload(payload)
-  return forceGenerate({ supabase, userId, payload, statsHash })
+  return forceGenerate({ admin, userId, payload, statsHash })
 }

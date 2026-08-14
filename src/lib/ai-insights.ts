@@ -238,11 +238,15 @@ export async function generateInsightsFromPayload(
   throw lastError ?? new Error('insights_generation_failed')
 }
 
+/**
+ * Call build_insight_payload for a user.
+ * MUST use the service-role client: EXECUTE was revoked from authenticated.
+ */
 export async function fetchInsightPayload(
-  supabase: SupabaseClient,
+  adminClient: SupabaseClient,
   userId: string,
 ): Promise<{ payload: unknown; error: string | null }> {
-  const { data, error } = await supabase.rpc('build_insight_payload', {
+  const { data, error } = await adminClient.rpc('build_insight_payload', {
     p_user_id: userId,
   })
   if (error) {
@@ -252,11 +256,17 @@ export async function fetchInsightPayload(
   return { payload: data ?? null, error: null }
 }
 
+/**
+ * Load cached insights for a user.
+ * MUST use the service-role client: `ai_insights` has RLS enabled with
+ * zero policies, so authenticated SELECTs always return nothing (silent
+ * cache miss → needless Claude regeneration).
+ */
 export async function fetchCachedInsights(
-  supabase: SupabaseClient,
+  adminClient: SupabaseClient,
   userId: string,
 ): Promise<AiInsightsRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await adminClient
     .from('ai_insights')
     .select(
       'user_id, insights, stats_hash, model, generated_at, feedback, feedback_at',
@@ -296,11 +306,10 @@ export function coerceStoredInsights(raw: unknown): InsightItem[] | null {
 }
 
 /**
- * Upsert generated insights. Prefer the caller's client; falls back to
- * service role if RLS blocks user writes (generation is server-owned).
+ * Upsert generated insights via service role only.
+ * `ai_insights` is RLS-on / no policies — user clients cannot write either.
  */
 export async function upsertAiInsights(
-  userClient: SupabaseClient,
   adminClient: SupabaseClient,
   row: {
     userId: string
@@ -308,30 +317,55 @@ export async function upsertAiInsights(
     statsHash: string
     model: string
   },
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; generatedAt: string }> {
+  const generatedAt = new Date().toISOString()
   const payload = {
     user_id: row.userId,
     insights: { insights: row.insights },
     stats_hash: row.statsHash,
     model: row.model,
-    generated_at: new Date().toISOString(),
+    generated_at: generatedAt,
     // Clear stale feedback when regenerating fresh content.
     feedback: null,
     feedback_at: null,
   }
 
-  const first = await userClient.from('ai_insights').upsert(payload, {
+  const { error } = await adminClient.from('ai_insights').upsert(payload, {
     onConflict: 'user_id',
   })
-  if (!first.error) return { error: null }
+  if (error) {
+    console.error('ai_insights upsert (admin) failed:', error.message)
+    return { error: error.message, generatedAt }
+  }
+  return { error: null, generatedAt }
+}
 
-  console.error('ai_insights upsert (user) failed:', first.error.message)
-  const retry = await adminClient.from('ai_insights').upsert(payload, {
-    onConflict: 'user_id',
+/**
+ * Persist useful/not_useful via service role (table is not user-readable/writable).
+ * Prefers set_insight_feedback RPC; falls back to a direct row update.
+ */
+export async function persistInsightFeedback(
+  adminClient: SupabaseClient,
+  userId: string,
+  feedback: InsightFeedback,
+): Promise<{ error: string | null }> {
+  const { error: rpcError } = await adminClient.rpc('set_insight_feedback', {
+    p_user_id: userId,
+    p_feedback: feedback,
   })
-  if (retry.error) {
-    console.error('ai_insights upsert (admin) failed:', retry.error.message)
-    return { error: retry.error.message }
+  if (!rpcError) return { error: null }
+
+  console.error('set_insight_feedback (admin) failed:', rpcError.message)
+
+  const feedbackAt = new Date().toISOString()
+  const { error: updateError } = await adminClient
+    .from('ai_insights')
+    .update({ feedback, feedback_at: feedbackAt })
+    .eq('user_id', userId)
+
+  if (updateError) {
+    console.error('ai_insights feedback update failed:', updateError.message)
+    return { error: updateError.message }
   }
   return { error: null }
 }
