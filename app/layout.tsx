@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthenticatedChrome } from '@/components/authenticated-chrome'
 import { ReportIssueProvider } from '@/components/report-issue-dialog'
 import { ThemeProvider } from '@/components/theme-provider'
+import { UserAccentProvider } from '@/components/user-accent-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { FriendRequestCountProvider } from '@/hooks/use-friend-request-count'
 import { UnreadChatCountProvider } from '@/hooks/use-unread-chat-count'
@@ -133,23 +134,25 @@ export default function RootLayout({
             Skip to content
           </a>
           <AuthProvider>
-            <XpFeedbackProvider>
-              <DailyXpHeartbeat />
-              <MobileChatChromeProvider>
-                <ReportIssueProvider>
-                  <Suspense fallback={null}>
-                    <DashboardTabProvider>
-                      <UnreadChatCountProvider>
-                        <FriendRequestCountProvider>
-                          {children}
-                          <AuthenticatedChrome />
-                        </FriendRequestCountProvider>
-                      </UnreadChatCountProvider>
-                    </DashboardTabProvider>
-                  </Suspense>
-                </ReportIssueProvider>
-              </MobileChatChromeProvider>
-            </XpFeedbackProvider>
+            <UserAccentProvider>
+              <XpFeedbackProvider>
+                <DailyXpHeartbeat />
+                <MobileChatChromeProvider>
+                  <ReportIssueProvider>
+                    <Suspense fallback={null}>
+                      <DashboardTabProvider>
+                        <UnreadChatCountProvider>
+                          <FriendRequestCountProvider>
+                            {children}
+                            <AuthenticatedChrome />
+                          </FriendRequestCountProvider>
+                        </UnreadChatCountProvider>
+                      </DashboardTabProvider>
+                    </Suspense>
+                  </ReportIssueProvider>
+                </MobileChatChromeProvider>
+              </XpFeedbackProvider>
+            </UserAccentProvider>
           </AuthProvider>
           <Toaster richColors position="top-center" />
           <Analytics />
