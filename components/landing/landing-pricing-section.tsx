@@ -63,9 +63,8 @@ const TIERS: PricingTier[] = [
     audience: 'For superfans.',
     monthlyPrice: '$4.99',
     yearlyPrice: '$49.99',
-    ctaLabel: 'Coming soon',
+    ctaLabel: 'Upgrade to Pro',
     popular: true,
-    comingSoon: true,
     features: [
       'Everything in Free',
       'Match insights & prediction trends',
@@ -119,15 +118,15 @@ const FAQ_ITEMS = [
   },
   {
     q: "What's the difference between Pro and Commissioner?",
-    a: 'Commissioner unlocks unlimited owned pools plus pool-admin tools: custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features. PoolCup Pro (player insights and personalization) is coming soon and is not available for purchase yet.',
+    a: 'PoolCup Pro unlocks player insights and personalization: advanced analytics, historical performance, prediction history filters, premium accent themes, and Crowd Win Chance. Commissioner includes Pro benefits plus unlimited owned pools and pool-admin tools (custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features).',
   },
   {
     q: 'Can I cancel anytime?',
-    a: 'Yes. Commissioner is billed month-to-month (or yearly if you choose that option). You can manage or cancel anytime from Billing in your account.',
+    a: 'Yes. Pro and Commissioner are billed month-to-month (or yearly if you choose that option). You can manage or cancel anytime from Billing in your account.',
   },
   {
     q: 'Do I need a credit card to start?',
-    a: 'No. You can create an account and start on Free with no credit card required. A card is only needed if you upgrade to Commissioner.',
+    a: 'No. You can create an account and start on Free with no credit card required. A card is only needed if you upgrade to Pro or Commissioner.',
   },
 ]
 
@@ -301,9 +300,9 @@ function PricingCard({
         ))}
       </ul>
 
-      {tier.id === 'commissioner' ? (
+      {tier.id === 'pro' || tier.id === 'commissioner' ? (
         <PaidPlanCheckoutButton
-          plan="commissioner"
+          plan={tier.id}
           label={tier.ctaLabel}
           className={cn(ctaClassName, 'mt-0')}
         />
@@ -415,7 +414,8 @@ export function LandingPricingSection() {
             Free vs Pro vs Commissioner at a glance
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-[#728d9c] md:text-base">
-            Free and Commissioner are available now. Pro is coming soon.
+            Free to start. Upgrade to Pro for insights, or Commissioner to run
+            unlimited pools.
           </p>
 
           <div className="mt-10 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0a0e12]">
@@ -427,10 +427,7 @@ export function LandingPricingSection() {
                   </th>
                   <th className="px-3 py-3.5 text-center font-medium">Free</th>
                   <th className="px-3 py-3.5 text-center font-medium text-[#00e676]">
-                    Pro{' '}
-                    <span className="block text-[10px] font-normal uppercase tracking-wide text-[#5a7080]">
-                      Coming soon
-                    </span>
+                    Pro
                   </th>
                   <th className="px-3 py-3.5 text-center font-medium">
                     Commissioner

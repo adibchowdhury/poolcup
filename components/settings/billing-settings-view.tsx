@@ -312,19 +312,14 @@ export function BillingSettingsView({
           >
             Upgrade
           </h2>
-          <div className="rounded-xl border border-border/80 bg-muted/20 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold text-foreground">PoolCup Pro</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  Insights and personalization — coming soon.
-                </p>
-              </div>
-              <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Coming soon
-              </p>
-            </div>
-          </div>
+          <UpgradeCard
+            title="PoolCup Pro"
+            price="$4.99/mo"
+            description="Insights, analytics, themes, and Crowd Win Chance."
+            plan="pro"
+            busy={checkoutBusy}
+            onUpgrade={handleUpgrade}
+          />
           <UpgradeCard
             title="Pool Commissioner"
             price="$9.99/mo"
@@ -346,14 +341,17 @@ export function BillingSettingsView({
           <p className="text-sm text-muted-foreground">
             Switch plans or cancel in the Stripe billing portal.
           </p>
-          {billing.tier !== 'commissioner' ? (
+          {billing.tier === 'pro' ? (
             <p className="text-sm text-muted-foreground">
-              Want Commissioner? Open Manage billing to upgrade.
+              Want Commissioner? Open Manage billing to upgrade. Pro insights
+              stay included with Commissioner.
             </p>
-          ) : null}
-          <p className="text-sm text-muted-foreground">
-            PoolCup Pro is coming soon.
-          </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              You&apos;re on Commissioner — Pro insights and personalization are
+              included. Use Manage billing to change or cancel your plan.
+            </p>
+          )}
         </section>
       )}
     </main>
