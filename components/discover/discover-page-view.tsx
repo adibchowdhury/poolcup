@@ -295,7 +295,7 @@ export function DiscoverPageView() {
     const q = debouncedQuery.trim()
     if (!q || q === searchTrackedRef.current) return
     searchTrackedRef.current = q
-    capturePostHog('discover_search', { query: q, query_length: q.length })
+    capturePostHog('discover_search', { query_length: q.length })
   }, [debouncedQuery])
 
   const competitions = useMemo(

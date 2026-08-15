@@ -155,7 +155,6 @@ export function usePushSubscription(): PushHookState {
       if ((data as { type?: string }).type === 'push_notification_clicked') {
         capturePostHog('push_notification_clicked', {
           category: (data as { category?: string | null }).category ?? null,
-          href: (data as { href?: string }).href ?? null,
         })
       }
     }

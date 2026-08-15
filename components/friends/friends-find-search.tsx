@@ -112,7 +112,6 @@ export const FriendsFindSearch = forwardRef<
       if (trimmed !== searchTrackedRef.current) {
         searchTrackedRef.current = trimmed
         capturePostHog('friend_search', {
-          query: trimmed,
           query_length: trimmed.length,
           result_count: users.length,
         })

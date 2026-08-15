@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (nextId !== null && nextUser) {
         userIdRef.current = nextId
-        identifyPostHogUser(nextId, { email: nextUser.email })
+        identifyPostHogUser(nextId)
         setUser(nextUser)
       } else {
         userIdRef.current = null
