@@ -45,7 +45,6 @@ import {
   type DiscoverPoolCard,
   type DiscoverSectionKey,
   type DiscoverSectionsPayload,
-  type DiscoverSportBucket,
   type DiscoverSportId,
 } from '@/src/lib/fetch-discover'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -175,10 +174,7 @@ function SportIconThumb({
   const png = sport ? sportIconPng(sport) : null
   return (
     <div
-      className={cn(
-        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40',
-        className,
-      )}
+      className={cn('relative flex shrink-0 items-center justify-center', className)}
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -188,7 +184,7 @@ function SportIconThumb({
           alt=""
           width={size}
           height={size}
-          className="size-full object-contain p-1.5"
+          className="size-full object-contain"
         />
       ) : (
         <Shield className="h-5 w-5 text-muted-foreground" />
@@ -325,7 +321,7 @@ function DiscoverPoolCardView({
           </div>
         </div>
         {useOfficial ? (
-          <SportIconThumb sport={pool.sport} size={compact ? 40 : 44} />
+          <SportIconThumb sport={pool.sport} size={compact ? 28 : 32} />
         ) : (
           <PoolAvatarImage
             avatar={pool.avatar}
@@ -367,7 +363,7 @@ function DiscoverPoolCardView({
   )
 }
 
-function TrendingRankRow({
+function TrendingPoolRow({
   pool,
   rank,
   joining,
@@ -383,56 +379,65 @@ function TrendingRankRow({
   onJoin: () => void
 }) {
   return (
-    <li
+    <article
+      role="listitem"
       className={cn(
-        'flex items-center gap-3 overflow-hidden rounded-2xl border border-border/70 bg-card/80 px-3 py-3',
-        'shadow-[0_6px_18px_rgba(0,0,0,0.14)]',
+        'flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border/70 bg-card/80 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-4',
+        'shadow-[0_8px_24px_rgba(0,0,0,0.18)]',
       )}
     >
-      <span
-        className="w-7 shrink-0 text-center font-display text-xl tabular-nums text-primary"
-        aria-label={`Rank ${rank}`}
-      >
-        {rank}
-      </span>
-      <PoolAvatarImage
-        avatar={pool.avatar}
-        emblemUrl={pool.emblemUrl}
-        size="sm"
-        pixelSize={40}
-        className="rounded-xl"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-foreground">{pool.name}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {pool.memberCount} members
-        </p>
-        {joinError ? (
-          <p className="mt-1 text-xs text-destructive">{joinError}</p>
-        ) : null}
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+        <span
+          className="w-6 shrink-0 text-center font-display text-lg tabular-nums text-primary sm:w-7 sm:text-xl"
+          aria-label={`Rank ${rank}`}
+        >
+          {rank}
+        </span>
+        <SportIconThumb sport={pool.sport} size={28} />
+        <div className="min-w-0 flex-1">
+          <h3
+            className="line-clamp-2 break-words font-display text-sm tracking-wide text-foreground sm:text-base"
+            title={pool.name}
+          >
+            {pool.name}
+          </h3>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {discoverSportLabel(pool.sport)}
+          </p>
+          {joinError ? (
+            <p className="mt-1 break-words text-xs text-destructive">{joinError}</p>
+          ) : null}
+        </div>
       </div>
-      {pool.isMember ? (
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          className={cn('shrink-0', FOCUS_VISIBLE_RING)}
-          disabled={!pool.inviteCode}
-        >
-          <Link href={`/pool/${pool.inviteCode}`}>Open</Link>
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          size="sm"
-          className={cn('shrink-0', FOCUS_VISIBLE_RING)}
-          disabled={joining || joinDisabled || !pool.inviteCode}
-          onClick={onJoin}
-        >
-          {joining ? '…' : 'Join'}
-        </Button>
-      )}
-    </li>
+
+      <div className="ml-auto flex shrink-0 items-center gap-2.5 sm:gap-3">
+        <p className="inline-flex items-center gap-1 text-xs tabular-nums text-muted-foreground sm:text-sm">
+          <Users className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{pool.memberCount}</span>
+        </p>
+        {pool.isMember ? (
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className={cn('shrink-0', FOCUS_VISIBLE_RING)}
+            disabled={!pool.inviteCode}
+          >
+            <Link href={`/pool/${pool.inviteCode}`}>Open</Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className={cn('shrink-0', FOCUS_VISIBLE_RING)}
+            disabled={joining || joinDisabled || !pool.inviteCode}
+            onClick={onJoin}
+          >
+            {joining ? '…' : 'Join'}
+          </Button>
+        )}
+      </div>
+    </article>
   )
 }
 
@@ -518,7 +523,7 @@ export function DiscoverPageView({
     if (sections.official.length > 0) return true
     if (sections.public.length > 0) return true
     if (sections.trending.length > 0) return true
-    return sections.bySport.some((b) => b.pools.length > 0)
+    return false
   }, [sections])
 
   const searchActive = debouncedQuery.trim().length > 0
@@ -626,7 +631,6 @@ export function DiscoverPageView({
       official_count: sections.official.length,
       public_count: sections.public.length,
       trending_count: sections.trending.length,
-      sport_bucket_count: sections.bySport.length,
     })
   }, [loading, error, userId, sections])
 
@@ -1135,46 +1139,7 @@ export function DiscoverPageView({
               </section>
             ) : null}
 
-            {/* 3. By sport */}
-            {sections.bySport.length > 0 ? (
-              <div className="min-w-0 space-y-8">
-                <h2 className="font-display text-2xl tracking-wide text-foreground">
-                  Pools by sport
-                </h2>
-                {sections.bySport.map((bucket: DiscoverSportBucket) => (
-                  <section
-                    key={bucket.sport}
-                    className="min-w-0 space-y-3"
-                    aria-labelledby={`discover-sport-${bucket.sport}`}
-                  >
-                    <SectionHeader
-                      id={`discover-sport-${bucket.sport}`}
-                      title={bucket.sportLabel}
-                      onSeeAll={() =>
-                        void openSeeAll(
-                          `sport:${bucket.sport}` as DiscoverSectionKey,
-                        )
-                      }
-                    />
-                    <HorizontalScroller label={`${bucket.sportLabel} pools`}>
-                      <div className="flex w-max gap-3 pr-1">
-                        {bucket.pools.map((pool) => (
-                          <DiscoverPoolCardView
-                            key={`${bucket.sport}-${pool.id}`}
-                            pool={pool}
-                            compact
-                            officialLayout={pool.isOfficial}
-                            {...joinProps(pool)}
-                          />
-                        ))}
-                      </div>
-                    </HorizontalScroller>
-                  </section>
-                ))}
-              </div>
-            ) : null}
-
-            {/* 4. Trending — vertical ranked list */}
+            {/* Trending — vertical stack of standard Discover cards */}
             {sections.trending.length > 0 ? (
               <section
                 className="min-w-0 space-y-3"
@@ -1209,16 +1174,16 @@ export function DiscoverPageView({
                     See all
                   </button>
                 </div>
-                <ol className="space-y-2">
+                <div className="flex flex-col gap-2.5 sm:gap-3" role="list">
                   {sections.trending.map((pool, index) => (
-                    <TrendingRankRow
+                    <TrendingPoolRow
                       key={`trend-${pool.id}`}
                       pool={pool}
                       rank={index + 1}
                       {...joinProps(pool)}
                     />
                   ))}
-                </ol>
+                </div>
               </section>
             ) : null}
           </>
@@ -1278,16 +1243,16 @@ export function DiscoverPageView({
                 No pools in this section yet.
               </p>
             ) : seeAllSection === 'trending' ? (
-              <ol className="space-y-2">
+              <div className="flex flex-col gap-2.5" role="list">
                 {seeAllPools.map((pool, index) => (
-                  <TrendingRankRow
+                  <TrendingPoolRow
                     key={`see-all-trend-${pool.id}`}
                     pool={pool}
                     rank={index + 1}
                     {...joinProps(pool)}
                   />
                 ))}
-              </ol>
+              </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {seeAllPools.map((pool) => (
