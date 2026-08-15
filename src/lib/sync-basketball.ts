@@ -21,6 +21,7 @@ import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
+import { withTransientDbRetry } from '@/src/lib/db-transient-retry'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
 export const API_BASKETBALL_PROVIDER = 'api-basketball'
@@ -276,26 +277,28 @@ export async function listSyncableApiBasketballEvents(
   supabase: SupabaseClient,
   options?: { eventId?: string | null },
 ): Promise<BasketballSportingEvent[]> {
-  let query = supabase
-    .from('sporting_events')
-    .select(
-      'id, name, slug, status, provider, provider_league_id, provider_season, event_type',
-    )
-    .eq('provider', API_BASKETBALL_PROVIDER)
-    .in('status', ['live', 'upcoming'])
-    .order('name', { ascending: true })
+  return withTransientDbRetry('listSyncableApiBasketballEvents', async () => {
+    let query = supabase
+      .from('sporting_events')
+      .select(
+        'id, name, slug, status, provider, provider_league_id, provider_season, event_type',
+      )
+      .eq('provider', API_BASKETBALL_PROVIDER)
+      .in('status', ['live', 'upcoming'])
+      .order('name', { ascending: true })
 
-  if (options?.eventId) {
-    query = query.eq('id', options.eventId)
-  }
+    if (options?.eventId) {
+      query = query.eq('id', options.eventId)
+    }
 
-  const { data, error } = await query
-  if (error) {
-    throw new Error(
-      `Failed to load basketball sporting_events: ${error.message}`,
-    )
-  }
-  return (data ?? []) as BasketballSportingEvent[]
+    const { data, error } = await query
+    if (error) {
+      throw new Error(
+        `Failed to load basketball sporting_events: ${error.message}`,
+      )
+    }
+    return (data ?? []) as BasketballSportingEvent[]
+  })
 }
 
 async function syncOneBasketballEvent(
@@ -544,40 +547,50 @@ export async function syncBasketballLiveScores(
     nowMs + LIVE_PRE_KICKOFF_MINUTES * 60_000,
   ).toISOString()
 
-  const { data: windowProbe, error: probeError } = await supabase
-    .from('matches')
-    .select('id')
-    .in('event_id', eventIds)
-    .eq('is_final', false)
-    .lte('kickoff_at', windowEnd)
-    .gt('kickoff_at', windowStart)
-    .limit(1)
-
-  if (probeError) {
-    throw new Error(
-      `Failed to check basketball live window: ${probeError.message}`,
-    )
-  }
+  const windowProbe = await withTransientDbRetry(
+    'syncBasketballLiveScores:windowProbe',
+    async () => {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('id')
+        .in('event_id', eventIds)
+        .eq('is_final', false)
+        .lte('kickoff_at', windowEnd)
+        .gt('kickoff_at', windowStart)
+        .limit(1)
+      if (error) {
+        throw new Error(
+          `Failed to check basketball live window: ${error.message}`,
+        )
+      }
+      return data
+    },
+  )
 
   if (!windowProbe?.[0]) {
     return empty('no_live_window')
   }
 
-  const { data: liveRows, error: loadError } = await supabase
-    .from('matches')
-    .select(
-      'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id',
-    )
-    .in('event_id', eventIds)
-    .eq('is_final', false)
-    .lte('kickoff_at', windowEnd)
-    .gt('kickoff_at', windowStart)
-
-  if (loadError) {
-    throw new Error(
-      `Failed to load basketball live matches: ${loadError.message}`,
-    )
-  }
+  const liveRows = await withTransientDbRetry(
+    'syncBasketballLiveScores:liveMatches',
+    async () => {
+      const { data, error } = await supabase
+        .from('matches')
+        .select(
+          'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id',
+        )
+        .in('event_id', eventIds)
+        .eq('is_final', false)
+        .lte('kickoff_at', windowEnd)
+        .gt('kickoff_at', windowStart)
+      if (error) {
+        throw new Error(
+          `Failed to load basketball live matches: ${error.message}`,
+        )
+      }
+      return data
+    },
+  )
 
   const candidates = ((liveRows ?? []) as BasketballLiveMatchRow[]).filter(
     (match) => isValidApiBasketballGameId(match.fixture_id),

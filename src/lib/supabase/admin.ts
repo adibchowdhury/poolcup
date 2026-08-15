@@ -3,6 +3,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 /**
  * Supabase client with the service role key. Bypasses RLS.
  * Use only in server-side API routes — never import in client components.
+ *
+ * Uses the project REST URL (PostgREST via Supabase's pooler gateway).
+ * Clients are created per invocation and do not hold idle DB sockets —
+ * each query is an HTTP request that releases when complete.
  */
 export function createAdminSupabaseClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

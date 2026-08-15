@@ -7,6 +7,10 @@ import { sendOpsNtfy } from '@/src/lib/notify-ops'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { syncBasketballLiveScores } from '@/src/lib/sync-basketball'
 import { withSyncJob } from '@/src/lib/sync-jobs'
+import {
+  notifySyncFatalIfSustained,
+  notifySyncRecoveryIfNeeded,
+} from '@/src/lib/sync-ops-alert'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -57,6 +61,15 @@ async function handleSyncBasketballLive(request: Request) {
       },
     )
 
+    try {
+      await notifySyncRecoveryIfNeeded(supabase, {
+        jobType: 'sync_basketball_live',
+        routeLabel: 'sync-basketball-live',
+      })
+    } catch {
+      /* ignore */
+    }
+
     if (summary.errors.length > 5) {
       try {
         await sendOpsNtfy(
@@ -76,7 +89,11 @@ async function handleSyncBasketballLive(request: Request) {
     const message =
       error instanceof Error ? error.message : 'Internal server error'
     try {
-      await sendOpsNtfy(`sync-basketball-live fatal: ${message}`)
+      await notifySyncFatalIfSustained(supabase, {
+        jobType: 'sync_basketball_live',
+        routeLabel: 'sync-basketball-live',
+        message,
+      })
     } catch {
       /* ignore */
     }
