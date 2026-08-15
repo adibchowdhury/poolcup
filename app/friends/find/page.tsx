@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
-import { FriendsPageView } from '@/components/friends/friends-page-view'
+import { FriendsFindPageView } from '@/components/friends/friends-find-page-view'
 import { resolveUserDisplayName } from '@/src/lib/auth'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { cn } from '@/lib/utils'
@@ -10,12 +10,11 @@ import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Social | PoolCup',
-  description:
-    'See what your friends are doing on PoolCup, compare on the friends leaderboard, and manage friends.',
+  title: 'Find friends | PoolCup',
+  description: 'Search PoolCup players by username or name and send friend requests.',
 }
 
-function FriendsFallback() {
+function FindFallback() {
   return (
     <main
       className={cn(
@@ -28,7 +27,7 @@ function FriendsFallback() {
   )
 }
 
-export default async function FriendsPage() {
+export default async function FriendsFindPage() {
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -36,7 +35,7 @@ export default async function FriendsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login?next=/friends')
+    redirect('/login?next=/friends/find')
   }
 
   const { data: profile } = await supabase
@@ -46,8 +45,8 @@ export default async function FriendsPage() {
     .maybeSingle()
 
   return (
-    <Suspense fallback={<FriendsFallback />}>
-      <FriendsPageView
+    <Suspense fallback={<FindFallback />}>
+      <FriendsFindPageView
         userId={user.id}
         email={user.email ?? ''}
         displayName={resolveUserDisplayName(

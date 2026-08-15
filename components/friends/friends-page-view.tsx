@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Loader2,
   Search,
@@ -10,21 +12,18 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
-import { Button } from '@/components/ui/button'
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { UserAvatarImage } from '@/components/user-avatar-image'
-import { UserProfileLink } from '@/components/user-profile-link'
 import { FriendsActivityFeed } from '@/components/friends/friends-activity-feed'
-import {
-  FriendsFindSearch,
-  type FriendsFindSearchHandle,
-} from '@/components/friends/friends-find-search'
 import { FriendsSuggestionsSection } from '@/components/friends/friends-suggestions-section'
 import { FriendsXpLeaderboard } from '@/components/friends/friends-xp-leaderboard'
 import {
   MutedBadge,
   UserModerationMenu,
 } from '@/components/friends/user-moderation-menu'
+import { Button } from '@/components/ui/button'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatarImage } from '@/components/user-avatar-image'
+import { UserProfileLink } from '@/components/user-profile-link'
 import { resolveAvatarFilename } from '@/src/lib/avatars'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
@@ -46,6 +45,20 @@ import {
   emitFriendRequestsChanged,
   useFriendRequestCount,
 } from '@/hooks/use-friend-request-count'
+
+const SOCIAL_TAB_VALUES = ['activity', 'leaderboard', 'friends'] as const
+type SocialTab = (typeof SOCIAL_TAB_VALUES)[number]
+
+function normalizeSocialTab(value: string | null): SocialTab {
+  if (
+    value === 'leaderboard' ||
+    value === 'friends' ||
+    value === 'activity'
+  ) {
+    return value
+  }
+  return 'activity'
+}
 
 function FriendIdentity({
   userId,
@@ -146,9 +159,16 @@ export function FriendsPageView({
   avatar,
   customAvatarUrl,
 }: FriendsPageViewProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { adjustCount, refresh: refreshRequestCount } = useFriendRequestCount()
-  const findSearchRef = useRef<FriendsFindSearchHandle>(null)
   const viewedRef = useRef(false)
+  const tabTrackedRef = useRef<SocialTab | null>(null)
+
+  const [activeTab, setActiveTab] = useState<SocialTab>(() =>
+    normalizeSocialTab(searchParams.get('tab')),
+  )
   const [friends, setFriends] = useState<FriendRow[]>([])
   const [incoming, setIncoming] = useState<IncomingFriendRequestRow[]>([])
   const [leaderboard, setLeaderboard] = useState<FriendsLeaderboardRow[]>([])
@@ -195,6 +215,18 @@ export function FriendsPageView({
   }, [reload])
 
   useEffect(() => {
+    const next = normalizeSocialTab(searchParams.get('tab'))
+    setActiveTab(next)
+  }, [searchParams])
+
+  // Legacy /friends#find → dedicated find screen
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash !== '#find') return
+    router.replace('/friends/find')
+  }, [router])
+
+  useEffect(() => {
     if (loading || error || viewedRef.current) return
     viewedRef.current = true
     capturePostHog('friends_viewed', {
@@ -203,19 +235,23 @@ export function FriendsPageView({
     })
   }, [loading, error, friends.length, incoming.length])
 
-  // Deep-link /friends#find (or header Find friends) focuses the search input.
   useEffect(() => {
-    if (loading) return
-    if (typeof window === 'undefined') return
-    if (window.location.hash !== '#find') return
-    findSearchRef.current?.focus()
-  }, [loading])
+    if (tabTrackedRef.current === activeTab) return
+    tabTrackedRef.current = activeTab
+    capturePostHog('social_tab_viewed', { tab: activeTab })
+  }, [activeTab])
 
-  function focusFindSearch() {
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', '#find')
-    }
-    findSearchRef.current?.focus()
+  function setTab(next: SocialTab) {
+    setActiveTab(next)
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'activity') params.delete('tab')
+    else params.set('tab', next)
+    const query = params.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }
+
+  function openFindFriends() {
+    router.push('/friends/find')
   }
 
   async function handleAccept(requesterId: string) {
@@ -282,67 +318,142 @@ export function FriendsPageView({
     >
       <div className="flex items-center gap-2">
         <h1 className="min-w-0 flex-1 font-display text-3xl tracking-wide text-foreground">
-          Friends
+          Social
         </h1>
         <Button
           type="button"
           size="sm"
           variant="outline"
           className={cn('h-8 shrink-0 gap-1.5', FOCUS_VISIBLE_RING)}
-          onClick={focusFindSearch}
+          onClick={openFindFriends}
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
           Find friends
         </Button>
       </div>
 
-      {error ? (
-        <div className="mt-8 rounded-xl border border-border/80 bg-card/40 px-4 py-10 text-center">
-          <p className="text-sm text-destructive">Couldn’t load friends.</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn('mt-3', FOCUS_VISIBLE_RING)}
-            onClick={() => void reload()}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setTab(normalizeSocialTab(value))}
+        className="mt-5 gap-4"
+      >
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1">
+          <TabsTrigger
+            value="activity"
+            className={cn(
+              'rounded-lg px-2 py-2 text-xs sm:text-sm',
+              FOCUS_VISIBLE_RING,
+            )}
           >
-            Try again
-          </Button>
-        </div>
-      ) : (
-        <>
-          <FriendsFindSearch
-            ref={findSearchRef}
-            onFriendshipChanged={() => void reload()}
-          />
+            Activity
+          </TabsTrigger>
+          <TabsTrigger
+            value="leaderboard"
+            className={cn(
+              'rounded-lg px-2 py-2 text-xs sm:text-sm',
+              FOCUS_VISIBLE_RING,
+            )}
+          >
+            Leaderboard
+          </TabsTrigger>
+          <TabsTrigger
+            value="friends"
+            className={cn(
+              'relative rounded-lg px-2 py-2 text-xs sm:text-sm',
+              FOCUS_VISIBLE_RING,
+            )}
+          >
+            Friends
+            {incoming.length > 0 ? (
+              <span
+                className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground"
+                aria-label={`${incoming.length} friend requests`}
+              >
+                {incoming.length > 9 ? '9+' : incoming.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
 
-          {loading ? (
-            <section className="mt-8 space-y-3">
-              <h2 className="font-display text-xl tracking-wide text-foreground">
-                Your friends
-              </h2>
-              <FriendListSkeleton />
-            </section>
+        <TabsContent value="activity" className="mt-0 outline-none">
+          <FriendsActivityFeed
+            userId={userId}
+            onFindFriends={openFindFriends}
+          />
+        </TabsContent>
+
+        <TabsContent value="leaderboard" className="mt-0 outline-none">
+          {error ? (
+            <div className="rounded-xl border border-border/80 bg-card/40 px-4 py-10 text-center">
+              <p className="text-sm text-destructive">Couldn’t load leaderboard.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn('mt-3', FOCUS_VISIBLE_RING)}
+                onClick={() => void reload()}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : loading ? (
+            <FriendListSkeleton />
+          ) : (
+            <FriendsXpLeaderboard
+              rows={leaderboard}
+              solo={friends.length === 0}
+              className="mt-0"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="friends" className="mt-0 space-y-6 outline-none">
+          {error ? (
+            <div className="rounded-xl border border-border/80 bg-card/40 px-4 py-10 text-center">
+              <p className="text-sm text-destructive">Couldn’t load friends.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn('mt-3', FOCUS_VISIBLE_RING)}
+                onClick={() => void reload()}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : loading ? (
+            <FriendListSkeleton />
           ) : (
             <>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn('h-8 gap-1.5', FOCUS_VISIBLE_RING)}
+                  onClick={openFindFriends}
+                >
+                  <Search className="h-3.5 w-3.5" aria-hidden />
+                  Find friends
+                </Button>
+              </div>
+
               {incoming.length > 0 ? (
-                <section className="mt-6 space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_8%,transparent)_inset]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                        Needs your attention
-                      </p>
-                      <h2 className="mt-1 font-display text-xl tracking-wide text-foreground">
-                        Friend requests
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          ({incoming.length})
-                        </span>
-                      </h2>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Accept or decline — they&apos;ll see Friends once you
-                        accept.
-                      </p>
-                    </div>
+                <section className="space-y-3 rounded-2xl border border-primary/35 bg-primary/[0.07] p-4 shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_8%,transparent)_inset]">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      Needs your attention
+                    </p>
+                    <h2 className="mt-1 font-display text-xl tracking-wide text-foreground">
+                      Friend requests
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        ({incoming.length})
+                      </span>
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Accept or decline — they&apos;ll see Friends once you
+                      accept.
+                    </p>
                   </div>
                   <ul className="space-y-2">
                     {incoming.map((row) => {
@@ -398,17 +509,11 @@ export function FriendsPageView({
               ) : null}
 
               <FriendsSuggestionsSection
+                className="mt-0"
                 onFriendshipChanged={() => void reload()}
               />
 
-              <FriendsXpLeaderboard
-                rows={leaderboard}
-                solo={friends.length === 0}
-              />
-
-              <FriendsActivityFeed onFindFriends={focusFindSearch} />
-
-              <section className="mt-8 space-y-3">
+              <section className="space-y-3">
                 <h2 className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground">
                   <Users className="h-5 w-5 text-primary" aria-hidden />
                   Your friends
@@ -428,7 +533,7 @@ export function FriendsPageView({
                       variant="outline"
                       size="sm"
                       className={cn('mt-4 gap-1.5', FOCUS_VISIBLE_RING)}
-                      onClick={focusFindSearch}
+                      onClick={openFindFriends}
                     >
                       <Search className="h-3.5 w-3.5" aria-hidden />
                       Find friends
@@ -498,8 +603,13 @@ export function FriendsPageView({
               </section>
             </>
           )}
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Keep Link available for keyboard users who land without JS nav */}
+      <p className="sr-only">
+        <Link href="/friends/find">Open find friends</Link>
+      </p>
     </DashboardAppShell>
   )
 }

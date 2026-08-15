@@ -49,6 +49,10 @@ type FriendsFindSearchProps = {
   /** Called after add/accept so lists/leaderboard can refresh. */
   onFriendshipChanged?: () => void
   className?: string
+  /** Autofocus the search input on mount. */
+  autoFocus?: boolean
+  /** Hide the section heading (parent page supplies title). */
+  hideHeading?: boolean
 }
 
 type SearchStatus = Exclude<FriendshipStatus, 'self'>
@@ -56,7 +60,10 @@ type SearchStatus = Exclude<FriendshipStatus, 'self'>
 export const FriendsFindSearch = forwardRef<
   FriendsFindSearchHandle,
   FriendsFindSearchProps
->(function FriendsFindSearch({ onFriendshipChanged, className }, ref) {
+>(function FriendsFindSearch(
+  { onFriendshipChanged, className, autoFocus = false, hideHeading = false },
+  ref,
+) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const requestSeqRef = useRef(0)
@@ -74,6 +81,12 @@ export const FriendsFindSearch = forwardRef<
       window.setTimeout(() => inputRef.current?.focus(), 120)
     },
   }))
+
+  useEffect(() => {
+    if (!autoFocus) return
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 80)
+    return () => window.clearTimeout(timer)
+  }, [autoFocus])
 
   const runSearch = useCallback(async (value: string) => {
     const trimmed = value.trim()
@@ -221,22 +234,25 @@ export const FriendsFindSearch = forwardRef<
   return (
     <section
       id="find"
-      className={cn('mt-6 space-y-3', className)}
-      aria-labelledby={`${inputId}-label`}
+      className={cn(hideHeading ? 'space-y-3' : 'mt-6 space-y-3', className)}
+      aria-labelledby={hideHeading ? undefined : `${inputId}-label`}
+      aria-label={hideHeading ? 'Find friends search' : undefined}
     >
-      <div>
-        <h2
-          id={`${inputId}-label`}
-          className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground"
-        >
-          <Search className="h-5 w-5 text-primary" aria-hidden />
-          Find friends
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Search by username or display name (at least {MIN_QUERY_CHARS}{' '}
-          characters).
-        </p>
-      </div>
+      {hideHeading ? null : (
+        <div>
+          <h2
+            id={`${inputId}-label`}
+            className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground"
+          >
+            <Search className="h-5 w-5 text-primary" aria-hidden />
+            Find friends
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Search by username or display name (at least {MIN_QUERY_CHARS}{' '}
+            characters).
+          </p>
+        </div>
+      )}
 
       <div className="relative">
         <Search

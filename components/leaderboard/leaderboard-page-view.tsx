@@ -448,7 +448,7 @@ export function LeaderboardPageView() {
                 Find people you know and climb the XP board together.
               </p>
               <Button asChild className={cn('mt-4', FOCUS_RING)}>
-                <Link href="/friends#find">Find friends</Link>
+                <Link href="/friends/find">Find friends</Link>
               </Button>
             </div>
           ) : scope === 'friends' && friendsSolo ? (
@@ -472,7 +472,7 @@ export function LeaderboardPageView() {
                   size="sm"
                   className={cn('mt-3', FOCUS_RING)}
                 >
-                  <Link href="/friends#find">Find friends</Link>
+                  <Link href="/friends/find">Find friends</Link>
                 </Button>
               </div>
             </div>

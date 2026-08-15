@@ -534,6 +534,7 @@ export async function getFriendActivity(
 /**
  * Paginated friends activity (badge, pool_join, prediction_result).
  * Server excludes muted/blocked actors; prediction_result is post-lock only.
+ * Prefer getFriendsActivityFeed for the Social Activity tab.
  */
 export async function getFriendActivityFeed(
   supabase: SupabaseClient,
@@ -555,6 +556,166 @@ export async function getFriendActivityFeed(
     rows: rows
       .map(coerceFriendActivityRow)
       .filter((row): row is FriendActivityRow => row != null),
+    error: null,
+  }
+}
+
+/** Social Activity tab item from get_friends_activity_feed (cursor via p_before). */
+export type FriendsActivityFeedBadgeItem = {
+  type: 'badge_earned'
+  ts: string
+  user_id: string
+  username: string | null
+  avatar: string | null
+  badge_name: string | null
+  badge_rarity: string | null
+  badge_art: string | null
+}
+
+export type FriendsActivityFeedPoolJoinedItem = {
+  type: 'pool_joined'
+  ts: string
+  user_id: string
+  username: string | null
+  avatar: string | null
+  pool_id: string
+  pool_name: string | null
+  pool_is_public: boolean
+  /** Enriched client-side for /pool/[invite_code] links. */
+  pool_invite_code?: string | null
+}
+
+export type FriendsActivityFeedItem =
+  | FriendsActivityFeedBadgeItem
+  | FriendsActivityFeedPoolJoinedItem
+
+function coerceFriendsActivityFeedItem(
+  raw: unknown,
+): FriendsActivityFeedItem | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const type = asString(row.type)
+  const ts = asString(row.ts)
+  const userId = asString(row.user_id)
+  if (!ts || !userId) return null
+
+  if (type === 'badge_earned') {
+    return {
+      type: 'badge_earned',
+      ts,
+      user_id: userId,
+      username: asString(row.username),
+      avatar: asString(row.avatar),
+      badge_name: asString(row.badge_name),
+      badge_rarity: asString(row.badge_rarity),
+      badge_art: asString(row.badge_art),
+    }
+  }
+
+  if (type === 'pool_joined') {
+    const poolId = asString(row.pool_id)
+    if (!poolId) return null
+    return {
+      type: 'pool_joined',
+      ts,
+      user_id: userId,
+      username: asString(row.username),
+      avatar: asString(row.avatar),
+      pool_id: poolId,
+      pool_name: asString(row.pool_name),
+      pool_is_public: Boolean(row.pool_is_public),
+    }
+  }
+
+  return null
+}
+
+async function enrichPoolInviteCodes(
+  supabase: SupabaseClient,
+  items: FriendsActivityFeedItem[],
+): Promise<FriendsActivityFeedItem[]> {
+  const poolIds = [
+    ...new Set(
+      items
+        .filter(
+          (item): item is FriendsActivityFeedPoolJoinedItem =>
+            item.type === 'pool_joined',
+        )
+        .map((item) => item.pool_id),
+    ),
+  ]
+  if (poolIds.length === 0) return items
+
+  const { data, error } = await supabase
+    .from('pools')
+    .select('id, invite_code')
+    .in('id', poolIds)
+    .eq('is_public', true)
+
+  if (error || !data) {
+    if (error) {
+      console.error('enrichPoolInviteCodes failed:', error.message)
+    }
+    return items
+  }
+
+  const inviteById = new Map<string, string>()
+  for (const row of data) {
+    const id = asString((row as { id?: unknown }).id)
+    const code = asString((row as { invite_code?: unknown }).invite_code)
+    if (id && code) inviteById.set(id, code)
+  }
+
+  return items.map((item) => {
+    if (item.type !== 'pool_joined') return item
+    return {
+      ...item,
+      pool_invite_code: inviteById.get(item.pool_id) ?? null,
+    }
+  })
+}
+
+/**
+ * Social Activity feed: badge_earned + public pool_joined, cursor pagination via p_before.
+ */
+export async function getFriendsActivityFeed(
+  supabase: SupabaseClient,
+  userId: string,
+  options?: { limit?: number; before?: string | null },
+): Promise<{ items: FriendsActivityFeedItem[]; error: string | null }> {
+  const limit = Math.max(1, Math.min(options?.limit ?? 30, 100))
+  const before = options?.before?.trim() || null
+
+  const { data, error } = await supabase.rpc('get_friends_activity_feed', {
+    p_user_id: userId,
+    p_limit: limit,
+    p_before: before,
+  })
+
+  if (error) {
+    console.error('get_friends_activity_feed failed:', error.message)
+    return { items: [], error: error.message }
+  }
+
+  const rawList = Array.isArray(data)
+    ? data
+    : typeof data === 'string'
+      ? (() => {
+          try {
+            const parsed = JSON.parse(data) as unknown
+            return Array.isArray(parsed) ? parsed : []
+          } catch {
+            return []
+          }
+        })()
+      : []
+
+  const items = rawList
+    .map(coerceFriendsActivityFeedItem)
+    .filter((item): item is FriendsActivityFeedItem => item != null)
+
+  return {
+    items: await enrichPoolInviteCodes(supabase, items),
     error: null,
   }
 }

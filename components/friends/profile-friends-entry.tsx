@@ -54,7 +54,7 @@ export function ProfileFriendsEntry({
           incomingCount > 0 && 'border-primary/40 bg-primary/10',
         )}
       >
-        <Link href="/friends#find">
+        <Link href="/friends/find">
           <Users className="h-3.5 w-3.5" aria-hidden />
           Friends
           {friendCount != null ? (
@@ -74,14 +74,14 @@ export function ProfileFriendsEntry({
       </Button>
       {friendCount === 0 ? (
         <Link
-          href="/friends#find"
+          href="/friends/find"
           className="text-[10px] font-medium tracking-wide text-primary transition-colors hover:underline"
         >
           Find friends by name
         </Link>
       ) : friendsRank != null ? (
         <Link
-          href="/friends"
+          href="/friends?tab=leaderboard"
           className="text-[10px] font-medium tracking-wide text-muted-foreground transition-colors hover:text-primary"
         >
           You&apos;re #{friendsRank} among friends · XP

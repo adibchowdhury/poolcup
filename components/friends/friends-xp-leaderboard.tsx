@@ -35,14 +35,19 @@ type FriendsXpLeaderboardProps = {
   rows: FriendsLeaderboardRow[]
   /** True when the user has zero accepted friends (solo board). */
   solo: boolean
+  className?: string
 }
 
 /**
  * Compact friends XP preview on /friends. Full board: /leaderboard?scope=friends
  */
-export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) {
+export function FriendsXpLeaderboard({
+  rows,
+  solo,
+  className,
+}: FriendsXpLeaderboardProps) {
   return (
-    <section className="mt-8 space-y-3">
+    <section className={cn('mt-8 space-y-3', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground">
@@ -73,7 +78,7 @@ export function FriendsXpLeaderboard({ rows, solo }: FriendsXpLeaderboardProps) 
               Find people you know, then climb the XP board together.
             </p>
             <Link
-              href="/friends#find"
+              href="/friends/find"
               className="inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
             >
               Find friends
