@@ -1,9 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   Loader2,
   Search,
   UserMinus,
@@ -11,6 +9,7 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { Button } from '@/components/ui/button'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { UserAvatarImage } from '@/components/user-avatar-image'
@@ -26,7 +25,6 @@ import {
   MutedBadge,
   UserModerationMenu,
 } from '@/components/friends/user-moderation-menu'
-import { useAuth } from '@/src/lib/auth-context'
 import { resolveAvatarFilename } from '@/src/lib/avatars'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
@@ -44,7 +42,6 @@ import {
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
-import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import {
   emitFriendRequestsChanged,
   useFriendRequestCount,
@@ -134,8 +131,21 @@ function MutualCountLoader({
   return null
 }
 
-export function FriendsPageView() {
-  const { user, loading: authLoading } = useAuth()
+export type FriendsPageViewProps = {
+  userId: string
+  email: string
+  displayName?: string | null
+  avatar?: string | null
+  customAvatarUrl?: string | null
+}
+
+export function FriendsPageView({
+  userId,
+  email,
+  displayName,
+  avatar,
+  customAvatarUrl,
+}: FriendsPageViewProps) {
   const { adjustCount, refresh: refreshRequestCount } = useFriendRequestCount()
   const findSearchRef = useRef<FriendsFindSearchHandle>(null)
   const viewedRef = useRef(false)
@@ -148,22 +158,13 @@ export function FriendsPageView() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
-  const onMutualLoaded = useCallback((userId: string, count: number) => {
+  const onMutualLoaded = useCallback((loadedUserId: string, count: number) => {
     setMutualById((prev) =>
-      prev[userId] === count ? prev : { ...prev, [userId]: count },
+      prev[loadedUserId] === count ? prev : { ...prev, [loadedUserId]: count },
     )
   }, [])
 
   const reload = useCallback(async () => {
-    if (!user?.id) {
-      setFriends([])
-      setIncoming([])
-      setLeaderboard([])
-      setMutedIds(new Set())
-      setLoading(false)
-      setError(null)
-      return
-    }
     setLoading(true)
     setError(null)
     const [nextFriends, nextIncoming, nextBoard, muted] = await Promise.all([
@@ -187,29 +188,28 @@ export function FriendsPageView() {
     setError(null)
     setLoading(false)
     void refreshRequestCount()
-  }, [user?.id, refreshRequestCount])
+  }, [refreshRequestCount])
 
   useEffect(() => {
-    if (authLoading) return
     void reload()
-  }, [authLoading, reload])
+  }, [reload])
 
   useEffect(() => {
-    if (loading || error || !user || viewedRef.current) return
+    if (loading || error || viewedRef.current) return
     viewedRef.current = true
     capturePostHog('friends_viewed', {
       friend_count: friends.length,
       request_count: incoming.length,
     })
-  }, [loading, error, user, friends.length, incoming.length])
+  }, [loading, error, friends.length, incoming.length])
 
   // Deep-link /friends#find (or header Find friends) focuses the search input.
   useEffect(() => {
-    if (loading || !user) return
+    if (loading) return
     if (typeof window === 'undefined') return
     if (window.location.hash !== '#find') return
     findSearchRef.current?.focus()
-  }, [loading, user])
+  }, [loading])
 
   function focusFindSearch() {
     if (typeof window !== 'undefined') {
@@ -271,49 +271,30 @@ export function FriendsPageView() {
     void getFriendsLeaderboard(supabase).then(setLeaderboard)
   }
 
-  if (authLoading) {
-    return (
-      <main
-        className={cn(
-          'mx-auto flex min-h-[70vh] w-full max-w-lg items-center justify-center px-4',
-          MOBILE_BOTTOM_NAV_PAD_CLASS,
-        )}
-      >
-        <Loader2
-          className="h-8 w-8 animate-spin text-primary"
-          aria-label="Loading friends"
-        />
-      </main>
-    )
-  }
-
-  if (!user) {
-    return (
-      <main
-        className={cn(
-          'mx-auto min-h-[70vh] w-full max-w-lg px-4 py-8',
-          MOBILE_BOTTOM_NAV_PAD_CLASS,
-        )}
-      >
-        <Header />
-        <p className="mt-6 text-sm text-muted-foreground">
-          Sign in to manage friends.
-        </p>
-        <Button asChild className={cn('mt-4', FOCUS_VISIBLE_RING)}>
-          <Link href="/login?next=%2Ffriends">Sign in</Link>
-        </Button>
-      </main>
-    )
-  }
-
   return (
-    <main
-      className={cn(
-        'mx-auto min-h-screen w-full max-w-lg px-4 py-6 sm:py-8',
-        MOBILE_BOTTOM_NAV_PAD_CLASS,
-      )}
+    <DashboardAppShell
+      userId={userId}
+      email={email}
+      displayName={displayName}
+      avatar={avatar}
+      customAvatarUrl={customAvatarUrl}
+      mainClassName="max-w-lg py-6 sm:py-8"
     >
-      <Header onFindFriends={focusFindSearch} />
+      <div className="flex items-center gap-2">
+        <h1 className="min-w-0 flex-1 font-display text-3xl tracking-wide text-foreground">
+          Friends
+        </h1>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={cn('h-8 shrink-0 gap-1.5', FOCUS_VISIBLE_RING)}
+          onClick={focusFindSearch}
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          Find friends
+        </Button>
+      </div>
 
       {error ? (
         <div className="mt-8 rounded-xl border border-border/80 bg-card/40 px-4 py-10 text-center">
@@ -519,38 +500,6 @@ export function FriendsPageView() {
           )}
         </>
       )}
-    </main>
-  )
-}
-
-function Header({ onFindFriends }: { onFindFriends?: () => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Link
-        href="/dashboard?tab=dashboard"
-        className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground',
-          FOCUS_VISIBLE_RING,
-        )}
-        aria-label="Back to dashboard"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden />
-      </Link>
-      <h1 className="min-w-0 flex-1 font-display text-3xl tracking-wide text-foreground">
-        Friends
-      </h1>
-      {onFindFriends ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className={cn('h-8 shrink-0 gap-1.5', FOCUS_VISIBLE_RING)}
-          onClick={onFindFriends}
-        >
-          <Search className="h-3.5 w-3.5" aria-hidden />
-          Find friends
-        </Button>
-      ) : null}
-    </div>
+    </DashboardAppShell>
   )
 }
