@@ -1,120 +1,87 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import {
-  formatOfficialLeagueName,
-  formatOfficialSeasonLabel,
-  formatOfficialStatusLabel,
-  joinPublicPool,
-  type OfficialPoolListItem,
-} from '@/src/lib/fetch-official-pools'
-import { normalizeSportKey, sportDisplayLabel } from '@/src/lib/sport-display'
-import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
+import { joinPublicPool } from '@/src/lib/fetch-official-pools'
+import { sportDisplayLabel } from '@/src/lib/sport-display'
 
-export { joinPublicPool, formatScoringStyleLabel }
+export { joinPublicPool }
 
-/** Page size for the main official-pools list (load more). */
-export const DISCOVER_PAGE_SIZE = 12
+/** Preview cap per section (matches RPC default). */
+export const DISCOVER_SECTION_CAP = 4
 
-/** Trending section size. */
-export const DISCOVER_TRENDING_LIMIT = 8
+/** Page size for See-all pagination. */
+export const DISCOVER_SECTION_PAGE_SIZE = 30
 
-export type DiscoverSportFilterId =
-  | 'all'
+/** How many official / public pools to pull for Discover search. */
+export const DISCOVER_SEARCH_FETCH_LIMIT = 100
+
+/** Sport chips on Discover (RPC section keys: `sport:<id>`). */
+export type DiscoverSportId =
   | 'soccer'
   | 'basketball'
-  | 'football'
+  | 'american_football'
   | 'hockey'
   | 'baseball'
-  | 'cricket'
 
-/** Sport chips on Discover — maps to normalized sporting_events.sport keys. */
 export const DISCOVER_SPORT_FILTERS: Array<{
-  id: DiscoverSportFilterId
+  id: DiscoverSportId
   label: string
-  /** null = all sports */
-  sportKey: string | null
+  iconPng: string
 }> = [
-  { id: 'all', label: 'All sports', sportKey: null },
-  { id: 'soccer', label: 'Soccer', sportKey: 'football' },
-  { id: 'basketball', label: 'Basketball', sportKey: 'basketball' },
-  { id: 'football', label: 'Football', sportKey: 'american_football' },
-  { id: 'hockey', label: 'Hockey', sportKey: 'hockey' },
-  { id: 'baseball', label: 'Baseball', sportKey: 'baseball' },
-  { id: 'cricket', label: 'Cricket', sportKey: 'cricket' },
+  { id: 'soccer', label: 'Soccer', iconPng: 'soccer.png' },
+  { id: 'basketball', label: 'Basketball', iconPng: 'basketball.png' },
+  { id: 'american_football', label: 'Football', iconPng: 'football.png' },
+  { id: 'hockey', label: 'Hockey', iconPng: 'hockey.png' },
+  { id: 'baseball', label: 'Baseball', iconPng: 'baseball.png' },
 ]
 
-export type DiscoverHost = {
-  userId: string
-  displayName: string
-  avatar: string | null
-  customAvatarUrl: string | null
-}
+export type DiscoverSectionKey =
+  | 'official'
+  | 'public'
+  | 'trending'
+  | `sport:${string}`
 
 export type DiscoverPoolCard = {
   id: string
   name: string
-  inviteCode: string
-  eventId: string | null
-  eventName: string
-  sport: string | null
-  sportKey: string
-  sportLabel: string
-  seasonLabel: string | null
-  eventStatus: string | null
-  eventStartDate: string | null
-  scoringStyle: string
-  scoringLabel: string
-  memberCount: number
-  recentJoins?: number
-  isMember: boolean
-  host: DiscoverHost | null
-}
-
-export type DiscoverTrendingPool = DiscoverPoolCard & {
-  recentJoins: number
-}
-
-export type DiscoverUpcomingCompetition = {
-  eventId: string
-  name: string
-  sport: string | null
-  sportLabel: string
-  status: string
-  startDate: string | null
-  endDate: string | null
-  officialPools: Array<{
-    id: string
-    name: string
-    inviteCode: string
-    isMember: boolean
-  }>
-}
-
-type PoolRow = {
-  id: string
-  name: string
-  invite_code: string
-  event_id: string | null
-  event_name: string | null
-  scoring_style: string
-  creator_id: string | null
-}
-
-type EventRow = {
-  id: string
-  name: string
-  sport: string | null
-  status: string
-  start_date: string | null
-  end_date: string | null
-  provider_season: string | null
-}
-
-type UserRow = {
-  id: string
-  display_name: string | null
   avatar: string | null
-  custom_avatar_url: string | null
+  emblemUrl: string | null
+  themeColor: string | null
+  isOfficial: boolean
+  isPublic: boolean
+  eventId: string | null
+  sport: string | null
+  sportLabel: string
+  eventName: string
+  memberCount: number
+  recentJoins: number
+  inviteCode: string
+  isMember: boolean
 }
+
+export type DiscoverSportBucket = {
+  sport: string
+  sportLabel: string
+  pools: DiscoverPoolCard[]
+}
+
+export type DiscoverSectionsPayload = {
+  official: DiscoverPoolCard[]
+  public: DiscoverPoolCard[]
+  trending: DiscoverPoolCard[]
+  bySport: DiscoverSportBucket[]
+}
+
+/** Preferred sport order for “Pools by sport”; unknowns follow by pool count. */
+const SPORT_ORDER = [
+  'soccer',
+  'football',
+  'american_football',
+  'basketball',
+  'baseball',
+  'hockey',
+  'cricket',
+  'tennis',
+  'volleyball',
+] as const
 
 function asNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -129,410 +96,293 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
 }
 
-function hostFromUser(row: UserRow | null | undefined): DiscoverHost | null {
-  if (!row?.id) return null
-  return {
-    userId: row.id,
-    displayName: row.display_name?.trim() || 'Host',
-    avatar: row.avatar,
-    customAvatarUrl: row.custom_avatar_url,
-  }
+function asBoolean(value: unknown): boolean {
+  return value === true
 }
 
-function buildDiscoverCard(
-  pool: PoolRow,
-  event: EventRow | undefined,
-  host: DiscoverHost | null,
-  memberCount: number,
-  isMember: boolean,
-  recentJoins?: number,
-): DiscoverPoolCard {
-  const sport = event?.sport ?? null
-  const sportKey = sport ? normalizeSportKey(sport) : 'football'
-  const eventName =
-    (event?.name ?? pool.event_name)?.trim() ||
-    formatOfficialLeagueName(pool.event_name, pool.name)
-
+function parseRpcPool(raw: unknown): DiscoverPoolCard | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const id = asString(row.id)
+  if (!id) return null
+  const sport = asString(row.sport)
   return {
-    id: pool.id,
-    name: pool.name,
-    inviteCode: pool.invite_code,
-    eventId: pool.event_id,
-    eventName,
+    id,
+    name: asString(row.name)?.trim() || 'Pool',
+    avatar: asString(row.avatar),
+    emblemUrl: asString(row.emblem_url),
+    themeColor: asString(row.theme_color),
+    isOfficial: asBoolean(row.is_official),
+    isPublic: asBoolean(row.is_public),
+    eventId: asString(row.event_id),
     sport,
-    sportKey,
     sportLabel: sport ? sportDisplayLabel(sport) : 'Sport',
-    seasonLabel: formatOfficialSeasonLabel(
-      event?.provider_season,
-      event?.start_date,
-      event?.end_date,
-    ),
-    eventStatus: event?.status ?? null,
-    eventStartDate: event?.start_date ?? null,
-    scoringStyle: pool.scoring_style || 'classic',
-    scoringLabel: formatScoringStyleLabel(pool.scoring_style || 'classic'),
-    memberCount,
-    recentJoins,
-    isMember,
-    host,
+    eventName: asString(row.event_name)?.trim() || 'Competition',
+    memberCount: Math.max(0, asNumber(row.member_count) ?? 0),
+    recentJoins: Math.max(0, asNumber(row.recent_joins) ?? 0),
+    inviteCode: asString(row.invite_code)?.trim() || '',
+    isMember: asBoolean(row.is_member),
   }
 }
 
-/**
- * Official discoverable pools with event sport + host (creator) enrichment.
- */
-export async function fetchDiscoverOfficialPools(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<{ pools: DiscoverPoolCard[]; error: string | null }> {
-  const { data: poolRows, error: poolsError } = await supabase
-    .from('pools')
-    .select(
-      'id, name, invite_code, event_id, event_name, scoring_style, creator_id',
-    )
-    .eq('is_official', true)
-    .eq('is_public', true)
-    .order('name', { ascending: true })
-
-  if (poolsError) {
-    console.error('fetchDiscoverOfficialPools:', poolsError.message)
-    return { pools: [], error: poolsError.message }
+function parsePoolList(raw: unknown): DiscoverPoolCard[] {
+  if (!Array.isArray(raw)) return []
+  const out: DiscoverPoolCard[] = []
+  for (const item of raw) {
+    const pool = parseRpcPool(item)
+    if (pool) out.push(pool)
   }
-
-  const pools = (poolRows ?? []) as PoolRow[]
-  if (pools.length === 0) return { pools: [], error: null }
-
-  const poolIds = pools.map((p) => p.id)
-  const eventIds = [
-    ...new Set(
-      pools
-        .map((p) => p.event_id)
-        .filter((id): id is string => Boolean(id?.trim())),
-    ),
-  ]
-  const creatorIds = [
-    ...new Set(
-      pools
-        .map((p) => p.creator_id)
-        .filter((id): id is string => Boolean(id?.trim())),
-    ),
-  ]
-
-  const [eventsResult, membersResult, myMembershipsResult, hostsResult] =
-    await Promise.all([
-      eventIds.length > 0
-        ? supabase
-            .from('sporting_events')
-            .select(
-              'id, name, sport, status, start_date, end_date, provider_season',
-            )
-            .in('id', eventIds)
-        : Promise.resolve({ data: [] as EventRow[], error: null }),
-      supabase.from('pool_members').select('pool_id').in('pool_id', poolIds),
-      supabase
-        .from('pool_members')
-        .select('pool_id')
-        .eq('user_id', userId)
-        .in('pool_id', poolIds),
-      creatorIds.length > 0
-        ? supabase
-            .from('users')
-            .select('id, display_name, avatar, custom_avatar_url')
-            .in('id', creatorIds)
-        : Promise.resolve({ data: [] as UserRow[], error: null }),
-    ])
-
-  if (eventsResult.error) {
-    console.error(
-      'fetchDiscoverOfficialPools events:',
-      eventsResult.error.message,
-    )
-  }
-  if (membersResult.error) {
-    console.error(
-      'fetchDiscoverOfficialPools members:',
-      membersResult.error.message,
-    )
-  }
-  if (myMembershipsResult.error) {
-    console.error(
-      'fetchDiscoverOfficialPools my memberships:',
-      myMembershipsResult.error.message,
-    )
-  }
-  if (hostsResult.error) {
-    console.error(
-      'fetchDiscoverOfficialPools hosts:',
-      hostsResult.error.message,
-    )
-  }
-
-  const eventsById = new Map<string, EventRow>()
-  for (const row of (eventsResult.data ?? []) as EventRow[]) {
-    eventsById.set(row.id, row)
-  }
-
-  const hostsById = new Map<string, DiscoverHost>()
-  for (const row of (hostsResult.data ?? []) as UserRow[]) {
-    const host = hostFromUser(row)
-    if (host) hostsById.set(host.userId, host)
-  }
-
-  const memberCounts = new Map<string, number>()
-  for (const row of membersResult.data ?? []) {
-    const id = row.pool_id as string
-    memberCounts.set(id, (memberCounts.get(id) ?? 0) + 1)
-  }
-
-  const myPoolIds = new Set(
-    (myMembershipsResult.data ?? []).map((row) => row.pool_id as string),
-  )
-
-  const items = pools.map((pool) => {
-    const event = pool.event_id ? eventsById.get(pool.event_id) : undefined
-    const host = pool.creator_id
-      ? (hostsById.get(pool.creator_id) ?? null)
-      : null
-    return buildDiscoverCard(
-      pool,
-      event,
-      host,
-      memberCounts.get(pool.id) ?? 0,
-      myPoolIds.has(pool.id),
-    )
-  })
-
-  const statusRank = (status: string | null) => {
-    const s = (status ?? '').toLowerCase()
-    if (s === 'live') return 0
-    if (s === 'upcoming' || s === 'scheduled') return 1
-    if (s === 'completed' || s === 'finished') return 3
-    return 2
-  }
-
-  items.sort((a, b) => {
-    const ra = statusRank(a.eventStatus)
-    const rb = statusRank(b.eventStatus)
-    if (ra !== rb) return ra - rb
-    return a.eventName.localeCompare(b.eventName)
-  })
-
-  return { pools: items, error: null }
+  return out
 }
 
 /**
- * Trending = most members joined in the last 7 days (RPC),
- * tiebreak total member_count. Metric: recent_joins (7d).
+ * RPC rows omit invite_code / is_member — enrich so Join/Open keep working.
  */
-export async function fetchTrendingOfficialPools(
+async function enrichDiscoverPools(
   supabase: SupabaseClient,
   userId: string,
-  limit = DISCOVER_TRENDING_LIMIT,
-): Promise<{ pools: DiscoverTrendingPool[]; error: string | null }> {
-  const { data, error } = await supabase.rpc('get_trending_official_pools', {
-    p_limit: limit,
-  })
+  pools: DiscoverPoolCard[],
+): Promise<DiscoverPoolCard[]> {
+  if (pools.length === 0) return pools
 
-  if (error) {
-    console.error('get_trending_official_pools failed:', error.message)
-    return { pools: [], error: error.message }
-  }
-
-  if (!Array.isArray(data) || data.length === 0) {
-    return { pools: [], error: null }
-  }
-
-  const poolIds = data
-    .map((row) => asString((row as Record<string, unknown>).pool_id))
-    .filter((id): id is string => Boolean(id))
-
-  const myPoolIds = new Set<string>()
-  if (poolIds.length > 0) {
-    const { data: memberships } = await supabase
+  const poolIds = [...new Set(pools.map((p) => p.id))]
+  const [poolsResult, membershipsResult] = await Promise.all([
+    supabase.from('pools').select('id, invite_code').in('id', poolIds),
+    supabase
       .from('pool_members')
       .select('pool_id')
       .eq('user_id', userId)
-      .in('pool_id', poolIds)
-    for (const row of memberships ?? []) {
-      myPoolIds.add(row.pool_id as string)
-    }
+      .in('pool_id', poolIds),
+  ])
+
+  if (poolsResult.error) {
+    console.error('enrichDiscoverPools invite codes:', poolsResult.error.message)
+  }
+  if (membershipsResult.error) {
+    console.error(
+      'enrichDiscoverPools memberships:',
+      membershipsResult.error.message,
+    )
   }
 
-  const pools: DiscoverTrendingPool[] = []
-  for (const raw of data) {
-    if (!raw || typeof raw !== 'object') continue
-    const row = raw as Record<string, unknown>
-    const poolId = asString(row.pool_id)
-    if (!poolId) continue
+  const inviteById = new Map<string, string>()
+  for (const row of poolsResult.data ?? []) {
+    const id = row.id as string
+    const code = typeof row.invite_code === 'string' ? row.invite_code.trim() : ''
+    if (id && code) inviteById.set(id, code)
+  }
 
-    const sport = asString(row.sport)
-    const sportKey = sport ? normalizeSportKey(sport) : 'football'
-    const eventName =
-      asString(row.event_name)?.trim() ||
-      asString(row.name)?.trim() ||
-      'Competition'
-    const scoringStyle = asString(row.scoring_style) || 'classic'
-    const hostUserId = asString(row.host_user_id)
-    const host: DiscoverHost | null = hostUserId
-      ? {
-          userId: hostUserId,
-          displayName: asString(row.host_name)?.trim() || 'Host',
-          avatar: asString(row.host_avatar),
-          customAvatarUrl: asString(row.host_custom_avatar_url),
-        }
-      : null
+  const memberIds = new Set(
+    (membershipsResult.data ?? []).map((row) => row.pool_id as string),
+  )
 
-    pools.push({
-      id: poolId,
-      name: asString(row.name)?.trim() || 'Official pool',
-      inviteCode: asString(row.invite_code) || '',
-      eventId: asString(row.event_id),
-      eventName,
+  return pools.map((pool) => ({
+    ...pool,
+    inviteCode: inviteById.get(pool.id) || pool.inviteCode,
+    isMember: memberIds.has(pool.id) || pool.isMember,
+  }))
+}
+
+function sportRank(sport: string): number {
+  const key = sport.trim().toLowerCase()
+  const idx = SPORT_ORDER.indexOf(key as (typeof SPORT_ORDER)[number])
+  return idx >= 0 ? idx : SPORT_ORDER.length + 1
+}
+
+function orderBySport(
+  bySportRaw: Record<string, unknown>,
+): DiscoverSportBucket[] {
+  const buckets: DiscoverSportBucket[] = []
+  for (const [sport, list] of Object.entries(bySportRaw)) {
+    const pools = parsePoolList(list)
+    if (pools.length === 0) continue
+    buckets.push({
       sport,
-      sportKey,
-      sportLabel: sport ? sportDisplayLabel(sport) : 'Sport',
-      seasonLabel: null,
-      eventStatus: null,
-      eventStartDate: null,
-      scoringStyle,
-      scoringLabel: formatScoringStyleLabel(scoringStyle),
-      memberCount: Math.max(0, asNumber(row.member_count) ?? 0),
-      recentJoins: Math.max(0, asNumber(row.recent_joins) ?? 0),
-      isMember: myPoolIds.has(poolId),
-      host,
+      sportLabel: sportDisplayLabel(sport),
+      pools,
     })
   }
 
+  buckets.sort((a, b) => {
+    const ra = sportRank(a.sport)
+    const rb = sportRank(b.sport)
+    if (ra !== rb) return ra - rb
+    const ca = a.pools.reduce((n, p) => n + p.memberCount, 0)
+    const cb = b.pools.reduce((n, p) => n + p.memberCount, 0)
+    if (ca !== cb) return cb - ca
+    return a.sportLabel.localeCompare(b.sportLabel)
+  })
+
+  return buckets
+}
+
+export async function fetchDiscoverSections(
+  supabase: SupabaseClient,
+  userId: string,
+  cap = DISCOVER_SECTION_CAP,
+): Promise<{ sections: DiscoverSectionsPayload; error: string | null }> {
+  const { data, error } = await supabase.rpc('get_discover_sections', {
+    p_user_id: userId,
+    p_cap: cap,
+  })
+
+  if (error) {
+    console.error('get_discover_sections failed:', error.message)
+    return {
+      sections: { official: [], public: [], trending: [], bySport: [] },
+      error: error.message,
+    }
+  }
+
+  const root =
+    data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+
+  const official = parsePoolList(root.official)
+  const publicPools = parsePoolList(root.public)
+  const trending = parsePoolList(root.trending)
+  const bySportRaw =
+    root.by_sport && typeof root.by_sport === 'object'
+      ? (root.by_sport as Record<string, unknown>)
+      : {}
+  const bySport = orderBySport(bySportRaw)
+
+  const allPools = [
+    ...official,
+    ...publicPools,
+    ...trending,
+    ...bySport.flatMap((b) => b.pools),
+  ]
+  const enriched = await enrichDiscoverPools(supabase, userId, allPools)
+  const byId = new Map(enriched.map((p) => [p.id, p]))
+
+  const mapList = (list: DiscoverPoolCard[]) =>
+    list.map((p) => byId.get(p.id) ?? p)
+
+  return {
+    sections: {
+      official: mapList(official),
+      public: mapList(publicPools),
+      trending: mapList(trending),
+      bySport: bySport.map((b) => ({
+        ...b,
+        pools: mapList(b.pools),
+      })),
+    },
+    error: null,
+  }
+}
+
+export async function fetchDiscoverSectionAll(
+  supabase: SupabaseClient,
+  userId: string,
+  section: DiscoverSectionKey,
+  options?: { limit?: number; offset?: number },
+): Promise<{ pools: DiscoverPoolCard[]; error: string | null }> {
+  const limit = options?.limit ?? DISCOVER_SECTION_PAGE_SIZE
+  const offset = options?.offset ?? 0
+
+  const { data, error } = await supabase.rpc('get_discover_section_all', {
+    p_user_id: userId,
+    p_section: section,
+    p_limit: limit,
+    p_offset: offset,
+  })
+
+  if (error) {
+    console.error('get_discover_section_all failed:', error.message)
+    return { pools: [], error: error.message }
+  }
+
+  const pools = await enrichDiscoverPools(
+    supabase,
+    userId,
+    parsePoolList(data),
+  )
   return { pools, error: null }
 }
 
-/**
- * Live + upcoming competitions with linked official pools (if any).
- */
-export async function fetchDiscoverUpcomingCompetitions(
-  supabase: SupabaseClient,
-  _userId: string,
-  officialPools: DiscoverPoolCard[],
-): Promise<{ events: DiscoverUpcomingCompetition[]; error: string | null }> {
-  const { data, error } = await supabase
-    .from('sporting_events')
-    .select('id, name, sport, status, start_date, end_date')
-    .in('status', ['live', 'upcoming', 'scheduled'])
-    .order('start_date', { ascending: true })
-
-  if (error) {
-    console.error('fetchDiscoverUpcomingCompetitions:', error.message)
-    return { events: [], error: error.message }
+export function discoverSectionTitle(section: DiscoverSectionKey): string {
+  if (section === 'official') return 'Official pools'
+  if (section === 'public') return 'Public pools'
+  if (section === 'trending') return 'Trending pools'
+  if (section.startsWith('sport:')) {
+    const sport = section.slice('sport:'.length)
+    return sport ? sportDisplayLabel(sport) : 'Pools by sport'
   }
-
-  const poolsByEvent = new Map<string, DiscoverPoolCard[]>()
-  for (const pool of officialPools) {
-    if (!pool.eventId) continue
-    const list = poolsByEvent.get(pool.eventId) ?? []
-    list.push(pool)
-    poolsByEvent.set(pool.eventId, list)
-  }
-
-  const events: DiscoverUpcomingCompetition[] = (data ?? []).map((row) => {
-    const sport = (row.sport as string | null) ?? null
-    const linked = poolsByEvent.get(row.id as string) ?? []
-    return {
-      eventId: row.id as string,
-      name: ((row.name as string) || 'Competition').trim(),
-      sport,
-      sportLabel: sport ? sportDisplayLabel(sport) : 'Sport',
-      status: (row.status as string) || 'upcoming',
-      startDate: (row.start_date as string | null) ?? null,
-      endDate: (row.end_date as string | null) ?? null,
-      officialPools: linked.map((p) => ({
-        id: p.id,
-        name: p.name,
-        inviteCode: p.inviteCode,
-        isMember: p.isMember,
-      })),
-    }
-  })
-
-  // Prefer live first, then soonest start.
-  events.sort((a, b) => {
-    const ra = a.status === 'live' ? 0 : 1
-    const rb = b.status === 'live' ? 0 : 1
-    if (ra !== rb) return ra - rb
-    return (a.startDate ?? '').localeCompare(b.startDate ?? '')
-  })
-
-  return { events, error: null }
+  return 'Pools'
 }
 
-export function sportFilterKey(
-  sportId: DiscoverSportFilterId,
-): string | null {
-  return (
-    DISCOVER_SPORT_FILTERS.find((s) => s.id === sportId)?.sportKey ?? null
+export function markPoolJoinedInList(
+  list: DiscoverPoolCard[],
+  poolId: string,
+  alreadyMember: boolean,
+): DiscoverPoolCard[] {
+  return list.map((p) =>
+    p.id === poolId
+      ? {
+          ...p,
+          isMember: true,
+          memberCount: alreadyMember ? p.memberCount : p.memberCount + 1,
+        }
+      : p,
   )
 }
 
-export function filterDiscoverPools(
-  pools: DiscoverPoolCard[],
-  options: {
-    sportId: DiscoverSportFilterId
-    eventId: string | null
-    query: string
-  },
-): DiscoverPoolCard[] {
-  const sportKey = sportFilterKey(options.sportId)
-  const q = options.query.trim().toLowerCase()
+/**
+ * Load official + public pools for Discover search (no dedicated search RPC).
+ * Dedupes by id (official wins on conflict).
+ */
+export async function fetchDiscoverSearchCorpus(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = DISCOVER_SEARCH_FETCH_LIMIT,
+): Promise<{ pools: DiscoverPoolCard[]; error: string | null }> {
+  const [official, publicPools] = await Promise.all([
+    fetchDiscoverSectionAll(supabase, userId, 'official', {
+      limit,
+      offset: 0,
+    }),
+    fetchDiscoverSectionAll(supabase, userId, 'public', {
+      limit,
+      offset: 0,
+    }),
+  ])
 
+  const byId = new Map<string, DiscoverPoolCard>()
+  for (const pool of official.pools) byId.set(pool.id, pool)
+  for (const pool of publicPools.pools) {
+    if (!byId.has(pool.id)) byId.set(pool.id, pool)
+  }
+
+  const error = official.error || publicPools.error
+  return { pools: [...byId.values()], error }
+}
+
+/** Match pool name or event name (case-insensitive substring). */
+export function filterDiscoverPoolsByQuery(
+  pools: DiscoverPoolCard[],
+  query: string,
+): DiscoverPoolCard[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return pools
   return pools.filter((pool) => {
-    if (sportKey && pool.sportKey !== sportKey) return false
-    if (options.eventId && pool.eventId !== options.eventId) return false
-    if (q) {
-      const hay = `${pool.name} ${pool.eventName} ${pool.sportLabel}`.toLowerCase()
-      if (!hay.includes(q)) return false
-    }
-    return true
+    const hay = `${pool.name} ${pool.eventName}`.toLowerCase()
+    return hay.includes(q)
   })
 }
 
-/** Unique competitions for the competition filter (optionally scoped by sport). */
-export function discoverCompetitionOptions(
+/** Official pools first, then name — for sport-filtered flat lists. */
+export function sortDiscoverPoolsOfficialFirst(
   pools: DiscoverPoolCard[],
-  sportId: DiscoverSportFilterId,
-): Array<{ eventId: string; label: string }> {
-  const sportKey = sportFilterKey(sportId)
-  const map = new Map<string, string>()
-  for (const pool of pools) {
-    if (!pool.eventId) continue
-    if (sportKey && pool.sportKey !== sportKey) continue
-    if (!map.has(pool.eventId)) map.set(pool.eventId, pool.eventName)
-  }
-  return [...map.entries()]
-    .map(([eventId, label]) => ({ eventId, label }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+): DiscoverPoolCard[] {
+  return [...pools].sort((a, b) => {
+    if (a.isOfficial !== b.isOfficial) return a.isOfficial ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
 }
 
-export function formatDiscoverStatus(
-  status: string | null | undefined,
-  startDate: string | null | undefined,
-): ReturnType<typeof formatOfficialStatusLabel> {
-  return formatOfficialStatusLabel(status, startDate)
-}
-
-/** Adapt DiscoverPoolCard → OfficialPoolListItem shape if needed by shared UI. */
-export function toOfficialListItem(
-  pool: DiscoverPoolCard,
-): OfficialPoolListItem {
-  return {
-    id: pool.id,
-    name: pool.name,
-    inviteCode: pool.inviteCode,
-    eventId: pool.eventId,
-    leagueName: formatOfficialLeagueName(pool.eventName, pool.name),
-    seasonLabel: pool.seasonLabel,
-    eventStatus: pool.eventStatus,
-    eventStartDate: pool.eventStartDate,
-    scoringStyle: pool.scoringStyle,
-    memberCount: pool.memberCount,
-    isMember: pool.isMember,
-  }
+export function discoverSportSectionKey(
+  sport: DiscoverSportId,
+): DiscoverSectionKey {
+  return `sport:${sport}`
 }

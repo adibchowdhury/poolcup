@@ -14,6 +14,17 @@ import { useRouter } from 'next/navigation'
 import { Download, Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/src/lib/auth-context'
 import {
   POOL_SCORING_STYLE_OPTIONS,
@@ -156,6 +167,8 @@ export default function CreatePoolPage() {
   const [poolName, setPoolName] = useState('')
   const [poolDescription, setPoolDescription] = useState('')
   const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('winner')
+  const [isPublic, setIsPublic] = useState(false)
+  const [publicConfirmOpen, setPublicConfirmOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -374,6 +387,7 @@ export default function CreatePoolPage() {
         event_name: selectedEvent.name,
         event_id: selectedEvent.id,
         creator_id: user.id,
+        is_public: isPublic,
       })
       .select('id, invite_code, is_public')
       .single()
@@ -924,6 +938,36 @@ export default function CreatePoolPage() {
                   ) : null}
                 </div>
 
+                <div className="flex items-start justify-between gap-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/70 px-4 py-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <label
+                      htmlFor="create-pool-public"
+                      className="text-sm font-medium text-[#f0f4f8]"
+                    >
+                      Make this pool public
+                    </label>
+                    <p
+                      id="create-pool-public-help"
+                      className="text-xs leading-relaxed text-[#5a7080]"
+                    >
+                      Anyone can find and join this pool from Discover.
+                    </p>
+                  </div>
+                  <Switch
+                    id="create-pool-public"
+                    checked={isPublic}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setPublicConfirmOpen(true)
+                        return
+                      }
+                      setIsPublic(false)
+                    }}
+                    disabled={submitting}
+                    aria-describedby="create-pool-public-help"
+                  />
+                </div>
+
                 {error ? (
                   <div
                     className={cn(
@@ -1106,6 +1150,41 @@ export default function CreatePoolPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={publicConfirmOpen}
+        onOpenChange={(open) => {
+          setPublicConfirmOpen(open)
+          if (!open && !isPublic) {
+            // Cancel / dismiss keeps toggle off (already false).
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make this pool public?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anyone will be able to see and join it from the Discover page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setIsPublic(false)
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsPublic(true)
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   )
 }

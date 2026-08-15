@@ -102,6 +102,7 @@ type PoolSettingsTabProps = {
   scoreDrawPoints: number | null
   scoringLocked: boolean
   acceptingMembers: boolean
+  isPublic?: boolean
   members: LeaderboardMember[]
   poolCreatorUserId?: string
   currentUserId: string
@@ -123,6 +124,7 @@ type PoolSettingsTabProps = {
     scoreDrawPoints: number | null
   }) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
+  onIsPublicChange?: (isPublic: boolean) => void
   onMemberRemoved?: (memberId: string) => void
   onOwnershipTransferred?: (newOwnerUserId: string) => void
   onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
@@ -189,6 +191,7 @@ export function PoolSettingsTab({
   scoreDrawPoints,
   scoringLocked,
   acceptingMembers,
+  isPublic = false,
   members,
   poolCreatorUserId,
   currentUserId,
@@ -202,6 +205,7 @@ export function PoolSettingsTab({
   onPoolEmblemUrlChange,
   onPoolScoringChange,
   onAcceptingMembersChange,
+  onIsPublicChange,
   onMemberRemoved,
   onOwnershipTransferred,
   onManagedAnnouncementChange,
@@ -241,6 +245,9 @@ export function PoolSettingsTab({
     string | null
   >(null)
   const [savingAcceptingMembers, setSavingAcceptingMembers] = useState(false)
+  const [isPublicError, setIsPublicError] = useState<string | null>(null)
+  const [savingIsPublic, setSavingIsPublic] = useState(false)
+  const [publicConfirmOpen, setPublicConfirmOpen] = useState(false)
   const [customHex, setCustomHex] = useState(
     () => poolThemeColor ?? DEFAULT_POOL_THEME_COLOR,
   )
@@ -431,6 +438,37 @@ export function PoolSettingsTab({
       action: checked ? 'pool_opened' : 'pool_closed',
       pool_id: poolId,
     })
+  }
+
+  async function persistIsPublic(next: boolean) {
+    if (!poolId || savingIsPublic || !isAdmin) return
+
+    setSavingIsPublic(true)
+    setIsPublicError(null)
+
+    const result = await patchPoolSettings(poolId, { isPublic: next })
+    setSavingIsPublic(false)
+
+    if (!result.success) {
+      setIsPublicError(result.error || 'Failed to update pool visibility')
+      return
+    }
+
+    const resolved = result.pool?.isPublic ?? next
+    onIsPublicChange?.(resolved)
+    capturePostHog('pool_visibility_changed', {
+      pool_id: poolId,
+      is_public: resolved,
+    })
+  }
+
+  function handleIsPublicToggle(checked: boolean) {
+    if (!poolId || savingIsPublic || !isAdmin) return
+    if (checked) {
+      setPublicConfirmOpen(true)
+      return
+    }
+    void persistIsPublic(false)
   }
 
   async function persistThemeColor(next: string | null) {
@@ -1554,7 +1592,9 @@ export function PoolSettingsTab({
                   className="text-xs leading-relaxed text-muted-foreground"
                 >
                   {acceptingMembers
-                    ? 'Anyone with the invite link can join.'
+                    ? isPublic
+                      ? 'Anyone can join from Discover or with the invite link.'
+                      : 'Anyone with the invite link can join.'
                     : 'Closed — no new members can join. Soft-close preferred over deleting.'}
                 </p>
                 {acceptingMembersError ? (
@@ -1589,6 +1629,39 @@ export function PoolSettingsTab({
                 Close to new members
               </Button>
             ) : null}
+
+            <div className="mt-6 flex items-start justify-between gap-4 border-t border-border/60 pt-5">
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label
+                  htmlFor="pool-public-toggle"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Make this pool public
+                </Label>
+                <p
+                  id="pool-public-help"
+                  className="text-xs leading-relaxed text-muted-foreground"
+                >
+                  Anyone can find and join this pool from Discover.
+                </p>
+                {isPublicError ? (
+                  <p className="text-xs text-destructive" role="alert">
+                    {isPublicError}
+                  </p>
+                ) : null}
+              </div>
+              <Switch
+                id="pool-public-toggle"
+                checked={isPublic}
+                onCheckedChange={handleIsPublicToggle}
+                disabled={savingIsPublic || !poolId || !isAdmin}
+                aria-describedby="pool-public-help"
+              />
+            </div>
+            {savingIsPublic ? (
+              <p className="mt-2 text-xs text-muted-foreground">Saving…</p>
+            ) : null}
+
             {acceptingMembers && inviteCode ? (
               <div className="mt-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -1981,6 +2054,30 @@ export function PoolSettingsTab({
               ) : (
                 'Remove member'
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={publicConfirmOpen} onOpenChange={setPublicConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make this pool public?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anyone will be able to see and join it from the Discover page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={savingIsPublic}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={savingIsPublic}
+              onClick={(e) => {
+                e.preventDefault()
+                setPublicConfirmOpen(false)
+                void persistIsPublic(true)
+              }}
+            >
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

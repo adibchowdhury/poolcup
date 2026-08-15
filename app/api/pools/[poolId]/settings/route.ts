@@ -44,6 +44,7 @@ type PatchBody = {
   name?: string
   description?: string | null
   acceptingMembers?: boolean
+  isPublic?: boolean
   themeColor?: string | null
   /** Custom uploaded emblem public URL, or null to clear. */
   emblemUrl?: string | null
@@ -87,7 +88,7 @@ export async function PATCH(request: Request, context: Ctx) {
   const { data: pool, error: poolError } = await admin
     .from('pools')
     .select(
-      'id, name, description, accepting_members, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style, scoring_locked_at',
+      'id, name, description, accepting_members, is_public, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style, scoring_locked_at',
     )
     .eq('id', poolId)
     .maybeSingle()
@@ -144,6 +145,17 @@ export async function PATCH(request: Request, context: Ctx) {
       updates.accepting_members = body.acceptingMembers
       logs.push({
         action: body.acceptingMembers ? 'pool_opened' : 'pool_closed',
+      })
+    }
+  }
+
+  if (typeof body.isPublic === 'boolean') {
+    const prev = pool.is_public === true
+    if (body.isPublic !== prev) {
+      updates.is_public = body.isPublic
+      logs.push({
+        action: 'visibility_changed',
+        detail: { is_public: body.isPublic },
       })
     }
   }
@@ -303,6 +315,7 @@ export async function PATCH(request: Request, context: Ctx) {
         name: pool.name,
         description: pool.description ?? null,
         acceptingMembers: pool.accepting_members ?? true,
+        isPublic: pool.is_public === true,
         themeColor: pool.theme_color ?? null,
         emblemUrl:
           typeof pool.emblem_url === 'string' && pool.emblem_url.trim()
@@ -323,7 +336,7 @@ export async function PATCH(request: Request, context: Ctx) {
     .update(updates)
     .eq('id', poolId)
     .select(
-      'name, description, accepting_members, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style',
+      'name, description, accepting_members, is_public, theme_color, emblem_url, score_exact_points, score_winner_points, score_draw_points, scoring_style',
     )
     .maybeSingle()
 
@@ -429,6 +442,7 @@ export async function PATCH(request: Request, context: Ctx) {
       name: updated.name,
       description: updated.description ?? null,
       acceptingMembers: updated.accepting_members ?? true,
+      isPublic: updated.is_public === true,
       themeColor: updated.theme_color ?? null,
       emblemUrl:
         typeof updated.emblem_url === 'string' && updated.emblem_url.trim()

@@ -65,6 +65,7 @@ export type PoolHomeMeta = {
   nextMatchIn: string | null
   nextMatchKickoffAt: string | null
   acceptingMembers: boolean
+  isPublic: boolean
   avatar: string | null
   /** Custom uploaded emblem URL (nullable). */
   emblemUrl: string | null
@@ -114,6 +115,7 @@ interface PoolHomeViewProps {
   onPoolNameChange?: (name: string) => void
   onPoolDescriptionChange?: (description: string | null) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
+  onIsPublicChange?: (isPublic: boolean) => void
   onPoolAvatarChange?: (avatar: string) => void
   onPoolThemeColorChange?: (themeColor: string | null) => void
   onPoolEmblemUrlChange?: (emblemUrl: string | null) => void
@@ -154,6 +156,7 @@ export function PoolHomeView({
   onPoolNameChange,
   onPoolDescriptionChange,
   onAcceptingMembersChange,
+  onIsPublicChange,
   onPoolAvatarChange,
   onPoolThemeColorChange,
   onPoolEmblemUrlChange,
@@ -697,6 +700,7 @@ export function PoolHomeView({
                 scoreDrawPoints={pool.scoreDrawPoints}
                 scoringLocked={pool.scoringLocked}
                 acceptingMembers={pool.acceptingMembers}
+                isPublic={pool.isPublic}
                 members={members}
                 poolCreatorUserId={poolCreatorUserId}
                 currentUserId={currentUserId}
@@ -710,6 +714,7 @@ export function PoolHomeView({
                 onPoolEmblemUrlChange={onPoolEmblemUrlChange}
                 onPoolScoringChange={onPoolScoringChange}
                 onAcceptingMembersChange={onAcceptingMembersChange}
+                onIsPublicChange={onIsPublicChange}
                 onMemberRemoved={onMemberRemoved}
                 onOwnershipTransferred={onOwnershipTransferred}
                 onManagedAnnouncementChange={onManagedAnnouncementChange}

@@ -63,6 +63,7 @@ type Pool = {
   creator_id: string
   scoring_style: string
   accepting_members: boolean | null
+  is_public: boolean | null
   avatar: string | null
   emblem_url: string | null
   theme_color: string | null
@@ -211,6 +212,12 @@ export function PoolPageClient() {
     )
   }, [])
 
+  const handleIsPublicChange = useCallback((isPublic: boolean) => {
+    setPoolMeta((previous) =>
+      previous ? { ...previous, isPublic } : previous,
+    )
+  }, [])
+
   const handleMemberRemoved = useCallback((removedMemberId: string) => {
     setMembers((previous) => previous.filter((m) => m.id !== removedMemberId))
     setPoolMeta((previous) =>
@@ -305,7 +312,7 @@ export function PoolPageClient() {
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
       .select(
-        'id, name, description, invite_code, creator_id, scoring_style, accepting_members, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
+        'id, name, description, invite_code, creator_id, scoring_style, accepting_members, is_public, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
       )
       .eq('invite_code', inviteCode)
       .maybeSingle()
@@ -554,6 +561,7 @@ export function PoolPageClient() {
       nextMatchIn,
       nextMatchKickoffAt,
       acceptingMembers: pool.accepting_members ?? true,
+      isPublic: pool.is_public === true,
       avatar: pool.avatar ?? null,
       emblemUrl: pool.emblem_url ?? null,
       themeColor: pool.theme_color ?? null,
@@ -895,6 +903,7 @@ export function PoolPageClient() {
       onPoolNameChange={handlePoolNameChange}
       onPoolDescriptionChange={handlePoolDescriptionChange}
       onAcceptingMembersChange={handleAcceptingMembersChange}
+      onIsPublicChange={handleIsPublicChange}
       onPoolAvatarChange={handlePoolAvatarChange}
       onPoolThemeColorChange={handlePoolThemeColorChange}
       onPoolEmblemUrlChange={handlePoolEmblemUrlChange}

@@ -4,6 +4,7 @@ export type PoolSettingsPatch = {
   name?: string
   description?: string | null
   acceptingMembers?: boolean
+  isPublic?: boolean
   themeColor?: string | null
   emblemUrl?: string | null
   scoreExactPoints?: number | null
@@ -27,6 +28,7 @@ export type PoolSettingsPatchResult = {
     name: string
     description: string | null
     acceptingMembers: boolean
+    isPublic: boolean
     themeColor: string | null
     emblemUrl?: string | null
     scoreExactPoints: number | null
