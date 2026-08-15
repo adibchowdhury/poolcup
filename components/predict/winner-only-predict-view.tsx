@@ -956,10 +956,15 @@ export function WinnerOnlyPredictView({
         return next
       })
       savedCount += 1
-      capturePostHog('prediction_submitted', {
-        pool_id: pool.id,
-        match_id: match.matchId,
-      })
+      capturePostHog(
+        match.savedPick === 1 || match.savedPick === 2
+          ? 'prediction_edited'
+          : 'prediction_submitted',
+        {
+          pool_id: pool.id,
+          match_id: match.matchId,
+        },
+      )
       void import('@/components/push/push-nudge-host').then(
         ({ markFirstPredictionForPushNudge }) => {
           markFirstPredictionForPushNudge()

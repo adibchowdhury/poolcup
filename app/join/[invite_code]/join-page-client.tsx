@@ -225,7 +225,7 @@ export function JoinPoolPageClient() {
     })
     capturePostHog('pool_joined', {
       pool_id: pool.id,
-      via: 'invite_code',
+      via: 'invite',
     })
 
     const { error: referralError } = await supabase.rpc('award_referral_points', {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -59,8 +59,9 @@ export function BillingSettingsView({
   const [portalBusy, setPortalBusy] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
   const [finalizing, setFinalizing] = useState(false)
+  const subscriptionStartedRef = useRef(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<BillingSnapshot | null> => {
     setLoading(true)
     setError(null)
     setRetryAction(null)
@@ -68,7 +69,7 @@ export function BillingSettingsView({
       const res = await fetch('/api/billing/me')
       if (res.status === 401) {
         router.push('/login?next=/settings/billing')
-        return
+        return null
       }
       if (!res.ok) {
         throw new Error('Could not load billing')
@@ -76,9 +77,11 @@ export function BillingSettingsView({
       const data = (await res.json()) as { billing?: BillingSnapshot }
       if (!data.billing) throw new Error('Could not load billing')
       setBilling(data.billing)
+      return data.billing
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load billing')
       setRetryAction({ kind: 'load' })
+      return null
     } finally {
       setLoading(false)
     }
@@ -89,22 +92,42 @@ export function BillingSettingsView({
   }, [initial.tier])
 
   useEffect(() => {
-    if (checkoutStatus === 'success') {
-      setBanner("You're all set! Plan active.")
-      if (billing.tier === 'free') {
-        setFinalizing(true)
-        const t = window.setTimeout(() => {
-          void (async () => {
-            await load()
-            setFinalizing(false)
-          })()
-        }, 1500)
-        return () => window.clearTimeout(t)
+    if (checkoutStatus !== 'success') {
+      if (checkoutStatus === 'cancel') {
+        setBanner('Checkout canceled.')
       }
-    } else if (checkoutStatus === 'cancel') {
-      setBanner('Checkout canceled.')
+      return undefined
     }
-    return undefined
+
+    setBanner("You're all set! Plan active.")
+
+    let cancelled = false
+    const fireIfPaid = (tier: BillingTier) => {
+      if (subscriptionStartedRef.current) return
+      if (tier === 'pro' || tier === 'commissioner') {
+        subscriptionStartedRef.current = true
+        capturePostHog('subscription_started', { plan: tier })
+      }
+    }
+
+    if (billing.tier === 'pro' || billing.tier === 'commissioner') {
+      fireIfPaid(billing.tier)
+      return undefined
+    }
+
+    setFinalizing(true)
+    const t = window.setTimeout(() => {
+      void (async () => {
+        const next = await load()
+        if (cancelled) return
+        setFinalizing(false)
+        if (next) fireIfPaid(next.tier)
+      })()
+    }, 1500)
+    return () => {
+      cancelled = true
+      window.clearTimeout(t)
+    }
   }, [checkoutStatus, billing.tier, load])
 
   async function handleUpgrade(plan: BillingPlan) {

@@ -29,6 +29,7 @@ import {
 import { trackEvent } from '@/src/lib/track'
 import { useAuth } from '@/src/lib/auth-context'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
@@ -201,9 +202,7 @@ export function PoolCard({
       user?.id,
     )
     void import('@/src/lib/share-client').then(({ shareOrCopy }) => {
-      void import('@/src/lib/posthog-client').then(({ capturePostHog }) => {
-        capturePostHog('share_card_generated', { type: 'pool_invite' })
-      })
+      capturePostHog('share_card_generated', { type: 'pool_invite' })
       void shareOrCopy({
         title: `Join ${pool.name} on PoolCup`,
         text: 'Join my prediction pool on PoolCup',
@@ -216,11 +215,17 @@ export function PoolCard({
             poolId: pool.id,
             metadata: { source: 'dashboard_card' },
           })
+          capturePostHog('invite_link_copied', { pool_id: pool.id })
           setCopied(true)
           window.setTimeout(() => setCopied(false), 2000)
         })
         .catch(() => {
           void navigator.clipboard.writeText(joinUrl)
+          trackEvent('invite_link_copied', {
+            poolId: pool.id,
+            metadata: { source: 'dashboard_card' },
+          })
+          capturePostHog('invite_link_copied', { pool_id: pool.id })
           setCopied(true)
           window.setTimeout(() => setCopied(false), 2000)
         })

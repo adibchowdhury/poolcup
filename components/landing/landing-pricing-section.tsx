@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, Minus } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
   startBillingCheckout,
   type BillingPlan,
 } from '@/src/lib/billing-checkout-client'
+import { capturePostHog } from '@/src/lib/posthog-client'
 
 const SIGNUP_HREF = '/login?next=/create'
 const LOGIN_FOR_PRICING_HREF = '/login?next=/pricing'
@@ -333,6 +334,10 @@ function PricingCard({
 export function LandingPricingSection() {
   const [period, setPeriod] = useState<BillingPeriod>('monthly')
   const toggleId = useId()
+
+  useEffect(() => {
+    capturePostHog('pricing_viewed')
+  }, [])
 
   return (
     <div className="bg-[#0a0e12]">

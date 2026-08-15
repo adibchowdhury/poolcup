@@ -43,6 +43,9 @@ export function PoolInviteCard({
       poolId: poolId ?? null,
       metadata: { source },
     })
+    if (poolId) {
+      capturePostHog('invite_link_copied', { pool_id: poolId })
+    }
     setCopied(true)
     window.setTimeout(() => setCopied(false), 2000)
   }

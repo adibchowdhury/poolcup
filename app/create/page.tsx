@@ -20,7 +20,7 @@ import {
   type PoolScoringStyleId,
 } from '@/src/lib/scoring-style-display'
 import { supabase } from '@/src/lib/supabase'
-import { capturePostHog, poolCreatedMode } from '@/src/lib/posthog-client'
+import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 import {
   FREE_TIER_OWNED_POOL_LIMIT,
@@ -375,7 +375,7 @@ export default function CreatePoolPage() {
         event_id: selectedEvent.id,
         creator_id: user.id,
       })
-      .select('id, invite_code')
+      .select('id, invite_code, is_public')
       .single()
 
     if (insertError || !pool) {
@@ -436,8 +436,9 @@ export default function CreatePoolPage() {
       inviteCode: pool.invite_code,
     })
     capturePostHog('pool_created', {
-      mode: poolCreatedMode(scoringStyle),
       pool_id: pool.id,
+      sport: normalizeSportKey(selectedEvent.sport),
+      is_public: Boolean(pool.is_public),
     })
     void loadCreationQuota()
     setStep(4)
@@ -456,6 +457,9 @@ export default function CreatePoolPage() {
       userId: user?.id,
       metadata: { source: 'create_success' },
     })
+    if (createdPool?.id) {
+      capturePostHog('invite_link_copied', { pool_id: createdPool.id })
+    }
     setLinkCopied(true)
     window.setTimeout(() => setLinkCopied(false), 2000)
   }

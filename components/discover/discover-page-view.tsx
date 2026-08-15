@@ -374,7 +374,7 @@ export function DiscoverPageView() {
     if (!alreadyMember) {
       capturePostHog('pool_joined', {
         pool_id: pool.id,
-        via: 'official',
+        via: 'discover',
       })
     }
 

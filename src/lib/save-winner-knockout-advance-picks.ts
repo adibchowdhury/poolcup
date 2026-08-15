@@ -89,10 +89,15 @@ export async function saveWinnerKnockoutAdvancePicks(
       return next
     })
     savedCount += 1
-    capturePostHog('prediction_submitted', {
-      pool_id: poolId,
-      match_id: match.matchId,
-    })
+    capturePostHog(
+      match.savedPick === 1 || match.savedPick === 2
+        ? 'prediction_edited'
+        : 'prediction_submitted',
+      {
+        pool_id: poolId,
+        match_id: match.matchId,
+      },
+    )
   }
 
   return { savedCount, lockedCount, errorCount }

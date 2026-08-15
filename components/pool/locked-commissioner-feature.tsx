@@ -6,7 +6,7 @@ import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
-import { capturePostHog } from '@/src/lib/posthog-client'
+import { capturePostHog, paywallFeatureKey } from '@/src/lib/posthog-client'
 
 type LockedCommissionerFeatureProps = {
   title: string
@@ -29,10 +29,8 @@ export function LockedCommissionerFeature({
   className,
 }: LockedCommissionerFeatureProps) {
   useEffect(() => {
-    capturePostHog('commissioner_feature_locked_viewed', {
-      feature: title,
-      pool_id: poolId ?? null,
-      is_owner: isOwner,
+    capturePostHog('paywall_viewed', {
+      feature: paywallFeatureKey('commissioner'),
     })
   }, [title, poolId, isOwner])
 
@@ -72,7 +70,7 @@ export function LockedCommissionerFeature({
                   href="/settings/billing"
                   onClick={() => {
                     capturePostHog('upgrade_from_pool_prompt_clicked', {
-                      feature: title,
+                      feature: paywallFeatureKey('commissioner'),
                       pool_id: poolId ?? null,
                     })
                   }}

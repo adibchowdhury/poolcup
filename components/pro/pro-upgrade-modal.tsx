@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { startBillingCheckout } from '@/src/lib/billing-checkout-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
-import { capturePostHog } from '@/src/lib/posthog-client'
+import { capturePostHog, paywallFeatureKey } from '@/src/lib/posthog-client'
 
 const DEFAULT_BENEFITS = [
   'Advanced analytics & form trends',
@@ -57,7 +57,9 @@ export function ProUpgradeModal({
       setError(null)
       return
     }
-    capturePostHog('pro_upgrade_modal_opened', { source })
+    capturePostHog('paywall_viewed', {
+      feature: paywallFeatureKey(source),
+    })
   }, [open, source])
 
   async function handleCheckout() {

@@ -163,7 +163,7 @@ export function HeaderNotificationBell({ className }: { className?: string }) {
       )
       setUnread((n) => Math.max(0, n - 1))
     }
-    capturePostHog('notification_clicked', { category: item.category })
+    capturePostHog('notification_opened', { type: item.category })
     const href = notificationHref(item.data)
     setOpen(false)
     if (href) router.push(href)

@@ -48,7 +48,7 @@ import {
   getVoidPredictionOutcomeLabel,
   isVoidMatchStatus,
 } from '@/src/lib/match-void-status'
-import { capturePostHog } from '@/src/lib/posthog-client'
+import { capturePostHog, capturePredictionStarted } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
 import { hasStoredClassicMatchPrediction } from '@/src/lib/merge-classic-match-predictions'
 import { getClassicKnockoutPredictionDisplayOutcome } from '@/src/lib/classic-knockout-breakdown-lines'
@@ -630,7 +630,8 @@ export function PredictionMatchCard({
       }
 
       setSaveStatus('saved')
-      capturePostHog('prediction_submitted', {
+      const wasEdit = savedScore1 !== '' && savedScore2 !== ''
+      capturePostHog(wasEdit ? 'prediction_edited' : 'prediction_submitted', {
         pool_id: poolId,
         match_id: prediction.matchId,
       })
@@ -851,6 +852,12 @@ export function PredictionMatchCard({
   }, [bumpDirty])
 
   const handleScoreChange = (field: 'score1' | 'score2', raw: string) => {
+    if (!preview && !isReadOnly && poolId) {
+      capturePredictionStarted({
+        match_id: prediction.matchId,
+        pool_id: poolId,
+      })
+    }
     const clamped = clampPredictionScoreValue(raw)
     const nextScore1 = field === 'score1' ? clamped : score1
     const nextScore2 = field === 'score2' ? clamped : score2

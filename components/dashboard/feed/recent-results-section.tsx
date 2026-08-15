@@ -39,6 +39,9 @@ type RecentResultsSectionProps = {
 const SURFACE =
   'rounded-xl border border-border/90 bg-card/90'
 
+/** Deduplicate prediction_scored when users re-open the dashboard. */
+const scoredSeenKeys = new Set<string>()
+
 function InlineStat({
   icon: Icon,
   label,
@@ -346,6 +349,26 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
     setData(next)
     setGlobalRank(rank)
     setLoading(false)
+
+    // Client-side surface for scored picks (scoring itself is server-side).
+    for (const item of next.recentScored) {
+      const key = `${item.poolId}:${item.matchId}`
+      if (scoredSeenKeys.has(key)) continue
+      scoredSeenKeys.add(key)
+      try {
+        const storageKey = `ph_prediction_scored:${key}`
+        if (sessionStorage.getItem(storageKey)) continue
+        sessionStorage.setItem(storageKey, '1')
+      } catch {
+        /* private mode — module Set still dedupes this session */
+      }
+      capturePostHog('prediction_scored', {
+        match_id: item.matchId,
+        pool_id: item.poolId,
+        points: item.points,
+        outcome: item.outcomeKind,
+      })
+    }
   }, [userId])
 
   const loadStreak = useCallback(async () => {

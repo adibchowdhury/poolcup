@@ -46,6 +46,22 @@ function CreateAccountPageContent() {
   }, [])
 
   useEffect(() => {
+    const raw = searchParams.get('source')
+    const source =
+      raw === 'referral' ||
+      raw === 'organic' ||
+      raw === 'invite' ||
+      raw === 'landing' ||
+      raw === 'ads'
+        ? raw
+        : undefined
+    capturePostHog(
+      'signup_started',
+      source ? { source } : undefined,
+    )
+  }, [searchParams])
+
+  useEffect(() => {
     if (resendCooldown <= 0) return
     const timer = window.setInterval(() => {
       setResendCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1))
@@ -79,13 +95,22 @@ function CreateAccountPageContent() {
       return
     }
 
-    capturePostHog('signup_submitted')
     setLoading(true)
 
     const { error: authError, needsEmailConfirmation, alreadyRegistered } =
       await signUpWithPassword(email, password, { firstName, lastName })
 
     setLoading(false)
+
+    const rawSource = searchParams.get('source')
+    const source =
+      rawSource === 'referral' ||
+      rawSource === 'organic' ||
+      rawSource === 'invite' ||
+      rawSource === 'landing' ||
+      rawSource === 'ads'
+        ? rawSource
+        : undefined
 
     if (authError) {
       capturePostHog('signup_failed', {
@@ -102,14 +127,20 @@ function CreateAccountPageContent() {
     }
 
     if (needsEmailConfirmation) {
-      capturePostHog('signup_succeeded', { needs_confirmation: true })
+      capturePostHog(
+        'signup_completed',
+        source ? { source } : undefined,
+      )
       setPendingConfirmation(true)
       setInfo('Account created. Check your email to confirm, then sign in.')
       setResendCooldown(RESEND_COOLDOWN_SECONDS)
       return
     }
 
-    capturePostHog('signup_succeeded', { needs_confirmation: false })
+    capturePostHog(
+      'signup_completed',
+      source ? { source } : undefined,
+    )
     router.push(next ?? '/dashboard')
   }
 

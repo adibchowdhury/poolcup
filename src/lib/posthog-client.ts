@@ -130,3 +130,35 @@ export function poolCreatedMode(
 ): 'winner_only' | 'score_predictor' {
   return scoringStyle === 'winner' ? 'winner_only' : 'score_predictor'
 }
+
+/** Map locked-feature / upgrade sources → short non-PII feature keys. */
+export function paywallFeatureKey(source: string): string {
+  const s = source.toLowerCase()
+  if (s.includes('insight')) return 'insights'
+  if (s.includes('analytics')) return 'analytics'
+  if (s.includes('appearance') || s.includes('theme')) return 'themes'
+  if (s.includes('consensus')) return 'consensus'
+  if (s.includes('history') || s.includes('historical')) return 'history'
+  if (s.includes('commissioner')) return 'commissioner'
+  if (s.includes('predict') || s.includes('knockout')) return 'predict'
+  if (s.includes('pool')) return 'pool'
+  if (s.includes('match')) return 'match'
+  return source.replace(/[^a-z0-9_]+/gi, '_').slice(0, 64) || 'unknown'
+}
+
+const predictionStartedKeys = new Set<string>()
+
+/** Fire once per match per page session when the user begins predicting. */
+export function capturePredictionStarted(props: {
+  match_id: string
+  pool_id?: string | null
+  sport?: string | null
+}): void {
+  const key = `${props.pool_id ?? ''}:${props.match_id}`
+  if (predictionStartedKeys.has(key)) return
+  predictionStartedKeys.add(key)
+  const payload: Record<string, unknown> = { match_id: props.match_id }
+  if (props.pool_id) payload.pool_id = props.pool_id
+  if (props.sport) payload.sport = props.sport
+  capturePostHog('prediction_started', payload)
+}

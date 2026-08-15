@@ -74,7 +74,7 @@ export function BadgeUnlockProvider({ children }: { children: ReactNode }) {
     (data: UserAchievementsData) => {
       enqueueBadges(resolveNewlyAwardedBadges(data))
       for (const id of data.newlyAwardedIds) {
-        capturePostHog('badge_unlocked', { achievement_id: id })
+        capturePostHog('badge_earned', { badge_key: id })
       }
       if (
         data.evalXpAwarded > 0 ||

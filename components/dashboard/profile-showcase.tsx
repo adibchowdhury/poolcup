@@ -682,9 +682,7 @@ export function ProfileShowcase({
     if (!active || !userId || viewedRef.current) return
     viewedRef.current = true
     capturePostHog('profile_viewed', {
-      profile_user_id: userId,
-      viewer: isOwnPublicProfile || !isPublic ? 'self' : 'other',
-      mode: isPublic ? 'public' : 'self',
+      is_self: isOwnPublicProfile || !isPublic,
     })
   }, [active, userId, isPublic, isOwnPublicProfile])
 
@@ -1252,10 +1250,9 @@ export function ProfileShowcase({
                 <FriendshipButton
                   profileUserId={userId}
                   onAction={(action) => {
-                    capturePostHog('friend_action', {
-                      action,
-                      profile_user_id: userId,
-                    })
+                    if (action === 'accepted' || action === 'request_sent') {
+                      capturePostHog('user_followed')
+                    }
                   }}
                 />
               )}

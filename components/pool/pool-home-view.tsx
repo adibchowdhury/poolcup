@@ -214,6 +214,9 @@ export function PoolHomeView({
           poolId: poolId ?? null,
           metadata: { source: 'pool_page' },
         })
+        if (poolId) {
+          capturePostHog('invite_link_copied', { pool_id: poolId })
+        }
         setCopied(true)
         window.setTimeout(() => setCopied(false), 2000)
       })

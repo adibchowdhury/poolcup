@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ProUpgradeModal } from '@/components/pro/pro-upgrade-modal'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
-import { capturePostHog } from '@/src/lib/posthog-client'
+import { capturePostHog, paywallFeatureKey } from '@/src/lib/posthog-client'
 
 export type LockedProFeatureProps = {
   title: string
@@ -45,16 +45,15 @@ export function LockedProFeature({
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
-    capturePostHog('pro_feature_locked_viewed', {
-      source,
-      feature: title,
+    capturePostHog('paywall_viewed', {
+      feature: paywallFeatureKey(source),
     })
   }, [source, title])
 
   function openUpgrade() {
     capturePostHog('pro_feature_upgrade_prompt_clicked', {
       source,
-      feature: title,
+      feature: paywallFeatureKey(source),
     })
     onCtaClick?.()
     setModalOpen(true)

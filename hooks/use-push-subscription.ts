@@ -153,8 +153,8 @@ export function usePushSubscription(): PushHookState {
       const data = event.data
       if (!data || typeof data !== 'object') return
       if ((data as { type?: string }).type === 'push_notification_clicked') {
-        capturePostHog('push_notification_clicked', {
-          category: (data as { category?: string | null }).category ?? null,
+        capturePostHog('notification_opened', {
+          type: (data as { category?: string | null }).category ?? null,
         })
       }
     }

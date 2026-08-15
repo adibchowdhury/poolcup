@@ -694,15 +694,6 @@ export default function PredictPage() {
           return next
         })
         savedCount += 1
-        capturePostHog('prediction_submitted', {
-          pool_id: pool.id,
-          match_id: match.id,
-        })
-        void import('@/components/push/push-nudge-host').then(
-          ({ markFirstPredictionForPushNudge }) => {
-            markFirstPredictionForPushNudge()
-          },
-        )
         continue
       }
 
@@ -719,6 +710,8 @@ export default function PredictPage() {
             advancePicks[match.id],
           )
         : undefined
+
+      const hadPrior = savedMatchIds.has(match.id)
 
       const result = await upsertPoolMatchPrediction(supabase, {
         poolId: pool.id,
@@ -747,10 +740,13 @@ export default function PredictPage() {
         }))
       }
       savedCount += 1
-      capturePostHog('prediction_submitted', {
-        pool_id: pool.id,
-        match_id: match.id,
-      })
+      capturePostHog(
+        hadPrior ? 'prediction_edited' : 'prediction_submitted',
+        {
+          pool_id: pool.id,
+          match_id: match.id,
+        },
+      )
       void import('@/components/push/push-nudge-host').then(
         ({ markFirstPredictionForPushNudge }) => {
           markFirstPredictionForPushNudge()

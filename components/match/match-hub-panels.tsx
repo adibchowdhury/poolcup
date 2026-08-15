@@ -27,7 +27,7 @@ import {
   upsertPoolMatchPrediction,
 } from '@/src/lib/pool-match-prediction-write'
 import type { TeamRosterPlayer } from '@/src/lib/team-roster'
-import { capturePostHog } from '@/src/lib/posthog-client'
+import { capturePostHog, capturePredictionStarted } from '@/src/lib/posthog-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import { formatFeaturedKickoffLocal } from '@/src/lib/featured-match'
@@ -239,9 +239,9 @@ function YourPredictionCard({
       return
     }
 
-    capturePostHog('prediction_edited_from_match', {
+    capturePostHog('prediction_edited', {
       match_id: matchId,
-      pool_count: writablePools.length,
+      pool_id: writablePools[0]?.poolId,
     })
     void import('@/components/push/push-nudge-host').then(
       ({ markFirstPredictionForPushNudge }) => {
@@ -308,7 +308,14 @@ function YourPredictionCard({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setEditing(true)
+                  capturePredictionStarted({
+                    match_id: matchId,
+                    pool_id: writablePools[0]?.poolId,
+                    sport: sport ?? undefined,
+                  })
+                }}
               >
                 Edit until {matchStartLabelLower(sport)}
               </Button>

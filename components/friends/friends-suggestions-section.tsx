@@ -121,12 +121,7 @@ export function FriendsSuggestionsSection({
       return
     }
     setHiddenIds((prev) => new Set(prev).add(row.user_id))
-    capturePostHog('friend_suggestion_added', {
-      target_user_id: row.user_id,
-      reason: row.reason,
-      shared_pools: row.shared_pools,
-      shared_sports: row.shared_sports,
-    })
+    capturePostHog('user_followed')
     toast.success(
       mapped === 'friends' ? 'You are now friends' : 'Friend request sent',
     )
