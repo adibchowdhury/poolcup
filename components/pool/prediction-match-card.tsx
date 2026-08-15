@@ -187,6 +187,8 @@ export function KnockoutAdvancePicker({
   isLocked?: boolean
   onAdvancePick?: (pick: 1 | 2) => void
 }) {
+  if (!isKnockoutRound(round) && !preview) return null
+
   const hasScores = predTeam1 != null && predTeam2 != null
   if (!hasScores && !preview) return null
 

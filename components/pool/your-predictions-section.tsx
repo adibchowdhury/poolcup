@@ -11,6 +11,7 @@ import {
 } from '@/src/lib/mobile-bottom-nav-routes'
 import {
   classicRoundTabEmptyMessage,
+  isTournamentStyleMatches,
   matchInClassicRoundTab,
   resolveDefaultClassicRoundTabForPredictions,
 } from '@/src/lib/classic-round-tab-logic'
@@ -51,6 +52,10 @@ const CLASSIC_SORT_OPTIONS: {
   { value: 'group', label: 'Group' },
   { value: 'status', label: 'Status' },
 ]
+
+const SEASON_SORT_OPTIONS = CLASSIC_SORT_OPTIONS.filter(
+  (option) => option.value !== 'group',
+)
 
 function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
   const { unsavedCount, saveAll } = usePredictionSaveCoordinator(activeMatchIds)
@@ -136,12 +141,22 @@ export function YourPredictionsSection({
 }: YourPredictionsSectionProps) {
   const matchScoringStyle = normalizeMatchScoringStyle('classic')
   const hasClassicContent = classicPredictions.length > 0
+  const seasonMode = useMemo(
+    () =>
+      classicPredictions.length > 0 &&
+      !isTournamentStyleMatches(classicPredictions),
+    [classicPredictions],
+  )
   const [activeRoundTab, setActiveRoundTab] = useState<ClassicRoundTabId>('group')
   const defaultRoundTabSetRef = useRef(false)
   const [classicSortMode, setClassicSortMode] =
-    useState<ClassicPredictionSortMode>('kickoff-newest')
+    useState<ClassicPredictionSortMode>('kickoff-oldest')
 
   useEffect(() => {
+    if (seasonMode) {
+      setClassicSortMode((prev) => (prev === 'group' ? 'kickoff-oldest' : prev))
+      return
+    }
     if (defaultRoundTabSetRef.current || classicPredictions.length === 0) {
       return
     }
@@ -150,15 +165,14 @@ export function YourPredictionsSection({
       resolveDefaultClassicRoundTabForPredictions(classicPredictions),
     )
     defaultRoundTabSetRef.current = true
-  }, [classicPredictions])
+  }, [classicPredictions, seasonMode])
 
-  const stageFilteredPredictions = useMemo(
-    () =>
-      classicPredictions.filter((prediction) =>
-        matchInClassicRoundTab(prediction.round, activeRoundTab),
-      ),
-    [classicPredictions, activeRoundTab],
-  )
+  const stageFilteredPredictions = useMemo(() => {
+    if (seasonMode) return classicPredictions
+    return classicPredictions.filter((prediction) =>
+      matchInClassicRoundTab(prediction.round, activeRoundTab),
+    )
+  }, [classicPredictions, activeRoundTab, seasonMode])
 
   const orderedClassicPredictions = useMemo(
     () => sortClassicPredictions(stageFilteredPredictions, classicSortMode),
@@ -181,6 +195,8 @@ export function YourPredictionsSection({
     () => stageFilteredPredictions.map((prediction) => prediction.matchId),
     [stageFilteredPredictions],
   )
+
+  const sortOptions = seasonMode ? SEASON_SORT_OPTIONS : CLASSIC_SORT_OPTIONS
 
   return (
     <PredictionSaveProvider>
@@ -218,7 +234,7 @@ export function YourPredictionsSection({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CLASSIC_SORT_OPTIONS.map((option) => (
+                {sortOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -229,7 +245,7 @@ export function YourPredictionsSection({
         ) : null}
       </div>
 
-      {hasClassicContent ? (
+      {hasClassicContent && !seasonMode ? (
         <div className="mb-4 min-w-0">
           <ClassicRoundTabs
             activeId={activeRoundTab}
@@ -239,7 +255,11 @@ export function YourPredictionsSection({
       ) : null}
 
       {orderedClassicPredictions.length === 0 ? (
-        activeRoundTab === 'r32' ? (
+        seasonMode ? (
+          <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+            No matches scheduled yet.
+          </p>
+        ) : activeRoundTab === 'r32' ? (
           <ClassicR32PreviewTab />
         ) : (
           <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">

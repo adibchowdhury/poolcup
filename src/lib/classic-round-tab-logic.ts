@@ -14,8 +14,32 @@ export const KNOCKOUT_ROUND_IDS = [
 
 export type KnockoutRoundId = (typeof KNOCKOUT_ROUND_IDS)[number]
 
+/** World Cup–style stage rounds used by classic predict tabs. */
+export const TOURNAMENT_STAGE_ROUND_IDS = [
+  'group',
+  ...KNOCKOUT_ROUND_IDS,
+] as const
+
+export type TournamentStageRoundId = (typeof TOURNAMENT_STAGE_ROUND_IDS)[number]
+
 export function isKnockoutRound(round: string): round is KnockoutRoundId {
   return (KNOCKOUT_ROUND_IDS as readonly string[]).includes(round)
+}
+
+export function isTournamentStageRound(
+  round: string,
+): round is TournamentStageRoundId {
+  return (TOURNAMENT_STAGE_ROUND_IDS as readonly string[]).includes(round)
+}
+
+/**
+ * Tournament mode when any match uses a WC stage round (group / knockout).
+ * Otherwise season mode: flat chronological list (league, regular, preseason, …).
+ */
+export function isTournamentStyleMatches(
+  items: Array<{ round: string }>,
+): boolean {
+  return items.some((item) => isTournamentStageRound(item.round))
 }
 
 export function matchInClassicRoundTab(

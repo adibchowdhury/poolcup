@@ -20,6 +20,7 @@ import {
 import {
   classicRoundTabEmptyMessage,
   isKnockoutRound,
+  isTournamentStyleMatches,
   matchInClassicRoundTab,
   resolveDefaultClassicRoundTab,
   type KnockoutRoundId,
@@ -511,15 +512,25 @@ export default function PredictPage() {
     loadData()
   }, [authLoading, userId, router, loadData])
 
-  const tabMatches = useMemo(
-    () => matches.filter((m) => matchInClassicRoundTab(m.round, activeTab)),
-    [matches, activeTab],
+  const seasonMode = useMemo(
+    () => matches.length > 0 && !isTournamentStyleMatches(matches),
+    [matches],
   )
 
+  const tabMatches = useMemo(() => {
+    if (seasonMode) {
+      return [...matches].sort(
+        (a, b) =>
+          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+      )
+    }
+    return matches.filter((m) => matchInClassicRoundTab(m.round, activeTab))
+  }, [matches, activeTab, seasonMode])
+
   const sections = useMemo(() => {
-    if (activeTab !== 'group') return []
+    if (seasonMode || activeTab !== 'group') return []
     return buildGroupStageSections(tabMatches)
-  }, [tabMatches, activeTab])
+  }, [tabMatches, activeTab, seasonMode])
 
   const defaultOpenSectionId = useMemo(() => {
     const open =
@@ -844,7 +855,9 @@ export default function PredictPage() {
 
           <ProgressHeader current={predictedCount} total={totalMatches} />
 
-          <ClassicRoundTabs activeId={activeTab} onChange={setActiveTab} />
+          {seasonMode ? null : (
+            <ClassicRoundTabs activeId={activeTab} onChange={setActiveTab} />
+          )}
         </div>
       </header>
 
@@ -866,7 +879,11 @@ export default function PredictPage() {
         )}
 
         {tabMatches.length === 0 && !error ? (
-          activeTab === 'r32' ? (
+          seasonMode ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No matches scheduled yet.
+            </p>
+          ) : activeTab === 'r32' ? (
             <ClassicR32PreviewTab />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -874,15 +891,15 @@ export default function PredictPage() {
             </p>
           )
         ) : (
-          <div key={activeTab} className="space-y-6">
+          <div key={seasonMode ? 'season' : activeTab} className="space-y-6">
             {MATCH_LIFECYCLE_SECTION_ORDER.filter(
               (sectionId) => lifecycleBuckets[sectionId].length > 0,
             ).map((sectionId) => {
               const sectionMatches = lifecycleBuckets[sectionId]
-              const groupSections =
-                activeTab === 'group'
-                  ? buildGroupStageSections(sectionMatches)
-                  : []
+              const useGroupSections = !seasonMode && activeTab === 'group'
+              const groupSections = useGroupSections
+                ? buildGroupStageSections(sectionMatches)
+                : []
 
               return (
                 <section
@@ -895,7 +912,7 @@ export default function PredictPage() {
                     count={sectionMatches.length}
                   />
 
-                  {activeTab === 'group' ? (
+                  {useGroupSections ? (
                     groupSections.length === 0 ? (
                       <p className="py-4 text-center text-sm text-muted-foreground">
                         No matches in this section.
@@ -941,13 +958,13 @@ export default function PredictPage() {
                     )
                   ) : (
                     <div className="flex flex-col gap-3">
-                      {(activeTab === 'final'
-                        ? sectionMatches.filter(
+                      {(seasonMode || activeTab !== 'final'
+                        ? sectionMatches
+                        : sectionMatches.filter(
                             (match) =>
                               match.round === 'final' ||
                               match.round === 'third',
                           )
-                        : sectionMatches
                       ).map((match) => {
                         const card = toSectionMatch(
                           match,
@@ -957,7 +974,7 @@ export default function PredictPage() {
                           advancePicks,
                           baselineAdvancePicks,
                         )
-                        if (match.round === 'third') {
+                        if (!seasonMode && match.round === 'third') {
                           return (
                             <section key={match.id} className="space-y-2">
                               <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -1003,7 +1020,8 @@ export default function PredictPage() {
                 </section>
               )
             })}
-            {activeTab === 'final' &&
+            {!seasonMode &&
+            activeTab === 'final' &&
             !tabMatches.some((match) => match.round === 'third') ? (
               <ClassicThirdPlaceTbdCard />
             ) : null}
