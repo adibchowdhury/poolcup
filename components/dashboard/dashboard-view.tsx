@@ -468,11 +468,13 @@ function DashboardViewContent({
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className={activeTab === 'profile' ? 'gap-3' : 'gap-10'}
+            className={
+              activeTab === 'profile' ? 'min-w-0 gap-3' : 'min-w-0 gap-10'
+            }
           >
             <DashboardDesktopNav />
 
-            <TabsContent value="profile" className="mt-0">
+            <TabsContent value="profile" className="min-w-0 mt-0">
               <ProfileShowcase
                 userId={userId}
                 username={username}
@@ -639,7 +641,7 @@ function DashboardViewContent({
 
             <TabsContent
               value="dashboard"
-              className="space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+              className="min-w-0 space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
             >
               <DashboardMatchFilters
                 sportRowClassName="-mt-6 mb-6 sm:-mt-8"
@@ -671,11 +673,11 @@ function DashboardViewContent({
               </DashboardFeed>
             </TabsContent>
 
-            <TabsContent value="games" className="mt-2">
+            <TabsContent value="games" className="min-w-0 mt-2">
               <UpcomingGamesTab />
             </TabsContent>
 
-            <TabsContent value="how-it-works" className="mt-4">
+            <TabsContent value="how-it-works" className="min-w-0 mt-4">
               <HowItWorksTab />
             </TabsContent>
           </Tabs>

@@ -201,7 +201,7 @@ export function EventPillsRow({
   return (
     <div className={cn('space-y-3', className)}>
       <div
-        className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="min-w-0 max-w-full -mx-1 overflow-x-auto overscroll-x-contain px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="list"
         aria-label="Sporting events"
       >
@@ -271,7 +271,7 @@ export function EventPillsRow({
 
       {prefetchLoading ? (
         <div
-          className="flex gap-3 px-1"
+          className="@container flex min-w-0 gap-3 px-1"
           aria-busy="true"
           aria-label="Loading matches"
         >
@@ -280,7 +280,7 @@ export function EventPillsRow({
         </div>
       ) : events.length === 0 ? null : (
         <div
-          className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="@container min-w-0 max-w-full -mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="list"
           aria-label={
             selectedEvent
@@ -304,12 +304,12 @@ export function EventPillsRow({
                 : 'No matches for this event yet.'}
             </p>
           ) : (
-            <div className="flex gap-3">
+            <div className="flex min-w-0 gap-3">
               {visibleMatchRows.map((match) => (
                 <div
                   key={match.id}
                   role="listitem"
-                  className="w-[min(85vw,20rem)] shrink-0 sm:w-[22rem]"
+                  className="w-[min(85cqi,20rem)] shrink-0 overflow-hidden sm:w-[22rem]"
                 >
                   <PremiumMatchCard
                     match={match}
@@ -339,7 +339,7 @@ function PillSkeleton() {
 function MatchCardSkeleton() {
   return (
     <div
-      className="h-[12.25rem] w-[min(85vw,20rem)] shrink-0 animate-pulse rounded-[1.4rem] border border-border/60 bg-muted/40 sm:w-[22rem]"
+      className="h-[12.25rem] w-[min(85cqi,20rem)] shrink-0 animate-pulse rounded-[1.4rem] border border-border/60 bg-muted/40 sm:w-[22rem]"
       aria-hidden
     />
   )

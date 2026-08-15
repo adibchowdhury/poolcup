@@ -22,7 +22,7 @@ export function DashboardFeed({ children, className }: DashboardFeedProps) {
   return (
     <div
       data-dashboard-feed
-      className={cn('flex flex-col gap-8', className)}
+      className={cn('flex min-w-0 flex-col gap-8', className)}
     >
       {children}
     </div>
@@ -48,7 +48,7 @@ export function DashboardFeedSection({
   return (
     <section
       data-feed-section={id}
-      className={cn('flex flex-col gap-4', className)}
+      className={cn('flex min-w-0 flex-col gap-4', className)}
     >
       {title || action ? (
         <div className="flex flex-row items-center justify-between gap-3">

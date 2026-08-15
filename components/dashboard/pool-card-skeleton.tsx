@@ -49,7 +49,7 @@ export function ActivePoolsSkeleton() {
   return (
     <div
       className={cn(
-        '@container -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+        '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
         '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
         '[scrollbar-width:thin]',
         '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',

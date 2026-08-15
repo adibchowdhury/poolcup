@@ -18,7 +18,7 @@ const POOL_CAROUSEL_ITEM_CLASS =
   'w-[calc(100cqi/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]'
 
 const POOL_CAROUSEL_SCROLL_CLASS = cn(
-  '@container -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+  '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
   '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
   '[scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]',
   '[&::-webkit-scrollbar]:h-1',

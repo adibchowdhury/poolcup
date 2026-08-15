@@ -219,15 +219,15 @@ export function PremiumMatchCard({
   const body = (
     <article
       className={cn(
-        'premium-match-card group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-visible',
+        'premium-match-card group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-hidden',
         'px-3.5 pb-3 pt-8',
-        'transition-[transform,filter] hover:-translate-y-0.5',
+        'transition-[transform,box-shadow] hover:-translate-y-0.5',
         className,
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
     >
       <svg
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full overflow-visible"
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full"
         viewBox="0 0 360 208"
         preserveAspectRatio="none"
         aria-hidden

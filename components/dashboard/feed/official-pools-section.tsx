@@ -140,14 +140,14 @@ export function OfficialPoolsSection({
       {loading ? (
         <div
           className={cn(
-            '@container w-full overflow-x-auto',
+            '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain',
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
           )}
           aria-busy="true"
           aria-label="Discover pools"
         >
           <div
-            className="grid grid-flow-col grid-rows-2 gap-2.5"
+            className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
             style={{
               gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
             }}
@@ -175,7 +175,7 @@ export function OfficialPoolsSection({
       ) : (
         <div
           className={cn(
-            '@container w-full overflow-x-auto pb-0.5',
+            '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain pb-0.5',
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
             'snap-x snap-mandatory',
           )}
@@ -183,7 +183,7 @@ export function OfficialPoolsSection({
           aria-label="Official pools"
         >
           <div
-            className="grid grid-flow-col grid-rows-2 gap-2.5"
+            className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
             style={{
               gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
             }}

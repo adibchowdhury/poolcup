@@ -142,8 +142,8 @@ export function DashboardAppShell({
 
   return (
     <BadgeUnlockProvider>
-    <div className="min-h-screen bg-app-background">
-      <div className="relative">
+    <div className="min-h-screen max-w-full min-w-0 overflow-x-clip bg-app-background">
+      <div className="relative max-w-full min-w-0">
         <div className="z-50 bg-app-background md:sticky md:top-0">
           {/*
             Safe-area spacer only (notch/status bar). Extra breathing room
@@ -466,7 +466,7 @@ export function DashboardAppShell({
 
         <main
           className={cn(
-            'mx-auto max-w-6xl px-4 py-8',
+            'mx-auto w-full min-w-0 max-w-6xl px-4 py-8',
             MOBILE_BOTTOM_NAV_PAD_CLASS,
             mainClassName,
           )}

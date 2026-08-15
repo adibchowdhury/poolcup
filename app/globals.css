@@ -84,8 +84,10 @@
     ),
     linear-gradient(155deg, #171719, #070708);
   --match-card-mark-text: rgba(255, 255, 255, 0.85);
-  --match-card-shadow: drop-shadow(0 15px 18px rgba(0, 0, 0, 0.34));
-  --match-card-shadow-hover: drop-shadow(0 18px 21px rgba(0, 0, 0, 0.4));
+  /* box-shadow values (not filter:drop-shadow) — filter outsets expand
+     document scrollWidth on Android Chrome after match carousels mount. */
+  --match-card-shadow: 0 15px 18px rgba(0, 0, 0, 0.34);
+  --match-card-shadow-hover: 0 18px 21px rgba(0, 0, 0, 0.4);
 }
 
 /*
@@ -151,8 +153,8 @@ html.light {
   --match-card-mark-bg: #e8eef3;
   --match-card-mark-inner: #f4f6f8;
   --match-card-mark-text: #0d1520;
-  --match-card-shadow: drop-shadow(0 8px 16px rgba(13, 21, 32, 0.1));
-  --match-card-shadow-hover: drop-shadow(0 10px 18px rgba(13, 21, 32, 0.14));
+  --match-card-shadow: 0 8px 16px rgba(13, 21, 32, 0.1);
+  --match-card-shadow-hover: 0 10px 18px rgba(13, 21, 32, 0.14);
 }
 
 @theme inline {
@@ -541,13 +543,14 @@ html.light .light-hide-hue-overlay {
   opacity: 0;
 }
 
-/* PremiumMatchCard drop shadow follows theme tokens */
+/* PremiumMatchCard elevation — box-shadow (not filter) so horizontal
+   carousels cannot widen the document via filter ink overflow. */
 .premium-match-card {
-  filter: var(--match-card-shadow);
+  box-shadow: var(--match-card-shadow);
 }
 
 .premium-match-card:hover {
-  filter: var(--match-card-shadow-hover);
+  box-shadow: var(--match-card-shadow-hover);
 }
 
 /* Mobile bottom nav — dark bar by default; white/card in light */

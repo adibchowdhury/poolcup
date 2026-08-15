@@ -148,7 +148,7 @@ export function SportBubblesRow({
   return (
     <div
       className={cn(
-        '-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'min-w-0 max-w-full -mx-1 overflow-x-auto overscroll-x-contain px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
       role="list"
