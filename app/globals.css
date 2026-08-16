@@ -702,6 +702,39 @@ html.light .mobile-bottom-nav-home {
   }
 }
 
+/* Onboarding welcome: sport-ball orbit — tweak duration here only */
+:root {
+  --onboarding-sport-orbit-duration: 10s;
+  --onboarding-sport-orbit-radius: -5.25rem; /* negative = out from center */
+}
+
+@media (min-width: 640px) {
+  :root {
+    --onboarding-sport-orbit-radius: -6rem;
+  }
+}
+
+@keyframes onboarding-sport-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-onboarding-sport-orbit {
+  animation: onboarding-sport-orbit var(--onboarding-sport-orbit-duration) linear
+    infinite;
+  will-change: transform;
+}
+
+.animate-onboarding-sport-orbit-counter {
+  animation: onboarding-sport-orbit var(--onboarding-sport-orbit-duration) linear
+    infinite reverse;
+  will-change: transform;
+}
+
 @keyframes join-chat-bounce {
   0%,
   100% {
@@ -1019,6 +1052,8 @@ html.light .mobile-bottom-nav-home {
   .animate-join-cta-shimmer,
   .animate-join-ball-spin,
   .animate-join-chat-bounce,
+  .animate-onboarding-sport-orbit,
+  .animate-onboarding-sport-orbit-counter,
   .landing-hook-phone,
   .landing-hook-pucky,
   .landing-hook-sparkle,

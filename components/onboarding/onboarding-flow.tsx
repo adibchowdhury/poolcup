@@ -76,26 +76,128 @@ const USERNAME_DEBOUNCE_MS = 400
 const SLIDE_MS = 320
 
 /**
- * Per-step mascots from /public/mascot/onboarding_mascot/.
+ * Per-step mascots from /public/mascot/onboarding_mascot/ (WebP, display-sized).
  * Six assets mapped by order to early steps; later slides reuse.
  */
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
 > = {
-  welcome: '/mascot/onboarding_mascot/pucky_1.png',
-  predict_compete: '/mascot/onboarding_mascot/pucky_2.png',
-  your_pool: '/mascot/onboarding_mascot/pucky_3.png',
-  sports_identity: '/mascot/onboarding_mascot/pucky_4.png',
-  better_friends: '/mascot/onboarding_mascot/pucky_5.png',
-  referral_source: '/mascot/onboarding_mascot/pucky_6.png',
-  fan_level: '/mascot/onboarding_mascot/pucky_6.png',
-  motivation_level: '/mascot/onboarding_mascot/pucky_6.png',
-  youre_ready: '/mascot/onboarding_mascot/pucky_1.png',
+  // welcome uses WelcomeSportOrbit instead of a mascot
+  predict_compete: '/mascot/onboarding_mascot/pucky_2.webp',
+  your_pool: '/mascot/onboarding_mascot/pucky_3.webp',
+  sports_identity: '/mascot/onboarding_mascot/pucky_4.webp',
+  better_friends: '/mascot/onboarding_mascot/pucky_5.webp',
+  referral_source: '/mascot/onboarding_mascot/pucky_6.webp',
+  fan_level: '/mascot/onboarding_mascot/pucky_6.webp',
+  motivation_level: '/mascot/onboarding_mascot/pucky_6.webp',
+  youre_ready: '/mascot/onboarding_mascot/pucky_1.webp',
 }
 
-/** Stable hero height so layout doesn't jump across asset aspect ratios. */
+/** Welcome orbit: sport balls (same assets as elsewhere). Duration tweaked via CSS var. */
+const WELCOME_ORBIT_BALLS = [
+  { src: '/sports/soccer.png' },
+  { src: '/sports/basketball.png' },
+  { src: '/sports/football.png' },
+  { src: '/sports/hockey.png' },
+  { src: '/sports/baseball.png' },
+] as const
+
+const POOLCUP_LOGO_SRC = '/poolcup-logo.png'
+
+/** Intrinsic size for next/image + CLS reservation (matches WebP export). */
+const MASCOT_INTRINSIC = 400
+/** CSS display box: h-56 / sm:h-64 — reserved so slides don't jump. */
+const MASCOT_FRAME_CLASS =
+  'relative mx-auto flex h-56 w-56 shrink-0 items-end justify-center sm:h-64 sm:w-64'
 const MASCOT_IMAGE_CLASS =
-  'h-56 w-auto max-w-[min(100%,22rem)] object-contain object-bottom sm:h-64 sm:max-w-[24rem]'
+  'h-full w-full object-contain object-bottom transition-opacity duration-200'
+
+function OnboardingMascot({
+  src,
+  priority = false,
+}: {
+  src: string
+  priority?: boolean
+}) {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setLoaded(false)
+  }, [src])
+
+  return (
+    <div className={MASCOT_FRAME_CLASS}>
+      {!loaded ? (
+        <div
+          className="absolute inset-0 animate-pulse rounded-2xl bg-muted/35"
+          aria-hidden
+        />
+      ) : null}
+      <Image
+        src={src}
+        alt=""
+        width={MASCOT_INTRINSIC}
+        height={MASCOT_INTRINSIC}
+        sizes="(min-width: 640px) 256px, 224px"
+        priority={priority}
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          MASCOT_IMAGE_CLASS,
+          loaded ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+    </div>
+  )
+}
+
+/**
+ * Welcome-only visual: sport balls evenly spaced on a circle.
+ * CSS `transform: rotate` on the ring (GPU-friendly); nested counter-rotate
+ * keeps icons upright. Duration: `--onboarding-sport-orbit-duration` in CSS.
+ */
+function WelcomeSportOrbit({ priority = false }: { priority?: boolean }) {
+  const count = WELCOME_ORBIT_BALLS.length
+
+  return (
+    <div
+      className={cn(MASCOT_FRAME_CLASS, 'overflow-hidden')}
+      aria-hidden
+    >
+      <div className="animate-onboarding-sport-orbit absolute inset-0">
+        {WELCOME_ORBIT_BALLS.map((ball, index) => {
+          const angle = (360 / count) * index
+          return (
+            <div
+              key={ball.src}
+              className="absolute left-1/2 top-1/2 h-11 w-11 sm:h-12 sm:w-12"
+              style={{
+                transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(var(--onboarding-sport-orbit-radius))`,
+              }}
+            >
+              {/* Static cancel of placement angle + animated cancel of orbit spin */}
+              <div
+                className="h-full w-full"
+                style={{ transform: `rotate(${-angle}deg)` }}
+              >
+                <div className="animate-onboarding-sport-orbit-counter h-full w-full">
+                  <Image
+                    src={ball.src}
+                    alt=""
+                    width={96}
+                    height={96}
+                    sizes="48px"
+                    priority={priority}
+                    className="h-full w-full object-contain drop-shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const PILL_BASE_CLASS = cn(
   'rounded-full border px-3.5 py-2 text-left text-sm font-medium transition-colors',
@@ -136,7 +238,7 @@ type InfoSlide = {
 const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'welcome',
-    title: 'Welcome to PoolCup',
+    title: 'Welcome to',
     body: 'The prediction game built for friends, offices, and rivalries — private pools, live standings, and bragging rights.',
   },
   {
@@ -296,6 +398,29 @@ export function OnboardingFlow({
   useEffect(() => {
     onStarted()
   }, [])
+
+  /** Prefetch the next slide's mascot so Continue transitions don't wait on fetch. */
+  useEffect(() => {
+    const following = nextStep(step)
+    if (!following) return
+    const src = ONBOARDING_MASCOT_SRC[following]
+    if (!src) return
+
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'image'
+    link.href = src
+    link.type = 'image/webp'
+    document.head.appendChild(link)
+
+    // Also warm the browser decode cache.
+    const img = new window.Image()
+    img.src = src
+
+    return () => {
+      link.remove()
+    }
+  }, [step])
 
   useEffect(() => {
     return () => {
@@ -966,9 +1091,25 @@ export function OnboardingFlow({
 
             {infoSlide ? (
               <section className="space-y-4 text-center">
-                <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                  {infoSlide.title}
-                </h1>
+                {infoSlide.id === 'welcome' ? (
+                  <h1 className="flex flex-col items-center gap-2 sm:gap-3">
+                    <span className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                      {infoSlide.title}
+                    </span>
+                    <Image
+                      src={POOLCUP_LOGO_SRC}
+                      alt="PoolCup"
+                      width={280}
+                      height={96}
+                      priority={panelStep === step}
+                      className="h-12 w-auto object-contain sm:h-14"
+                    />
+                  </h1>
+                ) : (
+                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                    {infoSlide.title}
+                  </h1>
+                )}
                 <p className="text-base text-muted-foreground sm:text-lg">
                   {infoSlide.body}
                 </p>
@@ -1310,18 +1451,31 @@ export function OnboardingFlow({
      * slot between header and footer. Equal flex-1 spacers center the text
      * in the mascot → Continue gap. Avoid overflow-y-auto here — it breaks
      * flex free-space distribution for short info slides.
+     *
+     * Welcome: title/logo above, sport-ball orbit below (flipped vs mascot slides).
      */
+    if (panelStep === 'welcome') {
+      return (
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1" aria-hidden />
+            {textBlock}
+            <div className="flex shrink-0 justify-center pb-1 pt-4 sm:pb-2 sm:pt-5">
+              <WelcomeSportOrbit priority={panelStep === step} />
+            </div>
+            <div className="min-h-0 flex-1" aria-hidden />
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
         {mascotSrc ? (
           <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
-            <Image
+            <OnboardingMascot
               src={mascotSrc}
-              alt=""
-              width={320}
-              height={320}
               priority={panelStep === step}
-              className={MASCOT_IMAGE_CLASS}
             />
           </div>
         ) : null}
