@@ -702,7 +702,7 @@ html.light .mobile-bottom-nav-home {
   }
 }
 
-/* Onboarding welcome: sport-ball orbit — tweak duration here only */
+/* Onboarding sports-identity: sport-ball orbit — tweak duration here only */
 :root {
   --onboarding-sport-orbit-duration: 10s;
   --onboarding-sport-orbit-radius: -5.25rem; /* negative = out from center */

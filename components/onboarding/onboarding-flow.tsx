@@ -82,10 +82,10 @@ const SLIDE_MS = 320
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
 > = {
-  // welcome uses WelcomeSportOrbit instead of a mascot
+  welcome: '/mascot/onboarding_mascot/pucky_1.webp',
   predict_compete: '/mascot/onboarding_mascot/pucky_2.webp',
   your_pool: '/mascot/onboarding_mascot/pucky_3.webp',
-  sports_identity: '/mascot/onboarding_mascot/pucky_4.webp',
+  // sports_identity uses SportBallsOrbit instead of a mascot
   better_friends: '/mascot/onboarding_mascot/pucky_5.webp',
   referral_source: '/mascot/onboarding_mascot/pucky_6.webp',
   fan_level: '/mascot/onboarding_mascot/pucky_6.webp',
@@ -93,8 +93,8 @@ const ONBOARDING_MASCOT_SRC: Partial<
   youre_ready: '/mascot/onboarding_mascot/pucky_1.webp',
 }
 
-/** Welcome orbit: sport balls (same assets as elsewhere). Duration tweaked via CSS var. */
-const WELCOME_ORBIT_BALLS = [
+/** Orbit balls for the sports-identity step. Duration via CSS var. */
+const SPORT_ORBIT_BALLS = [
   { src: '/sports/soccer.png' },
   { src: '/sports/basketball.png' },
   { src: '/sports/football.png' },
@@ -151,12 +151,12 @@ function OnboardingMascot({
 }
 
 /**
- * Welcome-only visual: sport balls evenly spaced on a circle.
+ * Sport balls evenly spaced on a circle (used on sports_identity).
  * CSS `transform: rotate` on the ring (GPU-friendly); nested counter-rotate
  * keeps icons upright. Duration: `--onboarding-sport-orbit-duration` in CSS.
  */
-function WelcomeSportOrbit({ priority = false }: { priority?: boolean }) {
-  const count = WELCOME_ORBIT_BALLS.length
+function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
+  const count = SPORT_ORBIT_BALLS.length
 
   return (
     <div
@@ -164,7 +164,7 @@ function WelcomeSportOrbit({ priority = false }: { priority?: boolean }) {
       aria-hidden
     >
       <div className="animate-onboarding-sport-orbit absolute inset-0">
-        {WELCOME_ORBIT_BALLS.map((ball, index) => {
+        {SPORT_ORBIT_BALLS.map((ball, index) => {
           const angle = (360 / count) * index
           return (
             <div
@@ -1452,17 +1452,23 @@ export function OnboardingFlow({
      * in the mascot → Continue gap. Avoid overflow-y-auto here — it breaks
      * flex free-space distribution for short info slides.
      *
-     * Welcome: title/logo above, sport-ball orbit below (flipped vs mascot slides).
+     * Welcome: title/logo above, Pucky below (same stack as when balls lived here).
      */
     if (panelStep === 'welcome') {
+      const welcomeMascot = ONBOARDING_MASCOT_SRC.welcome
       return (
         <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1" aria-hidden />
             {textBlock}
-            <div className="flex shrink-0 justify-center pb-1 pt-4 sm:pb-2 sm:pt-5">
-              <WelcomeSportOrbit priority={panelStep === step} />
-            </div>
+            {welcomeMascot ? (
+              <div className="flex shrink-0 justify-center pb-1 pt-4 sm:pb-2 sm:pt-5">
+                <OnboardingMascot
+                  src={welcomeMascot}
+                  priority={panelStep === step}
+                />
+              </div>
+            ) : null}
             <div className="min-h-0 flex-1" aria-hidden />
           </div>
         </div>
@@ -1471,7 +1477,11 @@ export function OnboardingFlow({
 
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
-        {mascotSrc ? (
+        {panelStep === 'sports_identity' ? (
+          <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
+            <SportBallsOrbit priority={panelStep === step} />
+          </div>
+        ) : mascotSrc ? (
           <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
             <OnboardingMascot
               src={mascotSrc}
