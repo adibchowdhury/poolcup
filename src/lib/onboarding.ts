@@ -6,6 +6,7 @@ export const ONBOARDING_STEPS = [
   'better_friends',
   'referral_source',
   'fan_level',
+  'motivation_level',
   'create_profile',
   'youre_ready',
 ] as const
@@ -28,6 +29,7 @@ export type OnboardingState = {
   display_name_draft?: string
   referral_source?: string
   fan_level?: number
+  motivation_level?: number
   avatar_touched?: boolean
 }
 
@@ -106,6 +108,44 @@ export function isOnboardingFanLevel(
   )
 }
 
+/** Goal / motivation level (1–5). Labels are display-only; store `level`. */
+export const ONBOARDING_MOTIVATION_LEVEL_OPTIONS = [
+  {
+    level: 1,
+    label: "I'm here for a friendly pool",
+  },
+  {
+    level: 2,
+    label: 'I want to beat my buddies',
+  },
+  {
+    level: 3,
+    label: 'I want to test my sports knowledge',
+  },
+  {
+    level: 4,
+    label: 'I want to track my prediction streaks',
+  },
+  {
+    level: 5,
+    label: 'I want to dominate the global leaderboards',
+  },
+] as const
+
+export type OnboardingMotivationLevel =
+  (typeof ONBOARDING_MOTIVATION_LEVEL_OPTIONS)[number]['level']
+
+export function isOnboardingMotivationLevel(
+  value: unknown,
+): value is OnboardingMotivationLevel {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5
+  )
+}
+
 export function parseOnboardingState(raw: unknown): OnboardingState {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
   const obj = raw as Record<string, unknown>
@@ -131,6 +171,9 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
   const fan_level = isOnboardingFanLevel(obj.fan_level)
     ? obj.fan_level
     : undefined
+  const motivation_level = isOnboardingMotivationLevel(obj.motivation_level)
+    ? obj.motivation_level
+    : undefined
   const avatar_touched =
     typeof obj.avatar_touched === 'boolean' ? obj.avatar_touched : undefined
 
@@ -141,6 +184,7 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     ...(display_name_draft !== undefined ? { display_name_draft } : {}),
     ...(referral_source ? { referral_source } : {}),
     ...(fan_level !== undefined ? { fan_level } : {}),
+    ...(motivation_level !== undefined ? { motivation_level } : {}),
     ...(avatar_touched !== undefined ? { avatar_touched } : {}),
   }
 }
