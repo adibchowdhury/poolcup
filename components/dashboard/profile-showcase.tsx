@@ -23,6 +23,7 @@ import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FriendshipButton } from '@/components/friends/friendship-button'
 import { UserModerationMenu } from '@/components/friends/user-moderation-menu'
+import { ProfileAnalyticsEntry } from '@/components/profile/profile-analytics-entry'
 import { ReportUserButton } from '@/components/profile/report-user-button'
 import { cn } from '@/lib/utils'
 import {
@@ -1322,6 +1323,8 @@ export function ProfileShowcase({
           </div>
           <CareerHighlightsGrid items={careerHighlights} />
         </section>
+
+        {showViewAllAchievements ? <ProfileAnalyticsEntry /> : null}
 
         <section>
           <h2 className="font-display text-xl tracking-wide text-foreground">

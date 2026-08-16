@@ -44,7 +44,17 @@ function selectClassName() {
   )
 }
 
-export function HistoricalPerformancePage() {
+type HistoricalPerformancePageProps = {
+  /**
+   * When true, omit page chrome (title / back link / outer padding) for use
+   * inside the unified Analytics page History tab.
+   */
+  embedded?: boolean
+}
+
+export function HistoricalPerformancePage({
+  embedded = false,
+}: HistoricalPerformancePageProps) {
   const router = useRouter()
   const [locked, setLocked] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -68,7 +78,7 @@ export function HistoricalPerformancePage() {
         cache: 'no-store',
       })
       if (res.status === 401) {
-        router.replace('/login?next=/history-performance')
+        router.replace('/login?next=/analytics%3Ftab%3Dhistory')
         return
       }
       const json = (await res.json()) as ApiOk | ApiLocked
@@ -166,29 +176,8 @@ export function HistoricalPerformancePage() {
     allTime.finalized === 0 &&
     bySeason.length === 0
 
-  return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Pro
-          </p>
-          <h1 className="mt-1 flex items-center gap-2 font-display text-3xl tracking-wide text-foreground sm:text-4xl">
-            <CalendarRange
-              className="h-7 w-7 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            Historical performance
-          </h1>
-          <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-            Season and calendar-year results from your finalized predictions.
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm" className={FOCUS_VISIBLE_RING}>
-          <Link href="/analytics">Back to analytics</Link>
-        </Button>
-      </div>
-
+  const body = (
+    <>
       {locked && !loading ? (
         <LockedProFeature
           title="Historical Performance is a Pro feature"
@@ -309,6 +298,36 @@ export function HistoricalPerformancePage() {
           )}
         </div>
       ) : null}
+    </>
+  )
+
+  if (embedded) {
+    return <div className="min-w-0">{body}</div>
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Pro
+          </p>
+          <h1 className="mt-1 flex items-center gap-2 font-display text-3xl tracking-wide text-foreground sm:text-4xl">
+            <CalendarRange
+              className="h-7 w-7 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+            Historical performance
+          </h1>
+          <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
+            Season and calendar-year results from your finalized predictions.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm" className={FOCUS_VISIBLE_RING}>
+          <Link href="/analytics?tab=history">Back to analytics</Link>
+        </Button>
+      </div>
+      {body}
     </div>
   )
 }

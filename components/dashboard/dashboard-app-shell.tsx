@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Heart, Mail, Settings, CircleHelp, Users, CreditCard, History, BarChart3, CalendarRange } from 'lucide-react'
+import { Heart, Mail, Settings, CircleHelp, Users, CreditCard, History, BarChart3 } from 'lucide-react'
 import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { Button } from '@/components/ui/button'
 import {
@@ -227,12 +227,6 @@ export function DashboardAppShell({
                           <Link href="/analytics">
                             <BarChart3 className="h-4 w-4" />
                             Analytics
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/history-performance">
-                            <CalendarRange className="h-4 w-4" />
-                            Historical performance
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>

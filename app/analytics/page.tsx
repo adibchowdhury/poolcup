@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Advanced Analytics | PoolCup',
-  description: 'Pro analytics for your PoolCup prediction performance.',
+  title: 'Analytics | PoolCup',
+  description:
+    'Pro analytics for current form, AI insights, and historical season performance.',
   robots: { index: false, follow: false },
 }
 

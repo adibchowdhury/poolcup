@@ -9,7 +9,6 @@ import {
   HelpCircle,
   History,
   BarChart3,
-  CalendarRange,
   LogOut,
   Mail,
   Settings,
@@ -107,14 +106,6 @@ export function WebMobileAppDrawer({
       icon: BarChart3,
       action: () => {
         router.push('/analytics')
-      },
-    },
-    {
-      id: 'history-performance',
-      label: 'Historical performance',
-      icon: CalendarRange,
-      action: () => {
-        router.push('/history-performance')
       },
     },
     {

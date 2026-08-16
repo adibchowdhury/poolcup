@@ -26,7 +26,9 @@ import {
 } from '@/components/ui/chart'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
+import { HistoricalPerformancePage } from '@/components/history/historical-performance-page'
 import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -85,6 +87,8 @@ export function AnalyticsDashboardPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const range = parseAnalyticsRange(searchParams.get('range'))
+  const activeTab =
+    searchParams.get('tab') === 'history' ? 'history' : 'performance'
 
   const [locked, setLocked] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -103,6 +107,17 @@ export function AnalyticsDashboardPage() {
       const qs = new URLSearchParams(searchParams.toString())
       if (next === '30d') qs.delete('range')
       else qs.set('range', next)
+      const s = qs.toString()
+      router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false })
+    },
+    [pathname, router, searchParams],
+  )
+
+  const setTab = useCallback(
+    (next: 'performance' | 'history') => {
+      const qs = new URLSearchParams(searchParams.toString())
+      if (next === 'performance') qs.delete('tab')
+      else qs.set('tab', 'history')
       const s = qs.toString()
       router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false })
     },
@@ -205,7 +220,8 @@ export function AnalyticsDashboardPage() {
             Analytics
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-            Accuracy, form, and breakdowns across your finalized predictions.
+            Current form, AI insights, and historical season performance — all
+            in one place.
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className={FOCUS_VISIBLE_RING}>
@@ -213,100 +229,137 @@ export function AnalyticsDashboardPage() {
         </Button>
       </div>
 
-      {locked && !loading ? (
-        <div className="space-y-4">
-          <LockedProFeature
-            title="AI Insights is a Pro feature"
-            description="Get four personalized coaching tips from your own prediction stats — weekly summary, strengths, weak spots, and recent form."
-            source="analytics_ai_insights"
-            modalHeadline="Unlock AI Insights"
-            onCtaClick={() => {
-              capturePostHog('insights_upgrade_prompt_clicked', {
-                source: 'analytics_ai_insights',
-              })
-            }}
-          />
-          <LockedProFeature
-            title="Advanced Analytics is a Pro feature"
-            description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
-            source="locked_analytics_dashboard"
-          />
-        </div>
-      ) : (
-        <>
-          <div
-            className="mb-5 flex flex-wrap items-center gap-2"
-            role="group"
-            aria-label="Time range"
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) =>
+          setTab(value === 'history' ? 'history' : 'performance')
+        }
+        className="gap-4"
+      >
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1 sm:w-auto sm:min-w-[20rem]">
+          <TabsTrigger
+            value="performance"
+            className={cn(
+              'rounded-lg px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none',
+              FOCUS_VISIBLE_RING,
+            )}
           >
-            {ANALYTICS_RANGE_OPTIONS.map((opt) => {
-              const selected = range === opt.value
-              return (
-                <Button
-                  key={opt.value}
-                  type="button"
-                  size="sm"
-                  variant={selected ? 'default' : 'outline'}
-                  aria-pressed={selected}
-                  title={opt.hint}
-                  disabled={loading || locked}
-                  className={cn('h-8', FOCUS_VISIBLE_RING)}
-                  onClick={() => setRange(opt.value)}
-                >
-                  {opt.label}
-                </Button>
-              )
-            })}
-            {range === 'season' ? (
-              <p className="w-full text-[11px] text-muted-foreground sm:w-auto">
-                Current season (per sport)
-              </p>
-            ) : null}
-          </div>
+            Performance
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className={cn(
+              'rounded-lg px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none',
+              FOCUS_VISIBLE_RING,
+            )}
+          >
+            History
+          </TabsTrigger>
+        </TabsList>
 
-          {error ? (
-            <div
-              className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-6 text-center"
-              role="alert"
-            >
-              <p className="text-sm text-foreground">{error}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn('mt-3', FOCUS_VISIBLE_RING)}
-                onClick={() => void load()}
-              >
-                Retry
-              </Button>
+        <TabsContent value="performance" className="mt-0 outline-none">
+          {locked && !loading ? (
+            <div className="space-y-4">
+              <LockedProFeature
+                title="AI Insights is a Pro feature"
+                description="Get four personalized coaching tips from your own prediction stats — weekly summary, strengths, weak spots, and recent form."
+                source="analytics_ai_insights"
+                modalHeadline="Unlock AI Insights"
+                onCtaClick={() => {
+                  capturePostHog('insights_upgrade_prompt_clicked', {
+                    source: 'analytics_ai_insights',
+                  })
+                }}
+              />
+              <LockedProFeature
+                title="Advanced Analytics is a Pro feature"
+                description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
+                source="locked_analytics_dashboard"
+              />
             </div>
-          ) : loading ? (
-            <AnalyticsSkeleton />
-          ) : empty ? (
-            <div className="rounded-xl border border-dashed border-border bg-card/40 px-4 py-12 text-center">
-              <p className="text-sm text-muted-foreground">
-                No finalized predictions yet — make some predictions to see your
-                analytics
-              </p>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className={cn('mt-3', FOCUS_VISIBLE_RING)}
+          ) : (
+            <>
+              <div
+                className="mb-5 flex flex-wrap items-center gap-2"
+                role="group"
+                aria-label="Time range"
               >
-                <Link href="/discover">Find a pool</Link>
-              </Button>
-            </div>
-          ) : analytics && comparisons && timeseries && rank ? (
-            <AnalyticsBody
-              analytics={analytics}
-              comparisons={comparisons}
-              timeseries={timeseries}
-              rank={rank}
-            />
+                {ANALYTICS_RANGE_OPTIONS.map((opt) => {
+                  const selected = range === opt.value
+                  return (
+                    <Button
+                      key={opt.value}
+                      type="button"
+                      size="sm"
+                      variant={selected ? 'default' : 'outline'}
+                      aria-pressed={selected}
+                      title={opt.hint}
+                      disabled={loading || locked}
+                      className={cn('h-8', FOCUS_VISIBLE_RING)}
+                      onClick={() => setRange(opt.value)}
+                    >
+                      {opt.label}
+                    </Button>
+                  )
+                })}
+                {range === 'season' ? (
+                  <p className="w-full text-[11px] text-muted-foreground sm:w-auto">
+                    Current season (per sport)
+                  </p>
+                ) : null}
+              </div>
+
+              {error ? (
+                <div
+                  className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-6 text-center"
+                  role="alert"
+                >
+                  <p className="text-sm text-foreground">{error}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={cn('mt-3', FOCUS_VISIBLE_RING)}
+                    onClick={() => void load()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : loading ? (
+                <AnalyticsSkeleton />
+              ) : empty ? (
+                <div className="rounded-xl border border-dashed border-border bg-card/40 px-4 py-12 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No finalized predictions yet — make some predictions to see
+                    your analytics
+                  </p>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className={cn('mt-3', FOCUS_VISIBLE_RING)}
+                  >
+                    <Link href="/discover">Find a pool</Link>
+                  </Button>
+                </div>
+              ) : analytics && comparisons && timeseries && rank ? (
+                <AnalyticsBody
+                  analytics={analytics}
+                  comparisons={comparisons}
+                  timeseries={timeseries}
+                  rank={rank}
+                />
+              ) : null}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0 outline-none">
+          {activeTab === 'history' ? (
+            <HistoricalPerformancePage embedded />
           ) : null}
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
