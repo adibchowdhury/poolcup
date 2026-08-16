@@ -7,11 +7,9 @@ import { AchievementBadgeArt } from '@/components/achievements/achievement-badge
 import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
   Award,
-  CheckCircle2,
   ChevronRight,
   Crown,
   Flame,
-  Lock,
   Medal,
   Pencil,
   Sparkles,
@@ -21,7 +19,6 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FriendshipButton } from '@/components/friends/friendship-button'
@@ -129,8 +126,6 @@ type ProfileShowcaseProps = {
   highestLevel?: number | null
 }
 
-type ProfileTab = 'overview' | 'progress' | 'achievements' | 'stats'
-
 type CareerItem = {
   label: string
   value: string
@@ -148,17 +143,6 @@ function formatMemberSince(value: string | null | undefined): string | null {
   })
 }
 
-function formatEarnedDate(value: string | null): string {
-  if (!value) return 'Date unavailable'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Date unavailable'
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 function sortEarnedNewestFirst(
   badges: AchievementWithStatus[],
 ): AchievementWithStatus[] {
@@ -168,23 +152,6 @@ function sortEarnedNewestFirst(
       (a, b) =>
         Date.parse(b.earned_at ?? '') - Date.parse(a.earned_at ?? ''),
     )
-}
-
-function metricUnit(metric: string, value: number): string {
-  if (metric === 'predictions_made')
-    return value === 1 ? 'prediction' : 'predictions'
-  if (metric === 'correct_predictions')
-    return value === 1 ? 'correct pick' : 'correct picks'
-  if (metric === 'exact_scores')
-    return value === 1 ? 'exact score' : 'exact scores'
-  if (metric === 'pools_joined') return value === 1 ? 'pool' : 'pools'
-  if (metric === 'pools_created')
-    return value === 1 ? 'pool created' : 'pools created'
-  if (metric === 'first_place_finishes') return value === 1 ? 'win' : 'wins'
-  if (metric === 'top3_finishes') return value === 1 ? 'podium' : 'podiums'
-  if (metric === 'consecutive_correct')
-    return value === 1 ? 'correct in a row' : 'correct in a row'
-  return ''
 }
 
 /** Top X% from global rank (rank ÷ total), never fabricated. */
@@ -254,7 +221,7 @@ function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
       </div>
       <p
         className={cn(
-          'mt-2 font-display text-xl tracking-wide text-foreground',
+          'mt-2 line-clamp-2 font-display text-base tracking-wide text-foreground sm:text-lg',
           href && 'transition-colors group-hover:text-primary',
         )}
       >
@@ -316,7 +283,7 @@ function YourPoolsSection({
         </p>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {visiblePools.map((pool) => (
               <ProfilePoolCard key={pool.id} pool={pool} />
             ))}
@@ -418,145 +385,13 @@ function SportsYouFollowSection({
   )
 }
 
-function BadgeDetailList({
-  badges,
-  progressById,
-  showLockedProgress,
-  emptyMessage,
-}: {
-  badges: AchievementWithStatus[]
-  progressById: Map<string, UserAchievementProgress>
-  showLockedProgress: boolean
-  emptyMessage: string
-}) {
-  if (badges.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {emptyMessage}
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      {badges.map((badge) => {
-        const rarity = achievementRarityLabel(badge.rarity)
-        const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
-        const progress = progressById.get(badge.id)
-        const currentValue = Math.min(
-          progress?.current_value ?? 0,
-          progress?.threshold ?? badge.threshold,
-        )
-        const threshold = progress?.threshold ?? badge.threshold
-        const progressPct = progress?.progress_pct ?? 0
-        const remaining = Math.max(0, threshold - currentValue)
-        const unit = metricUnit(badge.condition_metric, remaining)
-
-        return (
-          <article
-            key={badge.id}
-            className={cn(
-              'rounded-[14px] border border-border/90 bg-card/90 px-2.5 py-2.5',
-              rarityStyle.border,
-              rarityStyle.glow,
-              badge.earned && 'bg-primary/[0.04]',
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[11px] border bg-black/25 p-0.5',
-                  rarityStyle.border,
-                  !badge.earned && 'opacity-55 grayscale',
-                )}
-              >
-                <AchievementBadgeArt
-                  achievementId={badge.id}
-                  artFilename={badge.art_filename}
-                  src={badge.imageUrl}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <p className="truncate text-xs font-semibold text-foreground">
-                    {badge.name}
-                  </p>
-                  <span
-                    className={cn(
-                      'shrink-0 text-[8px] font-bold uppercase tracking-[0.08em]',
-                      rarityStyle.text,
-                    )}
-                  >
-                    {rarity}
-                  </span>
-                </div>
-                <p className="mt-0.5 truncate text-[9px] text-muted-foreground/80">
-                  {badge.description}
-                </p>
-              </div>
-              {badge.earned ? (
-                <CheckCircle2
-                  className="h-4 w-4 shrink-0 text-primary"
-                  aria-label="Unlocked"
-                />
-              ) : (
-                <Lock
-                  className="h-4 w-4 shrink-0 text-muted-foreground/50"
-                  aria-label="Locked"
-                />
-              )}
-            </div>
-
-            {badge.earned ? (
-              <div className="mt-2 flex items-center justify-between border-t border-border pt-1.5 text-[9px]">
-                <span className="text-muted-foreground">
-                  Unlocked {formatEarnedDate(badge.earned_at)}
-                </span>
-                <span className="font-semibold tabular-nums text-primary">
-                  +{badge.xp_value} XP
-                </span>
-              </div>
-            ) : showLockedProgress && progress ? (
-              <div className="mt-2 border-t border-white/6 pt-1.5">
-                <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground">
-                  <span className="truncate">
-                    {currentValue.toLocaleString()}/
-                    {threshold.toLocaleString()}
-                    {metricUnit(badge.condition_metric, threshold)
-                      ? ` ${metricUnit(badge.condition_metric, threshold)}`
-                      : ''}
-                  </span>
-                  <span className="shrink-0">
-                    {remaining > 0
-                      ? `${remaining.toLocaleString()}${unit ? ` ${unit}` : ''} more`
-                      : 'Ready to unlock'}
-                  </span>
-                </div>
-                <div className="mt-1 h-1 overflow-hidden rounded-full bg-black/55">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-[width] duration-700',
-                      rarityStyle.bar,
-                    )}
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </article>
-        )
-      })}
-    </div>
-  )
-}
-
 export function ProfileShowcase({
   userId,
   username = null,
   displayName,
   avatar,
   customAvatarUrl,
-  predictionsMade,
+  predictionsMade: _predictionsMade,
   accuracy,
   totalPoints = null,
   exactScores = null,
@@ -576,7 +411,6 @@ export function ProfileShowcase({
   initialActivity,
   initialGlobalRank = null,
   loadError = null,
-  highestLevel: highestLevelProp = null,
 }: ProfileShowcaseProps) {
   const isPublic = mode === 'public'
   const [data, setData] = useState<UserAchievementsData | null>(
@@ -585,7 +419,6 @@ export function ProfileShowcase({
   const [progressRows, setProgressRows] = useState<UserAchievementProgress[]>(
     [],
   )
-  const [peakLevel, setPeakLevel] = useState<number | null>(highestLevelProp)
   const [loading, setLoading] = useState(false)
   const [sectionError, setSectionError] = useState<string | null>(loadError)
   const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(
@@ -594,7 +427,6 @@ export function ProfileShowcase({
   const [globalRankLoaded, setGlobalRankLoaded] = useState(
     initialGlobalRank != null,
   )
-  const [profileTab, setProfileTab] = useState<ProfileTab>('overview')
   const [profilePools, setProfilePools] = useState<ProfilePoolSummary[]>([])
   const [profileSports, setProfileSports] = useState<ProfileSportSummary[]>([])
   const [poolsLoading, setPoolsLoading] = useState(false)
@@ -646,7 +478,7 @@ export function ProfileShowcase({
         includeInviteCodes: !isPublic,
       }),
       fetchProfileBreakdownStats(supabase, userId),
-      fetchProfileRecentActivity(supabase, userId, { limit: 12 }),
+      fetchProfileRecentActivity(supabase, userId, { limit: 5 }),
       fetchPublicProfile(supabase, userId),
     ])
 
@@ -825,43 +657,26 @@ export function ProfileShowcase({
     setLoading(true)
 
     void (async () => {
-      const peakPromise = supabase
-        .from('users')
-        .select('highest_level')
-        .eq('id', userId)
-        .maybeSingle()
-
       if (isPublic) {
-        const [result, progress, peak] = await Promise.all([
+        const [result, progress] = await Promise.all([
           fetchUserAchievementsReadOnly(supabase, userId),
           fetchUserAchievementProgress(supabase, userId),
-          peakPromise,
         ])
         if (cancelled) return
         setData(result)
         setProgressRows(progress)
-        setPeakLevel(
-          Math.max(
-            1,
-            Number(peak.data?.highest_level) || result.level.level,
-          ),
-        )
         setLoading(false)
         return
       }
 
-      const [result, progress, peak] = await Promise.all([
+      const [result, progress] = await Promise.all([
         fetchUserAchievements(supabase, userId),
         fetchUserAchievementProgress(supabase, userId),
-        peakPromise,
       ])
       if (cancelled) return
       setData(result)
       badgeUnlock?.enqueueFromAchievementsData(result)
       setProgressRows(progress)
-      setPeakLevel(
-        Math.max(1, Number(peak.data?.highest_level) || result.level.level),
-      )
       setLoading(false)
     })()
 
@@ -879,31 +694,11 @@ export function ProfileShowcase({
     totalPoints,
   ])
 
-  const progressById = useMemo(
-    () =>
-      new Map(progressRows.map((row) => [row.achievement_id, row] as const)),
-    [progressRows],
-  )
   const earnedBadges = useMemo(
     () => sortEarnedNewestFirst(data?.achievements ?? []),
     [data?.achievements],
   )
   const featuredBadges = earnedBadges.slice(0, 4)
-
-  const lockedNearComplete = useMemo(() => {
-    if (isPublic) return []
-    return (data?.achievements ?? [])
-      .filter(
-        (badge) =>
-          !badge.earned && badge.is_active && badge.buildable === 'green',
-      )
-      .sort(
-        (a, b) =>
-          (progressById.get(b.id)?.progress_pct ?? 0) -
-          (progressById.get(a.id)?.progress_pct ?? 0),
-      )
-      .slice(0, 5)
-  }, [data?.achievements, progressById, isPublic])
 
   const totalXp = data?.totalXp ?? 0
   const level = data?.level ?? xpToLevel(totalXp)
@@ -941,13 +736,6 @@ export function ProfileShowcase({
 
   const careerHighlights = useMemo(() => {
     const items: CareerItem[] = []
-
-    items.push({
-      label: 'Predictions',
-      value: predictionsMade.toLocaleString(),
-      icon: Target,
-      accent: 'text-foreground border-border bg-card/80',
-    })
 
     if (accuracy != null) {
       items.push({
@@ -1041,19 +829,11 @@ export function ProfileShowcase({
     metricValues,
     predictionCurrent,
     predictionLongest,
-    predictionsMade,
     resolvedExactScores,
     resolvedTotalPoints,
   ])
 
   const showViewAllAchievements = !isPublic || isOwnPublicProfile
-
-  const rankOf =
-    globalRankLoaded &&
-    globalRank?.global_rank != null &&
-    globalRank.total_ranked > 0
-      ? `of ${globalRank.total_ranked.toLocaleString()}`
-      : null
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-3 pb-8">
@@ -1072,34 +852,23 @@ export function ProfileShowcase({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_55%)]" />
 
           {/* Global rank — top-right corner of hero */}
-          <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,15rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[18rem]">
+          <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,16rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[20rem]">
             {globalRankLoaded ? (
               globalRank?.global_rank != null ? (
                 <div
                   className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:gap-1.5 sm:px-2.5"
                   aria-label={`Global rank ${globalRank.global_rank}${
-                    globalRank.total_ranked > 0
-                      ? ` of ${globalRank.total_ranked}`
-                      : ''
-                  }${topPct != null ? `, top ${topPct}%` : ''}`}
+                    topPct != null ? `, top ${topPct}%` : ''
+                  }`}
                 >
                   <Crown
                     className="h-2.5 w-2.5 shrink-0 text-primary sm:h-3 sm:w-3"
                     aria-hidden
                   />
                   <span className="truncate font-display text-[10px] tracking-wide text-foreground sm:text-xs">
-                    <span className="sm:hidden">
-                      #{globalRank.global_rank.toLocaleString()}
-                    </span>
-                    <span className="hidden sm:inline">
-                      Global Rank #{globalRank.global_rank.toLocaleString()}
-                    </span>
+                    Global rank: #{globalRank.global_rank.toLocaleString()}
+                    {topPct != null ? ` (Top ${topPct}%)` : ''}
                   </span>
-                  {topPct != null ? (
-                    <span className="shrink-0 text-[8px] font-semibold tabular-nums text-primary sm:text-[9px]">
-                      Top {topPct}%
-                    </span>
-                  ) : null}
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-2 py-1 text-muted-foreground backdrop-blur-sm sm:px-2.5">
@@ -1119,9 +888,9 @@ export function ProfileShowcase({
         </div>
 
         <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6">
-          {/* Identity row: avatar + name / member since (rank is top-right) */}
-          <div className="relative z-10 -mt-11 flex items-end gap-4 sm:-mt-12 sm:gap-5">
-            <div className="relative h-[88px] w-[88px] shrink-0 sm:h-[96px] sm:w-[96px]">
+          {/* Identity row: avatar height matches adjacent text column */}
+          <div className="relative z-10 -mt-11 flex items-stretch gap-4 sm:-mt-12 sm:gap-5">
+            <div className="relative aspect-square min-h-[5.5rem] w-auto shrink-0 self-stretch sm:min-h-[6rem]">
               <div className="h-full w-full overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
                 <UserAvatarImage
                   avatar={avatar}
@@ -1146,7 +915,7 @@ export function ProfileShowcase({
               ) : null}
             </div>
 
-            <div className="min-w-0 flex-1 pb-1.5">
+            <div className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
@@ -1174,7 +943,7 @@ export function ProfileShowcase({
               </div>
 
               {titleText ? (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-semibold text-primary">
+                <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-semibold text-primary">
                   <Sparkles className="h-2.5 w-2.5" aria-hidden />
                   {titleText}
                 </span>
@@ -1202,10 +971,6 @@ export function ProfileShowcase({
                     {mutualFriendsCount === 1 ? '' : 's'}
                   </span>
                 ) : null}
-                <span>
-                  {predictionsMade.toLocaleString()} prediction
-                  {predictionsMade === 1 ? '' : 's'}
-                </span>
               </div>
             </div>
           </div>
@@ -1271,217 +1036,406 @@ export function ProfileShowcase({
         </div>
       </section>
 
-      {/* ── Tabs: Overview · Progress · Achievements · Stats ── */}
-      <Tabs
-        value={profileTab}
-        onValueChange={(value) => {
-          const next = value as ProfileTab
-          setProfileTab(next)
-          capturePostHog('tab_changed', {
-            surface: 'profile',
-            tab: next,
-            profile_user_id: userId,
-          })
-        }}
-        className="gap-3"
-      >
-        <TabsList className="grid h-auto w-full grid-cols-4 gap-0.5 rounded-xl border border-border/90 bg-card/90 p-1">
-          {(
-            [
-              ['overview', 'Overview'],
-              ['progress', 'Progress'],
-              ['achievements', 'Achievements'],
-              ['stats', 'Stats'],
-            ] as const
-          ).map(([value, label]) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className={cn(
-                'min-w-0 rounded-lg px-1 py-2 text-[10px] leading-tight sm:px-2 sm:text-[11px] data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-none',
-                FOCUS_VISIBLE_RING,
-              )}
-            >
-              <span className="truncate">{label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {sectionError ? (
+        <div className="rounded-2xl border border-border bg-card/70 px-4 py-6 text-center">
+          <p className="text-sm text-destructive">{sectionError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('mt-3', FOCUS_VISIBLE_RING)}
+            onClick={() => void reloadExtras()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
-        {sectionError ? (
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-6 text-center">
-            <p className="text-sm text-destructive">{sectionError}</p>
-            <Button
-              type="button"
-              variant="outline"
-              className={cn('mt-3', FOCUS_VISIBLE_RING)}
-              onClick={() => void reloadExtras()}
-            >
-              Try again
-            </Button>
+      <div className="mt-1 space-y-5">
+        <section>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl tracking-wide text-foreground">
+                Featured Badges
+              </h2>
+              <p className="text-[10px] text-muted-foreground">
+                Recent unlocks · rarity from catalogue
+              </p>
+            </div>
+            {showViewAllAchievements ? (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground"
+              >
+                <Link href="/achievements">
+                  View all
+                  <ChevronRight className="h-3 w-3" aria-hidden />
+                </Link>
+              </Button>
+            ) : null}
           </div>
-        ) : null}
 
-        {/* OVERVIEW */}
-        <TabsContent value="overview" className="mt-1 space-y-5">
-          <section>
-            <div className="mb-2.5 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-xl tracking-wide text-foreground">
-                  Featured Badges
-                </h2>
-                <p className="text-[10px] text-muted-foreground">
-                  Recent unlocks · rarity from catalogue
-                </p>
-              </div>
-              {showViewAllAchievements ? (
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-0.5 px-1.5 text-[10px] text-muted-foreground"
-                >
-                  <Link href="/achievements">
-                    View all
-                    <ChevronRight className="h-3 w-3" aria-hidden />
-                  </Link>
-                </Button>
+          {loading && featuredBadges.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Loading badges…
+            </p>
+          ) : featuredBadges.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {isPublic
+                ? 'No badges unlocked yet.'
+                : 'Earn badges to feature them here.'}
+            </p>
+          ) : (
+            <div className="grid grid-cols-4 gap-x-1 gap-y-2">
+              {featuredBadges.map((badge) => {
+                const rarity = achievementRarityLabel(badge.rarity)
+                const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
+                return (
+                  <div
+                    key={badge.id}
+                    className="flex w-full min-w-0 flex-col items-center px-0.5 text-center"
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden sm:h-[4.5rem] sm:w-[4.5rem]">
+                      <AchievementBadgeArt
+                        achievementId={badge.id}
+                        artFilename={badge.art_filename}
+                        src={badge.imageUrl}
+                      />
+                    </div>
+                    <p className="mt-1.5 w-full line-clamp-2 text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
+                      {badge.name}
+                    </p>
+                    <span
+                      className={cn(
+                        'mt-0.5 text-[8px] font-bold uppercase tracking-[0.08em]',
+                        rarityStyle.text,
+                      )}
+                    >
+                      {rarity}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {!isPublic ? (
+          <section className="hue-card-surface overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Next Unlock
+              </p>
+              {nextAchievement ? (
+                <span className="font-mono text-[11px] tabular-nums text-primary">
+                  {nextAchievement.progress_pct}%
+                </span>
               ) : null}
             </div>
-
-            {loading && featuredBadges.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Loading badges…
-              </p>
-            ) : featuredBadges.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {isPublic
-                  ? 'No badges unlocked yet.'
-                  : 'Earn badges to feature them here.'}
-              </p>
-            ) : (
-              <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-                {featuredBadges.map((badge) => {
-                  const rarity = achievementRarityLabel(badge.rarity)
-                  const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
-                  return (
+            {nextAchievement ? (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background/50 p-1">
+                  <AchievementBadgeArt
+                    achievementId={nextAchievement.achievement_id}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-lg tracking-wide text-foreground">
+                    {nextAchievement.name}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                    {nextAchievement.description}
+                  </p>
+                  <p className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+                    {nextAchievement.current_value.toLocaleString()}/
+                    {nextAchievement.threshold.toLocaleString()}
+                  </p>
+                  <div
+                    className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label={`Progress on ${nextAchievement.name}`}
+                    aria-valuenow={nextAchievement.progress_pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
                     <div
-                      key={badge.id}
-                      className="flex min-w-0 flex-col items-center text-center"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden sm:h-14 sm:w-14">
-                        <AchievementBadgeArt
-                          achievementId={badge.id}
-                          artFilename={badge.art_filename}
-                          src={badge.imageUrl}
-                        />
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-[9px] font-semibold leading-tight text-foreground sm:text-[10px]">
-                        {badge.name}
-                      </p>
-                      <span
-                        className={cn(
-                          'mt-1 text-[7px] font-bold uppercase tracking-[0.08em]',
-                          rarityStyle.text,
-                        )}
-                      >
-                        {rarity}
-                      </span>
-                    </div>
-                  )
-                })}
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${nextAchievement.progress_pct}%`,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Next achievement progress will show as you play.
+              </p>
             )}
           </section>
+        ) : null}
 
-          <YourPoolsSection
-            pools={profilePools}
-            loading={poolsLoading}
-            isPublic={isPublic}
-          />
+        <YourPoolsSection
+          pools={profilePools}
+          loading={poolsLoading}
+          isPublic={isPublic}
+        />
 
-          {liveFavorites.length > 0 ? (
-            <section>
-              <h2 className="font-display text-xl tracking-wide text-foreground">
-                Favorite sports
-              </h2>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {liveFavorites.map((sport) => (
-                  <span
-                    key={sport.id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-2.5 py-1 text-xs font-medium text-foreground"
-                  >
-                    {sport.ballSrc ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={sport.ballSrc}
-                        alt=""
-                        className="h-4 w-4 object-contain"
-                      />
-                    ) : null}
-                    {sport.label}
-                  </span>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <SportsYouFollowSection
-            sports={profileSports}
-            loading={poolsLoading}
-            hasPools={profilePools.length > 0}
-            isPublic={isPublic}
-          />
-
+        {liveFavorites.length > 0 ? (
           <section>
-            <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
-              <h2 className="font-display text-xl tracking-wide text-foreground">
-                Recent activity
-              </h2>
-              {!isPublic || isOwnPublicProfile ? (
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link
-                    href="/history"
-                    className={cn(
-                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
-                      FOCUS_VISIBLE_RING,
-                    )}
-                  >
-                    View all history
-                  </Link>
-                  <Link
-                    href="/analytics"
-                    className={cn(
-                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
-                      FOCUS_VISIBLE_RING,
-                    )}
-                  >
-                    Analytics
-                  </Link>
-                  <Link
-                    href="/history-performance"
-                    className={cn(
-                      'text-xs font-medium text-primary underline-offset-4 hover:underline',
-                      FOCUS_VISIBLE_RING,
-                    )}
-                  >
-                    Historical
-                  </Link>
-                </div>
-              ) : null}
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Favorite sports
+            </h2>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {liveFavorites.map((sport) => (
+                <span
+                  key={sport.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-2.5 py-1 text-xs font-medium text-foreground"
+                >
+                  {sport.ballSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sport.ballSrc}
+                      alt=""
+                      className="h-4 w-4 object-contain"
+                    />
+                  ) : null}
+                  {sport.label}
+                </span>
+              ))}
             </div>
-            {activityLoading && activity.length === 0 ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <ShimmerBlock key={i} className="h-14 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : activity.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-                No recent scored activity yet.
+          </section>
+        ) : null}
+
+        <SportsYouFollowSection
+          sports={profileSports}
+          loading={poolsLoading}
+          hasPools={profilePools.length > 0}
+          isPublic={isPublic}
+        />
+
+        <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
+          <h2 className="font-display text-xl tracking-wide text-foreground">
+            Prediction Accuracy
+          </h2>
+          <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
+            {accuracy == null ? '—' : `${accuracy}%`}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Correct winner picks across classic match predictions
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Exact
               </p>
+              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                {resolvedExactScores.toLocaleString()}
+              </p>
+            </div>
+            {!isPublic ? (
+              <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Current streak
+                </p>
+                {streakLoading ? (
+                  <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
+                ) : (
+                  <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                    {predictionCurrent ?? 0}
+                  </p>
+                )}
+              </div>
             ) : (
+              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Points
+                </p>
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {(resolvedTotalPoints ?? 0).toLocaleString()}
+                </p>
+              </div>
+            )}
+            <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Longest streak
+              </p>
+              {streakLoading && !isPublic ? (
+                <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
+              ) : (
+                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                  {predictionLongest}
+                </p>
+              )}
+            </div>
+          </div>
+          {streakError && !isPublic ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-[11px] text-destructive">{streakError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn('h-7 px-2 text-[11px]', FOCUS_VISIBLE_RING)}
+                onClick={() => {
+                  streakViewedRef.current = false
+                  setDayCurrentStreak(null)
+                  setStreakLoading(true)
+                  setStreakError(null)
+                  void syncPredictionStreak().then((result) => {
+                    if (!result || result.error) {
+                      setStreakError(result?.error ?? 'Could not load streak')
+                      setStreakLoading(false)
+                      return
+                    }
+                    setDayCurrentStreak(result.current_streak)
+                    setDayLongestStreak(result.longest_streak)
+                    applyStreakSyncFeedback(result, {
+                      onLevelUp: xp?.enqueueLevelUp,
+                    })
+                    setStreakLoading(false)
+                  })
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : !isPublic &&
+            !streakLoading &&
+            (predictionCurrent ?? 0) === 0 &&
+            predictionLongest === 0 ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Start your streak — predict today!
+            </p>
+          ) : null}
+        </section>
+
+        <section>
+          <div className="mb-2.5">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Career Highlights
+            </h2>
+            <p className="text-[10px] text-muted-foreground">
+              From pool finishes and prediction stats
+            </p>
+          </div>
+          <CareerHighlightsGrid items={careerHighlights} />
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl tracking-wide text-foreground">
+            By sport
+          </h2>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Post-lock predictions only · expands as more sports launch
+          </p>
+          {activityLoading && sportStats.length === 0 ? (
+            <div className="mt-3 space-y-2">
+              <ShimmerBlock className="h-16 w-full rounded-xl" />
+            </div>
+          ) : sportStats.length === 0 ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+              No scored predictions by sport yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {sportStats.map((row) => (
+                <li
+                  key={row.sportKey}
+                  className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-foreground">
+                      {row.sportLabel}
+                    </p>
+                    <p className="font-mono text-sm tabular-nums text-foreground">
+                      {row.points} pts
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {row.accuracy != null ? `${row.accuracy}%` : '—'}
+                    {` · ${row.exactScores} exact`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl tracking-wide text-foreground">
+            By competition
+          </h2>
+          {activityLoading && competitionStats.length === 0 ? (
+            <div className="mt-3 space-y-2">
+              <ShimmerBlock className="h-16 w-full rounded-xl" />
+            </div>
+          ) : competitionStats.length === 0 ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+              No scored predictions by competition yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {competitionStats.map((row) => (
+                <li
+                  key={row.eventId}
+                  className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {row.eventName}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {row.sportLabel}
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-mono text-sm tabular-nums text-foreground">
+                      {row.points} pts
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {row.accuracy != null ? `${row.accuracy}%` : '—'}
+                    {` · ${row.exactScores} exact`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Recent activity
+            </h2>
+            {!isPublic || isOwnPublicProfile ? (
+              <Link
+                href="/history"
+                className={cn(
+                  'text-xs font-medium text-primary underline-offset-4 hover:underline',
+                  FOCUS_VISIBLE_RING,
+                )}
+              >
+                View all history
+              </Link>
+            ) : null}
+          </div>
+          {activityLoading && activity.length === 0 ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <ShimmerBlock key={i} className="h-14 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : activity.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+              No recent scored activity yet.
+            </p>
+          ) : (
+            <>
               <ul className="space-y-2">
-                {activity.map((item) => (
+                {activity.slice(0, 5).map((item) => (
                   <li
                     key={item.id}
                     className="rounded-xl border border-border/80 bg-card/70 px-3 py-2.5"
@@ -1509,415 +1463,21 @@ export function ProfileShowcase({
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
-        </TabsContent>
-
-        {/* PROGRESS — XP, levels, global rank, next unlock */}
-        <TabsContent value="progress" className="mt-1 space-y-5">
-          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              Level & XP
-            </h2>
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Level
-                </p>
-                <p className="mt-0.5 font-display text-4xl leading-none tabular-nums text-foreground">
-                  {level?.level ?? 1}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                  {totalXp.toLocaleString()}
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                    XP
-                  </span>
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {level?.nextLevelThreshold == null
-                    ? 'Max level'
-                    : `${(level?.xpToNext ?? 0).toLocaleString()} to next`}
-                </p>
-              </div>
-            </div>
-            <div
-              className="mt-3 h-2.5 overflow-hidden rounded-full border border-border bg-muted"
-              role="progressbar"
-              aria-label={`XP progress for Level ${level?.level ?? 1}`}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={level?.progressPct ?? 0}
-            >
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${level?.progressPct ?? 0}%` }}
-              />
-            </div>
-            <p className="mt-2 font-mono text-[11px] tabular-nums text-muted-foreground">
-              {level?.nextLevelThreshold == null
-                ? `${totalXp.toLocaleString()} XP · Max level`
-                : `${totalXp.toLocaleString()} / ${level.nextLevelThreshold.toLocaleString()} XP`}
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Highest level reached{' '}
-              <span className="font-mono tabular-nums text-foreground">
-                {Math.max(peakLevel ?? 1, level?.level ?? 1)}
-              </span>
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              Global Rank
-            </h2>
-            {globalRankLoaded ? (
-              globalRank?.global_rank != null ? (
-                <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-2">
-                  <p className="font-display text-4xl leading-none tabular-nums text-foreground">
-                    #{globalRank.global_rank.toLocaleString()}
-                  </p>
-                  <div className="pb-1">
-                    {rankOf ? (
-                      <p className="text-sm text-muted-foreground">{rankOf}</p>
-                    ) : null}
-                    {topPct != null ? (
-                      <p className="text-sm font-semibold text-primary">
-                        Top {topPct}%
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-muted-foreground">Unranked</p>
-              )
-            ) : (
-              <p className="mt-3 text-sm text-muted-foreground">Loading rank…</p>
-            )}
-          </section>
-
-          {!isPublic ? (
-            <section className="hue-card-surface overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Next Unlock
-                </p>
-                {nextAchievement ? (
-                  <span className="font-mono text-[11px] tabular-nums text-primary">
-                    {nextAchievement.progress_pct}%
-                  </span>
-                ) : null}
-              </div>
-              {nextAchievement ? (
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background/50 p-1">
-                    <AchievementBadgeArt
-                      achievementId={nextAchievement.achievement_id}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-lg tracking-wide text-foreground">
-                      {nextAchievement.name}
-                    </p>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {nextAchievement.description}
-                    </p>
-                    <p className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-                      {nextAchievement.current_value.toLocaleString()}/
-                      {nextAchievement.threshold.toLocaleString()}
-                    </p>
-                    <div
-                      className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
-                      role="progressbar"
-                      aria-label={`Progress on ${nextAchievement.name}`}
-                      aria-valuenow={nextAchievement.progress_pct}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    >
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{
-                          width: `${nextAchievement.progress_pct}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Next achievement progress will show as you play.
-                </p>
-              )}
-            </section>
-          ) : null}
-        </TabsContent>
-
-        {/* ACHIEVEMENTS */}
-        <TabsContent value="achievements" className="mt-1 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-xl tracking-wide text-foreground">
-                Achievements
-              </h2>
-              <p className="text-[10px] text-muted-foreground">
-                {earnedBadges.length} unlocked
-                {data?.totalCount
-                  ? ` · ${data.totalCount} in catalogue`
-                  : ''}
-              </p>
-            </div>
-            {showViewAllAchievements ? (
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1 text-[11px]"
-              >
-                <Link href="/achievements">
-                  Full page
-                  <ChevronRight className="h-3 w-3" aria-hidden />
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-
-          {loading && !data ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Loading achievements…
-            </p>
-          ) : (
-            <>
-              <BadgeDetailList
-                badges={earnedBadges}
-                progressById={progressById}
-                showLockedProgress={false}
-                emptyMessage={
-                  isPublic
-                    ? 'No badges unlocked yet.'
-                    : 'Your achievement collection will appear here.'
-                }
-              />
-              {!isPublic && lockedNearComplete.length > 0 ? (
-                <div className="pt-2">
-                  <h3 className="mb-2 font-display text-base tracking-wide text-muted-foreground">
-                    In progress
-                  </h3>
-                  <BadgeDetailList
-                    badges={lockedNearComplete}
-                    progressById={progressById}
-                    showLockedProgress
-                    emptyMessage=""
-                  />
-                </div>
+              {!isPublic || isOwnPublicProfile ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className={cn('mt-3 w-full', FOCUS_VISIBLE_RING)}
+                >
+                  <Link href="/history">View all history</Link>
+                </Button>
               ) : null}
             </>
           )}
-        </TabsContent>
+        </section>
+      </div>
 
-        {/* STATS — accuracy, career, per-sport / per-competition */}
-        <TabsContent value="stats" className="mt-1 space-y-5">
-          <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              Prediction Accuracy
-            </h2>
-            <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
-              {accuracy == null ? '—' : `${accuracy}%`}
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Correct winner picks across classic match predictions
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Predictions
-                </p>
-                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                  {predictionsMade.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Exact
-                </p>
-                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                  {resolvedExactScores.toLocaleString()}
-                </p>
-              </div>
-              {!isPublic ? (
-                <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Current streak
-                  </p>
-                  {streakLoading ? (
-                    <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
-                  ) : (
-                    <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                      {predictionCurrent ?? 0}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Points
-                  </p>
-                  <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                    {(resolvedTotalPoints ?? 0).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Longest streak
-                </p>
-                {streakLoading && !isPublic ? (
-                  <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
-                ) : (
-                  <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                    {predictionLongest}
-                  </p>
-                )}
-              </div>
-            </div>
-            {streakError && !isPublic ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <p className="text-[11px] text-destructive">{streakError}</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={cn('h-7 px-2 text-[11px]', FOCUS_VISIBLE_RING)}
-                  onClick={() => {
-                    streakViewedRef.current = false
-                    setDayCurrentStreak(null)
-                    setStreakLoading(true)
-                    setStreakError(null)
-                    void syncPredictionStreak().then((result) => {
-                      if (!result || result.error) {
-                        setStreakError(result?.error ?? 'Could not load streak')
-                        setStreakLoading(false)
-                        return
-                      }
-                      setDayCurrentStreak(result.current_streak)
-                      setDayLongestStreak(result.longest_streak)
-                      applyStreakSyncFeedback(result, {
-                        onLevelUp: xp?.enqueueLevelUp,
-                      })
-                      setStreakLoading(false)
-                    })
-                  }}
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : !isPublic &&
-              !streakLoading &&
-              (predictionCurrent ?? 0) === 0 &&
-              predictionLongest === 0 ? (
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                Start your streak — predict today!
-              </p>
-            ) : null}
-          </section>
-
-          <section>
-            <div className="mb-2.5">
-              <h2 className="font-display text-xl tracking-wide text-foreground">
-                Career Highlights
-              </h2>
-              <p className="text-[10px] text-muted-foreground">
-                From pool finishes and prediction stats
-              </p>
-            </div>
-            <CareerHighlightsGrid items={careerHighlights} />
-          </section>
-
-          <section>
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              By sport
-            </h2>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">
-              Post-lock predictions only · expands as more sports launch
-            </p>
-            {activityLoading && sportStats.length === 0 ? (
-              <div className="mt-3 space-y-2">
-                <ShimmerBlock className="h-16 w-full rounded-xl" />
-              </div>
-            ) : sportStats.length === 0 ? (
-              <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-                No scored predictions by sport yet.
-              </p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {sportStats.map((row) => (
-                  <li
-                    key={row.sportKey}
-                    className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium text-foreground">
-                        {row.sportLabel}
-                      </p>
-                      <p className="font-mono text-sm tabular-nums text-foreground">
-                        {row.points} pts
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {row.predictions} preds
-                      {row.accuracy != null ? ` · ${row.accuracy}%` : ''}
-                      {` · ${row.exactScores} exact`}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section>
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              By competition
-            </h2>
-            {activityLoading && competitionStats.length === 0 ? (
-              <div className="mt-3 space-y-2">
-                <ShimmerBlock className="h-16 w-full rounded-xl" />
-              </div>
-            ) : competitionStats.length === 0 ? (
-              <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-                No scored predictions by competition yet.
-              </p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {competitionStats.map((row) => (
-                  <li
-                    key={row.eventId}
-                    className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">
-                          {row.eventName}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {row.sportLabel}
-                        </p>
-                      </div>
-                      <p className="shrink-0 font-mono text-sm tabular-nums text-foreground">
-                        {row.points} pts
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {row.predictions} preds
-                      {row.accuracy != null ? ` · ${row.accuracy}%` : ''}
-                      {` · ${row.exactScores} exact`}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }
