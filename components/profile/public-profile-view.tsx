@@ -2,11 +2,7 @@
 
 import { ProfileShowcase } from '@/components/dashboard/profile-showcase'
 import type { UserAchievementsData } from '@/src/lib/fetch-user-achievements'
-import type {
-  ProfileActivityItem,
-  ProfileCompetitionStat,
-  ProfileSportStat,
-} from '@/src/lib/fetch-profile-activity'
+import type { ProfileActivityItem } from '@/src/lib/fetch-profile-activity'
 import type { FavoriteSportChip } from '@/src/lib/fetch-public-profile'
 import type { UserGlobalRank } from '@/src/lib/global-rank'
 
@@ -26,8 +22,6 @@ type PublicProfileViewProps = {
   createdAt: string | null
   isOwnPublicProfile: boolean
   initialAchievements: UserAchievementsData
-  initialSportStats: ProfileSportStat[]
-  initialCompetitionStats: ProfileCompetitionStat[]
   initialActivity: ProfileActivityItem[]
   initialGlobalRank: UserGlobalRank | null
   loadError: string | null
@@ -54,8 +48,6 @@ export function PublicProfileView({
   createdAt,
   isOwnPublicProfile,
   initialAchievements,
-  initialSportStats,
-  initialCompetitionStats,
   initialActivity,
   initialGlobalRank,
   loadError,
@@ -80,8 +72,6 @@ export function PublicProfileView({
       active
       isOwnPublicProfile={isOwnPublicProfile}
       initialAchievements={initialAchievements}
-      initialSportStats={initialSportStats}
-      initialCompetitionStats={initialCompetitionStats}
       initialActivity={initialActivity}
       initialGlobalRank={initialGlobalRank}
       loadError={loadError}

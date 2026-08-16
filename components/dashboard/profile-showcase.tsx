@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
 import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
-  Award,
   ChevronRight,
   Crown,
   Flame,
@@ -16,7 +15,6 @@ import {
   Target,
   Trophy,
   Users,
-  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
@@ -45,11 +43,8 @@ import {
   type ProfileSportSummary,
 } from '@/src/lib/fetch-profile-pools'
 import {
-  fetchProfileBreakdownStats,
   fetchProfileRecentActivity,
   type ProfileActivityItem,
-  type ProfileCompetitionStat,
-  type ProfileSportStat,
 } from '@/src/lib/fetch-profile-activity'
 import {
   fetchUserGlobalRank,
@@ -118,8 +113,6 @@ type ProfileShowcaseProps = {
   isOwnPublicProfile?: boolean
   /** Optional preloaded achievements (public page server fetch). */
   initialAchievements?: UserAchievementsData | null
-  initialSportStats?: ProfileSportStat[]
-  initialCompetitionStats?: ProfileCompetitionStat[]
   initialActivity?: ProfileActivityItem[]
   initialGlobalRank?: UserGlobalRank | null
   loadError?: string | null
@@ -127,11 +120,178 @@ type ProfileShowcaseProps = {
   highestLevel?: number | null
 }
 
-type CareerItem = {
-  label: string
-  value: string
-  icon: typeof Trophy
-  accent: string
+type CareerHighlightsData = {
+  poolsWon: number
+  bestFinish: number | null
+  accuracy: number | null
+  totalPoints: number | null
+  exactScores: number
+  podiums: number
+  bestStreak: number
+  currentStreak: number | null
+  showCurrentStreak: boolean
+}
+
+const CAREER_HAIRLINE = 'bg-white/[0.08]'
+
+function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
+  const hasAny =
+    data.poolsWon > 0 ||
+    data.bestFinish != null ||
+    data.accuracy != null ||
+    (data.totalPoints != null && data.totalPoints > 0) ||
+    data.exactScores > 0 ||
+    data.podiums > 0 ||
+    data.bestStreak > 0 ||
+    (data.showCurrentStreak && (data.currentStreak ?? 0) > 0)
+
+  if (!hasAny) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Career milestones will appear as you compete.
+      </p>
+    )
+  }
+
+  const streakFilled = Math.max(0, data.bestStreak)
+  const streakTrack = Math.max(7, streakFilled)
+  const stripItems: { value: string; label: string }[] = [
+    {
+      value: (data.totalPoints ?? 0).toLocaleString(),
+      label: 'POINTS',
+    },
+    {
+      value: data.exactScores.toLocaleString(),
+      label: 'EXACT',
+    },
+    {
+      value: data.podiums.toLocaleString(),
+      label: 'PODIUMS',
+    },
+  ]
+
+  return (
+    <div className="flex flex-col overflow-hidden">
+      {/* Hero — pools won (no card; subtle green glow only) */}
+      <div
+        data-career-hero="pools-won"
+        className="relative flex flex-col items-center px-2 py-7 text-center"
+      >
+        <div
+          className="pointer-events-none absolute left-1/2 top-[42%] h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_22%,transparent)_0%,transparent_70%)]"
+          aria-hidden
+        />
+        <Trophy
+          className="relative h-6 w-6 text-primary"
+          aria-hidden
+        />
+        <p className="relative mt-2 font-display text-6xl leading-none tabular-nums tracking-wide text-foreground sm:text-7xl">
+          {data.poolsWon.toLocaleString()}
+        </p>
+        <p className="relative mt-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          Pools Won
+        </p>
+        <p className="relative mt-1.5 text-[11px] text-muted-foreground">
+          Your biggest achievement
+        </p>
+      </div>
+
+      <div className={cn('h-px w-full', CAREER_HAIRLINE)} aria-hidden />
+
+      {/* Best finish + Accuracy — typography only, one vertical hairline */}
+      <div className="grid grid-cols-2 py-6">
+        <div
+          data-career-hero="best-finish"
+          className="flex flex-col items-center px-3 text-center"
+        >
+          <p className="font-display text-4xl leading-none tabular-nums tracking-wide text-[#ffb300] sm:text-5xl">
+            {data.bestFinish != null ? `#${data.bestFinish}` : '—'}
+          </p>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Best Finish
+          </p>
+        </div>
+        <div
+          data-career-hero="accuracy"
+          className="flex flex-col items-center border-l border-white/[0.08] px-3 text-center"
+        >
+          <p className="font-display text-4xl leading-none tabular-nums tracking-wide text-sky-300 sm:text-5xl">
+            {data.accuracy != null ? `${data.accuracy}%` : '—'}
+          </p>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Accuracy
+          </p>
+        </div>
+      </div>
+
+      <div className={cn('h-px w-full', CAREER_HAIRLINE)} aria-hidden />
+
+      {/* Stat strip — evenly spaced, no boxes */}
+      <div className="flex items-start justify-between gap-2 px-1 py-5">
+        {stripItems.map((item) => (
+          <div
+            key={item.label}
+            className="min-w-0 flex-1 text-center"
+          >
+            <p className="font-mono text-sm tabular-nums text-foreground sm:text-[15px]">
+              {item.value}
+            </p>
+            <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              {item.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className={cn('h-px w-full', CAREER_HAIRLINE)} aria-hidden />
+
+      {/* Streak — heading + filled/empty dots */}
+      <div className="px-0.5 py-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="inline-flex items-baseline gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-300">
+            <Flame className="relative top-px h-3.5 w-3.5 shrink-0" aria-hidden />
+            Best Streak
+            <span className="font-display text-2xl leading-none tracking-wide text-foreground tabular-nums">
+              {streakFilled > 0 ? streakFilled.toLocaleString() : '—'}
+            </span>
+          </p>
+          {data.showCurrentStreak ? (
+            <p className="text-[11px] text-muted-foreground">
+              Current streak:{' '}
+              <span className="font-mono tabular-nums text-foreground/90">
+                {data.currentStreak ?? 0}
+              </span>
+            </p>
+          ) : null}
+        </div>
+        <div
+          className="mt-3.5 flex flex-wrap items-center gap-1.5"
+          role="img"
+          aria-label={
+            streakFilled > 0
+              ? `Best streak of ${streakFilled}`
+              : 'No best streak yet'
+          }
+        >
+          {Array.from({ length: streakTrack }, (_, i) => {
+            const filled = i < streakFilled
+            return (
+              <span
+                key={i}
+                className={cn(
+                  'inline-block h-2 w-2 shrink-0 rounded-full',
+                  filled
+                    ? 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.45)]'
+                    : 'bg-transparent ring-1 ring-white/20',
+                )}
+                aria-hidden
+              />
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function formatMemberSince(value: string | null | undefined): string | null {
@@ -162,38 +322,6 @@ function topPercentFromRank(
 ): number | null {
   if (rank == null || total == null || total <= 0 || rank <= 0) return null
   return Math.max(1, Math.min(100, Math.ceil((rank / total) * 100)))
-}
-
-function CareerHighlightsGrid({ items }: { items: CareerItem[] }) {
-  if (items.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Career milestones will appear as you compete.
-      </p>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {items.map((highlight) => (
-        <article
-          key={highlight.label}
-          className={cn(
-            'rounded-2xl border p-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)]',
-            highlight.accent,
-          )}
-        >
-          <highlight.icon className="h-4 w-4 opacity-90" aria-hidden />
-          <p className="mt-2 font-display text-2xl leading-none tabular-nums text-foreground">
-            {highlight.value}
-          </p>
-          <p className="mt-1.5 text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            {highlight.label}
-          </p>
-        </article>
-      ))}
-    </div>
-  )
 }
 
 function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
@@ -407,8 +535,6 @@ export function ProfileShowcase({
   onEditProfile,
   isOwnPublicProfile = false,
   initialAchievements = null,
-  initialSportStats,
-  initialCompetitionStats,
   initialActivity,
   initialGlobalRank = null,
   loadError = null,
@@ -431,12 +557,6 @@ export function ProfileShowcase({
   const [profilePools, setProfilePools] = useState<ProfilePoolSummary[]>([])
   const [profileSports, setProfileSports] = useState<ProfileSportSummary[]>([])
   const [poolsLoading, setPoolsLoading] = useState(false)
-  const [sportStats, setSportStats] = useState<ProfileSportStat[]>(
-    initialSportStats ?? [],
-  )
-  const [competitionStats, setCompetitionStats] = useState<
-    ProfileCompetitionStat[]
-  >(initialCompetitionStats ?? [])
   const [activity, setActivity] = useState<ProfileActivityItem[]>(
     initialActivity ?? [],
   )
@@ -474,11 +594,10 @@ export function ProfileShowcase({
     setActivityLoading(true)
     setPoolsLoading(true)
 
-    const [poolsResult, breakdown, recent, publicProfile] = await Promise.all([
+    const [poolsResult, recent, publicProfile] = await Promise.all([
       fetchProfilePools(supabase, userId, {
         includeInviteCodes: !isPublic,
       }),
-      fetchProfileBreakdownStats(supabase, userId),
       fetchProfileRecentActivity(supabase, userId, { limit: 5 }),
       fetchPublicProfile(supabase, userId),
     ])
@@ -487,11 +606,9 @@ export function ProfileShowcase({
     setProfileSports(poolsResult.sports)
     setPoolsLoading(false)
 
-    if (breakdown.error || recent.error) {
-      setSectionError(breakdown.error || recent.error)
+    if (recent.error) {
+      setSectionError(recent.error)
     } else {
-      setSportStats(breakdown.sports)
-      setCompetitionStats(breakdown.competitions)
       setActivity(recent.items)
     }
     setActivityLoading(false)
@@ -608,8 +725,6 @@ export function ProfileShowcase({
     // Public page preloads extras; self dashboard fetches client-side.
     if (isPublic && initialActivity) {
       setActivity(initialActivity)
-      setSportStats(initialSportStats ?? [])
-      setCompetitionStats(initialCompetitionStats ?? [])
       setLiveFriendsCount(friendsCount)
       setLiveFavorites(favoriteSports)
       setLiveUsername(username)
@@ -629,8 +744,6 @@ export function ProfileShowcase({
     userId,
     isPublic,
     initialActivity,
-    initialSportStats,
-    initialCompetitionStats,
     friendsCount,
     favoriteSports,
     username,
@@ -715,8 +828,6 @@ export function ProfileShowcase({
     return values
   }, [progressRows])
 
-  const correctRun =
-    metricValues.get('consecutive_correct') ?? 0
   const predictionCurrent =
     !isPublic ? (dayCurrentStreak ?? 0) : null
   const predictionLongest =
@@ -735,97 +846,25 @@ export function ProfileShowcase({
     globalRank?.total_ranked,
   )
 
-  const careerHighlights = useMemo(() => {
-    const items: CareerItem[] = []
+  const careerHighlights = useMemo((): CareerHighlightsData => {
+    const poolsWon = metricValues.get('first_place_finishes') ?? 0
+    const bestFinishRaw = metricValues.get('best_finish_rank_at_or_below')
+    const podiums = metricValues.get('top3_finishes') ?? 0
 
-    if (accuracy != null) {
-      items.push({
-        label: 'Accuracy',
-        value: `${accuracy}%`,
-        icon: Target,
-        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
-      })
+    return {
+      poolsWon,
+      bestFinish:
+        bestFinishRaw != null && bestFinishRaw > 0 ? bestFinishRaw : null,
+      accuracy,
+      totalPoints: resolvedTotalPoints,
+      exactScores: resolvedExactScores,
+      podiums,
+      bestStreak: predictionLongest,
+      currentStreak: predictionCurrent,
+      showCurrentStreak: !isPublic,
     }
-
-    if (resolvedExactScores > 0) {
-      items.push({
-        label: 'Exact Scores',
-        value: resolvedExactScores.toLocaleString(),
-        icon: Award,
-        accent: 'text-foreground border-border bg-card/80',
-      })
-    }
-
-    if (resolvedTotalPoints != null) {
-      items.push({
-        label: 'Total Points',
-        value: resolvedTotalPoints.toLocaleString(),
-        icon: Zap,
-        accent: 'text-foreground border-border bg-card/80',
-      })
-    }
-
-    if (!isPublic && predictionCurrent != null && predictionCurrent > 0) {
-      items.push({
-        label: 'Current Streak',
-        value: `${predictionCurrent}`,
-        icon: Flame,
-        accent: 'text-orange-300 border-orange-400/20 bg-orange-400/[0.06]',
-      })
-    }
-
-    if (predictionLongest > 0) {
-      items.push({
-        label: 'Longest Streak',
-        value: `${predictionLongest}`,
-        icon: Flame,
-        accent: 'text-orange-300 border-orange-400/20 bg-orange-400/[0.06]',
-      })
-    }
-
-    if (correctRun > 0) {
-      items.push({
-        label: 'Best correct run',
-        value: `${correctRun}`,
-        icon: Sparkles,
-        accent: 'text-amber-300 border-amber-400/20 bg-amber-400/[0.06]',
-      })
-    }
-
-    const poolsWon = metricValues.get('first_place_finishes')
-    if (poolsWon != null && poolsWon > 0) {
-      items.push({
-        label: 'Pools Won',
-        value: poolsWon.toLocaleString(),
-        icon: Crown,
-        accent: 'text-primary border-primary/20 bg-primary/[0.06]',
-      })
-    }
-
-    const bestFinish = metricValues.get('best_finish_rank_at_or_below')
-    if (bestFinish != null && bestFinish > 0) {
-      items.push({
-        label: 'Best Finish',
-        value: `#${bestFinish}`,
-        icon: Trophy,
-        accent: 'text-primary border-primary/20 bg-primary/[0.06]',
-      })
-    }
-
-    const podiums = metricValues.get('top3_finishes')
-    if (podiums != null && podiums > 0) {
-      items.push({
-        label: 'Podium',
-        value: podiums.toLocaleString(),
-        icon: Medal,
-        accent: 'text-sky-300 border-sky-400/20 bg-sky-400/[0.06]',
-      })
-    }
-
-    return items
   }, [
     accuracy,
-    correctRun,
     isPublic,
     metricValues,
     predictionCurrent,
@@ -889,9 +928,9 @@ export function ProfileShowcase({
         </div>
 
         <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6">
-          {/* Identity row: avatar height matches adjacent text column */}
-          <div className="relative z-10 -mt-11 flex items-stretch gap-4 sm:-mt-12 sm:gap-5">
-            <div className="relative aspect-square min-h-[5.5rem] w-auto shrink-0 self-stretch sm:min-h-[6rem]">
+          {/* Identity row: larger circle + tightened text, top-aligned */}
+          <div className="relative z-10 -mt-11 flex items-start gap-3.5 sm:-mt-12 sm:gap-4">
+            <div className="relative h-28 w-28 shrink-0 sm:h-32 sm:w-32">
               <div className="h-full w-full overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
                 <UserAvatarImage
                   avatar={avatar}
@@ -908,7 +947,7 @@ export function ProfileShowcase({
                 <button
                   type="button"
                   onClick={onEditProfile}
-                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Edit profile and avatar"
                 >
                   <Pencil className="h-3 w-3" aria-hidden />
@@ -916,14 +955,14 @@ export function ProfileShowcase({
               ) : null}
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
+            <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
                     {displayName}
                   </h1>
                   {handle ? (
-                    <p className="mt-1.5 truncate text-sm text-muted-foreground">
+                    <p className="mt-1 truncate text-sm leading-snug text-muted-foreground">
                       @{handle}
                     </p>
                   ) : null}
@@ -944,19 +983,19 @@ export function ProfileShowcase({
               </div>
 
               {titleText ? (
-                <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-semibold text-primary">
+                <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-semibold leading-none text-primary">
                   <Sparkles className="h-2.5 w-2.5" aria-hidden />
                   {titleText}
                 </span>
               ) : null}
 
               {memberSince ? (
-                <p className="mt-2 text-[11px] text-muted-foreground">
+                <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
                   Member since {memberSince}
                 </p>
               ) : null}
 
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] leading-snug text-muted-foreground">
                 <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
                   <Users className="h-3.5 w-3.5" aria-hidden />
                   {liveFriendsCount != null
@@ -1318,95 +1357,13 @@ export function ProfileShowcase({
               Career Highlights
             </h2>
             <p className="text-[10px] text-muted-foreground">
-              From pool finishes and prediction stats
+              Your PoolCup career at a glance
             </p>
           </div>
-          <CareerHighlightsGrid items={careerHighlights} />
+          <CareerHighlightsResume data={careerHighlights} />
         </section>
 
         {showViewAllAchievements ? <ProfileAnalyticsEntry /> : null}
-
-        <section>
-          <h2 className="font-display text-xl tracking-wide text-foreground">
-            By sport
-          </h2>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
-            Post-lock predictions only · expands as more sports launch
-          </p>
-          {activityLoading && sportStats.length === 0 ? (
-            <div className="mt-3 space-y-2">
-              <ShimmerBlock className="h-16 w-full rounded-xl" />
-            </div>
-          ) : sportStats.length === 0 ? (
-            <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-              No scored predictions by sport yet.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {sportStats.map((row) => (
-                <li
-                  key={row.sportKey}
-                  className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-foreground">
-                      {row.sportLabel}
-                    </p>
-                    <p className="font-mono text-sm tabular-nums text-foreground">
-                      {row.points} pts
-                    </p>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {row.accuracy != null ? `${row.accuracy}%` : '—'}
-                    {` · ${row.exactScores} exact`}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section>
-          <h2 className="font-display text-xl tracking-wide text-foreground">
-            By competition
-          </h2>
-          {activityLoading && competitionStats.length === 0 ? (
-            <div className="mt-3 space-y-2">
-              <ShimmerBlock className="h-16 w-full rounded-xl" />
-            </div>
-          ) : competitionStats.length === 0 ? (
-            <p className="mt-3 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-              No scored predictions by competition yet.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {competitionStats.map((row) => (
-                <li
-                  key={row.eventId}
-                  className="rounded-xl border border-border/80 bg-card/70 px-3 py-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">
-                        {row.eventName}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {row.sportLabel}
-                      </p>
-                    </div>
-                    <p className="shrink-0 font-mono text-sm tabular-nums text-foreground">
-                      {row.points} pts
-                    </p>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {row.accuracy != null ? `${row.accuracy}%` : '—'}
-                    {` · ${row.exactScores} exact`}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
         <section>
           <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">

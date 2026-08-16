@@ -11,7 +11,6 @@ import {
   fetchUserAchievementsReadOnly,
 } from '@/src/lib/fetch-public-profile'
 import {
-  fetchProfileBreakdownStats,
   fetchProfileRecentActivity,
 } from '@/src/lib/fetch-profile-activity'
 import { fetchUserAchievementProgress } from '@/src/lib/fetch-user-achievements'
@@ -122,7 +121,6 @@ export default async function PublicProfilePage({
     },
     achievements,
     progress,
-    breakdown,
     activity,
     globalRank,
     streakRes,
@@ -130,7 +128,6 @@ export default async function PublicProfilePage({
     supabase.auth.getUser(),
     fetchUserAchievementsReadOnly(supabase, profile.id),
     fetchUserAchievementProgress(supabase, profile.id),
-    fetchProfileBreakdownStats(supabase, profile.id),
     fetchProfileRecentActivity(supabase, profile.id, { limit: 12 }),
     fetchUserGlobalRank(supabase, profile.id),
     createAdminSupabaseClient().rpc('get_prediction_streak', {
@@ -180,15 +177,9 @@ export default async function PublicProfilePage({
         createdAt={profile.created_at || null}
         isOwnPublicProfile={isOwnPublicProfile}
         initialAchievements={achievements}
-        initialSportStats={breakdown.sports}
-        initialCompetitionStats={breakdown.competitions}
         initialActivity={activity.items}
         initialGlobalRank={globalRank}
-        loadError={
-          breakdown.error || activity.error
-            ? breakdown.error || activity.error
-            : null
-        }
+        loadError={activity.error ? activity.error : null}
         highestLevel={profile.highest_level}
       />
     </main>
