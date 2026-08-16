@@ -19,13 +19,17 @@ import {
   CREATE_POOL_HREF,
   EXPLORE_HREF,
   JOIN_POOL_HREF,
+  LOGIN_HREF,
+  ONBOARDING_FAN_LEVEL_OPTIONS,
   ONBOARDING_REFERRAL_OPTIONS,
   ONBOARDING_SPORT_OPTIONS,
   ONBOARDING_STEPS,
+  isOnboardingFanLevel,
   nextStep,
   previousStep,
   resolveResumeStep,
   stepIndex,
+  type OnboardingFanLevel,
   type OnboardingReferralId,
   type OnboardingSportId,
   type OnboardingState,
@@ -58,6 +62,7 @@ export type OnboardingBootstrap = {
   avatar: string | null
   customAvatarUrl: string | null
   referralSource: string | null
+  fanLevel: number | null
   onboardingState: OnboardingState
   nextPath: string
 }
@@ -68,8 +73,7 @@ const SLIDE_MS = 320
 
 /**
  * Per-step mascots from /public/mascot/onboarding_mascot/.
- * Only 6 assets exist — mapped by order to steps 1–6; create_profile
- * has no dedicated art (form density); youre_ready reuses pucky_1.
+ * Six assets mapped by order to early steps; later slides reuse.
  */
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
@@ -80,12 +84,27 @@ const ONBOARDING_MASCOT_SRC: Partial<
   sports_identity: '/mascot/onboarding_mascot/pucky_4.png',
   better_friends: '/mascot/onboarding_mascot/pucky_5.png',
   referral_source: '/mascot/onboarding_mascot/pucky_6.png',
+  fan_level: '/mascot/onboarding_mascot/pucky_6.png',
   youre_ready: '/mascot/onboarding_mascot/pucky_1.png',
 }
 
 /** Stable hero height so layout doesn't jump across asset aspect ratios. */
 const MASCOT_IMAGE_CLASS =
   'h-56 w-auto max-w-[min(100%,22rem)] object-contain object-bottom sm:h-64 sm:max-w-[24rem]'
+
+const PILL_BASE_CLASS = cn(
+  'rounded-full border px-3.5 py-2 text-left text-sm font-medium transition-colors',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+)
+
+function pillClass(selected: boolean) {
+  return cn(
+    PILL_BASE_CLASS,
+    selected
+      ? 'border-primary bg-primary/15 text-primary'
+      : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
+  )
+}
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
@@ -107,7 +126,6 @@ type InfoSlide = {
   id: OnboardingStepId
   title: string
   body: string
-  bullets?: string[]
 }
 
 const INFO_SLIDES: InfoSlide[] = [
@@ -119,42 +137,22 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'predict_compete',
     title: 'Predict. Compete. Climb.',
-    body: 'Create or join a pool, lock in your picks before kickoff, and watch the live leaderboard move with every result.',
-    bullets: [
-      'Join with an invite or discover official pools',
-      'Exact-score or winner-only prediction styles',
-      'Standings that update as matches finish',
-    ],
+    body: 'Create or join a pool, lock in your picks before kickoff, and watch the live leaderboard move with every result. Exact-score or winner-only styles — standings update as matches finish.',
   },
   {
     id: 'your_pool',
     title: 'Your Pool. Your Rules.',
-    body: 'Commissioners run the show — scoring style, announcements, polls, and tools to keep your league humming.',
-    bullets: [
-      'Set the rules your group actually wants',
-      'Keep members in the loop with announcements',
-      'Run polls and manage the competition',
-    ],
+    body: 'Commissioners run the show — scoring style, announcements, polls, and tools to keep your league humming the way your group wants.',
   },
   {
     id: 'sports_identity',
     title: 'Build Your Sports Identity.',
-    body: 'Your profile is your résumé — XP, badges, favorites, and a look that feels like you.',
-    bullets: [
-      'Earn XP and level up as you play',
-      'Unlock badges for streaks and milestones',
-      'Customize your avatar and favorites',
-    ],
+    body: 'Your profile is your résumé — earn XP, unlock badges for streaks and milestones, and customize your look and favorites.',
   },
   {
     id: 'better_friends',
     title: 'Better With Friends.',
-    body: 'Add friends, chat about the slate, and turn every matchweek into a social competition.',
-    bullets: [
-      'Find friends and climb shared leaderboards',
-      'Chat about picks and rivalries',
-      'Compete beyond a single pool',
-    ],
+    body: 'Add friends, chat about the slate, and turn every matchweek into a social competition beyond a single pool.',
   },
 ]
 
@@ -226,6 +224,12 @@ export function OnboardingFlow({
       return null
     },
   )
+  const [fanLevel, setFanLevel] = useState<OnboardingFanLevel | null>(() => {
+    const fromState = bootstrap.onboardingState.fan_level
+    if (isOnboardingFanLevel(fromState)) return fromState
+    if (isOnboardingFanLevel(bootstrap.fanLevel)) return bootstrap.fanLevel
+    return null
+  })
   const [availability, setAvailability] = useState<Availability>('idle')
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [displayNameError, setDisplayNameError] = useState<string | null>(null)
@@ -394,11 +398,13 @@ export function OnboardingFlow({
       username_draft: username || undefined,
       display_name_draft: displayName.trim() || undefined,
       referral_source: referralSource ?? undefined,
+      fan_level: fanLevel ?? undefined,
       ...partial,
     }),
     [
       bootstrap.onboardingState,
       displayName,
+      fanLevel,
       favoriteSports,
       referralSource,
       step,
@@ -443,12 +449,14 @@ export function OnboardingFlow({
           username_draft: normalizedUsername || undefined,
           display_name_draft: trimmedDisplay || undefined,
           referral_source: referralSource ?? undefined,
+          fan_level: fanLevel ?? undefined,
         },
         favorite_sports: favoriteSports,
       }
       if (normalizedUsername) profilePatch.username = normalizedUsername
       if (trimmedDisplay) profilePatch.display_name = trimmedDisplay
       if (referralSource) profilePatch.referral_source = referralSource
+      if (fanLevel != null) profilePatch.fan_level = fanLevel
       if (selectedAvatar) profilePatch.avatar = selectedAvatar
       if (customAvatarUrl !== undefined) {
         profilePatch.custom_avatar_url = customAvatarUrl
@@ -469,7 +477,10 @@ export function OnboardingFlow({
 
       capturePostHog(
         mode === 'skipped' ? 'onboarding_skipped' : 'onboarding_completed',
-        referralSource ? { referral_source: referralSource } : undefined,
+        {
+          ...(referralSource ? { referral_source: referralSource } : {}),
+          ...(fanLevel != null ? { fan_level: fanLevel } : {}),
+        },
       )
       const { awardClientXp } = await import('@/src/lib/xp-client')
       await awardClientXp({ sourceType: 'onboarding_complete' })
@@ -481,6 +492,7 @@ export function OnboardingFlow({
       bootstrap.userId,
       customAvatarUrl,
       displayName,
+      fanLevel,
       favoriteSports,
       preview,
       referralSource,
@@ -508,6 +520,9 @@ export function OnboardingFlow({
         step: from,
         ...(from === 'referral_source' && referralSource
           ? { referral_source: referralSource }
+          : {}),
+        ...(from === 'fan_level' && fanLevel != null
+          ? { fan_level: fanLevel }
           : {}),
       })
       if (!following) {
@@ -641,6 +656,7 @@ export function OnboardingFlow({
         avatar: selectedAvatar,
         custom_avatar_url: customAvatarUrl,
         referral_source: referralSource,
+        fan_level: fanLevel,
         onboarding_state: buildDraftState({
           step: 'youre_ready',
           username_draft: normalized,
@@ -752,7 +768,7 @@ export function OnboardingFlow({
         return
       }
       if (preview) {
-        goToStep('create_profile', 1)
+        goToStep('fan_level', 1)
         return
       }
       setSaving(true)
@@ -762,13 +778,49 @@ export function OnboardingFlow({
           .from('users')
           .update({
             referral_source: referralSource,
-            onboarding_state: buildDraftState({ step: 'create_profile' }),
+            onboarding_state: buildDraftState({ step: 'fan_level' }),
           })
           .eq('id', bootstrap.userId)
         if (updateError) throw new Error(updateError.message)
         capturePostHog('onboarding_step_completed', {
           step: 'referral_source',
           referral_source: referralSource,
+        })
+        goToStep('fan_level', 1)
+      } catch (err) {
+        reportError(
+          err instanceof Error ? err.message : 'Could not save',
+          () => handlePrimaryProceed(),
+        )
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
+    if (step === 'fan_level') {
+      if (fanLevel == null) {
+        reportError('Pick one option to continue.')
+        return
+      }
+      if (preview) {
+        goToStep('create_profile', 1)
+        return
+      }
+      setSaving(true)
+      clearErrorBanner()
+      try {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            fan_level: fanLevel,
+            onboarding_state: buildDraftState({ step: 'create_profile' }),
+          })
+          .eq('id', bootstrap.userId)
+        if (updateError) throw new Error(updateError.message)
+        capturePostHog('onboarding_step_completed', {
+          step: 'fan_level',
+          fan_level: fanLevel,
         })
         goToStep('create_profile', 1)
       } catch (err) {
@@ -803,12 +855,18 @@ export function OnboardingFlow({
     saving ||
     isSliding ||
     (step === 'referral_source' && !referralSource) ||
+    (step === 'fan_level' && fanLevel == null) ||
     (step === 'create_profile' && !canSubmitProfile)
+
+  const showProgress = step !== 'welcome'
 
   function renderStepPanel(panelStep: OnboardingStepId) {
     const infoSlide = INFO_SLIDES.find((slide) => slide.id === panelStep)
     const mascotSrc = ONBOARDING_MASCOT_SRC[panelStep]
-    const isDenseForm = panelStep === 'create_profile'
+    const isDenseForm =
+      panelStep === 'create_profile' ||
+      panelStep === 'referral_source' ||
+      panelStep === 'fan_level'
 
     const textBlock = (
       <div className="w-full shrink-0 px-0.5">
@@ -850,13 +908,6 @@ export function OnboardingFlow({
                 <p className="text-base text-muted-foreground sm:text-lg">
                   {infoSlide.body}
                 </p>
-                {infoSlide.bullets?.length ? (
-                  <ul className="mx-auto max-w-sm space-y-2 text-left text-sm text-foreground/90">
-                    {infoSlide.bullets.map((item) => (
-                      <li key={item}>• {item}</li>
-                    ))}
-                  </ul>
-                ) : null}
               </section>
             ) : null}
 
@@ -872,7 +923,7 @@ export function OnboardingFlow({
                   </p>
                 </div>
                 <div
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                  className="flex flex-wrap justify-center gap-2"
                   role="radiogroup"
                   aria-label="Referral source"
                 >
@@ -888,13 +939,44 @@ export function OnboardingFlow({
                           setReferralSource(option.id)
                           clearErrorBanner()
                         }}
-                        className={cn(
-                          'rounded-xl border px-3 py-3 text-left text-sm font-medium transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          selected
-                            ? 'border-primary bg-primary/10 text-foreground'
-                            : 'border-border bg-card text-muted-foreground hover:border-primary/40',
-                        )}
+                        className={pillClass(selected)}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {panelStep === 'fan_level' ? (
+              <section className="w-full space-y-4">
+                <div className="text-center">
+                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                    What brings you here?
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Pick the option that fits you best.
+                  </p>
+                </div>
+                <div
+                  className="flex flex-col gap-2"
+                  role="radiogroup"
+                  aria-label="What brings you here"
+                >
+                  {ONBOARDING_FAN_LEVEL_OPTIONS.map((option) => {
+                    const selected = fanLevel === option.level
+                    return (
+                      <button
+                        key={option.level}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => {
+                          setFanLevel(option.level)
+                          clearErrorBanner()
+                        }}
+                        className={cn(pillClass(selected), 'w-full')}
                       >
                         {option.label}
                       </button>
@@ -1177,19 +1259,23 @@ export function OnboardingFlow({
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
-          <div
-            className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={stepIndex(chromeStep) + 1}
-            aria-valuemin={1}
-            aria-valuemax={ONBOARDING_STEPS.length}
-            aria-label={`Step ${stepIndex(chromeStep) + 1} of ${ONBOARDING_STEPS.length}`}
-          >
+          {showProgress ? (
             <div
-              className="h-full rounded-full bg-primary transition-[width] duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+              className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={stepIndex(chromeStep) + 1}
+              aria-valuemin={1}
+              aria-valuemax={ONBOARDING_STEPS.length}
+              aria-label={`Step ${stepIndex(chromeStep) + 1} of ${ONBOARDING_STEPS.length}`}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" aria-hidden />
+          )}
         </div>
       </header>
 
@@ -1254,6 +1340,28 @@ export function OnboardingFlow({
               }
             >
               Explore PoolCup
+            </Button>
+          </div>
+        ) : step === 'welcome' ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              disabled={primaryDisabled}
+              onClick={() => void handlePrimaryProceed()}
+            >
+              Get Started
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="w-full"
+              disabled={saving || isSliding}
+              onClick={() => router.push(LOGIN_HREF)}
+            >
+              I already have an account
             </Button>
           </div>
         ) : (

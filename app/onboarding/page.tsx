@@ -37,7 +37,7 @@ export default async function OnboardingPage({
   const { data: profile, error } = await supabase
     .from('users')
     .select(
-      'username, display_name, favorite_sports, avatar, custom_avatar_url, referral_source, onboarding_completed, onboarding_state, is_admin',
+      'username, display_name, favorite_sports, avatar, custom_avatar_url, referral_source, fan_level, onboarding_completed, onboarding_state, is_admin',
     )
     .eq('id', user.id)
     .maybeSingle()
@@ -90,6 +90,8 @@ export default async function OnboardingPage({
             typeof profile?.referral_source === 'string'
               ? profile.referral_source
               : null,
+          fanLevel:
+            typeof profile?.fan_level === 'number' ? profile.fan_level : null,
           onboardingState,
           nextPath,
         }}

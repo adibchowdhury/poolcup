@@ -5,6 +5,7 @@ export const ONBOARDING_STEPS = [
   'sports_identity',
   'better_friends',
   'referral_source',
+  'fan_level',
   'create_profile',
   'youre_ready',
 ] as const
@@ -26,6 +27,7 @@ export type OnboardingState = {
   username_draft?: string
   display_name_draft?: string
   referral_source?: string
+  fan_level?: number
   avatar_touched?: boolean
 }
 
@@ -43,7 +45,7 @@ export type OnboardingSportId = (typeof ONBOARDING_SPORT_OPTIONS)[number]['id']
 export const ONBOARDING_REFERRAL_OPTIONS = [
   { id: 'instagram', label: 'Instagram' },
   { id: 'tiktok', label: 'TikTok' },
-  { id: 'x', label: 'X (Twitter)' },
+  { id: 'x', label: 'X' },
   { id: 'youtube', label: 'YouTube' },
   { id: 'reddit', label: 'Reddit' },
   { id: 'google', label: 'Google Search' },
@@ -63,6 +65,44 @@ export function isOnboardingReferralId(
     (ONBOARDING_REFERRAL_OPTIONS as readonly { id: string }[]).some(
       (opt) => opt.id === value,
     )
+  )
+}
+
+/** Fan engagement level (1–5). Labels are display-only; store `level`. */
+export const ONBOARDING_FAN_LEVEL_OPTIONS = [
+  {
+    level: 1,
+    label: 'I just got an invite from a friend',
+  },
+  {
+    level: 2,
+    label: 'I casually follow my hometown teams',
+  },
+  {
+    level: 3,
+    label: 'I watch games regularly every week',
+  },
+  {
+    level: 4,
+    label: 'I play fantasy and track every stat',
+  },
+  {
+    level: 5,
+    label: 'Sports is life—I never miss a game',
+  },
+] as const
+
+export type OnboardingFanLevel =
+  (typeof ONBOARDING_FAN_LEVEL_OPTIONS)[number]['level']
+
+export function isOnboardingFanLevel(
+  value: unknown,
+): value is OnboardingFanLevel {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5
   )
 }
 
@@ -88,6 +128,9 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     isOnboardingReferralId(obj.referral_source)
       ? obj.referral_source
       : undefined
+  const fan_level = isOnboardingFanLevel(obj.fan_level)
+    ? obj.fan_level
+    : undefined
   const avatar_touched =
     typeof obj.avatar_touched === 'boolean' ? obj.avatar_touched : undefined
 
@@ -97,6 +140,7 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     ...(username_draft !== undefined ? { username_draft } : {}),
     ...(display_name_draft !== undefined ? { display_name_draft } : {}),
     ...(referral_source ? { referral_source } : {}),
+    ...(fan_level !== undefined ? { fan_level } : {}),
     ...(avatar_touched !== undefined ? { avatar_touched } : {}),
   }
 }
@@ -130,3 +174,4 @@ export function previousStep(step: OnboardingStepId): OnboardingStepId | null {
 export const JOIN_POOL_HREF = '/discover'
 export const CREATE_POOL_HREF = '/create'
 export const EXPLORE_HREF = '/dashboard'
+export const LOGIN_HREF = '/login'
