@@ -77,7 +77,7 @@ export default async function OnboardingPage({
     : undefined
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <OnboardingFlow
         bootstrap={{
           userId: user.id,

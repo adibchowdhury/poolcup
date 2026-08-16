@@ -65,21 +65,27 @@ export type OnboardingBootstrap = {
 const USERNAME_DEBOUNCE_MS = 400
 /** Full carousel slide duration (ms). */
 const SLIDE_MS = 320
-/** Reserved region under the progress bar for the Pucky mascot. */
-const MASCOT_RESERVE_CLASS =
-  'relative flex h-28 shrink-0 items-end justify-center sm:h-32'
-const PUCKY_HERO_SRC = '/mascot/pucky_hero.png'
 
-/** Steps that show Pucky in the top reserve (skip dense create_profile). */
-const STEPS_WITH_MASCOT = new Set<OnboardingStepId>([
-  'welcome',
-  'predict_compete',
-  'your_pool',
-  'sports_identity',
-  'better_friends',
-  'referral_source',
-  'youre_ready',
-])
+/**
+ * Per-step mascots from /public/mascot/onboarding_mascot/.
+ * Only 6 assets exist — mapped by order to steps 1–6; create_profile
+ * has no dedicated art (form density); youre_ready reuses pucky_1.
+ */
+const ONBOARDING_MASCOT_SRC: Partial<
+  Record<OnboardingStepId, string>
+> = {
+  welcome: '/mascot/onboarding_mascot/pucky_1.png',
+  predict_compete: '/mascot/onboarding_mascot/pucky_2.png',
+  your_pool: '/mascot/onboarding_mascot/pucky_3.png',
+  sports_identity: '/mascot/onboarding_mascot/pucky_4.png',
+  better_friends: '/mascot/onboarding_mascot/pucky_5.png',
+  referral_source: '/mascot/onboarding_mascot/pucky_6.png',
+  youre_ready: '/mascot/onboarding_mascot/pucky_1.png',
+}
+
+/** Stable hero height so layout doesn't jump across asset aspect ratios. */
+const MASCOT_IMAGE_CLASS =
+  'h-56 w-auto max-w-[min(100%,22rem)] object-contain object-bottom sm:h-64 sm:max-w-[24rem]'
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
@@ -108,7 +114,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'welcome',
     title: 'Welcome to PoolCup',
-    body: 'The prediction game built for friends, offices, and rivalries â€” private pools, live standings, and bragging rights.',
+    body: 'The prediction game built for friends, offices, and rivalries — private pools, live standings, and bragging rights.',
   },
   {
     id: 'predict_compete',
@@ -123,7 +129,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'your_pool',
     title: 'Your Pool. Your Rules.',
-    body: 'Commissioners run the show â€” scoring style, announcements, polls, and tools to keep your league humming.',
+    body: 'Commissioners run the show — scoring style, announcements, polls, and tools to keep your league humming.',
     bullets: [
       'Set the rules your group actually wants',
       'Keep members in the loop with announcements',
@@ -133,7 +139,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'sports_identity',
     title: 'Build Your Sports Identity.',
-    body: 'Your profile is your rÃ©sumÃ© â€” XP, badges, favorites, and a look that feels like you.',
+    body: 'Your profile is your résumé — XP, badges, favorites, and a look that feels like you.',
     bullets: [
       'Earn XP and level up as you play',
       'Unlock badges for streaks and milestones',
@@ -801,32 +807,11 @@ export function OnboardingFlow({
 
   function renderStepPanel(panelStep: OnboardingStepId) {
     const infoSlide = INFO_SLIDES.find((slide) => slide.id === panelStep)
-    const showMascot = STEPS_WITH_MASCOT.has(panelStep)
+    const mascotSrc = ONBOARDING_MASCOT_SRC[panelStep]
+    const isDenseForm = panelStep === 'create_profile'
 
-    return (
-      <div className="flex h-full min-h-0 w-full flex-col">
-        <div className={MASCOT_RESERVE_CLASS} aria-hidden={!showMascot}>
-          {showMascot ? (
-            <Image
-              src={PUCKY_HERO_SRC}
-              alt=""
-              width={160}
-              height={160}
-              priority={panelStep === step}
-              className="h-[6.5rem] w-auto object-contain object-bottom sm:h-28"
-            />
-          ) : null}
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-          <div
-            className={cn(
-              'flex flex-1 flex-col px-0.5',
-              panelStep === 'create_profile' || panelStep === 'referral_source'
-                ? 'justify-start pb-4 pt-1'
-                : 'justify-center py-2',
-            )}
-          >
+    const textBlock = (
+      <div className="w-full shrink-0 px-0.5">
             {error && panelStep === step ? (
               <div
                 className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -868,7 +853,7 @@ export function OnboardingFlow({
                 {infoSlide.bullets?.length ? (
                   <ul className="mx-auto max-w-sm space-y-2 text-left text-sm text-foreground/90">
                     {infoSlide.bullets.map((item) => (
-                      <li key={item}>â€¢ {item}</li>
+                      <li key={item}>• {item}</li>
                     ))}
                   </ul>
                 ) : null}
@@ -882,7 +867,7 @@ export function OnboardingFlow({
                     How did you hear about us?
                   </h1>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Pick one â€” it helps us understand where PoolCup fans come
+                    Pick one — it helps us understand where PoolCup fans come
                     from.
                   </p>
                 </div>
@@ -960,7 +945,7 @@ export function OnboardingFlow({
                         className="h-3.5 w-3.5 animate-spin"
                         aria-hidden
                       />
-                      Checking availabilityâ€¦
+                      Checking availability…
                     </p>
                   ) : null}
                   {availability === 'available' && !usernameError ? (
@@ -1033,7 +1018,7 @@ export function OnboardingFlow({
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <Upload className="h-4 w-4" aria-hidden />
-                        {uploadingAvatar ? 'Uploadingâ€¦' : 'Upload photo'}
+                        {uploadingAvatar ? 'Uploading…' : 'Upload photo'}
                       </Button>
                       {customAvatarUrl ? (
                         <Button
@@ -1050,7 +1035,7 @@ export function OnboardingFlow({
                   </div>
                   {availableAvatars.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground">
-                      Loading presetsâ€¦
+                      Loading presets…
                     </p>
                   ) : (
                     <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
@@ -1088,7 +1073,7 @@ export function OnboardingFlow({
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Favorite sports</p>
                   <p className="text-xs text-muted-foreground">
-                    Optional â€” you can change these later.
+                    Optional — you can change these later.
                   </p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {ONBOARDING_SPORT_OPTIONS.map((sport) => {
@@ -1129,19 +1114,52 @@ export function OnboardingFlow({
                   You&apos;re Ready
                 </h1>
                 <p className="text-base text-muted-foreground sm:text-lg">
-                  Jump into a pool, start your own, or explore the app â€” your
+                  Jump into a pool, start your own, or explore the app — your
                   call.
                 </p>
               </section>
             ) : null}
+      </div>
+    )
+
+    /**
+     * Height chain: panel is flex-1 (not h-full %) so it fills the middle
+     * slot between header and footer. Equal flex-1 spacers center the text
+     * in the mascot → Continue gap. Avoid overflow-y-auto here — it breaks
+     * flex free-space distribution for short info slides.
+     */
+    return (
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
+        {mascotSrc ? (
+          <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
+            <Image
+              src={mascotSrc}
+              alt=""
+              width={320}
+              height={320}
+              priority={panelStep === step}
+              className={MASCOT_IMAGE_CLASS}
+            />
           </div>
-        </div>
+        ) : null}
+
+        {isDenseForm ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3">
+            {textBlock}
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1" aria-hidden />
+            {textBlock}
+            <div className="min-h-0 flex-1" aria-hidden />
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-x-hidden px-4">
+    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-x-hidden px-4">
       <header className="shrink-0 pt-6 sm:pt-8">
         <div className="flex items-center gap-3">
           <button
@@ -1179,22 +1197,22 @@ export function OnboardingFlow({
         {isSliding && leftPanelStep && rightPanelStep ? (
           <div
             className={cn(
-              'flex h-full w-[200%] will-change-transform',
+              'flex min-h-0 h-full w-[200%] will-change-transform',
               trackTransition &&
                 'transition-transform duration-[320ms] ease-in-out',
             )}
             style={{ transform: `translateX(${trackX}%)` }}
             aria-hidden
           >
-            <div className="pointer-events-none flex h-full w-1/2 shrink-0 flex-col">
+            <div className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col">
               {renderStepPanel(leftPanelStep)}
             </div>
-            <div className="pointer-events-none flex h-full w-1/2 shrink-0 flex-col">
+            <div className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col">
               {renderStepPanel(rightPanelStep)}
             </div>
           </div>
         ) : (
-          <div className="flex h-full min-h-0 w-full flex-col">
+          <div className="flex min-h-0 w-full flex-1 flex-col">
             {renderStepPanel(step)}
           </div>
         )}
@@ -1212,7 +1230,7 @@ export function OnboardingFlow({
                 void completeOnboarding('completed', JOIN_POOL_HREF)
               }
             >
-              {saving ? 'Finishingâ€¦' : 'Join a pool'}
+              {saving ? 'Finishing…' : 'Join a pool'}
             </Button>
             <Button
               type="button"
@@ -1249,7 +1267,7 @@ export function OnboardingFlow({
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Savingâ€¦
+                Saving…
               </>
             ) : (
               'Continue'
