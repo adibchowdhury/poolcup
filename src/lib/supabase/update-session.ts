@@ -95,7 +95,7 @@ export async function updateSessionAndGateAuth(
   if (user) {
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('banned, onboarding_completed')
+      .select('banned, onboarding_completed, is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -156,14 +156,26 @@ export async function updateSessionAndGateAuth(
         }
 
         if (!incomplete && onOnboarding) {
-          const doneUrl = request.nextUrl.clone()
-          const nextParam = request.nextUrl.searchParams.get('next')
-          const safeNext = resolveSafeRedirectPath(nextParam)
-          doneUrl.pathname = safeNext ?? '/dashboard'
-          doneUrl.search = ''
-          const redirectResponse = NextResponse.redirect(doneUrl)
-          copyCookies(supabaseResponse, redirectResponse)
-          return redirectResponse
+          // Allow admin / non-production design preview without resetting
+          // onboarding_completed. Real completion gate still applies otherwise.
+          const previewParam = request.nextUrl.searchParams.get('preview')
+          const wantsPreview =
+            previewParam === '1' || previewParam === 'true'
+          const allowPreview =
+            wantsPreview &&
+            (profile?.is_admin === true ||
+              process.env.NODE_ENV !== 'production')
+
+          if (!allowPreview) {
+            const doneUrl = request.nextUrl.clone()
+            const nextParam = request.nextUrl.searchParams.get('next')
+            const safeNext = resolveSafeRedirectPath(nextParam)
+            doneUrl.pathname = safeNext ?? '/dashboard'
+            doneUrl.search = ''
+            const redirectResponse = NextResponse.redirect(doneUrl)
+            copyCookies(supabaseResponse, redirectResponse)
+            return redirectResponse
+          }
         }
       }
     }
