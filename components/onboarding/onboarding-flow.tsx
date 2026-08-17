@@ -58,7 +58,7 @@ import {
 } from '@/src/lib/username'
 
 export type OnboardingBootstrap = {
-  userId: string
+  userId: string | null
   username: string | null
   displayName: string | null
   favoriteSports: string[]
@@ -76,21 +76,23 @@ const USERNAME_DEBOUNCE_MS = 400
 const SLIDE_MS = 320
 
 /**
- * Per-step mascots from /public/mascot/onboarding_mascot/ (WebP, display-sized).
- * Six assets mapped by order to early steps; later slides reuse.
+ * Temp stand-in mascot for every step that shows Pucky.
+ * sports_identity uses SportBallsOrbit instead; create_profile has no mascot.
  */
+const PUCKY_TEMP_SRC = '/mascot/onboarding_mascot/original/pucky_temp.png'
+
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
 > = {
-  welcome: '/mascot/onboarding_mascot/pucky_1.webp',
-  predict_compete: '/mascot/onboarding_mascot/pucky_2.webp',
-  your_pool: '/mascot/onboarding_mascot/pucky_3.webp',
+  welcome: PUCKY_TEMP_SRC,
+  predict_compete: PUCKY_TEMP_SRC,
+  your_pool: PUCKY_TEMP_SRC,
   // sports_identity uses SportBallsOrbit instead of a mascot
-  better_friends: '/mascot/onboarding_mascot/pucky_5.webp',
-  referral_source: '/mascot/onboarding_mascot/pucky_6.webp',
-  fan_level: '/mascot/onboarding_mascot/pucky_6.webp',
-  motivation_level: '/mascot/onboarding_mascot/pucky_6.webp',
-  youre_ready: '/mascot/onboarding_mascot/pucky_1.webp',
+  better_friends: PUCKY_TEMP_SRC,
+  referral_source: PUCKY_TEMP_SRC,
+  fan_level: PUCKY_TEMP_SRC,
+  motivation_level: PUCKY_TEMP_SRC,
+  youre_ready: PUCKY_TEMP_SRC,
 }
 
 /** Orbit balls for the sports-identity step. Duration via CSS var. */
@@ -104,20 +106,30 @@ const SPORT_ORBIT_BALLS = [
 
 const POOLCUP_LOGO_SRC = '/poolcup-logo.png'
 
-/** Intrinsic size for next/image + CLS reservation (matches WebP export). */
+/** Intrinsic size for next/image + CLS reservation (matches display box). */
 const MASCOT_INTRINSIC = 400
 /** CSS display box: h-56 / sm:h-64 — reserved so slides don't jump. */
 const MASCOT_FRAME_CLASS =
   'relative mx-auto flex h-56 w-56 shrink-0 items-end justify-center sm:h-64 sm:w-64'
+/** Selection slides only: slightly smaller so wrapped pills fit at ~667px. */
+const MASCOT_FRAME_COMPACT_CLASS =
+  'relative mx-auto flex h-36 w-36 shrink-0 items-end justify-center sm:h-56 sm:w-56'
+/** Welcome hero: ~18% larger than the default frame. */
+const MASCOT_FRAME_HERO_CLASS =
+  'relative mx-auto flex h-[16.5rem] w-[16.5rem] shrink-0 items-end justify-center sm:h-[19.5rem] sm:w-[19.5rem]'
 const MASCOT_IMAGE_CLASS =
   'h-full w-full object-contain object-bottom transition-opacity duration-200'
 
 function OnboardingMascot({
   src,
   priority = false,
+  compact = false,
+  hero = false,
 }: {
   src: string
   priority?: boolean
+  compact?: boolean
+  hero?: boolean
 }) {
   const [loaded, setLoaded] = useState(false)
 
@@ -125,8 +137,14 @@ function OnboardingMascot({
     setLoaded(false)
   }, [src])
 
+  const frameClass = hero
+    ? MASCOT_FRAME_HERO_CLASS
+    : compact
+      ? MASCOT_FRAME_COMPACT_CLASS
+      : MASCOT_FRAME_CLASS
+
   return (
-    <div className={MASCOT_FRAME_CLASS}>
+    <div className={frameClass}>
       {!loaded ? (
         <div
           className="absolute inset-0 animate-pulse rounded-2xl bg-muted/35"
@@ -138,7 +156,13 @@ function OnboardingMascot({
         alt=""
         width={MASCOT_INTRINSIC}
         height={MASCOT_INTRINSIC}
-        sizes="(min-width: 640px) 256px, 224px"
+        sizes={
+          hero
+            ? '(min-width: 640px) 312px, 264px'
+            : compact
+              ? '(min-width: 640px) 224px, 144px'
+              : '(min-width: 640px) 256px, 224px'
+        }
         priority={priority}
         onLoad={() => setLoaded(true)}
         className={cn(
@@ -200,7 +224,7 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
 }
 
 const PILL_BASE_CLASS = cn(
-  'rounded-full border px-3.5 py-2 text-left text-sm font-medium transition-colors',
+  'rounded-full border px-2.5 py-1.5 text-center text-sm font-medium leading-snug transition-colors',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
 )
 
@@ -212,6 +236,9 @@ function pillClass(selected: boolean) {
       : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
   )
 }
+
+const PILL_WRAP_CLASS =
+  'flex-[1_1_calc(50%-0.375rem)] min-w-[9rem] max-w-full'
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
@@ -239,7 +266,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'welcome',
     title: 'Welcome to',
-    body: 'The prediction game built for friends, offices, and rivalries — private pools, live standings, and bragging rights.',
+    body: 'Predict with friends, climb the standings, and claim the bragging rights.',
   },
   {
     id: 'predict_compete',
@@ -276,6 +303,7 @@ export function OnboardingFlow({
 }) {
   const router = useRouter()
   const prefersReducedMotion = usePrefersReducedMotion()
+  const userId = bootstrap.userId
   const [step, setStep] = useState<OnboardingStepId>(() =>
     preview && previewStep
       ? previewStep
@@ -389,9 +417,9 @@ export function OnboardingFlow({
   }
 
   const onStarted = useEffectEvent(() => {
+    if (preview) return
     if (startedRef.current) return
     startedRef.current = true
-    if (preview) return
     capturePostHog('onboarding_started')
   })
 
@@ -410,7 +438,7 @@ export function OnboardingFlow({
     link.rel = 'preload'
     link.as = 'image'
     link.href = src
-    link.type = 'image/webp'
+    link.type = 'image/png'
     document.head.appendChild(link)
 
     // Also warm the browser decode cache.
@@ -492,10 +520,11 @@ export function OnboardingFlow({
     let cancelled = false
 
     async function ensureUsernameWithRetry() {
+      if (!userId) return
       if (bootstrap.username?.trim()) return
       const { username: generated, error: genError } = await ensureDefaultUsername(
         supabase,
-        bootstrap.userId,
+        userId,
       )
       if (cancelled) return
       if (generated) {
@@ -511,7 +540,7 @@ export function OnboardingFlow({
     return () => {
       cancelled = true
     }
-  }, [bootstrap.userId, bootstrap.username])
+  }, [bootstrap.username, userId])
 
   useEffect(() => {
     let cancelled = false
@@ -556,15 +585,15 @@ export function OnboardingFlow({
   const persistState = useCallback(
     async (partial: OnboardingState = {}) => {
       const nextState = buildDraftState(partial)
-      if (preview) return nextState
+      if (preview || !userId) return nextState
       const { error: updateError } = await supabase
         .from('users')
         .update({ onboarding_state: nextState })
-        .eq('id', bootstrap.userId)
+        .eq('id', userId)
       if (updateError) throw new Error(updateError.message)
       return nextState
     },
-    [bootstrap.userId, buildDraftState, preview],
+    [buildDraftState, preview, userId],
   )
 
   const completeOnboarding = useCallback(
@@ -575,6 +604,11 @@ export function OnboardingFlow({
       if (preview) {
         router.replace(redirectTo ?? bootstrap.nextPath)
         return true
+      }
+
+      if (!userId) {
+        reportError('Sign in to finish onboarding.')
+        return false
       }
 
       setSaving(true)
@@ -608,7 +642,7 @@ export function OnboardingFlow({
       const { error: updateError } = await supabase
         .from('users')
         .update(profilePatch)
-        .eq('id', bootstrap.userId)
+        .eq('id', userId)
 
       setSaving(false)
       if (updateError) {
@@ -635,7 +669,6 @@ export function OnboardingFlow({
     },
     [
       bootstrap.nextPath,
-      bootstrap.userId,
       customAvatarUrl,
       displayName,
       fanLevel,
@@ -645,6 +678,7 @@ export function OnboardingFlow({
       referralSource,
       router,
       selectedAvatar,
+      userId,
       username,
     ],
   )
@@ -659,6 +693,7 @@ export function OnboardingFlow({
           router.replace(bootstrap.nextPath)
           return
         }
+        capturePostHog('onboarding_step_completed', { step: from })
         goToStep(following, 1)
         return
       }
@@ -704,7 +739,7 @@ export function OnboardingFlow({
 
   // Debounced username availability (profile step only)
   useEffect(() => {
-    if (step !== 'create_profile') return
+    if (step !== 'create_profile' || !userId) return
     const normalized = normalizeUsernameInput(username)
     const formatError = getUsernameFormatError(normalized)
     if (formatError) {
@@ -721,7 +756,7 @@ export function OnboardingFlow({
         const { available, error: availError } = await checkUsernameAvailable(
           supabase,
           normalized,
-          bootstrap.userId,
+          userId,
         )
         if (usernameCheckGen.current !== gen) return
         if (availError) {
@@ -740,7 +775,7 @@ export function OnboardingFlow({
     }, USERNAME_DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
-  }, [username, step, bootstrap.userId])
+  }, [username, step, userId])
 
   async function saveProfileAndContinue() {
     const normalized = normalizeUsernameInput(username)
@@ -776,13 +811,18 @@ export function OnboardingFlow({
       return
     }
 
+    if (!userId) {
+      reportError('Sign in to save your profile.')
+      return
+    }
+
     setSaving(true)
     clearErrorBanner()
 
     const { available, error: availError } = await checkUsernameAvailable(
       supabase,
       normalized,
-      bootstrap.userId,
+      userId,
     )
     if (availError) {
       setSaving(false)
@@ -814,7 +854,7 @@ export function OnboardingFlow({
           display_name_draft: trimmedDisplay,
         }),
       })
-      .eq('id', bootstrap.userId)
+      .eq('id', userId)
 
     setSaving(false)
     if (updateError) {
@@ -851,6 +891,11 @@ export function OnboardingFlow({
       return
     }
 
+    if (!userId) {
+      setAvatarSaving(null)
+      return
+    }
+
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -858,7 +903,7 @@ export function OnboardingFlow({
         custom_avatar_url: null,
         onboarding_state: buildDraftState({ avatar_touched: true }),
       })
-      .eq('id', bootstrap.userId)
+      .eq('id', userId)
 
     setAvatarSaving(null)
     if (updateError) {
@@ -900,10 +945,11 @@ export function OnboardingFlow({
     clearErrorBanner()
 
     if (preview) return
+    if (!userId) return
 
     const { error: clearError } = await clearCurrentUserCustomAvatar(
       supabase,
-      bootstrap.userId,
+      userId,
     )
     if (clearError) {
       setCustomAvatarUrl(previous)
@@ -918,6 +964,10 @@ export function OnboardingFlow({
         reportError('Pick one option to continue.')
         return
       }
+      capturePostHog('onboarding_step_completed', {
+        step: 'referral_source',
+        referral_source: referralSource,
+      })
       if (preview) {
         goToStep('fan_level', 1)
         return
@@ -931,12 +981,8 @@ export function OnboardingFlow({
             referral_source: referralSource,
             onboarding_state: buildDraftState({ step: 'fan_level' }),
           })
-          .eq('id', bootstrap.userId)
+          .eq('id', userId)
         if (updateError) throw new Error(updateError.message)
-        capturePostHog('onboarding_step_completed', {
-          step: 'referral_source',
-          referral_source: referralSource,
-        })
         goToStep('fan_level', 1)
       } catch (err) {
         reportError(
@@ -954,6 +1000,10 @@ export function OnboardingFlow({
         reportError('Pick one option to continue.')
         return
       }
+      capturePostHog('onboarding_step_completed', {
+        step: 'fan_level',
+        fan_level: fanLevel,
+      })
       if (preview) {
         goToStep('motivation_level', 1)
         return
@@ -967,12 +1017,8 @@ export function OnboardingFlow({
             fan_level: fanLevel,
             onboarding_state: buildDraftState({ step: 'motivation_level' }),
           })
-          .eq('id', bootstrap.userId)
+          .eq('id', userId)
         if (updateError) throw new Error(updateError.message)
-        capturePostHog('onboarding_step_completed', {
-          step: 'fan_level',
-          fan_level: fanLevel,
-        })
         goToStep('motivation_level', 1)
       } catch (err) {
         reportError(
@@ -990,6 +1036,10 @@ export function OnboardingFlow({
         reportError('Pick one option to continue.')
         return
       }
+      capturePostHog('onboarding_step_completed', {
+        step: 'motivation_level',
+        motivation_level: motivationLevel,
+      })
       if (preview) {
         goToStep('create_profile', 1)
         return
@@ -1001,14 +1051,12 @@ export function OnboardingFlow({
           .from('users')
           .update({
             motivation_level: motivationLevel,
-            onboarding_state: buildDraftState({ step: 'create_profile' }),
+            onboarding_state: buildDraftState({
+              step: 'create_profile',
+            }),
           })
-          .eq('id', bootstrap.userId)
+          .eq('id', userId)
         if (updateError) throw new Error(updateError.message)
-        capturePostHog('onboarding_step_completed', {
-          step: 'motivation_level',
-          motivation_level: motivationLevel,
-        })
         goToStep('create_profile', 1)
       } catch (err) {
         reportError(
@@ -1051,8 +1099,7 @@ export function OnboardingFlow({
   function renderStepPanel(panelStep: OnboardingStepId) {
     const infoSlide = INFO_SLIDES.find((slide) => slide.id === panelStep)
     const mascotSrc = ONBOARDING_MASCOT_SRC[panelStep]
-    const isDenseForm =
-      panelStep === 'create_profile' ||
+    const isSelectionSlide =
       panelStep === 'referral_source' ||
       panelStep === 'fan_level' ||
       panelStep === 'motivation_level'
@@ -1090,29 +1137,38 @@ export function OnboardingFlow({
             ) : null}
 
             {infoSlide ? (
-              <section className="space-y-4 text-center">
+              <section
+                className={cn(
+                  'text-center',
+                  infoSlide.id === 'welcome' ? 'space-y-2.5' : 'space-y-4',
+                )}
+              >
                 {infoSlide.id === 'welcome' ? (
-                  <h1 className="flex flex-col items-center gap-2 sm:gap-3">
-                    <span className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                  <>
+                    <h1 className="font-display text-3xl tracking-wide text-[#f0f4f8] sm:text-4xl">
                       {infoSlide.title}
-                    </span>
-                    <Image
-                      src={POOLCUP_LOGO_SRC}
-                      alt="PoolCup"
-                      width={280}
-                      height={96}
-                      priority={panelStep === step}
-                      className="h-12 w-auto object-contain sm:h-14"
-                    />
-                  </h1>
+                    </h1>
+                    <div className="flex justify-center">
+                      <Image
+                        src={POOLCUP_LOGO_SRC}
+                        alt="PoolCup"
+                        width={260}
+                        height={90}
+                        priority={panelStep === step}
+                        className="h-[3.75rem] w-auto max-w-[min(100%,15.75rem)] object-contain min-[380px]:h-[4.125rem] min-[380px]:max-w-[min(100%,18rem)] sm:h-[5.25rem] sm:max-w-[min(100%,21rem)] md:h-24 md:max-w-[min(100%,24rem)]"
+                      />
+                    </div>
+                  </>
                 ) : (
                   <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
                     {infoSlide.title}
                   </h1>
                 )}
-                <p className="text-base text-muted-foreground sm:text-lg">
-                  {infoSlide.body}
-                </p>
+                {infoSlide.id !== 'welcome' ? (
+                  <p className="text-base text-muted-foreground sm:text-lg">
+                    {infoSlide.body}
+                  </p>
+                ) : null}
               </section>
             ) : null}
 
@@ -1128,7 +1184,7 @@ export function OnboardingFlow({
                   </p>
                 </div>
                 <div
-                  className="flex flex-wrap justify-center gap-2"
+                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
                   role="radiogroup"
                   aria-label="Referral source"
                 >
@@ -1165,7 +1221,7 @@ export function OnboardingFlow({
                   </p>
                 </div>
                 <div
-                  className="flex flex-col gap-2"
+                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
                   role="radiogroup"
                   aria-label="What kind of sports fan are you"
                 >
@@ -1181,7 +1237,7 @@ export function OnboardingFlow({
                           setFanLevel(option.level)
                           clearErrorBanner()
                         }}
-                        className={cn(pillClass(selected), 'w-full')}
+                        className={cn(pillClass(selected), PILL_WRAP_CLASS)}
                       >
                         {option.label}
                       </button>
@@ -1202,7 +1258,7 @@ export function OnboardingFlow({
                   </p>
                 </div>
                 <div
-                  className="flex flex-col gap-2"
+                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
                   role="radiogroup"
                   aria-label="What's your goal on PoolCup"
                 >
@@ -1218,7 +1274,7 @@ export function OnboardingFlow({
                           setMotivationLevel(option.level)
                           clearErrorBanner()
                         }}
-                        className={cn(pillClass(selected), 'w-full')}
+                        className={cn(pillClass(selected), PILL_WRAP_CLASS)}
                       >
                         {option.label}
                       </button>
@@ -1447,66 +1503,67 @@ export function OnboardingFlow({
     )
 
     /**
-     * Height chain: panel is flex-1 (not h-full %) so it fills the middle
-     * slot between header and footer. Equal flex-1 spacers center the text
-     * in the mascot → Continue gap. Avoid overflow-y-auto here — it breaks
-     * flex free-space distribution for short info slides.
-     *
-     * Welcome: title/logo above, Pucky below (same stack as when balls lived here).
+     * Vertical rhythm (content column between header and footer):
+     *   [gap A] → visual → [gap A] → text → [gap B] → Continue
+     * Welcome: "Welcome to" → logo → Pucky → description. Other slides: mascot, then copy.
      */
+    const visual =
+      panelStep === 'sports_identity' ? (
+        <div className="flex shrink-0 justify-center">
+          <SportBallsOrbit priority={panelStep === step} />
+        </div>
+      ) : mascotSrc ? (
+        <div className="flex shrink-0 justify-center">
+          <OnboardingMascot
+            src={mascotSrc}
+            priority={panelStep === step}
+            compact={isSelectionSlide}
+            hero={panelStep === 'welcome'}
+          />
+        </div>
+      ) : null
+
+    // Welcome: headline + logo near the top; leftover between logo and Pucky
+    // and below the description. Extra pad between Pucky and description.
     if (panelStep === 'welcome') {
-      const welcomeMascot = ONBOARDING_MASCOT_SRC.welcome
       return (
-        <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1" aria-hidden />
-            {textBlock}
-            {welcomeMascot ? (
-              <div className="flex shrink-0 justify-center pb-1 pt-4 sm:pb-2 sm:pt-5">
-                <OnboardingMascot
-                  src={welcomeMascot}
-                  priority={panelStep === step}
-                />
-              </div>
-            ) : null}
-            <div className="min-h-0 flex-1" aria-hidden />
-          </div>
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="h-2 shrink-0 sm:h-3" aria-hidden />
+          {textBlock}
+          <div className="min-h-1 flex-1" aria-hidden />
+          {visual}
+          <div className="h-5 shrink-0 sm:h-6" aria-hidden />
+          {infoSlide ? (
+            <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-sm text-muted-foreground sm:text-base">
+              {infoSlide.body}
+            </p>
+          ) : null}
+          <div className="min-h-1 flex-1" aria-hidden />
         </div>
       )
     }
 
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden">
-        {panelStep === 'sports_identity' ? (
-          <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
-            <SportBallsOrbit priority={panelStep === step} />
-          </div>
-        ) : mascotSrc ? (
-          <div className="flex shrink-0 justify-center pt-1 sm:pt-2">
-            <OnboardingMascot
-              src={mascotSrc}
-              priority={panelStep === step}
-            />
-          </div>
-        ) : null}
-
-        {isDenseForm ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3">
-            {textBlock}
-          </div>
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        {visual ? (
+          <>
+            <div className="min-h-1 flex-1" aria-hidden />
+            {visual}
+            <div className="min-h-1 flex-1" aria-hidden />
+          </>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1" aria-hidden />
-            {textBlock}
-            <div className="min-h-0 flex-1" aria-hidden />
-          </div>
+          <div className="min-h-1 flex-1" aria-hidden />
         )}
+
+        {textBlock}
+
+        <div className="min-h-1 flex-1" aria-hidden />
       </div>
     )
   }
 
   return (
-    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-x-hidden px-4">
+    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-hidden px-4">
       <header className="shrink-0 pt-6 sm:pt-8">
         <div className="flex items-center gap-3">
           <button
@@ -1612,7 +1669,7 @@ export function OnboardingFlow({
             <Button
               type="button"
               size="lg"
-              className="w-full"
+              className="w-full font-semibold text-white"
               disabled={primaryDisabled}
               onClick={() => void handlePrimaryProceed()}
             >

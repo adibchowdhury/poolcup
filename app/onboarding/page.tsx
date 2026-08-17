@@ -3,6 +3,7 @@ import { OnboardingFlow } from '@/components/onboarding/onboarding-flow'
 import { parseOnboardingState } from '@/src/lib/onboarding'
 import {
   canUseOnboardingPreview,
+  isAnonymousOnboardingPreviewAllowed,
   isOnboardingPreviewRequest,
   parseOnboardingPreviewStep,
 } from '@/src/lib/onboarding-preview'
@@ -11,6 +12,20 @@ import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { ensureDefaultUsername } from '@/src/lib/username'
 
 export const dynamic = 'force-dynamic'
+
+const ANONYMOUS_PREVIEW_BOOTSTRAP = {
+  userId: null,
+  username: null,
+  displayName: null,
+  favoriteSports: [] as string[],
+  avatar: null,
+  customAvatarUrl: null,
+  referralSource: null,
+  fanLevel: null,
+  motivationLevel: null,
+  onboardingState: {},
+  nextPath: '/dashboard',
+}
 
 export default async function OnboardingPage({
   searchParams,
@@ -22,16 +37,27 @@ export default async function OnboardingPage({
     preview: previewParam,
     step: stepParam,
   } = await searchParams
+  const wantsPreview = isOnboardingPreviewRequest(previewParam)
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Preview gate runs before auth redirect: non-production ?preview=1 is
+  // viewable logged-out. Production still requires an authenticated admin.
   if (!user) {
-    const loginNext = isOnboardingPreviewRequest(previewParam)
-      ? '/onboarding?preview=1'
-      : '/onboarding'
-    redirect(`/login?next=${encodeURIComponent(loginNext)}`)
+    if (isAnonymousOnboardingPreviewAllowed(previewParam)) {
+      return (
+        <div className="flex min-h-dvh flex-col bg-background text-foreground">
+          <OnboardingFlow
+            bootstrap={ANONYMOUS_PREVIEW_BOOTSTRAP}
+            preview
+            previewStep={parseOnboardingPreviewStep(stepParam)}
+          />
+        </div>
+      )
+    }
+    redirect(`/login?next=${encodeURIComponent('/onboarding')}`)
   }
 
   const { data: profile, error } = await supabase
@@ -46,21 +72,15 @@ export default async function OnboardingPage({
     console.error('onboarding: failed to load profile', error.message)
   }
 
-  const wantsPreview = isOnboardingPreviewRequest(previewParam)
   const previewAllowed = canUseOnboardingPreview({
     isAdmin: profile?.is_admin,
   })
   const preview = wantsPreview && previewAllowed
 
-  if (wantsPreview && !previewAllowed) {
-    redirect(getSafeRedirectPath(nextParam, '/dashboard'))
-  }
-
   if (profile?.onboarding_completed === true && !preview) {
     redirect(getSafeRedirectPath(nextParam, '/dashboard'))
   }
 
-  // Guarantee a default sports username before the profile step.
   const { username: ensuredUsername } = await ensureDefaultUsername(
     supabase,
     user.id,

@@ -9,6 +9,7 @@ import {
   isOnboardingPath,
   isProtectedAppPath,
 } from '@/src/lib/authenticated-paths'
+import { isAnonymousOnboardingPreviewAllowed } from '@/src/lib/onboarding-preview'
 import { resolveSafeRedirectPath } from '@/src/lib/safe-redirect'
 
 function copyCookies(from: NextResponse, to: NextResponse) {
@@ -198,6 +199,15 @@ export async function updateSessionAndGateAuth(
   }
 
   if (isProtectedAppPath(pathname)) {
+    if (
+      onOnboarding &&
+      isAnonymousOnboardingPreviewAllowed(
+        request.nextUrl.searchParams.get('preview'),
+      )
+    ) {
+      return supabaseResponse
+    }
+
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.search = ''

@@ -23,6 +23,18 @@ import { getSafeNext } from '@/src/lib/safe-redirect'
 const inputClassName = authInputClassName
 const RESEND_COOLDOWN_SECONDS = 60
 
+function afterSignupHref(next: string | null): string {
+  if (!next) return '/onboarding'
+  if (
+    next === '/onboarding' ||
+    next.startsWith('/onboarding?') ||
+    next.startsWith('/onboarding/')
+  ) {
+    return next
+  }
+  return `/onboarding?next=${encodeURIComponent(next)}`
+}
+
 function CreateAccountPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -141,7 +153,7 @@ function CreateAccountPageContent() {
       'signup_completed',
       source ? { source } : undefined,
     )
-    router.push(next ?? '/dashboard')
+    router.push(afterSignupHref(next))
   }
 
   async function handleResendVerification() {
@@ -185,7 +197,7 @@ function CreateAccountPageContent() {
         </p>
 
         <div className="mt-8">
-          <GoogleSignInButton next={next ?? undefined} />
+          <GoogleSignInButton next={afterSignupHref(next)} />
         </div>
         <AuthFormDivider />
 
