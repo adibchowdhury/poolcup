@@ -21,19 +21,13 @@ import {
   CREATE_POOL_HREF,
   EXPLORE_HREF,
   JOIN_POOL_HREF,
-  ONBOARDING_FAN_LEVEL_OPTIONS,
-  ONBOARDING_MOTIVATION_LEVEL_OPTIONS,
   ONBOARDING_REFERRAL_OPTIONS,
   ONBOARDING_SPORT_OPTIONS,
   ONBOARDING_STEPS,
-  isOnboardingFanLevel,
-  isOnboardingMotivationLevel,
   nextStep,
   previousStep,
   resolveResumeStep,
   stepIndex,
-  type OnboardingFanLevel,
-  type OnboardingMotivationLevel,
   type OnboardingReferralId,
   type OnboardingSportId,
   type OnboardingState,
@@ -59,8 +53,6 @@ export type OnboardingBootstrap = {
   avatar: string | null
   customAvatarUrl: string | null
   referralSource: string | null
-  fanLevel: number | null
-  motivationLevel: number | null
   onboardingState: OnboardingState
   nextPath: string
 }
@@ -83,7 +75,8 @@ function slideMotionStyle(
 
 /**
  * Numbered Pucky poses (pucky_1…6). sports_identity keeps SportBallsOrbit
- * even though pucky_4.webp exists for that slot. Steps 7–10 have no numbered file.
+ * even though pucky_4.webp exists for that slot. Create profile and You're
+ * Ready have no numbered file.
  */
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
@@ -124,7 +117,7 @@ const MASCOT_FRAME_CLASS =
 /** Selection slides: scaled down from hero just enough for wrapped pills at ~667px. */
 const MASCOT_FRAME_COMPACT_CLASS =
   'relative mx-auto flex h-48 w-48 shrink-0 items-end justify-center sm:h-64 sm:w-64 lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
-/** Referral / fan / goal: extra-small mobile mascot so pills + nav stay on-screen. */
+/** Referral: extra-small mobile mascot so pills + nav stay on-screen. */
 const MASCOT_FRAME_TIGHT_CLASS =
   'relative mx-auto flex h-36 w-36 shrink-0 items-end justify-center sm:h-64 sm:w-64 lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
 /** Welcome + value slides: shared hero frame. Desktop is half the previous lg size. */
@@ -318,9 +311,6 @@ function pillClass(selected: boolean) {
   )
 }
 
-const PILL_WRAP_CLASS =
-  'flex-[1_1_calc(50%-0.375rem)] min-w-[9rem] max-w-full'
-
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
 
@@ -480,21 +470,6 @@ export function OnboardingFlow({
       return null
     },
   )
-  const [fanLevel, setFanLevel] = useState<OnboardingFanLevel | null>(() => {
-    const fromState = bootstrap.onboardingState.fan_level
-    if (isOnboardingFanLevel(fromState)) return fromState
-    if (isOnboardingFanLevel(bootstrap.fanLevel)) return bootstrap.fanLevel
-    return null
-  })
-  const [motivationLevel, setMotivationLevel] =
-    useState<OnboardingMotivationLevel | null>(() => {
-      const fromState = bootstrap.onboardingState.motivation_level
-      if (isOnboardingMotivationLevel(fromState)) return fromState
-      if (isOnboardingMotivationLevel(bootstrap.motivationLevel)) {
-        return bootstrap.motivationLevel
-      }
-      return null
-    })
   const [availability, setAvailability] = useState<Availability>('idle')
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [selectedAvatar, setSelectedAvatar] = useState(
@@ -711,16 +686,12 @@ export function OnboardingFlow({
         favorite_sports: favoriteSports,
         username_draft: username || undefined,
         referral_source: referralSource ?? undefined,
-        fan_level: fanLevel ?? undefined,
-        motivation_level: motivationLevel ?? undefined,
         ...partial,
       }
     },
     [
       bootstrap.onboardingState,
-      fanLevel,
       favoriteSports,
-      motivationLevel,
       referralSource,
       step,
       username,
@@ -767,15 +738,11 @@ export function OnboardingFlow({
           favorite_sports: favoriteSports,
           username_draft: normalizedUsername || undefined,
           referral_source: referralSource ?? undefined,
-          fan_level: fanLevel ?? undefined,
-          motivation_level: motivationLevel ?? undefined,
         },
         favorite_sports: favoriteSports,
       }
       if (normalizedUsername) profilePatch.username = normalizedUsername
       if (referralSource) profilePatch.referral_source = referralSource
-      if (fanLevel != null) profilePatch.fan_level = fanLevel
-      if (motivationLevel != null) profilePatch.motivation_level = motivationLevel
       if (selectedAvatar) profilePatch.avatar = selectedAvatar
       if (customAvatarUrl !== undefined) {
         profilePatch.custom_avatar_url = customAvatarUrl
@@ -798,10 +765,6 @@ export function OnboardingFlow({
         mode === 'skipped' ? 'onboarding_skipped' : 'onboarding_completed',
         {
           ...(referralSource ? { referral_source: referralSource } : {}),
-          ...(fanLevel != null ? { fan_level: fanLevel } : {}),
-          ...(motivationLevel != null
-            ? { motivation_level: motivationLevel }
-            : {}),
         },
       )
       const { awardClientXp } = await import('@/src/lib/xp-client')
@@ -812,9 +775,7 @@ export function OnboardingFlow({
     [
       bootstrap.nextPath,
       customAvatarUrl,
-      fanLevel,
       favoriteSports,
-      motivationLevel,
       preview,
       referralSource,
       router,
@@ -843,12 +804,6 @@ export function OnboardingFlow({
         step: from,
         ...(from === 'referral_source' && referralSource
           ? { referral_source: referralSource }
-          : {}),
-        ...(from === 'fan_level' && fanLevel != null
-          ? { fan_level: fanLevel }
-          : {}),
-        ...(from === 'motivation_level' && motivationLevel != null
-          ? { motivation_level: motivationLevel }
           : {}),
       })
       if (!following) {
@@ -974,8 +929,6 @@ export function OnboardingFlow({
         avatar: selectedAvatar,
         custom_avatar_url: customAvatarUrl,
         referral_source: referralSource,
-        fan_level: fanLevel,
-        motivation_level: motivationLevel,
         onboarding_state: buildDraftState({
           step: 'youre_ready',
           username_draft: normalized,
@@ -1076,8 +1029,10 @@ export function OnboardingFlow({
         step: 'referral_source',
         referral_source: referralSource,
       })
+      const following = nextStep('referral_source')
+      if (!following) return
       if (preview) {
-        goToStep('fan_level', 1)
+        goToStep(following, 1)
         return
       }
       setSaving(true)
@@ -1087,85 +1042,11 @@ export function OnboardingFlow({
           .from('users')
           .update({
             referral_source: referralSource,
-            onboarding_state: buildDraftState({ step: 'fan_level' }),
+            onboarding_state: buildDraftState({ step: following }),
           })
           .eq('id', userId)
         if (updateError) throw new Error(updateError.message)
-        goToStep('fan_level', 1)
-      } catch (err) {
-        reportError(
-          err instanceof Error ? err.message : 'Could not save',
-          () => handlePrimaryProceed(),
-        )
-      } finally {
-        setSaving(false)
-      }
-      return
-    }
-
-    if (step === 'fan_level') {
-      if (fanLevel == null) {
-        reportError('Pick one option to continue.')
-        return
-      }
-      capturePostHog('onboarding_step_completed', {
-        step: 'fan_level',
-        fan_level: fanLevel,
-      })
-      if (preview) {
-        goToStep('motivation_level', 1)
-        return
-      }
-      setSaving(true)
-      clearErrorBanner()
-      try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            fan_level: fanLevel,
-            onboarding_state: buildDraftState({ step: 'motivation_level' }),
-          })
-          .eq('id', userId)
-        if (updateError) throw new Error(updateError.message)
-        goToStep('motivation_level', 1)
-      } catch (err) {
-        reportError(
-          err instanceof Error ? err.message : 'Could not save',
-          () => handlePrimaryProceed(),
-        )
-      } finally {
-        setSaving(false)
-      }
-      return
-    }
-
-    if (step === 'motivation_level') {
-      if (motivationLevel == null) {
-        reportError('Pick one option to continue.')
-        return
-      }
-      capturePostHog('onboarding_step_completed', {
-        step: 'motivation_level',
-        motivation_level: motivationLevel,
-      })
-      if (preview) {
-        goToStep('create_profile', 1)
-        return
-      }
-      setSaving(true)
-      clearErrorBanner()
-      try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            motivation_level: motivationLevel,
-            onboarding_state: buildDraftState({
-              step: 'create_profile',
-            }),
-          })
-          .eq('id', userId)
-        if (updateError) throw new Error(updateError.message)
-        goToStep('create_profile', 1)
+        goToStep(following, 1)
       } catch (err) {
         reportError(
           err instanceof Error ? err.message : 'Could not save',
@@ -1203,8 +1084,6 @@ export function OnboardingFlow({
       saving ||
       isSliding ||
       (forStep === 'referral_source' && !referralSource) ||
-      (forStep === 'fan_level' && fanLevel == null) ||
-      (forStep === 'motivation_level' && motivationLevel == null) ||
       (forStep === 'create_profile' && !canSubmitProfile)
 
     if (forStep === 'youre_ready') {
@@ -1277,8 +1156,6 @@ export function OnboardingFlow({
       saving ||
       isSliding ||
       (forStep === 'referral_source' && !referralSource) ||
-      (forStep === 'fan_level' && fanLevel == null) ||
-      (forStep === 'motivation_level' && motivationLevel == null) ||
       (forStep === 'create_profile' && !canSubmitProfile)
 
     return (
@@ -1371,10 +1248,7 @@ export function OnboardingFlow({
   function renderStepPanel(panelStep: OnboardingStepId) {
     const infoSlide = INFO_SLIDES.find((slide) => slide.id === panelStep)
     const mascotSrc = ONBOARDING_MASCOT_SRC[panelStep]
-    const isSelectionSlide =
-      panelStep === 'referral_source' ||
-      panelStep === 'fan_level' ||
-      panelStep === 'motivation_level'
+    const isSelectionSlide = panelStep === 'referral_source'
 
     const headlineBlock = (
       <div className="w-full shrink-0 px-0.5">
@@ -1446,18 +1320,6 @@ export function OnboardingFlow({
               </h1>
             ) : null}
 
-            {panelStep === 'fan_level' ? (
-              <h1 className={ONBOARDING_TITLE_CLASS}>
-                What kind of sports fan are you?
-              </h1>
-            ) : null}
-
-            {panelStep === 'motivation_level' ? (
-              <h1 className={ONBOARDING_TITLE_CLASS}>
-                What&apos;s your goal on PoolCup?
-              </h1>
-            ) : null}
-
             {panelStep === 'create_profile' ? (
               <h1 className={ONBOARDING_TITLE_CLASS}>
                 Create Your Profile
@@ -1480,10 +1342,6 @@ export function OnboardingFlow({
       ) : panelStep === 'referral_source' ? (
         <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground lg:mx-0 lg:text-left">
           Pick one — it helps us understand where PoolCup fans come from.
-        </p>
-      ) : panelStep === 'fan_level' || panelStep === 'motivation_level' ? (
-        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground lg:mx-0 lg:text-left">
-          Pick the option that fits you best.
         </p>
       ) : panelStep === 'youre_ready' ? (
         <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg lg:mx-0 lg:max-w-lg lg:text-left">
@@ -1512,60 +1370,6 @@ export function OnboardingFlow({
                           clearErrorBanner()
                         }}
                         className={pillClass(selected)}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-              </div>
-            ) : null}
-
-            {panelStep === 'fan_level' ? (
-              <div
-                className="flex flex-wrap justify-center gap-1.5 sm:gap-2 lg:justify-start"
-                role="radiogroup"
-                aria-label="What kind of sports fan are you"
-              >
-                  {ONBOARDING_FAN_LEVEL_OPTIONS.map((option) => {
-                    const selected = fanLevel === option.level
-                    return (
-                      <button
-                        key={option.level}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => {
-                          setFanLevel(option.level)
-                          clearErrorBanner()
-                        }}
-                        className={cn(pillClass(selected), PILL_WRAP_CLASS)}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-              </div>
-            ) : null}
-
-            {panelStep === 'motivation_level' ? (
-              <div
-                className="flex flex-wrap justify-center gap-1.5 sm:gap-2 lg:justify-start"
-                role="radiogroup"
-                aria-label="What's your goal on PoolCup"
-              >
-                  {ONBOARDING_MOTIVATION_LEVEL_OPTIONS.map((option) => {
-                    const selected = motivationLevel === option.level
-                    return (
-                      <button
-                        key={option.level}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => {
-                          setMotivationLevel(option.level)
-                          clearErrorBanner()
-                        }}
-                        className={cn(pillClass(selected), PILL_WRAP_CLASS)}
                       >
                         {option.label}
                       </button>
@@ -1799,11 +1603,7 @@ export function OnboardingFlow({
           priority
           compact={panelStep !== 'welcome'}
           hero={panelStep === 'welcome'}
-          tight={
-            panelStep === 'referral_source' ||
-            panelStep === 'fan_level' ||
-            panelStep === 'motivation_level'
-          }
+          tight={panelStep === 'referral_source'}
         />
       ) : null
 

@@ -1,5 +1,5 @@
 import {
-  ONBOARDING_STEPS,
+  coerceOnboardingStep,
   type OnboardingStepId,
 } from '@/src/lib/onboarding'
 
@@ -35,9 +35,7 @@ export function parseOnboardingPreviewStep(
   raw: string | null | undefined,
 ): OnboardingStepId | undefined {
   if (!raw) return undefined
-  return (ONBOARDING_STEPS as readonly string[]).includes(raw)
-    ? (raw as OnboardingStepId)
-    : undefined
+  return coerceOnboardingStep(raw)
 }
 
 export const ONBOARDING_PREVIEW_HREF = '/onboarding?preview=1'
