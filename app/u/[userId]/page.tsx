@@ -14,7 +14,6 @@ import {
   fetchProfileRecentActivity,
 } from '@/src/lib/fetch-profile-activity'
 import { fetchUserAchievementProgress } from '@/src/lib/fetch-user-achievements'
-import { fetchUserGlobalRank } from '@/src/lib/global-rank'
 import { xpToLevel } from '@/src/lib/levels'
 import {
   isUserIdSlug,
@@ -120,13 +119,11 @@ export default async function PublicProfilePage({
     achievements,
     progress,
     activity,
-    globalRank,
   ] = await Promise.all([
     supabase.auth.getUser(),
     fetchUserAchievementsReadOnly(supabase, profile.id),
     fetchUserAchievementProgress(supabase, profile.id),
     fetchProfileRecentActivity(supabase, profile.id, { limit: 12 }),
-    fetchUserGlobalRank(supabase, profile.id),
   ])
 
   const isOwnPublicProfile = viewer?.id === profile.id
@@ -168,7 +165,6 @@ export default async function PublicProfilePage({
         isOwnPublicProfile={isOwnPublicProfile}
         initialAchievements={achievements}
         initialActivity={activity.items}
-        initialGlobalRank={globalRank}
         loadError={activity.error ? activity.error : null}
         highestLevel={profile.highest_level}
       />

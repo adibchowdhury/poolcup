@@ -75,9 +75,9 @@ const CORE_FEATURES: CoreFeature[] = [
     category: 'Sports Identity & Progression',
     title: 'Build your sports identity.',
     description:
-      'Every prediction builds your record. Earn XP, level up, unlock badges, and climb the global rank as you prove yourself across every match.',
+      'Every prediction builds your record. Earn XP, level up, and unlock badges as you prove yourself across every match.',
     bullets: [
-      'XP, levels & a global rank',
+      'XP, levels & badges',
       'Unlockable badges & achievements',
       'Accuracy, stats & career highlights',
       'Your identity follows you everywhere',

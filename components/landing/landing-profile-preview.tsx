@@ -1,14 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import { Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { xpToLevel } from '@/src/lib/levels'
 
 /**
  * Landing-only presentational slice of ProfileShowcase.
  * Static example data — no auth, fetch, evaluate, or navigation.
- * Mirrors the redesigned hero (left avatar + name, rank top-right, XP bar)
+ * Mirrors the redesigned hero (left avatar + name, XP bar)
  * plus a compact Featured Badges row.
  */
 
@@ -19,8 +18,6 @@ const EXAMPLE = {
   memberSince: 'Jan 2025',
   /** Level 8 (floor 4,000 → next 5,200) with a clear mid-bar fill. */
   totalXp: 4_750,
-  globalRank: 12,
-  totalRanked: 2_847,
   badges: [
     {
       id: 'welcome',
@@ -65,10 +62,6 @@ function getRarity(xpValue: number): BadgeRarity {
   return 'Legendary'
 }
 
-function topPercentFromRank(rank: number, total: number): number {
-  return Math.max(1, Math.min(100, Math.ceil((rank / total) * 100)))
-}
-
 type LandingProfilePreviewProps = {
   /** Nest inside a feature card — drop outer chrome (parent provides glass frame). */
   embedded?: boolean
@@ -78,7 +71,6 @@ export function LandingProfilePreview({
   embedded = false,
 }: LandingProfilePreviewProps) {
   const level = xpToLevel(EXAMPLE.totalXp)
-  const topPct = topPercentFromRank(EXAMPLE.globalRank, EXAMPLE.totalRanked)
 
   return (
     <div
@@ -102,25 +94,6 @@ export function LandingProfilePreview({
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.12),transparent_55%)]" />
-
-            {/* Global rank — top-right */}
-            <div className="absolute right-2.5 top-2.5 z-20 sm:right-3 sm:top-3">
-              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:gap-1.5 sm:px-2.5">
-                <Crown
-                  className="h-2.5 w-2.5 shrink-0 text-primary sm:h-3 sm:w-3"
-                  aria-hidden
-                />
-                <span className="truncate font-display text-[10px] tracking-wide text-foreground sm:text-xs">
-                  <span className="sm:hidden">#{EXAMPLE.globalRank}</span>
-                  <span className="hidden sm:inline">
-                    Global Rank #{EXAMPLE.globalRank}
-                  </span>
-                </span>
-                <span className="shrink-0 text-[8px] font-semibold tabular-nums text-primary sm:text-[9px]">
-                  Top {topPct}%
-                </span>
-              </div>
-            </div>
           </div>
 
           <div className="relative px-3.5 pb-4 pt-1 sm:px-4 sm:pb-4.5">

@@ -91,7 +91,6 @@ export function resolveMobileBottomNavActive(
   if (pathname === '/chat' || pathname.startsWith('/chat/')) return null
   if (pathname === '/discover') return 'discover'
   if (pathname === '/friends' || pathname.startsWith('/friends')) return 'friends'
-  if (pathname === '/leaderboard') return 'friends'
 
   if (pathname === '/dashboard') {
     if (tabParam === 'profile') return 'profile'

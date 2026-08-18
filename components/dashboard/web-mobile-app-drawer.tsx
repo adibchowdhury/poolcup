@@ -13,7 +13,6 @@ import {
   Mail,
   Settings,
   Shield,
-  Trophy,
   UserPlus,
   X,
 } from 'lucide-react'
@@ -82,14 +81,6 @@ export function WebMobileAppDrawer({
       icon: UserPlus,
       action: () => {
         router.push(DASHBOARD_TAB_HREFS.dashboard)
-      },
-    },
-    {
-      id: 'leaderboard',
-      label: 'Leaderboard',
-      icon: Trophy,
-      action: () => {
-        router.push('/leaderboard')
       },
     },
     {

@@ -7,8 +7,6 @@ import { AchievementBadgeArt } from '@/components/achievements/achievement-badge
 import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-provider'
 import {
   ChevronRight,
-  Crown,
-  Medal,
   Pencil,
   Sparkles,
   Target,
@@ -45,10 +43,6 @@ import {
   fetchProfileRecentActivity,
   type ProfileActivityItem,
 } from '@/src/lib/fetch-profile-activity'
-import {
-  fetchUserGlobalRank,
-  type UserGlobalRank,
-} from '@/src/lib/global-rank'
 import { pickNextAchievement } from '@/src/lib/pick-next-achievement'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
@@ -106,7 +100,6 @@ type ProfileShowcaseProps = {
   /** Optional preloaded achievements (public page server fetch). */
   initialAchievements?: UserAchievementsData | null
   initialActivity?: ProfileActivityItem[]
-  initialGlobalRank?: UserGlobalRank | null
   loadError?: string | null
   /** Peak level from users.highest_level. */
   highestLevel?: number | null
@@ -250,15 +243,6 @@ function sortEarnedNewestFirst(
       (a, b) =>
         Date.parse(b.earned_at ?? '') - Date.parse(a.earned_at ?? ''),
     )
-}
-
-/** Top X% from global rank (rank ÷ total), never fabricated. */
-function topPercentFromRank(
-  rank: number | null | undefined,
-  total: number | null | undefined,
-): number | null {
-  if (rank == null || total == null || total <= 0 || rank <= 0) return null
-  return Math.max(1, Math.min(100, Math.ceil((rank / total) * 100)))
 }
 
 function ProfilePoolCard({ pool }: { pool: ProfilePoolSummary }) {
@@ -472,7 +456,6 @@ export function ProfileShowcase({
   isOwnPublicProfile = false,
   initialAchievements = null,
   initialActivity,
-  initialGlobalRank = null,
   loadError = null,
 }: ProfileShowcaseProps) {
   const isPublic = mode === 'public'
@@ -484,12 +467,6 @@ export function ProfileShowcase({
   )
   const [loading, setLoading] = useState(false)
   const [sectionError, setSectionError] = useState<string | null>(loadError)
-  const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(
-    initialGlobalRank,
-  )
-  const [globalRankLoaded, setGlobalRankLoaded] = useState(
-    initialGlobalRank != null,
-  )
   const [profilePools, setProfilePools] = useState<ProfilePoolSummary[]>([])
   const [profileSports, setProfileSports] = useState<ProfileSportSummary[]>([])
   const [poolsLoading, setPoolsLoading] = useState(false)
@@ -583,29 +560,6 @@ export function ProfileShowcase({
       cancelled = true
     }
   }, [active, isPublic, isOwnPublicProfile, userId])
-
-  useEffect(() => {
-    if (!active || !userId) return
-    if (initialGlobalRank) {
-      setGlobalRank(initialGlobalRank)
-      setGlobalRankLoaded(true)
-      return
-    }
-
-    let cancelled = false
-    setGlobalRankLoaded(false)
-
-    void (async () => {
-      const rank = await fetchUserGlobalRank(supabase, userId)
-      if (cancelled) return
-      setGlobalRank(rank)
-      setGlobalRankLoaded(true)
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [active, userId, initialGlobalRank])
 
   useEffect(() => {
     if (!active || !userId) return
@@ -722,11 +676,6 @@ export function ProfileShowcase({
     [isPublic, progressRows],
   )
 
-  const topPct = topPercentFromRank(
-    globalRank?.global_rank,
-    globalRank?.total_ranked,
-  )
-
   const careerHighlights = useMemo((): CareerHighlightsData => {
     const poolsWon = metricValues.get('first_place_finishes') ?? 0
     const bestFinishRaw = metricValues.get('best_finish_rank_at_or_below')
@@ -752,7 +701,7 @@ export function ProfileShowcase({
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-3 pb-8">
-      {/* ── Hero: avatar|name left, rank top-right, XP below ── */}
+      {/* ── Hero: avatar|name left, XP below ── */}
       <section className="hue-card-surface relative overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
         <div className="relative h-[104px] w-full sm:h-[120px]">
           <Image
@@ -766,40 +715,13 @@ export function ProfileShowcase({
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_55%)]" />
 
-          {/* Global rank — top-right corner of hero */}
-          <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,16rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[20rem]">
-            {globalRankLoaded ? (
-              globalRank?.global_rank != null ? (
-                <div
-                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:gap-1.5 sm:px-2.5"
-                  aria-label={`Global rank ${globalRank.global_rank}${
-                    topPct != null ? `, top ${topPct}%` : ''
-                  }`}
-                >
-                  <Crown
-                    className="h-2.5 w-2.5 shrink-0 text-primary sm:h-3 sm:w-3"
-                    aria-hidden
-                  />
-                  <span className="truncate font-display text-[10px] tracking-wide text-foreground sm:text-xs">
-                    Global rank: #{globalRank.global_rank.toLocaleString()}
-                    {topPct != null ? ` (Top ${topPct}%)` : ''}
-                  </span>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-2 py-1 text-muted-foreground backdrop-blur-sm sm:px-2.5">
-                  <Medal className="h-2.5 w-2.5 opacity-70" aria-hidden />
-                  <span className="font-display text-[10px] tracking-wide sm:text-xs">
-                    Unranked
-                  </span>
-                </div>
-              )
-            ) : null}
-            {seasonText ? (
+          {seasonText ? (
+            <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,16rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[20rem]">
               <span className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground backdrop-blur-sm">
                 {seasonText}
               </span>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6">

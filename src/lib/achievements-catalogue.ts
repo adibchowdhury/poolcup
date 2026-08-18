@@ -416,13 +416,6 @@ export const ACHIEVEMENTS_CATALOGUE: AchievementBadge[] = [
     tier: 'silver',
   }),
   badge({
-    id: 'rank-global-100',
-    name: 'Global 100',
-    description: 'Reach the global top 100 (when live).',
-    category: 'Ranking',
-    tier: 'gold',
-  }),
-  badge({
     id: 'rank-overtake',
     name: 'Overtake',
     description: 'Pass the previous leader on a leaderboard.',

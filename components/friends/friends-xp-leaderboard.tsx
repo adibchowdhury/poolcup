@@ -39,7 +39,7 @@ type FriendsXpLeaderboardProps = {
 }
 
 /**
- * Compact friends XP preview on /friends. Full board: /leaderboard?scope=friends
+ * Friends XP leaderboard on the Social tab.
  */
 export function FriendsXpLeaderboard({
   rows,
@@ -48,22 +48,14 @@ export function FriendsXpLeaderboard({
 }: FriendsXpLeaderboardProps) {
   return (
     <section className={cn('mt-8 space-y-3', className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground">
-            <Trophy className="h-5 w-5 text-amber-300" aria-hidden />
-            Friends leaderboard
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Ranked by XP (ledger) — not pool points.
-          </p>
-        </div>
-        <Link
-          href="/leaderboard?scope=friends"
-          className="shrink-0 text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
-        >
-          Full board
-        </Link>
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 font-display text-xl tracking-wide text-foreground">
+          <Trophy className="h-5 w-5 text-amber-300" aria-hidden />
+          Friends leaderboard
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Ranked by XP (ledger) — not pool points.
+        </p>
       </div>
 
       <div className="hue-card-surface overflow-hidden rounded-2xl border border-amber-400/20 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.12),transparent_45%),linear-gradient(160deg,rgba(22,28,18,0.98),rgba(8,12,10,0.99))] shadow-[0_14px_36px_rgba(0,0,0,0.28)]">
@@ -89,16 +81,10 @@ export function FriendsXpLeaderboard({
             <p className="text-sm text-muted-foreground">
               Leaderboard unavailable right now.
             </p>
-            <Link
-              href="/leaderboard?scope=friends"
-              className="inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
-            >
-              Try the XP leaderboard
-            </Link>
           </div>
         ) : (
           <ol className="divide-y divide-white/[0.06] p-2">
-            {rows.slice(0, 5).map((row) => {
+            {rows.map((row) => {
               const name = row.display_name?.trim() || 'PoolCup player'
               return (
                 <li

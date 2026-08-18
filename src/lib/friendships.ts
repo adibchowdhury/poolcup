@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { fetchFriendsXpLeaderboard } from '@/src/lib/global-rank'
 
 export type FriendshipStatus =
   | 'none'
@@ -156,7 +155,10 @@ function coerceFriendsLeaderboardRow(raw: unknown): FriendsLeaderboardRow | null
   const row = raw as Record<string, unknown>
   const userId = asString(row.user_id)
   if (!userId) return null
-  const rank = asNumber(row.rank)
+  const rank =
+    asNumber(row.friend_rank) ??
+    asNumber(row.rank) ??
+    asNumber(row.global_rank)
   if (rank == null || rank <= 0) return null
   return {
     user_id: userId,
@@ -405,19 +407,43 @@ export async function getIncomingFriendRequests(
 export async function getFriendsLeaderboard(
   supabase: SupabaseClient,
 ): Promise<FriendsLeaderboardRow[]> {
-  const { rows, error } = await fetchFriendsXpLeaderboard(supabase)
+  const primary = await supabase.rpc('get_friends_xp_leaderboard')
+  let data = primary.data
+  let error = primary.error
+
   if (error) {
+    console.warn(
+      'get_friends_xp_leaderboard failed, trying get_friends_leaderboard:',
+      error.message,
+    )
+    const fallback = await supabase.rpc('get_friends_leaderboard')
+    data = fallback.data
+    error = fallback.error
+  }
+
+  if (error) {
+    console.error('friends XP leaderboard failed:', error.message)
     return []
   }
-  return rows.map((row) => ({
-    user_id: row.user_id,
-    display_name: row.display_name,
-    avatar: row.avatar,
-    custom_avatar_url: row.custom_avatar_url,
-    total_xp: row.total_xp,
-    rank: row.global_rank,
-    is_me: row.is_me,
-  }))
+
+  if (!Array.isArray(data)) return []
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const me = user?.id ?? null
+
+  return data
+    .map((raw) => {
+      const row = coerceFriendsLeaderboardRow(raw)
+      if (!row) return null
+      return {
+        ...row,
+        is_me: row.is_me || (me != null && row.user_id === me),
+      }
+    })
+    .filter((row): row is FriendsLeaderboardRow => row != null)
+    .sort((a, b) => a.rank - b.rank)
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Crown, Sparkles, TrendingUp } from 'lucide-react'
+import { Sparkles, TrendingUp } from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
@@ -16,10 +16,6 @@ import {
   type RecentResultsFeedData,
   type RecentScoredPrediction,
 } from '@/src/lib/fetch-recent-results-feed'
-import {
-  fetchUserGlobalRank,
-  type UserGlobalRank,
-} from '@/src/lib/global-rank'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import type { PredictionOutcomeKind } from '@/src/lib/prediction-scoring'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -54,50 +50,22 @@ function InlineStat({
   )
 }
 
-function GlobalRankChip({ rank }: { rank: UserGlobalRank }) {
-  if (rank.global_rank == null || rank.total_ranked <= 0) return null
-
-  return (
-    <Link
-      href="/leaderboard"
-      className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-card/95 px-2.5 py-1 text-[11px] shadow-sm transition-colors hover:border-primary/40 hover:bg-card',
-        FOCUS_VISIBLE_RING,
-      )}
-      aria-label={`Global rank ${rank.global_rank} of ${rank.total_ranked}`}
-    >
-      <Crown className="h-3 w-3 shrink-0 text-primary" aria-hidden />
-      <span className="font-display tracking-wide text-foreground">
-        Global rank #{rank.global_rank.toLocaleString()}
-        <span className="ml-1 font-sans font-normal text-muted-foreground">
-          of {rank.total_ranked.toLocaleString()}
-        </span>
-      </span>
-    </Link>
-  )
-}
-
 function PointsHero({
   points,
   accuracy,
-  globalRank,
 }: {
   points: number
   accuracy: string
-  globalRank: UserGlobalRank | null
 }) {
   return (
     <div className={cn(SURFACE, 'px-3.5 py-3 sm:px-4')}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Total points
-          </p>
-          <p className="mt-1 font-display text-4xl leading-none tracking-tight tabular-nums text-foreground sm:text-5xl">
-            {points.toLocaleString()}
-          </p>
-        </div>
-        {globalRank ? <GlobalRankChip rank={globalRank} /> : null}
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Total points
+        </p>
+        <p className="mt-1 font-display text-4xl leading-none tracking-tight tabular-nums text-foreground sm:text-5xl">
+          {points.toLocaleString()}
+        </p>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <InlineStat icon={TrendingUp} label="Accuracy" value={accuracy} />
@@ -246,18 +214,13 @@ function ProgressSkeleton() {
 
 export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
   const [data, setData] = useState<RecentResultsFeedData | null>(null)
-  const [globalRank, setGlobalRank] = useState<UserGlobalRank | null>(null)
   const [loading, setLoading] = useState(true)
   const [achievementsEmpty, setAchievementsEmpty] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [next, rank] = await Promise.all([
-      fetchRecentResultsFeed(supabase, userId),
-      fetchUserGlobalRank(supabase, userId),
-    ])
+    const next = await fetchRecentResultsFeed(supabase, userId)
     setData(next)
-    setGlobalRank(rank)
     setLoading(false)
 
     // Client-side surface for scored picks (scoring itself is server-side).
@@ -289,24 +252,16 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
     void load()
   }, [load])
 
-  const hasRank =
-    globalRank?.global_rank != null && (globalRank.total_ranked ?? 0) > 0
   const recentScored = data?.recentScored ?? []
   const showRecentScored = recentScored.length > 0
-  const showPointsHero = Boolean(data && (!data.isEmpty || hasRank))
+  const showPointsHero = Boolean(data && !data.isEmpty)
   const showProgressBody =
     showPointsHero ||
     Boolean(data?.bestPrediction) ||
     showRecentScored ||
     !achievementsEmpty
 
-  if (
-    !loading &&
-    data &&
-    !data.error &&
-    !showProgressBody &&
-    !hasRank
-  ) {
+  if (!loading && data && !data.error && !showProgressBody) {
     return null
   }
 
@@ -315,7 +270,7 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
       <div className="flex flex-col gap-2.5">
         {loading && !data ? (
           <ProgressSkeleton />
-        ) : data?.error && data.isEmpty && !hasRank ? (
+        ) : data?.error && data.isEmpty ? (
           <div className="space-y-2 py-1 text-center">
             <p className="text-sm text-destructive">{data.error}</p>
             <Button
@@ -336,12 +291,7 @@ export function RecentResultsSection({ userId }: RecentResultsSectionProps) {
                 accuracy={
                   data.winRate != null ? `${data.winRate}%` : '—'
                 }
-                globalRank={hasRank ? globalRank : null}
               />
-            ) : hasRank && globalRank ? (
-              <div className={cn(SURFACE, 'px-3.5 py-3')}>
-                <GlobalRankChip rank={globalRank} />
-              </div>
             ) : null}
 
             {data?.bestPrediction ? (

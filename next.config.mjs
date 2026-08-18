@@ -13,6 +13,21 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/leaderboard',
+        has: [{ type: 'query', key: 'scope', value: 'friends' }],
+        destination: '/friends?tab=leaderboard',
+        permanent: false,
+      },
+      {
+        source: '/leaderboard',
+        destination: '/dashboard',
+        permanent: false,
+      },
+    ]
+  },
   images: {
     unoptimized: true,
     ...(supabaseHostname
