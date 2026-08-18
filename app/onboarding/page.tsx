@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { preload } from 'react-dom'
 import { OnboardingFlow } from '@/components/onboarding/onboarding-flow'
 import { parseOnboardingState } from '@/src/lib/onboarding'
 import {
@@ -12,6 +13,16 @@ import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { ensureDefaultUsername } from '@/src/lib/username'
 
 export const dynamic = 'force-dynamic'
+
+const ONBOARDING_PRELOAD_IMAGES = [
+  '/mascot/onboarding_mascot/original/pucky_temp.png',
+  '/poolcup-logo.png',
+  '/sports/soccer.png',
+  '/sports/basketball.png',
+  '/sports/football.png',
+  '/sports/hockey.png',
+  '/sports/baseball.png',
+] as const
 
 const ANONYMOUS_PREVIEW_BOOTSTRAP = {
   userId: null,
@@ -37,6 +48,9 @@ export default async function OnboardingPage({
     preview: previewParam,
     step: stepParam,
   } = await searchParams
+  for (const src of ONBOARDING_PRELOAD_IMAGES) {
+    preload(src, { as: 'image' })
+  }
   const wantsPreview = isOnboardingPreviewRequest(previewParam)
   const supabase = await createServerSupabaseClient()
   const {

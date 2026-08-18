@@ -111,7 +111,13 @@ const MASCOT_FRAME_COMPACT_CLASS =
 const MASCOT_FRAME_HERO_CLASS =
   'relative mx-auto flex h-[16.5rem] w-[16.5rem] shrink-0 items-end justify-center sm:h-[19.5rem] sm:w-[19.5rem]'
 const MASCOT_IMAGE_CLASS =
-  'h-full w-full object-contain object-bottom transition-opacity duration-200'
+  'h-full w-full object-contain object-bottom'
+
+const ONBOARDING_PRELOAD_SRCS = [
+  PUCKY_TEMP_SRC,
+  POOLCUP_LOGO_SRC,
+  ...SPORT_ORBIT_BALLS.map((ball) => ball.src),
+] as const
 
 function OnboardingMascot({
   src,
@@ -124,12 +130,6 @@ function OnboardingMascot({
   compact?: boolean
   hero?: boolean
 }) {
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    setLoaded(false)
-  }, [src])
-
   const frameClass = hero
     ? MASCOT_FRAME_HERO_CLASS
     : compact
@@ -138,17 +138,13 @@ function OnboardingMascot({
 
   return (
     <div className={frameClass}>
-      {!loaded ? (
-        <div
-          className="absolute inset-0 animate-pulse rounded-2xl bg-muted/35"
-          aria-hidden
-        />
-      ) : null}
       <Image
         src={src}
         alt=""
         width={MASCOT_INTRINSIC}
         height={MASCOT_INTRINSIC}
+        unoptimized
+        decoding="sync"
         sizes={
           hero
             ? '(min-width: 640px) 312px, 264px'
@@ -157,11 +153,7 @@ function OnboardingMascot({
               : '(min-width: 640px) 256px, 224px'
         }
         priority={priority}
-        onLoad={() => setLoaded(true)}
-        className={cn(
-          MASCOT_IMAGE_CLASS,
-          loaded ? 'opacity-100' : 'opacity-0',
-        )}
+        className={MASCOT_IMAGE_CLASS}
       />
     </div>
   )
@@ -203,6 +195,7 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
                     width={96}
                     height={96}
                     sizes="48px"
+                    unoptimized
                     priority={priority}
                     className="h-full w-full object-contain drop-shadow-sm"
                   />
@@ -303,20 +296,19 @@ export function OnboardingFlow({
   const router = useRouter()
   const prefersReducedMotion = usePrefersReducedMotion()
   const userId = bootstrap.userId
-  const [step, setStep] = useState<OnboardingStepId>(() =>
+  const initialStep: OnboardingStepId =
     preview && previewStep
       ? previewStep
-      : resolveResumeStep(bootstrap.onboardingState),
-  )
+      : resolveResumeStep(bootstrap.onboardingState)
+  const [step, setStep] = useState<OnboardingStepId>(initialStep)
   /** Dual-panel carousel: track is 200% wide; translateX 0 or -50%. */
   const [isSliding, setIsSliding] = useState(false)
   const [trackX, setTrackX] = useState(0)
   const [trackTransition, setTrackTransition] = useState(false)
-  const [leftPanelStep, setLeftPanelStep] = useState<OnboardingStepId | null>(
-    null,
-  )
+  const [leftPanelStep, setLeftPanelStep] =
+    useState<OnboardingStepId>(initialStep)
   const [rightPanelStep, setRightPanelStep] = useState<OnboardingStepId | null>(
-    null,
+    () => nextStep(initialStep),
   )
   const [slideTarget, setSlideTarget] = useState<OnboardingStepId | null>(null)
   const slideTimersRef = useRef<number[]>([])
@@ -414,28 +406,26 @@ export function OnboardingFlow({
     onStarted()
   }, [])
 
-  /** Prefetch the next slide's mascot so Continue transitions don't wait on fetch. */
+  /** Decode Pucky, logo, and sport-balls once so slide remounts don't pop in. */
   useEffect(() => {
-    const following = nextStep(step)
-    if (!following) return
-    const src = ONBOARDING_MASCOT_SRC[following]
-    if (!src) return
+    const links: HTMLLinkElement[] = []
+    for (const src of ONBOARDING_PRELOAD_SRCS) {
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = src
+      document.head.appendChild(link)
+      links.push(link)
 
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'image'
-    link.href = src
-    link.type = 'image/png'
-    document.head.appendChild(link)
-
-    // Also warm the browser decode cache.
-    const img = new window.Image()
-    img.src = src
+      const img = new window.Image()
+      img.src = src
+      void img.decode?.().catch(() => {})
+    }
 
     return () => {
-      link.remove()
+      for (const link of links) link.remove()
     }
-  }, [step])
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -459,11 +449,15 @@ export function OnboardingFlow({
 
       if (prefersReducedMotion) {
         setStep(next)
+        setLeftPanelStep(next)
+        setRightPanelStep(nextStep(next))
+        setTrackX(0)
+        setTrackTransition(false)
         syncPreviewUrl(next)
         return
       }
 
-      // Forward: [current | next] at 0% â†’ -50%. Back: [prev | current] at -50% â†’ 0%.
+      // Forward: [current | next] at 0% → -50%. Back: [prev | current] at -50% → 0%.
       if (dir === 1) {
         setLeftPanelStep(step)
         setRightPanelStep(next)
@@ -487,14 +481,14 @@ export function OnboardingFlow({
       })
 
       const doneTimer = window.setTimeout(() => {
+        setTrackTransition(false)
         setStep(next)
+        setLeftPanelStep(next)
+        setRightPanelStep(nextStep(next))
+        setTrackX(0)
         syncPreviewUrl(next)
         setIsSliding(false)
         setSlideTarget(null)
-        setLeftPanelStep(null)
-        setRightPanelStep(null)
-        setTrackTransition(false)
-        setTrackX(0)
         cancelAnimationFrame(raf1)
         cancelAnimationFrame(raf2)
       }, SLIDE_MS)
@@ -1110,7 +1104,8 @@ export function OnboardingFlow({
                         alt="PoolCup"
                         width={260}
                         height={90}
-                        priority={panelStep === step}
+                        unoptimized
+                        priority
                         className="h-[3.75rem] w-auto max-w-[min(100%,15.75rem)] object-contain min-[380px]:h-[4.125rem] min-[380px]:max-w-[min(100%,18rem)] sm:h-[5.25rem] sm:max-w-[min(100%,21rem)] md:h-24 md:max-w-[min(100%,24rem)]"
                       />
                     </div>
@@ -1479,13 +1474,13 @@ export function OnboardingFlow({
     const visual =
       panelStep === 'sports_identity' ? (
         <div className="flex shrink-0 justify-center">
-          <SportBallsOrbit priority={panelStep === step} />
+          <SportBallsOrbit priority />
         </div>
       ) : mascotSrc ? (
         <div className="flex shrink-0 justify-center">
           <OnboardingMascot
             src={mascotSrc}
-            priority={panelStep === step}
+            priority
             compact={isSelectionSlide}
             hero={!isSelectionSlide}
           />
@@ -1596,28 +1591,31 @@ export function OnboardingFlow({
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {isSliding && leftPanelStep && rightPanelStep ? (
+        <div
+          className={cn(
+            'flex h-full min-h-0 w-[200%] flex-1 will-change-transform',
+            trackTransition &&
+              'transition-transform duration-[320ms] ease-in-out',
+          )}
+          style={{ transform: `translateX(${trackX}%)` }}
+        >
           <div
+            key={leftPanelStep}
             className={cn(
-              'flex min-h-0 h-full w-[200%] will-change-transform',
-              trackTransition &&
-                'transition-transform duration-[320ms] ease-in-out',
+              'flex h-full min-h-0 w-1/2 shrink-0 flex-col',
+              isSliding && 'pointer-events-none',
             )}
-            style={{ transform: `translateX(${trackX}%)` }}
+          >
+            {renderStepPanel(leftPanelStep)}
+          </div>
+          <div
+            key={rightPanelStep ?? 'onboarding-slide-empty'}
+            className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col"
             aria-hidden
           >
-            <div className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col">
-              {renderStepPanel(leftPanelStep)}
-            </div>
-            <div className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col">
-              {renderStepPanel(rightPanelStep)}
-            </div>
+            {rightPanelStep ? renderStepPanel(rightPanelStep) : null}
           </div>
-        ) : (
-          <div className="flex min-h-0 w-full flex-1 flex-col">
-            {renderStepPanel(step)}
-          </div>
-        )}
+        </div>
       </div>
 
       <footer className="shrink-0 border-t border-white/[0.06] bg-background pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
