@@ -714,6 +714,18 @@ html.light .mobile-bottom-nav-home {
   }
 }
 
+@media (min-width: 1024px) {
+  :root {
+    --onboarding-sport-orbit-radius: -5.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --onboarding-sport-orbit-radius: -6.5rem;
+  }
+}
+
 @keyframes onboarding-sport-orbit {
   from {
     transform: rotate(0deg);

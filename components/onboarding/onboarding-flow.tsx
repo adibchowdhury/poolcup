@@ -19,7 +19,6 @@ import {
   CREATE_POOL_HREF,
   EXPLORE_HREF,
   JOIN_POOL_HREF,
-  LOGIN_HREF,
   ONBOARDING_FAN_LEVEL_OPTIONS,
   ONBOARDING_MOTIVATION_LEVEL_OPTIONS,
   ONBOARDING_REFERRAL_OPTIONS,
@@ -103,15 +102,49 @@ const POOLCUP_LOGO_SRC = '/poolcup-logo.png'
 const MASCOT_INTRINSIC = 400
 /** CSS display box: h-56 / sm:h-64 — reserved so slides don't jump. */
 const MASCOT_FRAME_CLASS =
-  'relative mx-auto flex h-56 w-56 shrink-0 items-end justify-center sm:h-64 sm:w-64'
+  'relative mx-auto flex h-56 w-56 shrink-0 items-end justify-center sm:h-64 sm:w-64 lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
 /** Selection slides: scaled down from hero just enough for wrapped pills at ~667px. */
 const MASCOT_FRAME_COMPACT_CLASS =
-  'relative mx-auto flex h-48 w-48 shrink-0 items-end justify-center sm:h-64 sm:w-64'
-/** Welcome + value slides: shared hero frame. */
+  'relative mx-auto flex h-48 w-48 shrink-0 items-end justify-center sm:h-64 sm:w-64 lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
+/** Referral / fan / goal: extra-small mobile mascot so pills + nav stay on-screen. */
+const MASCOT_FRAME_TIGHT_CLASS =
+  'relative mx-auto flex h-36 w-36 shrink-0 items-end justify-center sm:h-64 sm:w-64 lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
+/** Welcome + value slides: shared hero frame. Desktop is half the previous lg size. */
 const MASCOT_FRAME_HERO_CLASS =
-  'relative mx-auto flex h-[16.5rem] w-[16.5rem] shrink-0 items-end justify-center sm:h-[19.5rem] sm:w-[19.5rem]'
+  'relative mx-auto flex h-[16.5rem] w-[16.5rem] shrink-0 items-end justify-center sm:h-[19.5rem] sm:w-[19.5rem] lg:h-[13rem] lg:w-[13rem] xl:h-[15rem] xl:w-[15rem]'
 const MASCOT_IMAGE_CLASS =
   'h-full w-full object-contain object-bottom'
+const ONBOARDING_TITLE_CLASS =
+  'text-center font-display text-3xl leading-tight tracking-wide text-foreground sm:text-5xl lg:text-left'
+const PANEL_SHELL_CLASS =
+  'flex min-h-0 w-full flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-rows-1 lg:gap-x-12 xl:gap-x-16'
+/** image→dots: 5rem (80px) */
+const MOBILE_IMAGE_TO_DOTS_GAP_CLASS = 'h-20 shrink-0 lg:hidden'
+/** title→copy / copy→pills: 32px */
+const MOBILE_GROUP_GAP_CLASS = 'h-8 shrink-0 lg:hidden'
+/** dots→title: 48px */
+const MOBILE_DOTS_TO_TITLE_GAP_CLASS = 'h-12 shrink-0 lg:hidden'
+
+/** Desktop raised buttons: box-shadow edge + translate press (no filter). */
+const ONBOARDING_BTN_3D_PRIMARY = cn(
+  'font-semibold text-primary-foreground',
+  'bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_68%,white),var(--primary))]',
+  'shadow-[4px_4px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
+  'transition-[transform,box-shadow] duration-75',
+  'hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_58%,white),var(--primary))]',
+  'active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
+  'disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[4px_4px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
+)
+
+const ONBOARDING_BTN_3D_BACK = cn(
+  'text-foreground',
+  'bg-[linear-gradient(180deg,#243044,#111a27)]',
+  'shadow-[4px_4px_0_0_#080b0f]',
+  'transition-[transform,box-shadow] duration-75',
+  'hover:bg-[linear-gradient(180deg,#2a384c,#151e2c)]',
+  'active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_0_#080b0f]',
+  'disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[4px_4px_0_0_#080b0f]',
+)
 
 const ONBOARDING_PRELOAD_SRCS = [
   PUCKY_TEMP_SRC,
@@ -124,17 +157,21 @@ function OnboardingMascot({
   priority = false,
   compact = false,
   hero = false,
+  tight = false,
 }: {
   src: string
   priority?: boolean
   compact?: boolean
   hero?: boolean
+  tight?: boolean
 }) {
   const frameClass = hero
     ? MASCOT_FRAME_HERO_CLASS
-    : compact
-      ? MASCOT_FRAME_COMPACT_CLASS
-      : MASCOT_FRAME_CLASS
+    : tight
+      ? MASCOT_FRAME_TIGHT_CLASS
+      : compact
+        ? MASCOT_FRAME_COMPACT_CLASS
+        : MASCOT_FRAME_CLASS
 
   return (
     <div className={frameClass}>
@@ -147,10 +184,12 @@ function OnboardingMascot({
         decoding="sync"
         sizes={
           hero
-            ? '(min-width: 640px) 312px, 264px'
-            : compact
-              ? '(min-width: 640px) 256px, 192px'
-              : '(min-width: 640px) 256px, 224px'
+            ? '(min-width: 1280px) 240px, (min-width: 1024px) 208px, (min-width: 640px) 312px, 264px'
+            : tight
+              ? '(min-width: 1024px) 208px, (min-width: 640px) 256px, 144px'
+              : compact
+                ? '(min-width: 1024px) 208px, (min-width: 640px) 256px, 192px'
+                : '(min-width: 1024px) 208px, (min-width: 640px) 256px, 224px'
         }
         priority={priority}
         className={MASCOT_IMAGE_CLASS}
@@ -169,7 +208,14 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
 
   return (
     <div
-      className={cn(MASCOT_FRAME_HERO_CLASS, 'overflow-hidden')}
+      className={cn(
+        MASCOT_FRAME_COMPACT_CLASS,
+        'overflow-hidden',
+        '[--onboarding-sport-orbit-radius:-4.75rem]',
+        'sm:[--onboarding-sport-orbit-radius:-6.5rem]',
+        'lg:[--onboarding-sport-orbit-radius:-5.5rem]',
+        'xl:[--onboarding-sport-orbit-radius:-6.5rem]',
+      )}
       aria-hidden
     >
       <div className="animate-onboarding-sport-orbit absolute inset-0">
@@ -178,7 +224,7 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
           return (
             <div
               key={ball.src}
-              className="absolute left-1/2 top-1/2 h-11 w-11 sm:h-12 sm:w-12"
+              className="absolute left-1/2 top-1/2 h-11 w-11 sm:h-12 sm:w-12 lg:h-8 lg:w-8"
               style={{
                 transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(var(--onboarding-sport-orbit-radius))`,
               }}
@@ -238,6 +284,49 @@ function usePrefersReducedMotion(): boolean {
   }, [])
 
   return reduced
+}
+
+/** Desktop-only step dots: current step is an elongated pill. */
+function OnboardingDotStepper({
+  currentIndex,
+  total,
+  animate,
+  className,
+}: {
+  currentIndex: number
+  total: number
+  animate: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className={cn('flex items-center justify-start gap-1.5', className)}
+      role="progressbar"
+      aria-valuenow={currentIndex + 1}
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-label={`Step ${currentIndex + 1} of ${total}`}
+    >
+      {Array.from({ length: total }, (_, index) => {
+        const isCurrent = index === currentIndex
+        const isCompleted = index < currentIndex
+        return (
+          <span
+            key={ONBOARDING_STEPS[index]}
+            className={cn(
+              'h-2 shrink-0 rounded-full',
+              isCurrent ? 'w-8' : 'w-2',
+              isCurrent || isCompleted
+                ? 'bg-[#00e676]'
+                : 'bg-muted-foreground/35',
+              animate && 'transition-[width] duration-200 ease-in-out',
+            )}
+            aria-hidden
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
@@ -1036,15 +1125,164 @@ export function OnboardingFlow({
     ((stepIndex(chromeStep) + 1) / ONBOARDING_STEPS.length) * 100
   const priorStep = previousStep(step)
   const canGoBack = Boolean(priorStep)
-  const primaryDisabled =
-    saving ||
-    isSliding ||
-    (step === 'referral_source' && !referralSource) ||
-    (step === 'fan_level' && fanLevel == null) ||
-    (step === 'motivation_level' && motivationLevel == null) ||
-    (step === 'create_profile' && !canSubmitProfile)
 
-  const showProgress = step !== 'welcome'
+  function renderChromeActions(
+    forStep: OnboardingStepId,
+    opts?: { desktop?: boolean },
+  ) {
+    const disabled =
+      saving ||
+      isSliding ||
+      (forStep === 'referral_source' && !referralSource) ||
+      (forStep === 'fan_level' && fanLevel == null) ||
+      (forStep === 'motivation_level' && motivationLevel == null) ||
+      (forStep === 'create_profile' && !canSubmitProfile)
+
+    if (forStep === 'youre_ready') {
+      return (
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            size="lg"
+            className={cn('w-full', opts?.desktop && ONBOARDING_BTN_3D_PRIMARY)}
+            disabled={saving || isSliding}
+            onClick={() =>
+              void completeOnboarding('completed', JOIN_POOL_HREF)
+            }
+          >
+            {saving ? 'Finishing…' : 'Join a pool'}
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="w-full"
+            disabled={saving || isSliding}
+            onClick={() =>
+              void completeOnboarding('completed', CREATE_POOL_HREF)
+            }
+          >
+            Create a pool
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            disabled={saving || isSliding}
+            onClick={() =>
+              void completeOnboarding('completed', EXPLORE_HREF)
+            }
+          >
+            Explore PoolCup
+          </Button>
+        </div>
+      )
+    }
+
+    return (
+      <Button
+        type="button"
+        size="lg"
+        className={cn('w-full', ONBOARDING_BTN_3D_PRIMARY)}
+        disabled={disabled}
+        onClick={() => void handlePrimaryProceed()}
+      >
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Saving…
+          </>
+        ) : (
+          'Continue'
+        )}
+      </Button>
+    )
+  }
+
+  function renderNavRow(forStep: OnboardingStepId) {
+    const continueDisabled =
+      saving ||
+      isSliding ||
+      (forStep === 'referral_source' && !referralSource) ||
+      (forStep === 'fan_level' && fanLevel == null) ||
+      (forStep === 'motivation_level' && motivationLevel == null) ||
+      (forStep === 'create_profile' && !canSubmitProfile)
+
+    return (
+      <>
+        <div className="flex w-full items-stretch gap-3 pb-1.5 pr-1.5">
+          <Button
+            type="button"
+            size="lg"
+            className={cn('w-[38%] min-w-0 shrink-0', ONBOARDING_BTN_3D_BACK)}
+            disabled={!canGoBack || saving || isSliding}
+            onClick={() => goPrevious()}
+          >
+            Back
+          </Button>
+          <div className="min-w-0 flex-1">
+            {forStep === 'youre_ready' ? (
+              <Button
+                type="button"
+                size="lg"
+                className={cn('w-full', ONBOARDING_BTN_3D_PRIMARY)}
+                disabled={saving || isSliding}
+                onClick={() =>
+                  void completeOnboarding('completed', JOIN_POOL_HREF)
+                }
+              >
+                {saving ? 'Finishing…' : 'Join a pool'}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="lg"
+                className={cn('w-full', ONBOARDING_BTN_3D_PRIMARY)}
+                disabled={continueDisabled}
+                onClick={() => void handlePrimaryProceed()}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  'Continue'
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+        {forStep === 'youre_ready' ? (
+          <>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="w-full"
+              disabled={saving || isSliding}
+              onClick={() =>
+                void completeOnboarding('completed', CREATE_POOL_HREF)
+              }
+            >
+              Create a pool
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={saving || isSliding}
+              onClick={() =>
+                void completeOnboarding('completed', EXPLORE_HREF)
+              }
+            >
+              Explore PoolCup
+            </Button>
+          </>
+        ) : null}
+      </>
+    )
+  }
 
   function renderStepPanel(panelStep: OnboardingStepId) {
     const infoSlide = INFO_SLIDES.find((slide) => slide.id === panelStep)
@@ -1089,13 +1327,13 @@ export function OnboardingFlow({
             {infoSlide ? (
               <section
                 className={cn(
-                  'text-center',
+                  'text-center lg:text-left',
                   infoSlide.id === 'welcome' ? 'space-y-2.5' : null,
                 )}
               >
                 {infoSlide.id === 'welcome' ? (
-                  <>
-                    <h1 className="font-display text-3xl tracking-wide text-[#f0f4f8] sm:text-4xl">
+                  <div className="mx-auto flex w-fit flex-col items-center gap-2.5 lg:mx-0">
+                    <h1 className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] sm:text-4xl">
                       {infoSlide.title}
                     </h1>
                     <div className="flex justify-center">
@@ -1109,9 +1347,9 @@ export function OnboardingFlow({
                         className="h-[3.75rem] w-auto max-w-[min(100%,15.75rem)] object-contain min-[380px]:h-[4.125rem] min-[380px]:max-w-[min(100%,18rem)] sm:h-[5.25rem] sm:max-w-[min(100%,21rem)] md:h-24 md:max-w-[min(100%,24rem)]"
                       />
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                  <h1 className={ONBOARDING_TITLE_CLASS}>
                     {infoSlide.title}
                   </h1>
                 )}
@@ -1119,31 +1357,31 @@ export function OnboardingFlow({
             ) : null}
 
             {panelStep === 'referral_source' ? (
-              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+              <h1 className={ONBOARDING_TITLE_CLASS}>
                 How did you hear about us?
               </h1>
             ) : null}
 
             {panelStep === 'fan_level' ? (
-              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+              <h1 className={ONBOARDING_TITLE_CLASS}>
                 What kind of sports fan are you?
               </h1>
             ) : null}
 
             {panelStep === 'motivation_level' ? (
-              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+              <h1 className={ONBOARDING_TITLE_CLASS}>
                 What&apos;s your goal on PoolCup?
               </h1>
             ) : null}
 
             {panelStep === 'create_profile' ? (
-              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+              <h1 className={ONBOARDING_TITLE_CLASS}>
                 Create Your Profile
               </h1>
             ) : null}
 
             {panelStep === 'youre_ready' ? (
-              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+              <h1 className={ONBOARDING_TITLE_CLASS}>
                 You&apos;re Ready
               </h1>
             ) : null}
@@ -1152,19 +1390,19 @@ export function OnboardingFlow({
 
     const descriptionBlock =
       infoSlide && infoSlide.id !== 'welcome' ? (
-        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg">
+        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg lg:mx-0 lg:max-w-lg lg:text-left">
           {infoSlide.body}
         </p>
       ) : panelStep === 'referral_source' ? (
-        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground">
+        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground lg:mx-0 lg:text-left">
           Pick one — it helps us understand where PoolCup fans come from.
         </p>
       ) : panelStep === 'fan_level' || panelStep === 'motivation_level' ? (
-        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground">
+        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground lg:mx-0 lg:text-left">
           Pick the option that fits you best.
         </p>
       ) : panelStep === 'youre_ready' ? (
-        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg">
+        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg lg:mx-0 lg:max-w-lg lg:text-left">
           Jump into a pool, start your own, or explore the app — your call.
         </p>
       ) : null
@@ -1173,7 +1411,7 @@ export function OnboardingFlow({
       <div className="w-full shrink-0 px-0.5">
             {panelStep === 'referral_source' ? (
               <div
-                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2 lg:justify-start"
                 role="radiogroup"
                 aria-label="Referral source"
               >
@@ -1200,7 +1438,7 @@ export function OnboardingFlow({
 
             {panelStep === 'fan_level' ? (
               <div
-                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2 lg:justify-start"
                 role="radiogroup"
                 aria-label="What kind of sports fan are you"
               >
@@ -1227,7 +1465,7 @@ export function OnboardingFlow({
 
             {panelStep === 'motivation_level' ? (
               <div
-                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2 lg:justify-start"
                 role="radiogroup"
                 aria-label="What's your goal on PoolCup"
               >
@@ -1464,101 +1702,223 @@ export function OnboardingFlow({
     )
 
     /**
-     * Vertical rhythm (content column between header and footer):
-     *   [gap A] → visual → [gap A] → text → [gap B] → Continue
-     * Welcome: "Welcome to" → logo → Pucky → description (unchanged).
-     * Other slides: title → mascot / sport-balls (hero size; compact on pill
-     * slides) → description → controls → Continue. Leftover flex around the
-     * mascot on value slides matches Welcome's vertical placement.
+     * Mobile: title → visual → copy → pills (unchanged).
+     * Desktop (lg+): left column = copy + actions; right = visual.
+     * One mascot instance per panel so slide remounts stay avoided.
      */
-    const visual =
+    const visualInner =
       panelStep === 'sports_identity' ? (
-        <div className="flex shrink-0 justify-center">
-          <SportBallsOrbit priority />
-        </div>
+        <SportBallsOrbit priority />
       ) : mascotSrc ? (
-        <div className="flex shrink-0 justify-center">
-          <OnboardingMascot
-            src={mascotSrc}
-            priority
-            compact={isSelectionSlide}
-            hero={!isSelectionSlide}
-          />
-        </div>
+        <OnboardingMascot
+          src={mascotSrc}
+          priority
+          compact={panelStep !== 'welcome'}
+          hero={panelStep === 'welcome'}
+          tight={
+            panelStep === 'referral_source' ||
+            panelStep === 'fan_level' ||
+            panelStep === 'motivation_level'
+          }
+        />
+      ) : panelStep === 'create_profile' ? (
+        <OnboardingMascot src={PUCKY_TEMP_SRC} priority compact />
       ) : null
+
+    const isWelcome = panelStep === 'welcome'
+
+    const visual = visualInner ? (
+      <div
+        className={cn(
+          'flex shrink-0 justify-center',
+          isWelcome ? 'max-lg:order-2' : 'max-lg:order-1',
+          'lg:h-full lg:items-center lg:justify-center',
+        )}
+      >
+        {visualInner}
+      </div>
+    ) : null
+
+    const welcomeBody =
+      panelStep === 'welcome' && infoSlide ? (
+        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-sm text-muted-foreground sm:text-base lg:mx-0 lg:max-w-lg lg:text-left">
+          {infoSlide.body}
+        </p>
+      ) : null
+
+    const copyBlock = welcomeBody ?? descriptionBlock
+
+    const desktopChrome = (
+      <div className="mb-6 hidden w-full shrink-0 justify-start px-0.5 lg:flex">
+        <OnboardingDotStepper
+          currentIndex={stepIndex(chromeStep)}
+          total={ONBOARDING_STEPS.length}
+          animate={!prefersReducedMotion}
+        />
+      </div>
+    )
+
+    const mobileDots = isWelcome ? null : (
+      <div className="max-lg:order-2 flex justify-center px-0.5 lg:hidden">
+        <OnboardingDotStepper
+          currentIndex={stepIndex(chromeStep)}
+          total={ONBOARDING_STEPS.length}
+          animate={!prefersReducedMotion}
+        />
+      </div>
+    )
+
+    const desktopActions = (
+      <div className="hidden w-full shrink-0 lg:flex lg:flex-col lg:gap-2 lg:pb-1.5 lg:pr-1.5 lg:pt-8">
+        {isWelcome ? (
+          renderChromeActions(panelStep, { desktop: true })
+        ) : (
+          renderNavRow(panelStep)
+        )}
+      </div>
+    )
 
     // Create Your Profile is a taller form — scroll the middle, keep chrome fixed.
     if (panelStep === 'create_profile') {
       return (
-        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-3 pt-5 sm:pt-6">
-            {headlineBlock}
-            <div className="h-4 shrink-0" aria-hidden />
-            {controlsBlock}
+        <div className={PANEL_SHELL_CLASS}>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:contents lg:h-full lg:justify-center">
+            <div
+              className="max-lg:order-1 h-2 shrink-0 sm:h-3 lg:hidden"
+              aria-hidden
+            />
+            {desktopChrome}
+            {mobileDots}
+            <div className="max-lg:order-3 scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-3 pt-12 lg:max-h-full lg:flex-none lg:pb-0 lg:pt-0">
+              {headlineBlock}
+              <div className="h-6 shrink-0 lg:h-4" aria-hidden />
+              {controlsBlock}
+            </div>
+            {desktopActions}
           </div>
-        </div>
-      )
-    }
-
-    // Welcome: headline + logo near the top; leftover between logo and Pucky
-    // and below the description. Extra pad between Pucky and description.
-    if (panelStep === 'welcome') {
-      return (
-        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="h-2 shrink-0 sm:h-3" aria-hidden />
-          {headlineBlock}
-          <div className="min-h-1 flex-1" aria-hidden />
           {visual}
-          <div className="h-5 shrink-0 sm:h-6" aria-hidden />
-          {infoSlide ? (
-            <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-sm text-muted-foreground sm:text-base">
-              {infoSlide.body}
-            </p>
-          ) : null}
-          <div className="min-h-1 flex-1" aria-hidden />
+          <div
+            className={cn('max-lg:order-1', MOBILE_IMAGE_TO_DOTS_GAP_CLASS)}
+            aria-hidden
+          />
         </div>
       )
     }
 
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <div className="h-5 shrink-0 sm:h-7" aria-hidden />
-        {headlineBlock}
-        {visual ? (
-          <>
+      <div className={PANEL_SHELL_CLASS}>
+        <div className="flex min-h-0 flex-1 flex-col max-lg:contents lg:h-full lg:min-h-0 lg:justify-center">
+            {desktopChrome}
+            {mobileDots}
+            {!isWelcome ? (
+              <div
+                className={cn('max-lg:order-2', MOBILE_DOTS_TO_TITLE_GAP_CLASS)}
+                aria-hidden
+              />
+            ) : null}
+            <div className="flex min-h-0 flex-col max-lg:contents lg:gap-6 lg:overflow-hidden">
+            <div
+              className="max-lg:order-1 h-2 shrink-0 sm:h-3 lg:hidden"
+              aria-hidden
+            />
+            <div
+              className={cn(
+                'w-full shrink-0',
+                isWelcome ? 'max-lg:order-1' : 'max-lg:order-3',
+              )}
+            >
+              {headlineBlock}
+            </div>
+            {isWelcome ? (
+              <div
+                className="max-lg:order-1 min-h-1 flex-1 lg:hidden"
+                aria-hidden
+              />
+            ) : null}
+            {copyBlock ? (
+              <>
+                <div
+                  className={cn(
+                    'shrink-0 lg:hidden',
+                    isWelcome
+                      ? 'max-lg:order-3 h-5 sm:h-6'
+                      : 'max-lg:order-4 h-6',
+                  )}
+                  aria-hidden
+                />
+                <div
+                  className={cn(
+                    'w-full shrink-0',
+                    isWelcome ? 'max-lg:order-3' : 'max-lg:order-4',
+                  )}
+                >
+                  {copyBlock}
+                </div>
+              </>
+            ) : null}
+            {!isWelcome && isSelectionSlide ? (
+              <div
+                className={cn('max-lg:order-4', MOBILE_GROUP_GAP_CLASS)}
+                aria-hidden
+              />
+            ) : null}
             {isSelectionSlide ? (
-              <div className="h-3 shrink-0 sm:h-4" aria-hidden />
-            ) : (
-              <div className="min-h-1 flex-1" aria-hidden />
-            )}
-            {visual}
-          </>
+              <div className="max-lg:order-5 w-full shrink-0">
+                {controlsBlock}
+              </div>
+            ) : null}
+            <div
+              className={cn(
+                'min-h-1 flex-1 lg:hidden',
+                isWelcome ? 'max-lg:order-3' : 'max-lg:order-6',
+              )}
+              aria-hidden
+            />
+          </div>
+          {desktopActions}
+        </div>
+        {visual}
+        {!isWelcome ? (
+          <div
+            className={cn('max-lg:order-1', MOBILE_IMAGE_TO_DOTS_GAP_CLASS)}
+            aria-hidden
+          />
         ) : null}
-        {descriptionBlock ? (
-          <>
-            <div className="h-4 shrink-0 sm:h-5" aria-hidden />
-            {descriptionBlock}
-          </>
-        ) : null}
-        {isSelectionSlide ? (
-          <>
-            <div className="h-3 shrink-0 sm:h-4" aria-hidden />
-            {controlsBlock}
-          </>
-        ) : null}
-        <div className="min-h-1 flex-1" aria-hidden />
       </div>
     )
   }
 
   return (
-    <main className="mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-hidden px-4">
-      <header className="shrink-0 pt-6 sm:pt-8">
+    <div className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden">
+      <div
+        className="h-[3px] w-full shrink-0 bg-muted"
+        aria-hidden
+      >
+        <div
+          className={cn(
+            'h-full bg-[#00e676]',
+            !prefersReducedMotion &&
+              'transition-[width] duration-200 ease-in-out',
+          )}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <main className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-hidden px-4 lg:max-w-6xl lg:px-10 lg:pt-10 xl:max-w-7xl xl:px-12">
+      <header
+        className={cn(
+          'shrink-0 pt-6 sm:pt-8 lg:hidden',
+          // Keep the Welcome title's top offset on later slides (invisible, still in flow).
+          step !== 'welcome' && 'invisible pointer-events-none',
+        )}
+        aria-hidden={step !== 'welcome'}
+      >
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => goPrevious()}
-            disabled={!canGoBack || saving || isSliding}
+            disabled={
+              step !== 'welcome' || !canGoBack || saving || isSliding
+            }
             aria-label="Go back"
             className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors',
@@ -1570,23 +1930,7 @@ export function OnboardingFlow({
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
-          {showProgress ? (
-            <div
-              className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={stepIndex(chromeStep) + 1}
-              aria-valuemin={1}
-              aria-valuemax={ONBOARDING_STEPS.length}
-              aria-label={`Step ${stepIndex(chromeStep) + 1} of ${ONBOARDING_STEPS.length}`}
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          ) : (
-            <div className="min-w-0 flex-1" aria-hidden />
-          )}
+          <div className="min-w-0 flex-1" aria-hidden />
         </div>
       </header>
 
@@ -1618,85 +1962,17 @@ export function OnboardingFlow({
         </div>
       </div>
 
-      <footer className="shrink-0 border-t border-white/[0.06] bg-background pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        {step === 'youre_ready' ? (
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              disabled={saving || isSliding}
-              onClick={() =>
-                void completeOnboarding('completed', JOIN_POOL_HREF)
-              }
-            >
-              {saving ? 'Finishing…' : 'Join a pool'}
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="w-full"
-              disabled={saving || isSliding}
-              onClick={() =>
-                void completeOnboarding('completed', CREATE_POOL_HREF)
-              }
-            >
-              Create a pool
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              disabled={saving || isSliding}
-              onClick={() =>
-                void completeOnboarding('completed', EXPLORE_HREF)
-              }
-            >
-              Explore PoolCup
-            </Button>
-          </div>
-        ) : step === 'welcome' ? (
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              size="lg"
-              className="w-full font-semibold text-white"
-              disabled={primaryDisabled}
-              onClick={() => void handlePrimaryProceed()}
-            >
-              Get Started
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="w-full"
-              disabled={saving || isSliding}
-              onClick={() => router.push(LOGIN_HREF)}
-            >
-              I already have an account
-            </Button>
+      <footer className="shrink-0 bg-background pb-3 pt-3 lg:hidden">
+        {step === 'welcome' ? (
+          <div className="pb-1.5 pr-1.5">
+            {renderChromeActions(step)}
           </div>
         ) : (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            disabled={primaryDisabled}
-            onClick={() => void handlePrimaryProceed()}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Saving…
-              </>
-            ) : (
-              'Continue'
-            )}
-          </Button>
+          renderNavRow(step)
         )}
       </footer>
     </main>
+    <div className="h-12 shrink-0 lg:hidden" aria-hidden />
+    </div>
   )
 }
