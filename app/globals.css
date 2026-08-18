@@ -705,12 +705,12 @@ html.light .mobile-bottom-nav-home {
 /* Onboarding sports-identity: sport-ball orbit — tweak duration here only */
 :root {
   --onboarding-sport-orbit-duration: 10s;
-  --onboarding-sport-orbit-radius: -5.25rem; /* negative = out from center */
+  --onboarding-sport-orbit-radius: -6.75rem; /* negative = out from center */
 }
 
 @media (min-width: 640px) {
   :root {
-    --onboarding-sport-orbit-radius: -6rem;
+    --onboarding-sport-orbit-radius: -8rem;
   }
 }
 

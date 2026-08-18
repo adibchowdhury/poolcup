@@ -158,7 +158,9 @@ export function parseOnboardingState(raw: unknown): OnboardingState {
     ? obj.favorite_sports.filter((s): s is string => typeof s === 'string')
     : undefined
   const username_draft =
-    typeof obj.username_draft === 'string' ? obj.username_draft : undefined
+    typeof obj.username_draft === 'string' && obj.username_draft.trim()
+      ? obj.username_draft.trim()
+      : undefined
   const display_name_draft =
     typeof obj.display_name_draft === 'string'
       ? obj.display_name_draft

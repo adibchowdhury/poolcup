@@ -10,7 +10,7 @@ import {
   useState,
   type ChangeEvent,
 } from 'react'
-import { ChevronLeft, Loader2, Upload } from 'lucide-react'
+import { Check, ChevronLeft, Loader2, Plus } from 'lucide-react'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,14 +40,7 @@ import {
 } from '@/src/lib/onboarding'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
-import {
-  DISPLAY_NAME_MAX_LENGTH,
-  validateDisplayName,
-} from '@/src/lib/ugc-limits'
-import {
-  clearCurrentUserCustomAvatar,
-  uploadCurrentUserAvatar,
-} from '@/src/lib/upload-user-avatar'
+import { uploadCurrentUserAvatar } from '@/src/lib/upload-user-avatar'
 import {
   checkUsernameAvailable,
   ensureDefaultUsername,
@@ -111,10 +104,10 @@ const MASCOT_INTRINSIC = 400
 /** CSS display box: h-56 / sm:h-64 — reserved so slides don't jump. */
 const MASCOT_FRAME_CLASS =
   'relative mx-auto flex h-56 w-56 shrink-0 items-end justify-center sm:h-64 sm:w-64'
-/** Selection slides only: slightly smaller so wrapped pills fit at ~667px. */
+/** Selection slides: scaled down from hero just enough for wrapped pills at ~667px. */
 const MASCOT_FRAME_COMPACT_CLASS =
-  'relative mx-auto flex h-36 w-36 shrink-0 items-end justify-center sm:h-56 sm:w-56'
-/** Welcome hero: ~18% larger than the default frame. */
+  'relative mx-auto flex h-48 w-48 shrink-0 items-end justify-center sm:h-64 sm:w-64'
+/** Welcome + value slides: shared hero frame. */
 const MASCOT_FRAME_HERO_CLASS =
   'relative mx-auto flex h-[16.5rem] w-[16.5rem] shrink-0 items-end justify-center sm:h-[19.5rem] sm:w-[19.5rem]'
 const MASCOT_IMAGE_CLASS =
@@ -160,7 +153,7 @@ function OnboardingMascot({
           hero
             ? '(min-width: 640px) 312px, 264px'
             : compact
-              ? '(min-width: 640px) 224px, 144px'
+              ? '(min-width: 640px) 256px, 192px'
               : '(min-width: 640px) 256px, 224px'
         }
         priority={priority}
@@ -184,7 +177,7 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
 
   return (
     <div
-      className={cn(MASCOT_FRAME_CLASS, 'overflow-hidden')}
+      className={cn(MASCOT_FRAME_HERO_CLASS, 'overflow-hidden')}
       aria-hidden
     >
       <div className="animate-onboarding-sport-orbit absolute inset-0">
@@ -290,6 +283,12 @@ const INFO_SLIDES: InfoSlide[] = [
   },
 ]
 
+function initialUsername(bootstrap: OnboardingBootstrap): string {
+  const draft = bootstrap.onboardingState.username_draft?.trim()
+  const assigned = bootstrap.username?.trim()
+  return draft || assigned || ''
+}
+
 export function OnboardingFlow({
   bootstrap,
   preview = false,
@@ -327,18 +326,7 @@ export function OnboardingFlow({
         ? bootstrap.onboardingState.favorite_sports
         : bootstrap.favoriteSports,
   )
-  const [username, setUsername] = useState(
-    () =>
-      bootstrap.onboardingState.username_draft ??
-      bootstrap.username ??
-      '',
-  )
-  const [displayName, setDisplayName] = useState(
-    () =>
-      bootstrap.onboardingState.display_name_draft ??
-      bootstrap.displayName ??
-      '',
-  )
+  const [username, setUsername] = useState(() => initialUsername(bootstrap))
   const [referralSource, setReferralSource] = useState<OnboardingReferralId | null>(
     () => {
       const fromState = bootstrap.onboardingState.referral_source
@@ -376,7 +364,6 @@ export function OnboardingFlow({
     })
   const [availability, setAvailability] = useState<Availability>('idle')
   const [usernameError, setUsernameError] = useState<string | null>(null)
-  const [displayNameError, setDisplayNameError] = useState<string | null>(null)
   const [selectedAvatar, setSelectedAvatar] = useState(
     bootstrap.avatar ?? 'white_skin_avatar.png',
   )
@@ -520,15 +507,19 @@ export function OnboardingFlow({
     let cancelled = false
 
     async function ensureUsernameWithRetry() {
+      const assigned = bootstrap.username?.trim()
+      if (assigned) {
+        setUsername((prev) => prev.trim() || assigned)
+        return
+      }
       if (!userId) return
-      if (bootstrap.username?.trim()) return
       const { username: generated, error: genError } = await ensureDefaultUsername(
         supabase,
         userId,
       )
       if (cancelled) return
       if (generated) {
-        setUsername((prev) => prev || generated)
+        setUsername((prev) => prev.trim() || generated)
         return
       }
       if (genError) {
@@ -559,20 +550,22 @@ export function OnboardingFlow({
   }, [])
 
   const buildDraftState = useCallback(
-    (partial: OnboardingState = {}): OnboardingState => ({
-      ...bootstrap.onboardingState,
-      step,
-      favorite_sports: favoriteSports,
-      username_draft: username || undefined,
-      display_name_draft: displayName.trim() || undefined,
-      referral_source: referralSource ?? undefined,
-      fan_level: fanLevel ?? undefined,
-      motivation_level: motivationLevel ?? undefined,
-      ...partial,
-    }),
+    (partial: OnboardingState = {}): OnboardingState => {
+      const { display_name_draft: _ignored, ...existing } =
+        bootstrap.onboardingState
+      return {
+        ...existing,
+        step,
+        favorite_sports: favoriteSports,
+        username_draft: username || undefined,
+        referral_source: referralSource ?? undefined,
+        fan_level: fanLevel ?? undefined,
+        motivation_level: motivationLevel ?? undefined,
+        ...partial,
+      }
+    },
     [
       bootstrap.onboardingState,
-      displayName,
       fanLevel,
       favoriteSports,
       motivationLevel,
@@ -615,14 +608,12 @@ export function OnboardingFlow({
       clearErrorBanner()
 
       const normalizedUsername = normalizeUsernameInput(username)
-      const trimmedDisplay = displayName.trim()
       const profilePatch: Record<string, unknown> = {
         onboarding_completed: true,
         onboarding_state: {
           step: 'done',
           favorite_sports: favoriteSports,
           username_draft: normalizedUsername || undefined,
-          display_name_draft: trimmedDisplay || undefined,
           referral_source: referralSource ?? undefined,
           fan_level: fanLevel ?? undefined,
           motivation_level: motivationLevel ?? undefined,
@@ -630,7 +621,6 @@ export function OnboardingFlow({
         favorite_sports: favoriteSports,
       }
       if (normalizedUsername) profilePatch.username = normalizedUsername
-      if (trimmedDisplay) profilePatch.display_name = trimmedDisplay
       if (referralSource) profilePatch.referral_source = referralSource
       if (fanLevel != null) profilePatch.fan_level = fanLevel
       if (motivationLevel != null) profilePatch.motivation_level = motivationLevel
@@ -670,7 +660,6 @@ export function OnboardingFlow({
     [
       bootstrap.nextPath,
       customAvatarUrl,
-      displayName,
       fanLevel,
       favoriteSports,
       motivationLevel,
@@ -786,17 +775,6 @@ export function OnboardingFlow({
       return
     }
 
-    const nameError = validateDisplayName(displayName)
-    if (nameError) {
-      setDisplayNameError(nameError)
-      return
-    }
-    if (!displayName.trim()) {
-      setDisplayNameError('Enter your full name.')
-      return
-    }
-    setDisplayNameError(null)
-
     if (
       availability === 'checking' ||
       availability === 'taken' ||
@@ -836,12 +814,10 @@ export function OnboardingFlow({
       return
     }
 
-    const trimmedDisplay = displayName.trim()
     const { error: updateError } = await supabase
       .from('users')
       .update({
         username: normalized,
-        display_name: trimmedDisplay,
         favorite_sports: favoriteSports,
         avatar: selectedAvatar,
         custom_avatar_url: customAvatarUrl,
@@ -851,7 +827,6 @@ export function OnboardingFlow({
         onboarding_state: buildDraftState({
           step: 'youre_ready',
           username_draft: normalized,
-          display_name_draft: trimmedDisplay,
         }),
       })
       .eq('id', userId)
@@ -867,13 +842,13 @@ export function OnboardingFlow({
     goToStep('youre_ready', 1)
   }
 
+  const usernamePending = Boolean(userId) && !username.trim()
   const canSubmitProfile =
     !saving &&
+    !usernamePending &&
     availability !== 'checking' &&
     availability !== 'taken' &&
-    availability !== 'invalid' &&
-    Boolean(displayName.trim()) &&
-    !displayNameError
+    availability !== 'invalid'
 
   async function handleSelectAvatar(filename: string) {
     if (avatarSaving || uploadingAvatar) return
@@ -936,25 +911,6 @@ export function OnboardingFlow({
       return
     }
     setCustomAvatarUrl(publicUrl)
-  }
-
-  async function handleRemoveCustomAvatar() {
-    if (!customAvatarUrl || uploadingAvatar) return
-    const previous = customAvatarUrl
-    setCustomAvatarUrl(null)
-    clearErrorBanner()
-
-    if (preview) return
-    if (!userId) return
-
-    const { error: clearError } = await clearCurrentUserCustomAvatar(
-      supabase,
-      userId,
-    )
-    if (clearError) {
-      setCustomAvatarUrl(previous)
-      reportError(clearError, () => handleRemoveCustomAvatar())
-    }
   }
 
   async function handlePrimaryProceed() {
@@ -1104,7 +1060,7 @@ export function OnboardingFlow({
       panelStep === 'fan_level' ||
       panelStep === 'motivation_level'
 
-    const textBlock = (
+    const headlineBlock = (
       <div className="w-full shrink-0 px-0.5">
             {error && panelStep === step ? (
               <div
@@ -1140,7 +1096,7 @@ export function OnboardingFlow({
               <section
                 className={cn(
                   'text-center',
-                  infoSlide.id === 'welcome' ? 'space-y-2.5' : 'space-y-4',
+                  infoSlide.id === 'welcome' ? 'space-y-2.5' : null,
                 )}
               >
                 {infoSlide.id === 'welcome' ? (
@@ -1164,30 +1120,68 @@ export function OnboardingFlow({
                     {infoSlide.title}
                   </h1>
                 )}
-                {infoSlide.id !== 'welcome' ? (
-                  <p className="text-base text-muted-foreground sm:text-lg">
-                    {infoSlide.body}
-                  </p>
-                ) : null}
               </section>
             ) : null}
 
             {panelStep === 'referral_source' ? (
-              <section className="w-full space-y-4">
-                <div className="text-center">
-                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                    How did you hear about us?
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Pick one — it helps us understand where PoolCup fans come
-                    from.
-                  </p>
-                </div>
-                <div
-                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
-                  role="radiogroup"
-                  aria-label="Referral source"
-                >
+              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                How did you hear about us?
+              </h1>
+            ) : null}
+
+            {panelStep === 'fan_level' ? (
+              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                What kind of sports fan are you?
+              </h1>
+            ) : null}
+
+            {panelStep === 'motivation_level' ? (
+              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                What&apos;s your goal on PoolCup?
+              </h1>
+            ) : null}
+
+            {panelStep === 'create_profile' ? (
+              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                Create Your Profile
+              </h1>
+            ) : null}
+
+            {panelStep === 'youre_ready' ? (
+              <h1 className="text-center font-display text-4xl tracking-wide text-foreground sm:text-5xl">
+                You&apos;re Ready
+              </h1>
+            ) : null}
+      </div>
+    )
+
+    const descriptionBlock =
+      infoSlide && infoSlide.id !== 'welcome' ? (
+        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg">
+          {infoSlide.body}
+        </p>
+      ) : panelStep === 'referral_source' ? (
+        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground">
+          Pick one — it helps us understand where PoolCup fans come from.
+        </p>
+      ) : panelStep === 'fan_level' || panelStep === 'motivation_level' ? (
+        <p className="mx-auto w-full shrink-0 px-0.5 text-center text-sm text-muted-foreground">
+          Pick the option that fits you best.
+        </p>
+      ) : panelStep === 'youre_ready' ? (
+        <p className="mx-auto w-full max-w-md shrink-0 px-0.5 text-center text-base text-muted-foreground sm:text-lg">
+          Jump into a pool, start your own, or explore the app — your call.
+        </p>
+      ) : null
+
+    const controlsBlock = (
+      <div className="w-full shrink-0 px-0.5">
+            {panelStep === 'referral_source' ? (
+              <div
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                role="radiogroup"
+                aria-label="Referral source"
+              >
                   {ONBOARDING_REFERRAL_OPTIONS.map((option) => {
                     const selected = referralSource === option.id
                     return (
@@ -1206,25 +1200,15 @@ export function OnboardingFlow({
                       </button>
                     )
                   })}
-                </div>
-              </section>
+              </div>
             ) : null}
 
             {panelStep === 'fan_level' ? (
-              <section className="w-full space-y-4">
-                <div className="text-center">
-                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                    What kind of sports fan are you?
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Pick the option that fits you best.
-                  </p>
-                </div>
-                <div
-                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
-                  role="radiogroup"
-                  aria-label="What kind of sports fan are you"
-                >
+              <div
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                role="radiogroup"
+                aria-label="What kind of sports fan are you"
+              >
                   {ONBOARDING_FAN_LEVEL_OPTIONS.map((option) => {
                     const selected = fanLevel === option.level
                     return (
@@ -1243,25 +1227,15 @@ export function OnboardingFlow({
                       </button>
                     )
                   })}
-                </div>
-              </section>
+              </div>
             ) : null}
 
             {panelStep === 'motivation_level' ? (
-              <section className="w-full space-y-4">
-                <div className="text-center">
-                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                    What&apos;s your goal on PoolCup?
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Pick the option that fits you best.
-                  </p>
-                </div>
-                <div
-                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
-                  role="radiogroup"
-                  aria-label="What's your goal on PoolCup"
-                >
+              <div
+                className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
+                role="radiogroup"
+                aria-label="What's your goal on PoolCup"
+              >
                   {ONBOARDING_MOTIVATION_LEVEL_OPTIONS.map((option) => {
                     const selected = motivationLevel === option.level
                     return (
@@ -1280,21 +1254,11 @@ export function OnboardingFlow({
                       </button>
                     )
                   })}
-                </div>
-              </section>
+              </div>
             ) : null}
 
             {panelStep === 'create_profile' ? (
-              <section className="w-full space-y-6">
-                <div className="text-center">
-                  <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                    Create Your Profile
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Set your handle, name, look, and favorite sports.
-                  </p>
-                </div>
-
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label
                     htmlFor="onboarding-username"
@@ -1309,10 +1273,29 @@ export function OnboardingFlow({
                     onChange={(e) =>
                       setUsername(normalizeUsernameInput(e.target.value))
                     }
-                    placeholder="swiftstriker42"
+                    placeholder={
+                      usernamePending ? 'Loading…' : 'your_username'
+                    }
+                    disabled={usernamePending}
                     aria-invalid={Boolean(usernameError)}
-                    aria-describedby="onboarding-username-hint"
+                    aria-describedby="onboarding-username-assigned onboarding-username-hint"
+                    className="text-foreground caret-foreground [-webkit-text-fill-color:var(--foreground)] [&:-webkit-autofill]:[-webkit-text-fill-color:var(--foreground)]"
                   />
+                  {usernamePending ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2
+                        className="h-3.5 w-3.5 animate-spin"
+                        aria-hidden
+                      />
+                      Loading your username…
+                    </p>
+                  ) : null}
+                  <p
+                    id="onboarding-username-assigned"
+                    className="text-xs text-muted-foreground"
+                  >
+                    This is your assigned username — feel free to change it.
+                  </p>
                   <p
                     id="onboarding-username-hint"
                     className="text-xs text-muted-foreground"
@@ -1341,121 +1324,107 @@ export function OnboardingFlow({
                 </div>
 
                 <div className="space-y-2">
-                  <label
-                    htmlFor="onboarding-display-name"
-                    className="text-sm font-medium"
-                  >
-                    Full name
-                  </label>
-                  <Input
-                    id="onboarding-display-name"
-                    autoComplete="name"
-                    value={displayName}
-                    maxLength={DISPLAY_NAME_MAX_LENGTH}
-                    onChange={(e) => {
-                      setDisplayName(e.target.value)
-                      setDisplayNameError(null)
-                    }}
-                    placeholder="Alex Rivera"
-                    aria-invalid={Boolean(displayNameError)}
+                  <p className="text-sm font-medium">Choose your avatar</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) =>
+                      void handleAvatarFileSelected(event)
+                    }
                   />
-                  {displayNameError ? (
-                    <p className="text-xs text-destructive" role="alert">
-                      {displayNameError}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Avatar</p>
-                  <div className="flex flex-col items-center gap-3">
-                    <UserAvatarImage
-                      avatar={selectedAvatar}
-                      customAvatarUrl={customAvatarUrl}
-                      className="h-24 w-24 border border-border"
-                      imgClassName={
-                        customAvatarUrl
-                          ? 'object-cover'
-                          : 'object-contain object-bottom p-1'
-                      }
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(event) =>
-                        void handleAvatarFileSelected(event)
-                      }
-                    />
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        disabled={uploadingAvatar || Boolean(avatarSaving)}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="h-4 w-4" aria-hidden />
-                        {uploadingAvatar ? 'Uploading…' : 'Upload photo'}
-                      </Button>
-                      {customAvatarUrl ? (
-                        <Button
+                  <div
+                    className="grid grid-cols-4 gap-2"
+                    role="radiogroup"
+                    aria-label="Choose your avatar"
+                  >
+                    {availableAvatars.map((filename) => {
+                      const isSelected =
+                        !customAvatarUrl && selectedAvatar === filename
+                      return (
+                        <button
+                          key={filename}
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={uploadingAvatar}
-                          onClick={() => void handleRemoveCustomAvatar()}
+                          role="radio"
+                          onClick={() => void handleSelectAvatar(filename)}
+                          disabled={Boolean(avatarSaving) || uploadingAvatar}
+                          className={cn(
+                            'aspect-square w-full overflow-hidden rounded-xl border p-1 transition-colors',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            isSelected
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border bg-card hover:border-primary/40',
+                          )}
+                          aria-label={`Select avatar ${filename}`}
+                          aria-checked={isSelected}
                         >
-                          Remove custom
-                        </Button>
-                      ) : null}
-                    </div>
+                          <UserAvatarImage
+                            avatar={filename}
+                            className="h-full w-full"
+                            imgClassName="object-contain object-bottom p-0.5"
+                          />
+                        </button>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      role="radio"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar || Boolean(avatarSaving)}
+                      className={cn(
+                        'aspect-square w-full overflow-hidden rounded-xl border transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        uploadingAvatar
+                          ? 'flex items-center justify-center border-border bg-card'
+                          : customAvatarUrl
+                            ? 'border-primary bg-primary/10 p-1'
+                            : 'flex flex-col items-center justify-center gap-0.5 border-dashed border-border bg-card px-1 hover:border-primary/40',
+                      )}
+                      aria-label={
+                        customAvatarUrl
+                          ? 'Your uploaded photo. Click to replace.'
+                          : 'Upload a photo'
+                      }
+                      aria-checked={Boolean(customAvatarUrl)}
+                    >
+                      {uploadingAvatar ? (
+                        <Loader2
+                          className="h-5 w-5 animate-spin text-muted-foreground"
+                          aria-hidden
+                        />
+                      ) : customAvatarUrl ? (
+                        <UserAvatarImage
+                          avatar={selectedAvatar}
+                          customAvatarUrl={customAvatarUrl}
+                          className="h-full w-full"
+                          imgClassName="object-cover"
+                        />
+                      ) : (
+                        <>
+                          <Plus
+                            className="h-5 w-5 text-muted-foreground"
+                            aria-hidden
+                          />
+                          <span className="text-[10px] font-medium leading-tight text-muted-foreground sm:text-xs">
+                            Upload
+                          </span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                  {availableAvatars.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground">
-                      Loading presets…
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-                      {availableAvatars.map((filename) => {
-                        const isSelected =
-                          !customAvatarUrl && selectedAvatar === filename
-                        return (
-                          <button
-                            key={filename}
-                            type="button"
-                            onClick={() => void handleSelectAvatar(filename)}
-                            disabled={Boolean(avatarSaving) || uploadingAvatar}
-                            className={cn(
-                              'overflow-hidden rounded-xl border p-1 transition-colors',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                              isSelected
-                                ? 'border-primary bg-primary/10'
-                                : 'border-border bg-card hover:border-primary/40',
-                            )}
-                            aria-label={`Select avatar ${filename}`}
-                            aria-pressed={isSelected}
-                          >
-                            <UserAvatarImage
-                              avatar={filename}
-                              className="h-14 w-full"
-                              imgClassName="object-contain object-bottom p-0.5"
-                            />
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <p className="text-sm font-medium">Favorite sports</p>
                   <p className="text-xs text-muted-foreground">
                     Optional — you can change these later.
                   </p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div
+                    className="grid grid-cols-2 gap-2"
+                    role="group"
+                    aria-label="Favorite sports"
+                  >
                     {ONBOARDING_SPORT_OPTIONS.map((sport) => {
                       const selected = favoriteSports.includes(sport.id)
                       return (
@@ -1465,39 +1434,36 @@ export function OnboardingFlow({
                           onClick={() => toggleSport(sport.id)}
                           aria-pressed={selected}
                           className={cn(
-                            'flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-colors',
+                            'flex h-12 w-full items-center gap-2 rounded-full border px-3 text-sm font-medium transition-colors sm:h-14',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                             selected
-                              ? 'border-primary bg-primary/10 text-foreground'
-                              : 'border-border bg-card text-muted-foreground hover:border-primary/40',
+                              ? 'border-primary bg-primary/15 text-foreground'
+                              : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
                           )}
                         >
                           <Image
                             src={sport.ballSrc}
                             alt=""
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 object-contain"
+                            width={24}
+                            height={24}
+                            className="h-6 w-6 shrink-0 object-contain"
                           />
-                          {sport.label}
+                          <span className="min-w-0 flex-1 truncate text-left">
+                            {sport.label}
+                          </span>
+                          {selected ? (
+                            <Check
+                              className="h-3.5 w-3.5 shrink-0 text-primary"
+                              strokeWidth={3}
+                              aria-hidden
+                            />
+                          ) : null}
                         </button>
                       )
                     })}
                   </div>
                 </div>
-              </section>
-            ) : null}
-
-            {panelStep === 'youre_ready' ? (
-              <section className="space-y-4 text-center">
-                <h1 className="font-display text-4xl tracking-wide text-foreground sm:text-5xl">
-                  You&apos;re Ready
-                </h1>
-                <p className="text-base text-muted-foreground sm:text-lg">
-                  Jump into a pool, start your own, or explore the app — your
-                  call.
-                </p>
-              </section>
+              </div>
             ) : null}
       </div>
     )
@@ -1505,7 +1471,10 @@ export function OnboardingFlow({
     /**
      * Vertical rhythm (content column between header and footer):
      *   [gap A] → visual → [gap A] → text → [gap B] → Continue
-     * Welcome: "Welcome to" → logo → Pucky → description. Other slides: mascot, then copy.
+     * Welcome: "Welcome to" → logo → Pucky → description (unchanged).
+     * Other slides: title → mascot / sport-balls (hero size; compact on pill
+     * slides) → description → controls → Continue. Leftover flex around the
+     * mascot on value slides matches Welcome's vertical placement.
      */
     const visual =
       panelStep === 'sports_identity' ? (
@@ -1518,10 +1487,23 @@ export function OnboardingFlow({
             src={mascotSrc}
             priority={panelStep === step}
             compact={isSelectionSlide}
-            hero={panelStep === 'welcome'}
+            hero={!isSelectionSlide}
           />
         </div>
       ) : null
+
+    // Create Your Profile is a taller form — scroll the middle, keep chrome fixed.
+    if (panelStep === 'create_profile') {
+      return (
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-3 pt-5 sm:pt-6">
+            {headlineBlock}
+            <div className="h-4 shrink-0" aria-hidden />
+            {controlsBlock}
+          </div>
+        </div>
+      )
+    }
 
     // Welcome: headline + logo near the top; leftover between logo and Pucky
     // and below the description. Extra pad between Pucky and description.
@@ -1529,7 +1511,7 @@ export function OnboardingFlow({
       return (
         <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
           <div className="h-2 shrink-0 sm:h-3" aria-hidden />
-          {textBlock}
+          {headlineBlock}
           <div className="min-h-1 flex-1" aria-hidden />
           {visual}
           <div className="h-5 shrink-0 sm:h-6" aria-hidden />
@@ -1545,18 +1527,30 @@ export function OnboardingFlow({
 
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <div className="h-5 shrink-0 sm:h-7" aria-hidden />
+        {headlineBlock}
         {visual ? (
           <>
-            <div className="min-h-1 flex-1" aria-hidden />
+            {isSelectionSlide ? (
+              <div className="h-3 shrink-0 sm:h-4" aria-hidden />
+            ) : (
+              <div className="min-h-1 flex-1" aria-hidden />
+            )}
             {visual}
-            <div className="min-h-1 flex-1" aria-hidden />
           </>
-        ) : (
-          <div className="min-h-1 flex-1" aria-hidden />
-        )}
-
-        {textBlock}
-
+        ) : null}
+        {descriptionBlock ? (
+          <>
+            <div className="h-4 shrink-0 sm:h-5" aria-hidden />
+            {descriptionBlock}
+          </>
+        ) : null}
+        {isSelectionSlide ? (
+          <>
+            <div className="h-3 shrink-0 sm:h-4" aria-hidden />
+            {controlsBlock}
+          </>
+        ) : null}
         <div className="min-h-1 flex-1" aria-hidden />
       </div>
     )
