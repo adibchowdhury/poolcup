@@ -57,8 +57,6 @@ export type RecentScoredPrediction = {
 export type RecentResultsFeedData = {
   totalPoints: number
   winRate: number | null
-  /** Consecutive settled matches with at least one positive-scoring pick. */
-  currentStreak: number
   bestPrediction: BestPrediction | null
   /** Chronological settled match picks (most recent kickoff first). */
   recentScored: RecentScoredPrediction[]
@@ -94,17 +92,6 @@ type PredictionBestRow = {
   matches: MatchJoin | MatchJoin[] | null
 }
 
-type StreakMatchJoin = {
-  kickoff_at: string
-  is_final: boolean
-}
-
-type StreakPredictionRow = {
-  match_id: string
-  points_awarded: number
-  matches: StreakMatchJoin | StreakMatchJoin[] | null
-}
-
 function unwrapPool(row: MembershipRow) {
   const raw = row.pools
   return Array.isArray(raw) ? raw[0] ?? null : raw
@@ -113,48 +100,6 @@ function unwrapPool(row: MembershipRow) {
 function unwrapMatch(raw: MatchJoin | MatchJoin[] | null): MatchJoin | null {
   if (!raw) return null
   return Array.isArray(raw) ? raw[0] ?? null : raw
-}
-
-function unwrapStreakMatch(
-  raw: StreakMatchJoin | StreakMatchJoin[] | null,
-): StreakMatchJoin | null {
-  if (!raw) return null
-  return Array.isArray(raw) ? raw[0] ?? null : raw
-}
-
-/**
- * Current momentum across real settled fixtures. Multiple pool predictions for
- * the same match count once; a match is successful when any pick scored points.
- */
-function calculateCurrentStreak(rows: StreakPredictionRow[]): number {
-  const byMatch = new Map<
-    string,
-    { kickoffMs: number; scored: boolean }
-  >()
-
-  for (const row of rows) {
-    const match = unwrapStreakMatch(row.matches)
-    if (!match?.is_final) continue
-    const kickoffMs = new Date(match.kickoff_at).getTime()
-    if (!Number.isFinite(kickoffMs)) continue
-
-    const existing = byMatch.get(row.match_id)
-    byMatch.set(row.match_id, {
-      kickoffMs,
-      scored: (existing?.scored ?? false) || row.points_awarded > 0,
-    })
-  }
-
-  const settled = [...byMatch.values()].sort(
-    (a, b) => b.kickoffMs - a.kickoffMs,
-  )
-
-  let streak = 0
-  for (const match of settled) {
-    if (!match.scored) break
-    streak += 1
-  }
-  return streak
 }
 
 function buildMatchBestPrediction(row: PredictionBestRow): BestPrediction | null {
@@ -260,7 +205,6 @@ export async function fetchRecentResultsFeed(
   const empty: RecentResultsFeedData = {
     totalPoints: 0,
     winRate: null,
-    currentStreak: 0,
     bestPrediction: null,
     recentScored: [],
     isEmpty: true,
@@ -301,7 +245,6 @@ export async function fetchRecentResultsFeed(
     const memberIds = memberContexts.map((row) => row.memberId)
 
     let winRate: number | null = null
-    let currentStreak = 0
     let bestPrediction: BestPrediction | null = null
     let recentScored: RecentScoredPrediction[] = []
 
@@ -309,7 +252,6 @@ export async function fetchRecentResultsFeed(
       const [
         counts,
         cacheResult,
-        streakResult,
         bestMatchResult,
         bestGroupResult,
         bestThirdResult,
@@ -319,19 +261,6 @@ export async function fetchRecentResultsFeed(
         supabase
           .from('leaderboard_cache')
           .select('member_id, correct_winners')
-          .in('member_id', memberIds),
-        supabase
-          .from('predictions')
-          .select(
-            `
-            match_id,
-            points_awarded,
-            matches!inner (
-              kickoff_at,
-              is_final
-            )
-          `,
-          )
           .in('member_id', memberIds),
         supabase
           .from('predictions')
@@ -412,9 +341,6 @@ export async function fetchRecentResultsFeed(
       if (cacheResult.error) {
         return { ...empty, error: cacheResult.error.message }
       }
-      if (streakResult.error) {
-        return { ...empty, error: streakResult.error.message }
-      }
 
       const correctByMember = new Map<string, number>()
       for (const row of cacheResult.data ?? []) {
@@ -430,10 +356,6 @@ export async function fetchRecentResultsFeed(
         settledPredictions > 0
           ? Math.round((correctPredictions / settledPredictions) * 100)
           : null
-
-      currentStreak = calculateCurrentStreak(
-        (streakResult.data ?? []) as StreakPredictionRow[],
-      )
 
       const candidates: BestPrediction[] = []
 
@@ -481,13 +403,11 @@ export async function fetchRecentResultsFeed(
       totalPoints <= 0 &&
       bestPrediction == null &&
       recentScored.length === 0 &&
-      winRate == null &&
-      currentStreak === 0
+      winRate == null
 
     return {
       totalPoints,
       winRate,
-      currentStreak,
       bestPrediction,
       recentScored,
       isEmpty,

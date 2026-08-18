@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Flame, Star, Target, Trophy, Zap } from 'lucide-react'
+import { Star, Target, Trophy, Zap } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -15,11 +15,6 @@ import { useAuth } from '@/src/lib/auth-context'
 import { MAX_XP_LEVEL, xpForLevel, xpToLevel } from '@/src/lib/levels'
 import { supabase } from '@/src/lib/supabase'
 import { fetchUserXpTotal, XP_ACTION_AMOUNTS } from '@/src/lib/xp'
-import {
-  STREAK_DEFINITION,
-  STREAK_MILESTONE_XP,
-  STREAK_MILESTONES,
-} from '@/src/lib/prediction-streak'
 
 const CLASSIC_GROUP_RULES = [
   'Exact score — 5 points',
@@ -421,41 +416,11 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
               <TableRow>
                 <TableCell className="text-foreground">Unlock a badge</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
-                  +badge XP
-                </TableCell>
-              </TableRow>
-              {STREAK_MILESTONES.map((day) => (
-                <TableRow key={`streak-${day}`}>
-                  <TableCell className="text-foreground">
-                    {day}-day prediction streak
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">
-                    +{STREAK_MILESTONE_XP[day]}
+                    +badge XP
                   </TableCell>
                 </TableRow>
-              ))}
             </TableBody>
           </Table>
-        </div>
-
-        <div className="rounded-2xl border border-orange-400/20 bg-orange-400/[0.05] p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            <Flame
-              className="mt-0.5 h-5 w-5 shrink-0 text-orange-300"
-              aria-hidden
-            />
-            <div>
-              <h3 className="font-display text-lg tracking-wide text-foreground">
-                Prediction streaks
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {STREAK_DEFINITION}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Hit 3 / 7 / 14 / 30 days for bonus XP (15 / 25 / 40 / 75).
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-5">

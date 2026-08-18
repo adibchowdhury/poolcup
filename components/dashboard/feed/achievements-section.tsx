@@ -19,8 +19,6 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 type AchievementsFeedContentProps = {
   userId: string
-  /** Real prediction-day streak from /api/streak (not consecutive-correct). */
-  predictionStreak?: number
   /** Report when this block has nothing useful to show (after load). */
   onEmptyChange?: (empty: boolean) => void
 }
@@ -30,7 +28,6 @@ const SURFACE = 'rounded-xl border border-border/90 bg-card/90'
 /** Achievements body for the dashboard feed (no section chrome — embed under Your Progress). */
 export function AchievementsFeedContent({
   userId,
-  predictionStreak = 0,
   onEmptyChange,
 }: AchievementsFeedContentProps) {
   const [data, setData] = useState<UserAchievementsData | null>(null)
@@ -91,7 +88,6 @@ export function AchievementsFeedContent({
   const showLevelCard =
     totalXp > 0 ||
     earnedCount > 0 ||
-    predictionStreak > 0 ||
     nextAchievement != null
   const showRecent = recentBadges.length > 0
   const showNext = nextAchievement != null
@@ -162,15 +158,6 @@ export function AchievementsFeedContent({
           </div>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-            <span>
-              Streak{' '}
-              <span className="font-mono tabular-nums text-foreground">
-                {predictionStreak}
-              </span>
-            </span>
-            <span className="text-border" aria-hidden>
-              ·
-            </span>
             <span>
               Badges{' '}
               <span className="font-mono tabular-nums text-foreground">

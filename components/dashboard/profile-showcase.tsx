@@ -8,7 +8,6 @@ import { useBadgeUnlockOptional } from '@/components/achievements/badge-unlock-p
 import {
   ChevronRight,
   Crown,
-  Flame,
   Medal,
   Pencil,
   Sparkles,
@@ -63,11 +62,6 @@ import {
   achievementRarityLabel,
   ACHIEVEMENT_RARITY_STYLES,
 } from '@/src/lib/achievement-rarity'
-import {
-  applyStreakSyncFeedback,
-  syncPredictionStreak,
-} from '@/src/lib/streak-client'
-import { useXpFeedbackOptional } from '@/components/xp/xp-feedback-provider'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 
 export type ProfileShowcaseMode = 'self' | 'public'
@@ -83,8 +77,6 @@ type ProfileShowcaseProps = {
   /** Pool points (`users.points`) — career highlights. */
   totalPoints?: number | null
   exactScores?: number | null
-  /** Public profiles: longest prediction-day streak only. */
-  longestStreak?: number | null
   friendsCount?: number | null
   favoriteSports?: FavoriteSportChip[]
   /** Account created date — “Member since”. */
@@ -127,9 +119,6 @@ type CareerHighlightsData = {
   totalPoints: number | null
   exactScores: number
   podiums: number
-  bestStreak: number
-  currentStreak: number | null
-  showCurrentStreak: boolean
 }
 
 const CAREER_HAIRLINE = 'bg-white/[0.08]'
@@ -141,9 +130,7 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
     data.accuracy != null ||
     (data.totalPoints != null && data.totalPoints > 0) ||
     data.exactScores > 0 ||
-    data.podiums > 0 ||
-    data.bestStreak > 0 ||
-    (data.showCurrentStreak && (data.currentStreak ?? 0) > 0)
+    data.podiums > 0
 
   if (!hasAny) {
     return (
@@ -153,8 +140,6 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
     )
   }
 
-  const streakFilled = Math.max(0, data.bestStreak)
-  const streakTrack = Math.max(7, streakFilled)
   const stripItems: { value: string; label: string }[] = [
     {
       value: (data.totalPoints ?? 0).toLocaleString(),
@@ -241,54 +226,6 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
             </p>
           </div>
         ))}
-      </div>
-
-      <div className={cn('h-px w-full', CAREER_HAIRLINE)} aria-hidden />
-
-      {/* Streak — heading + filled/empty dots */}
-      <div className="px-0.5 py-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p className="inline-flex items-baseline gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-300">
-            <Flame className="relative top-px h-3.5 w-3.5 shrink-0" aria-hidden />
-            Best Streak
-            <span className="font-display text-2xl leading-none tracking-wide text-foreground tabular-nums">
-              {streakFilled > 0 ? streakFilled.toLocaleString() : '—'}
-            </span>
-          </p>
-          {data.showCurrentStreak ? (
-            <p className="text-[11px] text-muted-foreground">
-              Current streak:{' '}
-              <span className="font-mono tabular-nums text-foreground/90">
-                {data.currentStreak ?? 0}
-              </span>
-            </p>
-          ) : null}
-        </div>
-        <div
-          className="mt-3.5 flex flex-wrap items-center gap-1.5"
-          role="img"
-          aria-label={
-            streakFilled > 0
-              ? `Best streak of ${streakFilled}`
-              : 'No best streak yet'
-          }
-        >
-          {Array.from({ length: streakTrack }, (_, i) => {
-            const filled = i < streakFilled
-            return (
-              <span
-                key={i}
-                className={cn(
-                  'inline-block h-2 w-2 shrink-0 rounded-full',
-                  filled
-                    ? 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.45)]'
-                    : 'bg-transparent ring-1 ring-white/20',
-                )}
-                aria-hidden
-              />
-            )
-          })}
-        </div>
       </div>
     </div>
   )
@@ -524,7 +461,6 @@ export function ProfileShowcase({
   accuracy,
   totalPoints = null,
   exactScores = null,
-  longestStreak = null,
   friendsCount = null,
   favoriteSports = [],
   createdAt = null,
@@ -573,15 +509,7 @@ export function ProfileShowcase({
   )
   const [viewerBlocked, setViewerBlocked] = useState(false)
   const badgeUnlock = useBadgeUnlockOptional()
-  const xp = useXpFeedbackOptional()
   const viewedRef = useRef(false)
-  const streakViewedRef = useRef(false)
-  const [dayCurrentStreak, setDayCurrentStreak] = useState<number | null>(null)
-  const [dayLongestStreak, setDayLongestStreak] = useState<number | null>(
-    longestStreak,
-  )
-  const [streakLoading, setStreakLoading] = useState(!isPublic)
-  const [streakError, setStreakError] = useState<string | null>(null)
 
   const titleText = profileTitle?.trim() || ''
   const seasonText = seasonLabel?.trim() || ''
@@ -635,47 +563,6 @@ export function ProfileShowcase({
       is_self: isOwnPublicProfile || !isPublic,
     })
   }, [active, userId, isPublic, isOwnPublicProfile])
-
-  useEffect(() => {
-    setDayLongestStreak(longestStreak)
-  }, [longestStreak])
-
-  useEffect(() => {
-    if (!active || !userId || isPublic) {
-      setStreakLoading(false)
-      return
-    }
-
-    let cancelled = false
-    setStreakLoading(true)
-    setStreakError(null)
-
-    void (async () => {
-      const result = await syncPredictionStreak()
-      if (cancelled) return
-      if (!result || result.error) {
-        setStreakError(result?.error ?? 'Could not load streak')
-        setStreakLoading(false)
-        return
-      }
-      setDayCurrentStreak(result.current_streak)
-      setDayLongestStreak(result.longest_streak)
-      applyStreakSyncFeedback(result, { onLevelUp: xp?.enqueueLevelUp })
-      if (!streakViewedRef.current) {
-        streakViewedRef.current = true
-        capturePostHog('streak_viewed', {
-          current_streak: result.current_streak,
-          longest_streak: result.longest_streak,
-          surface: 'profile',
-        })
-      }
-      setStreakLoading(false)
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [active, userId, isPublic, xp?.enqueueLevelUp])
 
   useEffect(() => {
     if (!active || !isPublic || isOwnPublicProfile || !userId) {
@@ -757,7 +644,6 @@ export function ProfileShowcase({
       // Still load progress for public career metrics when not pre-supplied.
       if (
         exactScores == null ||
-        longestStreak == null ||
         totalPoints == null
       ) {
         void fetchUserAchievementProgress(supabase, userId).then((progress) => {
@@ -804,7 +690,6 @@ export function ProfileShowcase({
     isPublic,
     initialAchievements,
     exactScores,
-    longestStreak,
     totalPoints,
   ])
 
@@ -828,10 +713,6 @@ export function ProfileShowcase({
     return values
   }, [progressRows])
 
-  const predictionCurrent =
-    !isPublic ? (dayCurrentStreak ?? 0) : null
-  const predictionLongest =
-    dayLongestStreak ?? longestStreak ?? 0
   const resolvedExactScores =
     exactScores ?? metricValues.get('exact_scores') ?? 0
   const resolvedTotalPoints =
@@ -859,16 +740,10 @@ export function ProfileShowcase({
       totalPoints: resolvedTotalPoints,
       exactScores: resolvedExactScores,
       podiums,
-      bestStreak: predictionLongest,
-      currentStreak: predictionCurrent,
-      showCurrentStreak: !isPublic,
     }
   }, [
     accuracy,
-    isPublic,
     metricValues,
-    predictionCurrent,
-    predictionLongest,
     resolvedExactScores,
     resolvedTotalPoints,
   ])
@@ -1265,7 +1140,7 @@ export function ProfileShowcase({
           <p className="mt-1 text-[11px] text-muted-foreground">
             Correct winner picks across classic match predictions
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
                 Exact
@@ -1274,81 +1149,15 @@ export function ProfileShowcase({
                 {resolvedExactScores.toLocaleString()}
               </p>
             </div>
-            {!isPublic ? (
-              <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Current streak
-                </p>
-                {streakLoading ? (
-                  <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
-                ) : (
-                  <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                    {predictionCurrent ?? 0}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Points
-                </p>
-                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                  {(resolvedTotalPoints ?? 0).toLocaleString()}
-                </p>
-              </div>
-            )}
-            <div className="rounded-xl border border-orange-400/20 bg-orange-400/[0.06] px-3 py-2">
+            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Longest streak
+                Points
               </p>
-              {streakLoading && !isPublic ? (
-                <ShimmerBlock className="mt-1 h-6 w-10 rounded-md" />
-              ) : (
-                <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                  {predictionLongest}
-                </p>
-              )}
+              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                {(resolvedTotalPoints ?? 0).toLocaleString()}
+              </p>
             </div>
           </div>
-          {streakError && !isPublic ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <p className="text-[11px] text-destructive">{streakError}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn('h-7 px-2 text-[11px]', FOCUS_VISIBLE_RING)}
-                onClick={() => {
-                  streakViewedRef.current = false
-                  setDayCurrentStreak(null)
-                  setStreakLoading(true)
-                  setStreakError(null)
-                  void syncPredictionStreak().then((result) => {
-                    if (!result || result.error) {
-                      setStreakError(result?.error ?? 'Could not load streak')
-                      setStreakLoading(false)
-                      return
-                    }
-                    setDayCurrentStreak(result.current_streak)
-                    setDayLongestStreak(result.longest_streak)
-                    applyStreakSyncFeedback(result, {
-                      onLevelUp: xp?.enqueueLevelUp,
-                    })
-                    setStreakLoading(false)
-                  })
-                }}
-              >
-                Retry
-              </Button>
-            </div>
-          ) : !isPublic &&
-            !streakLoading &&
-            (predictionCurrent ?? 0) === 0 &&
-            predictionLongest === 0 ? (
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Start your streak — predict today!
-            </p>
-          ) : null}
         </section>
 
         <section>

@@ -395,7 +395,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'sports_identity',
     title: 'Build Your Sports Identity.',
-    body: 'Your profile is your résumé — earn XP, unlock badges for streaks and milestones, and customize your look and favorites.',
+    body: 'Your profile is your résumé — earn XP, unlock badges, and customize your look and favorites.',
   },
   {
     id: 'better_friends',

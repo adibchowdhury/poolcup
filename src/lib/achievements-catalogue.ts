@@ -19,7 +19,7 @@ export const ACHIEVEMENT_CATEGORIES = [
   'Points Milestones',
   'Pools',
   'Social / Invites',
-  'Engagement / Streaks',
+  'Engagement',
   'Ranking',
   'Event / Collection',
 ] as const
@@ -56,7 +56,6 @@ export const PLACEHOLDER_EARNED_ACHIEVEMENT_IDS = [
   'exact-1',
   'points-100',
   'pool-join-1',
-  'streak-3',
 ] as const
 
 export const ACHIEVEMENTS_CATALOGUE: AchievementBadge[] = [
@@ -350,61 +349,33 @@ export const ACHIEVEMENTS_CATALOGUE: AchievementBadge[] = [
     tier: 'gold',
   }),
 
-  // —— Engagement / Streaks ——
-  badge({
-    id: 'streak-3',
-    name: 'On a Roll',
-    description: 'Predict on 3 consecutive matchdays.',
-    category: 'Engagement / Streaks',
-    tier: 'bronze',
-  }),
-  badge({
-    id: 'streak-7',
-    name: 'Week Warrior',
-    description: 'Keep a 7-day prediction streak.',
-    category: 'Engagement / Streaks',
-    tier: 'silver',
-  }),
-  badge({
-    id: 'streak-14',
-    name: 'Fortnight Flame',
-    description: 'Keep a 14-day prediction streak.',
-    category: 'Engagement / Streaks',
-    tier: 'gold',
-  }),
-  badge({
-    id: 'streak-30',
-    name: 'Monthly Machine',
-    description: 'Keep a 30-day prediction streak.',
-    category: 'Engagement / Streaks',
-    tier: 'platinum',
-  }),
+  // —— Engagement ——
   badge({
     id: 'login-7',
     name: 'Checked In',
     description: 'Open PoolCup on 7 different days.',
-    category: 'Engagement / Streaks',
+    category: 'Engagement',
     tier: 'bronze',
   }),
   badge({
     id: 'deadline-crunch',
     name: 'Last Whistle',
     description: 'Submit a prediction within 5 minutes of kickoff lock.',
-    category: 'Engagement / Streaks',
+    category: 'Engagement',
     tier: 'silver',
   }),
   badge({
     id: 'never-miss',
     name: 'Never Miss',
     description: 'Predict every locked match in a week.',
-    category: 'Engagement / Streaks',
+    category: 'Engagement',
     tier: 'gold',
   }),
   badge({
     id: 'comeback',
     name: 'Comeback Kid',
     description: 'Return and predict after 14+ days away.',
-    category: 'Engagement / Streaks',
+    category: 'Engagement',
     tier: 'bronze',
   }),
 

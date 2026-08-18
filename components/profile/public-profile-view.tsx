@@ -16,7 +16,6 @@ type PublicProfileViewProps = {
   accuracy: number | null
   totalPoints: number
   exactScores: number
-  longestStreak: number
   friendsCount: number
   favoriteSports: FavoriteSportChip[]
   createdAt: string | null
@@ -42,7 +41,6 @@ export function PublicProfileView({
   accuracy,
   totalPoints,
   exactScores,
-  longestStreak,
   friendsCount,
   favoriteSports,
   createdAt,
@@ -65,7 +63,6 @@ export function PublicProfileView({
       accuracy={accuracy}
       totalPoints={totalPoints}
       exactScores={exactScores}
-      longestStreak={longestStreak}
       friendsCount={friendsCount}
       favoriteSports={favoriteSports}
       createdAt={createdAt}

@@ -34,7 +34,6 @@ export type PublicProfileCareer = {
   accuracy: number | null
   exactScores: number
   totalPoints: number
-  longestStreak: number
 }
 
 export type FavoriteSportChip = {
@@ -112,9 +111,7 @@ function coercePublicProfile(raw: unknown): PublicProfile | null {
     favorite_sports,
     exact_scores: asNumber(row.exact_scores),
     points_total: asNumber(row.points_total ?? row.total_points ?? row.points),
-    consecutive_correct: asNumber(
-      row.consecutive_correct ?? row.longest_streak ?? row.streak,
-    ),
+    consecutive_correct: asNumber(row.consecutive_correct),
     friends_count: asNumber(row.friends_count),
     highest_level: asNumber(row.highest_level),
   }
@@ -173,7 +170,6 @@ export function careerFromProgress(
     | 'consecutive_correct'
   >,
   progress: Array<{ condition_metric: string; current_value: number }>,
-  options?: { longestDayStreak?: number | null },
 ): PublicProfileCareer {
   const metric = (key: string) => {
     let best = 0
@@ -193,11 +189,6 @@ export function careerFromProgress(
     accuracy: profile.accuracy,
     exactScores: profile.exact_scores ?? metric('exact_scores'),
     totalPoints: profile.points_total ?? metric('points_total'),
-    // Prefer prediction-day longest from get_prediction_streak when provided.
-    longestStreak: Math.max(
-      0,
-      options?.longestDayStreak ?? 0,
-    ),
   }
 }
 
