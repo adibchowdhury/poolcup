@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
 } from 'react'
+import { flushSync } from 'react-dom'
 import { Check, ChevronLeft, Loader2, Plus } from 'lucide-react'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { Button } from '@/components/ui/button'
@@ -64,28 +66,44 @@ export type OnboardingBootstrap = {
 }
 
 const USERNAME_DEBOUNCE_MS = 400
-/** Full carousel slide duration (ms). */
-const SLIDE_MS = 320
+/** Full carousel slide+fade duration (ms). Single source for CSS and the JS timer. */
+const SLIDE_MS = 750
+
+function slideMotionStyle(
+  property: 'transform' | 'opacity',
+  enabled: boolean,
+): CSSProperties {
+  if (!enabled) return {}
+  return {
+    transitionProperty: property,
+    transitionDuration: `${SLIDE_MS}ms`,
+    transitionTimingFunction: 'ease-in-out',
+  }
+}
 
 /**
- * Temp stand-in mascot for every step that shows Pucky.
- * sports_identity uses SportBallsOrbit instead; create_profile has no mascot.
+ * Numbered Pucky poses (pucky_1…6). sports_identity keeps SportBallsOrbit
+ * even though pucky_4.webp exists for that slot. Steps 7–10 have no numbered file.
  */
-const PUCKY_TEMP_SRC = '/mascot/onboarding_mascot/original/pucky_temp.png'
-
 const ONBOARDING_MASCOT_SRC: Partial<
   Record<OnboardingStepId, string>
 > = {
-  welcome: PUCKY_TEMP_SRC,
-  predict_compete: PUCKY_TEMP_SRC,
-  your_pool: PUCKY_TEMP_SRC,
-  // sports_identity uses SportBallsOrbit instead of a mascot
-  better_friends: PUCKY_TEMP_SRC,
-  referral_source: PUCKY_TEMP_SRC,
-  fan_level: PUCKY_TEMP_SRC,
-  motivation_level: PUCKY_TEMP_SRC,
-  youre_ready: PUCKY_TEMP_SRC,
+  welcome: '/mascot/onboarding_mascot/pucky_1.webp',
+  predict_compete: '/mascot/onboarding_mascot/pucky_2.webp',
+  your_pool: '/mascot/onboarding_mascot/pucky_3.webp',
+  // sports_identity: pucky_4.webp exists; keep orbit balls
+  better_friends: '/mascot/onboarding_mascot/pucky_5.webp',
+  referral_source: '/mascot/onboarding_mascot/pucky_6.webp',
 }
+
+const ONBOARDING_MASCOT_PRELOAD_SRCS = [
+  '/mascot/onboarding_mascot/pucky_1.webp',
+  '/mascot/onboarding_mascot/pucky_2.webp',
+  '/mascot/onboarding_mascot/pucky_3.webp',
+  '/mascot/onboarding_mascot/pucky_4.webp',
+  '/mascot/onboarding_mascot/pucky_5.webp',
+  '/mascot/onboarding_mascot/pucky_6.webp',
+] as const
 
 /** Orbit balls for the sports-identity step. Duration via CSS var. */
 const SPORT_ORBIT_BALLS = [
@@ -125,29 +143,60 @@ const MOBILE_GROUP_GAP_CLASS = 'h-8 shrink-0 lg:hidden'
 /** dots→title: 48px */
 const MOBILE_DOTS_TO_TITLE_GAP_CLASS = 'h-12 shrink-0 lg:hidden'
 
-/** Desktop raised buttons: box-shadow edge + translate press (no filter). */
+/**
+ * 3D motion durations — applied as CSS vars; motion itself lives in
+ * `button.onboarding-3d-btn` in globals.css (plain CSS, not Tailwind variants).
+ */
+const ONBOARDING_BTN_HOVER_IN_MS = 290
+const ONBOARDING_BTN_HOVER_OUT_MS = 270
+const ONBOARDING_BTN_PRESS_MS = 150
+
+const ONBOARDING_BTN_MOTION_VARS = {
+  '--onboarding-btn-hover-in-ms': `${ONBOARDING_BTN_HOVER_IN_MS}ms`,
+  '--onboarding-btn-hover-out-ms': `${ONBOARDING_BTN_HOVER_OUT_MS}ms`,
+  '--onboarding-btn-press-ms': `${ONBOARDING_BTN_PRESS_MS}ms`,
+} as CSSProperties
+
+/** iOS often skips :active unless a pointer listener is on the node/ancestor. */
+function bindOnboarding3dPress(target: EventTarget | null) {
+  const btn =
+    target instanceof Element
+      ? target.closest('button.onboarding-3d-btn')
+      : null
+  if (!btn || (btn instanceof HTMLButtonElement && btn.disabled)) return
+  if (btn.hasAttribute('data-pressed')) return
+  btn.setAttribute('data-pressed', '')
+  const clear = () => {
+    btn.removeAttribute('data-pressed')
+    window.removeEventListener('pointerup', clear)
+    window.removeEventListener('pointercancel', clear)
+  }
+  window.addEventListener('pointerup', clear)
+  window.addEventListener('pointercancel', clear)
+}
+
 const ONBOARDING_BTN_3D_PRIMARY = cn(
+  'onboarding-3d-btn onboarding-3d-btn--primary',
   'font-semibold text-primary-foreground',
+  '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
   'bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_68%,white),var(--primary))]',
-  'shadow-[4px_4px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
-  'transition-[transform,box-shadow] duration-75',
-  'hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_58%,white),var(--primary))]',
-  'active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
-  'disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[4px_4px_0_0_color-mix(in_srgb,var(--primary)_42%,#000000)]',
+  'hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_68%,white),var(--primary))]',
+  'active:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_68%,white),var(--primary))]',
+  'disabled:pointer-events-none disabled:opacity-100',
 )
 
 const ONBOARDING_BTN_3D_BACK = cn(
+  'onboarding-3d-btn',
   'text-foreground',
+  '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
   'bg-[linear-gradient(180deg,#243044,#111a27)]',
-  'shadow-[4px_4px_0_0_#080b0f]',
-  'transition-[transform,box-shadow] duration-75',
-  'hover:bg-[linear-gradient(180deg,#2a384c,#151e2c)]',
-  'active:translate-x-[3px] active:translate-y-[3px] active:shadow-[1px_1px_0_0_#080b0f]',
-  'disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[4px_4px_0_0_#080b0f]',
+  'hover:bg-[linear-gradient(180deg,#243044,#111a27)]',
+  'active:bg-[linear-gradient(180deg,#243044,#111a27)]',
+  'disabled:pointer-events-none disabled:opacity-100',
 )
 
 const ONBOARDING_PRELOAD_SRCS = [
-  PUCKY_TEMP_SRC,
+  ...ONBOARDING_MASCOT_PRELOAD_SRCS,
   POOLCUP_LOGO_SRC,
   ...SPORT_ORBIT_BALLS.map((ball) => ball.src),
 ] as const
@@ -399,6 +448,9 @@ export function OnboardingFlow({
   const [rightPanelStep, setRightPanelStep] = useState<OnboardingStepId | null>(
     () => nextStep(initialStep),
   )
+  /** Opacity is independent of trackX so it can interpolate while panels are on-screen. */
+  const [leftOpacity, setLeftOpacity] = useState(1)
+  const [rightOpacity, setRightOpacity] = useState(0)
   const [slideTarget, setSlideTarget] = useState<OnboardingStepId | null>(null)
   const slideTimersRef = useRef<number[]>([])
   const [favoriteSports, setFavoriteSports] = useState<string[]>(
@@ -541,31 +593,46 @@ export function OnboardingFlow({
         setLeftPanelStep(next)
         setRightPanelStep(nextStep(next))
         setTrackX(0)
+        setLeftOpacity(1)
+        setRightOpacity(0)
         setTrackTransition(false)
         syncPreviewUrl(next)
         return
       }
 
-      // Forward: [current | next] at 0% → -50%. Back: [prev | current] at -50% → 0%.
-      if (dir === 1) {
-        setLeftPanelStep(step)
-        setRightPanelStep(next)
-        setTrackTransition(false)
-        setTrackX(0)
-      } else {
-        setLeftPanelStep(next)
-        setRightPanelStep(step)
-        setTrackTransition(false)
-        setTrackX(-50)
-      }
-      setSlideTarget(next)
-      setIsSliding(true)
+      const startX = dir === 1 ? 0 : -50
+      const endX = dir === 1 ? -50 : 0
+      const startLeft = dir === 1 ? 1 : 0
+      const startRight = dir === 1 ? 0 : 1
+      const endLeft = dir === 1 ? 0 : 1
+      const endRight = dir === 1 ? 1 : 0
 
-      let raf2 = 0
-      const raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => {
-          setTrackTransition(true)
-          setTrackX(dir === 1 ? -50 : 0)
+      // Commit START pose with transitions off, then attach transitions on a
+      // later frame, THEN set the end pose. If transition + end opacity land
+      // in the same render, opacity jumps and the fade is invisible.
+      flushSync(() => {
+        if (dir === 1) {
+          setLeftPanelStep(step)
+          setRightPanelStep(next)
+        } else {
+          setLeftPanelStep(next)
+          setRightPanelStep(step)
+        }
+        setTrackX(startX)
+        setLeftOpacity(startLeft)
+        setRightOpacity(startRight)
+        setTrackTransition(false)
+        setSlideTarget(next)
+        setIsSliding(true)
+      })
+
+      let rafEnd = 0
+      const rafEnable = requestAnimationFrame(() => {
+        setTrackTransition(true)
+        rafEnd = requestAnimationFrame(() => {
+          setTrackX(endX)
+          setLeftOpacity(endLeft)
+          setRightOpacity(endRight)
         })
       })
 
@@ -575,11 +642,13 @@ export function OnboardingFlow({
         setLeftPanelStep(next)
         setRightPanelStep(nextStep(next))
         setTrackX(0)
+        setLeftOpacity(1)
+        setRightOpacity(0)
         syncPreviewUrl(next)
         setIsSliding(false)
         setSlideTarget(null)
-        cancelAnimationFrame(raf1)
-        cancelAnimationFrame(raf2)
+        cancelAnimationFrame(rafEnable)
+        cancelAnimationFrame(rafEnd)
       }, SLIDE_MS)
       slideTimersRef.current.push(doneTimer)
     },
@@ -1183,7 +1252,11 @@ export function OnboardingFlow({
       <Button
         type="button"
         size="lg"
-        className={cn('w-full', ONBOARDING_BTN_3D_PRIMARY)}
+        className={cn(
+          'w-full',
+          ONBOARDING_BTN_3D_PRIMARY,
+          disabled && !saving && !isSliding && 'disabled:opacity-50',
+        )}
         disabled={disabled}
         onClick={() => void handlePrimaryProceed()}
       >
@@ -1210,11 +1283,15 @@ export function OnboardingFlow({
 
     return (
       <>
-        <div className="flex w-full items-stretch gap-3 pb-1.5 pr-1.5">
+        <div className="flex w-full items-stretch gap-3 pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]">
           <Button
             type="button"
             size="lg"
-            className={cn('w-[38%] min-w-0 shrink-0', ONBOARDING_BTN_3D_BACK)}
+            className={cn(
+              'w-[38%] min-w-0 shrink-0',
+              ONBOARDING_BTN_3D_BACK,
+              !canGoBack && 'disabled:opacity-50',
+            )}
             disabled={!canGoBack || saving || isSliding}
             onClick={() => goPrevious()}
           >
@@ -1237,7 +1314,14 @@ export function OnboardingFlow({
               <Button
                 type="button"
                 size="lg"
-                className={cn('w-full', ONBOARDING_BTN_3D_PRIMARY)}
+                className={cn(
+                  'w-full',
+                  ONBOARDING_BTN_3D_PRIMARY,
+                  continueDisabled &&
+                    !saving &&
+                    !isSliding &&
+                    'disabled:opacity-50',
+                )}
                 disabled={continueDisabled}
                 onClick={() => void handlePrimaryProceed()}
               >
@@ -1721,8 +1805,6 @@ export function OnboardingFlow({
             panelStep === 'motivation_level'
           }
         />
-      ) : panelStep === 'create_profile' ? (
-        <OnboardingMascot src={PUCKY_TEMP_SRC} priority compact />
       ) : null
 
     const isWelcome = panelStep === 'welcome'
@@ -1769,7 +1851,7 @@ export function OnboardingFlow({
     )
 
     const desktopActions = (
-      <div className="hidden w-full shrink-0 lg:flex lg:flex-col lg:gap-2 lg:pb-1.5 lg:pr-1.5 lg:pt-8">
+      <div className="hidden w-full shrink-0 [-webkit-tap-highlight-color:transparent] lg:flex lg:flex-col lg:gap-2 lg:pb-1.5 lg:pr-1.5 lg:pt-8">
         {isWelcome ? (
           renderChromeActions(panelStep, { desktop: true })
         ) : (
@@ -1797,10 +1879,12 @@ export function OnboardingFlow({
             {desktopActions}
           </div>
           {visual}
-          <div
-            className={cn('max-lg:order-1', MOBILE_IMAGE_TO_DOTS_GAP_CLASS)}
-            aria-hidden
-          />
+          {visual ? (
+            <div
+              className={cn('max-lg:order-1', MOBILE_IMAGE_TO_DOTS_GAP_CLASS)}
+              aria-hidden
+            />
+          ) : null}
         </div>
       )
     }
@@ -1878,7 +1962,7 @@ export function OnboardingFlow({
           {desktopActions}
         </div>
         {visual}
-        {!isWelcome ? (
+        {!isWelcome && visual ? (
           <div
             className={cn('max-lg:order-1', MOBILE_IMAGE_TO_DOTS_GAP_CLASS)}
             aria-hidden
@@ -1889,7 +1973,11 @@ export function OnboardingFlow({
   }
 
   return (
-    <div className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden">
+    <div
+      className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden"
+      style={ONBOARDING_BTN_MOTION_VARS}
+      onPointerDownCapture={(event) => bindOnboarding3dPress(event.target)}
+    >
       <div
         className="h-[3px] w-full shrink-0 bg-muted"
         aria-hidden
@@ -1936,25 +2024,35 @@ export function OnboardingFlow({
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
-          className={cn(
-            'flex h-full min-h-0 w-[200%] flex-1 will-change-transform',
-            trackTransition &&
-              'transition-transform duration-[320ms] ease-in-out',
-          )}
-          style={{ transform: `translateX(${trackX}%)` }}
+          className="flex h-full min-h-0 w-[200%] flex-1 will-change-transform"
+          style={{
+            transform: `translateX(${trackX}%)`,
+            ...slideMotionStyle('transform', trackTransition),
+          }}
         >
           <div
-            key={leftPanelStep}
+            key="onboarding-panel-left"
             className={cn(
               'flex h-full min-h-0 w-1/2 shrink-0 flex-col',
-              isSliding && 'pointer-events-none',
+              isSliding && 'pointer-events-none will-change-[opacity]',
             )}
+            style={{
+              opacity: leftOpacity,
+              ...slideMotionStyle('opacity', trackTransition),
+            }}
           >
             {renderStepPanel(leftPanelStep)}
           </div>
           <div
-            key={rightPanelStep ?? 'onboarding-slide-empty'}
-            className="pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col"
+            key="onboarding-panel-right"
+            className={cn(
+              'pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col',
+              isSliding && 'will-change-[opacity]',
+            )}
+            style={{
+              opacity: rightOpacity,
+              ...slideMotionStyle('opacity', trackTransition),
+            }}
             aria-hidden
           >
             {rightPanelStep ? renderStepPanel(rightPanelStep) : null}
@@ -1962,9 +2060,9 @@ export function OnboardingFlow({
         </div>
       </div>
 
-      <footer className="shrink-0 bg-background pb-3 pt-3 lg:hidden">
+      <footer className="shrink-0 bg-background pb-3 pt-3 [-webkit-tap-highlight-color:transparent] lg:hidden">
         {step === 'welcome' ? (
-          <div className="pb-1.5 pr-1.5">
+          <div className="pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]">
             {renderChromeActions(step)}
           </div>
         ) : (

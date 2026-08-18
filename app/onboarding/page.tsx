@@ -15,7 +15,12 @@ import { ensureDefaultUsername } from '@/src/lib/username'
 export const dynamic = 'force-dynamic'
 
 const ONBOARDING_PRELOAD_IMAGES = [
-  '/mascot/onboarding_mascot/original/pucky_temp.png',
+  '/mascot/onboarding_mascot/pucky_1.webp',
+  '/mascot/onboarding_mascot/pucky_2.webp',
+  '/mascot/onboarding_mascot/pucky_3.webp',
+  '/mascot/onboarding_mascot/pucky_4.webp',
+  '/mascot/onboarding_mascot/pucky_5.webp',
+  '/mascot/onboarding_mascot/pucky_6.webp',
   '/poolcup-logo.png',
   '/sports/soccer.png',
   '/sports/basketball.png',

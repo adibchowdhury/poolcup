@@ -726,6 +726,76 @@ html.light .mobile-bottom-nav-home {
   }
 }
 
+/*
+  Onboarding 3D buttons — plain CSS so hover duration cannot silently
+  fall back (Tailwind v4 translate-x uses `translate`, not `transform`,
+  and stacked arbitrary variants were losing to `transition-all` 150ms).
+
+  Touch: no hover. :active / [data-pressed] is the sink; releasing returns
+  to this rest rule, which owns the spring. Desktop hover is extra preview.
+*/
+button.onboarding-3d-btn {
+  --onboarding-btn-sink: 4px;
+  --onboarding-btn-hover-sink: 2px;
+  --onboarding-btn-press-sink: 3px;
+  --onboarding-btn-edge: #080b0f;
+  --onboarding-btn-shadow: var(--onboarding-btn-sink) var(--onboarding-btn-sink) 0 0
+    var(--onboarding-btn-edge);
+  --onboarding-btn-shadow-hover: var(--onboarding-btn-hover-sink)
+    var(--onboarding-btn-hover-sink) 0 0 var(--onboarding-btn-edge);
+  --onboarding-btn-shadow-active: 1px 1px 0 0 var(--onboarding-btn-edge);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  /* Return (hover-off / touch-release): spring on transform, ease on shadow. */
+  transition-property: transform, box-shadow;
+  transition-duration: var(--onboarding-btn-hover-out-ms, 270ms);
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-out;
+  transform: translate(0, 0);
+  box-shadow: var(--onboarding-btn-shadow);
+}
+
+button.onboarding-3d-btn--primary {
+  --onboarding-btn-edge: color-mix(in srgb, var(--primary) 42%, #000000);
+}
+
+button.onboarding-3d-btn:active:not(:disabled),
+button.onboarding-3d-btn[data-pressed]:not(:disabled) {
+  transition-duration: var(--onboarding-btn-press-ms, 150ms);
+  transition-timing-function: ease-out;
+  transform: translate(
+    var(--onboarding-btn-press-sink),
+    var(--onboarding-btn-press-sink)
+  );
+  box-shadow: var(--onboarding-btn-shadow-active);
+}
+
+/* Touch has no hover preview — the press-in is the 290ms sink. */
+@media (hover: none) {
+  button.onboarding-3d-btn:active:not(:disabled),
+  button.onboarding-3d-btn[data-pressed]:not(:disabled) {
+    transition-duration: var(--onboarding-btn-hover-in-ms, 290ms);
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+button.onboarding-3d-btn:disabled {
+  transform: translate(0, 0);
+  box-shadow: var(--onboarding-btn-shadow);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.onboarding-3d-btn:hover:not(:active):not([data-pressed]):not(:disabled) {
+    transition-duration: var(--onboarding-btn-hover-in-ms, 290ms);
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translate(
+      var(--onboarding-btn-hover-sink),
+      var(--onboarding-btn-hover-sink)
+    );
+    box-shadow: var(--onboarding-btn-shadow-hover);
+  }
+}
+
 @keyframes onboarding-sport-orbit {
   from {
     transform: rotate(0deg);
