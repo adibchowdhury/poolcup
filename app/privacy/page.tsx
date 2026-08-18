@@ -12,7 +12,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Last updated: May 21, 2026
+          Last updated: August 18, 2026
         </p>
 
         <div className="mt-12 space-y-10 text-foreground">
@@ -60,9 +60,10 @@ export default function PrivacyPage() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               We use your information to operate PoolCup: authenticate you, create and
               manage prediction pools, record and score predictions, display
-              leaderboards, and send service-related messages (for example, account or
-              security notices). We do not sell your personal information to third
-              parties.
+              leaderboards, generate optional AI Insights from your own
+              aggregated prediction statistics, and send service-related messages
+              (for example, account or security notices). We do not sell your
+              personal information to third parties.
             </p>
           </section>
 
@@ -82,6 +83,13 @@ export default function PrivacyPage() {
               <li>
                 <strong className="text-foreground">Stripe</strong> — payment
                 processing for optional paid subscriptions.
+              </li>
+              <li>
+                <strong className="text-foreground">Anthropic</strong> — service
+                provider that processes your own aggregated prediction statistics
+                (not other users&apos; data) to generate optional AI Insights.
+                Individual match-by-match picks and other users&apos; information
+                are not sent to this processor.
               </li>
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">

@@ -123,7 +123,21 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Can I cancel anytime?',
-    a: 'Yes. Pro and Commissioner are billed month-to-month (or yearly if you choose that option). You can manage or cancel anytime from Billing in your account.',
+    a: (
+      <>
+        Yes. Pro ($4.99/mo) and Commissioner ($9.99/mo) are billed through
+        Stripe. You can manage or cancel anytime from Billing in your account.
+        Access continues until the end of the current billing period; we do not
+        prorate unused time after cancellation. See the{' '}
+        <Link
+          href="/terms#subscriptions-refunds"
+          className="text-[#00e676] underline-offset-4 hover:underline"
+        >
+          refund policy
+        </Link>{' '}
+        in our Terms of Service.
+      </>
+    ),
   },
   {
     q: 'Do I need a credit card to start?',

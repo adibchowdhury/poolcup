@@ -32,6 +32,7 @@ const siteMap: FooterLink[] = [
 const legal: { label: string; href: string }[] = [
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Service', href: '/terms' },
+  { label: 'Refunds', href: '/terms#subscriptions-refunds' },
   { label: 'Cookie Policy', href: '/cookies' },
   { label: 'How We Protect Your Data', href: '/security' },
 ]

@@ -377,6 +377,18 @@ export function BillingSettingsView({
           )}
         </section>
       )}
+
+      <p className="mt-8 text-xs text-muted-foreground">
+        Subscriptions are billed through Stripe. Cancel anytime via Manage
+        billing; access continues until the end of the current period. See our{' '}
+        <Link
+          href="/terms#subscriptions-refunds"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          refund policy
+        </Link>{' '}
+        in the Terms of Service.
+      </p>
     </main>
   )
 }
