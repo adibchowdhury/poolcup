@@ -48,20 +48,31 @@ export function eventMatchesSportBubble(
   return normalizeSportKey(eventSport) === key
 }
 
-/** 56px */
-const BALL_SIZE = 'h-14 w-14'
+/** 56px default; 64px large (Matches tab desktop strip). */
+const BALL_SIZE_CLASS = {
+  default: 'h-14 w-14',
+  lg: 'h-16 w-16',
+} as const
+
+const BALL_COLUMN_CLASS = {
+  default: 'w-16 sm:w-[4.5rem]',
+  lg: 'w-[4.75rem] sm:w-20',
+} as const
 
 function SportBubbleItem({
   sport,
   selected,
   onSelect,
+  size = 'default',
 }: {
   sport: SportBubble
   selected: boolean
   onSelect: () => void
+  size?: 'default' | 'lg'
 }) {
   const [imgFailed, setImgFailed] = useState(false)
   const showIcon = !sport.iconPng || imgFailed
+  const isLg = size === 'lg'
 
   return (
     <button
@@ -70,8 +81,8 @@ function SportBubbleItem({
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        'flex w-16 shrink-0 cursor-pointer flex-col items-center gap-0.5',
-        'select-none sm:w-[4.5rem]',
+        'flex shrink-0 cursor-pointer flex-col items-center gap-0.5 select-none',
+        BALL_COLUMN_CLASS[size],
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
     >
@@ -80,7 +91,7 @@ function SportBubbleItem({
           className={cn(
             'flex items-center justify-center rounded-full',
             'border bg-card/70',
-            BALL_SIZE,
+            BALL_SIZE_CLASS[size],
             selected
               ? 'border-primary shadow-[0_0_16px_color-mix(in_srgb,var(--primary)_35%,transparent)]'
               : 'border-border/70',
@@ -88,7 +99,7 @@ function SportBubbleItem({
         >
           <Swords
             className={cn(
-              'h-6 w-6',
+              isLg ? 'h-7 w-7' : 'h-6 w-6',
               selected ? 'text-primary' : 'text-foreground',
             )}
             aria-hidden
@@ -99,10 +110,10 @@ function SportBubbleItem({
         <img
           src={`/sports/${sport.iconPng}`}
           alt=""
-          width={56}
-          height={56}
+          width={isLg ? 64 : 56}
+          height={isLg ? 64 : 56}
           className={cn(
-            BALL_SIZE,
+            BALL_SIZE_CLASS[size],
             'object-contain transition-[filter,opacity]',
             selected
               ? 'drop-shadow-[0_0_10px_color-mix(in_srgb,var(--primary)_55%,transparent)]'
@@ -114,7 +125,10 @@ function SportBubbleItem({
       )}
       <span
         className={cn(
-          'w-full truncate text-center text-[10px] font-medium leading-none sm:text-[11px]',
+          'w-full truncate text-center font-medium leading-none',
+          isLg
+            ? 'text-xs sm:text-sm'
+            : 'text-[10px] sm:text-[11px]',
           selected ? 'font-semibold text-primary' : 'text-foreground',
         )}
       >
@@ -129,6 +143,9 @@ type SportBubblesRowProps = {
   /** null = all sports (no bubble selected). */
   selectedSportId: string | null
   onSelectedSportIdChange: (sportId: string | null) => void
+  size?: 'default' | 'lg'
+  /** scroll = overflow strip; inline = flex row for centered desktop strip. */
+  layout?: 'scroll' | 'inline'
 }
 
 /** Story-style sport bubbles — single-select, tap again to deselect (all sports). */
@@ -136,17 +153,34 @@ export function SportBubblesRow({
   className,
   selectedSportId,
   onSelectedSportIdChange,
+  size = 'default',
+  layout = 'scroll',
 }: SportBubblesRowProps) {
+  const isInline = layout === 'inline'
+  const isLg = size === 'lg'
+
   return (
     <div
       className={cn(
-        'min-w-0 max-w-full -mx-1 overflow-x-auto overscroll-x-contain px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        isInline
+          ? 'min-w-0'
+          : cn(
+              'min-w-0 max-w-full -mx-1 overflow-x-auto overscroll-x-contain px-1',
+              '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            ),
         className,
       )}
       role="list"
       aria-label="Sports"
     >
-      <div className="flex w-full min-w-0 items-start justify-start gap-2.5 sm:gap-3">
+      <div
+        className={cn(
+          'flex min-w-0 items-start',
+          isInline
+            ? cn('justify-center', isLg ? 'gap-3.5 sm:gap-4' : 'gap-2.5 sm:gap-3')
+            : cn('w-full justify-start', isLg ? 'gap-3.5 sm:gap-4' : 'gap-2.5 sm:gap-3'),
+        )}
+      >
         {SPORT_BUBBLES.map((sport) => {
           const selected = sport.id === selectedSportId
           return (
@@ -154,6 +188,7 @@ export function SportBubblesRow({
               key={sport.id}
               sport={sport}
               selected={selected}
+              size={size}
               onSelect={() =>
                 onSelectedSportIdChange(selected ? null : sport.id)
               }

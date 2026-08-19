@@ -741,7 +741,13 @@ function DashboardViewContent({
               </MakeYourPicksQueueProvider>
             </TabsContent>
 
-            <TabsContent value="games" className="min-w-0 mt-2">
+            <TabsContent
+              value="games"
+              className={cn(
+                'min-w-0 mt-2',
+                DASHBOARD_HOME_MUTED_SCOPE_CLASS,
+              )}
+            >
               <UpcomingGamesTab userId={userId} />
             </TabsContent>
 

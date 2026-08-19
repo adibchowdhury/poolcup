@@ -1,14 +1,19 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type MouseEvent, type PointerEvent } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Clock3 } from 'lucide-react'
+import { ArrowRight, Check, Clock3, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import type { MatchesTabPredictionSummary } from '@/src/lib/fetch-matches-tab-predictions'
 import {
   FeaturedMatchCountdownDisplay,
   useKickoffCountdown,
+  useLiveMatchClock,
 } from '@/components/dashboard/live-scoreboard'
 import type { FeaturedMatchMode } from '@/src/lib/featured-match'
+import { formatFeaturedMatchStatusLabel } from '@/src/lib/featured-match'
 import { isTeamLogoUrl } from '@/src/lib/team-logos'
 import {
   getVoidMatchStatusLabel,
@@ -117,6 +122,28 @@ function QueueStatusNotch({ kickoffAt }: { kickoffAt: string }) {
       ) : (
         <FeaturedMatchCountdownDisplay compact {...countdown} />
       )}
+    </div>
+  )
+}
+
+function LiveWatchNotch() {
+  return (
+    <div
+      className={cn(
+        'absolute left-1/2 top-0 z-20 flex h-6 min-w-20 max-w-[92%] -translate-x-1/2 items-center justify-center gap-1.5 px-3',
+        'bg-[linear-gradient(180deg,#e84b55,#ba2532)] text-white shadow-[0_4px_12px_rgba(220,38,52,0.28)]',
+        'text-[9px] font-bold uppercase tracking-[0.13em]',
+      )}
+      style={{
+        clipPath:
+          'polygon(0 0, 100% 0, 100% 58%, 88% 100%, 12% 100%, 0 58%)',
+      }}
+    >
+      <span
+        className="stage-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
+        aria-hidden
+      />
+      <span>Live</span>
     </div>
   )
 }
@@ -246,6 +273,84 @@ function QueuePoolContextLine({ poolNames }: { poolNames: string[] }) {
   )
 }
 
+export type PremiumMatchCardAccentVariant = 'bottom' | 'full'
+
+function stopCardNavigation(event: MouseEvent | PointerEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function MatchesTabPredictionFooter({
+  prediction,
+  actionHref,
+}: {
+  prediction: MatchesTabPredictionSummary
+  actionHref: string
+}) {
+  const { status, pickLabel } = prediction
+
+  return (
+    <div className="hidden min-w-0 shrink-0 items-center gap-1.5 lg:flex">
+      {status === 'not_picked' ? (
+        <span className="truncate text-[10px] font-medium text-muted-foreground/75">
+          Not picked
+        </span>
+      ) : null}
+      {status === 'picked' || status === 'locked_picked' ? (
+        <span className="inline-flex min-w-0 items-center gap-0.5 truncate text-[10px] font-semibold text-primary">
+          <Check className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="truncate">
+            Picked{pickLabel ? ` ${pickLabel}` : ''}
+          </span>
+        </span>
+      ) : null}
+      {status === 'locked_unpicked' ? (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-muted-foreground">
+          <Lock className="h-3 w-3 shrink-0" aria-hidden />
+          Locked
+        </span>
+      ) : null}
+      {status === 'not_picked' ? (
+        <Button
+          asChild
+          size="sm"
+          className={cn(
+            'pointer-events-auto relative z-[2] h-7 shrink-0 px-2.5 text-xs',
+            FOCUS_VISIBLE_RING,
+          )}
+        >
+          <Link
+            href={actionHref}
+            onClick={stopCardNavigation}
+            onPointerDown={stopCardNavigation}
+          >
+            Predict
+          </Link>
+        </Button>
+      ) : null}
+      {status === 'picked' ? (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'pointer-events-auto relative z-[2] h-7 shrink-0 px-2 text-xs font-semibold text-primary',
+            FOCUS_VISIBLE_RING,
+          )}
+        >
+          <Link
+            href={actionHref}
+            onClick={stopCardNavigation}
+            onPointerDown={stopCardNavigation}
+          >
+            Edit
+          </Link>
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 export function PremiumMatchCard({
   match,
   mode,
@@ -257,6 +362,10 @@ export function PremiumMatchCard({
   queuePicked = false,
   predictCtaLabel,
   queueMode = false,
+  accentVariant = 'bottom',
+  liveWatchMode = false,
+  footerBottomInset = false,
+  matchesTabPrediction,
 }: {
   match: PremiumMatchCardMatch
   mode: FeaturedMatchMode
@@ -273,6 +382,14 @@ export function PremiumMatchCard({
   predictCtaLabel?: string
   /** Queue: omit generic competition fallback. */
   queueMode?: boolean
+  /** bottom = upcoming default notch; full = live ring around entire card. */
+  accentVariant?: PremiumMatchCardAccentVariant
+  /** Matches tab live strip: mono score, LIVE notch, clock footer, no predict CTA. */
+  liveWatchMode?: boolean
+  /** Matches tab desktop: breathing room below kickoff / live clock row. */
+  footerBottomInset?: boolean
+  /** Matches tab desktop: prediction state + Predict/Edit in footer. */
+  matchesTabPrediction?: MatchesTabPredictionSummary | null
 }) {
   const voidLabel = getVoidMatchStatusLabel(match.status_short)
   const isVoid = isVoidMatchStatus(match.status_short)
@@ -283,7 +400,19 @@ export function PremiumMatchCard({
   const surfaceGradientId = `match-surface-${id}`
   const surfaceGlowId = `match-glow-${id}`
 
-  const resolvedCtaLabel = queuePicked ? 'Edit' : predictCtaLabel
+  const resolvedCtaLabel =
+    liveWatchMode && mode === 'live' ? undefined : queuePicked ? 'Edit' : predictCtaLabel
+  const useFullAccent = accentVariant === 'full'
+  const isLiveStripLayout = Boolean(liveWatchMode)
+  const liveClock = useLiveMatchClock(match)
+  const liveClockFallback =
+    liveWatchMode && mode === 'live'
+      ? formatFeaturedMatchStatusLabel(
+          match.status_short,
+          match.elapsed_minute,
+          match.is_final,
+        )
+      : null
   const eventLabel =
     queueMode && competitionName?.trim()
       ? competitionName.trim()
@@ -291,10 +420,15 @@ export function PremiumMatchCard({
         ? null
         : competitionName || 'PoolCup'
 
+  const showMatchesTabPrediction =
+    Boolean(matchesTabPrediction) && mode === 'upcoming' && !liveWatchMode
+  const cardNavigateHref = href ?? null
+  const matchesTabActionHref = cardNavigateHref
+
   const body = (
     <article
       className={cn(
-        'premium-match-card group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-hidden',
+        'premium-match-card group relative isolate flex h-full min-h-[220px] flex-col overflow-hidden',
         'px-3.5 pb-3 pt-8',
         'transition-[transform,box-shadow] hover:-translate-y-0.5',
         queuePicked && 'ring-1 ring-primary/35',
@@ -345,26 +479,52 @@ export function PremiumMatchCard({
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
         />
-        <path
-          d={SCULPTED_BOTTOM_EDGE_PATH}
-          fill="none"
-          stroke="var(--primary)"
-          strokeOpacity="0.12"
-          strokeWidth="4"
-          vectorEffect="non-scaling-stroke"
-          className="blur-[2px]"
-        />
-        <path
-          d={SCULPTED_BOTTOM_EDGE_PATH}
-          fill="none"
-          stroke="var(--primary)"
-          strokeOpacity="0.48"
-          strokeWidth="0.8"
-          vectorEffect="non-scaling-stroke"
-        />
+        {useFullAccent ? (
+          <>
+            <path
+              d={SCULPTED_CARD_PATH}
+              fill="none"
+              stroke="var(--primary)"
+              strokeOpacity="0.28"
+              strokeWidth="4"
+              vectorEffect="non-scaling-stroke"
+              className="blur-[1.5px]"
+            />
+            <path
+              d={SCULPTED_CARD_PATH}
+              fill="none"
+              stroke="var(--primary)"
+              strokeOpacity="0.78"
+              strokeWidth="1.4"
+              vectorEffect="non-scaling-stroke"
+            />
+          </>
+        ) : (
+          <>
+            <path
+              d={SCULPTED_BOTTOM_EDGE_PATH}
+              fill="none"
+              stroke="var(--primary)"
+              strokeOpacity="0.12"
+              strokeWidth="4"
+              vectorEffect="non-scaling-stroke"
+              className="blur-[2px]"
+            />
+            <path
+              d={SCULPTED_BOTTOM_EDGE_PATH}
+              fill="none"
+              stroke="var(--primary)"
+              strokeOpacity="0.48"
+              strokeWidth="0.8"
+              vectorEffect="non-scaling-stroke"
+            />
+          </>
+        )}
       </svg>
 
-      {showQueueCountdown && mode === 'upcoming' ? (
+      {liveWatchMode && mode === 'live' ? (
+        <LiveWatchNotch />
+      ) : showQueueCountdown && mode === 'upcoming' ? (
         <QueueStatusNotch kickoffAt={match.kickoff_at} />
       ) : (
         <StatusNotch
@@ -392,7 +552,12 @@ export function PremiumMatchCard({
         <div className="flex min-h-16 min-w-[5rem] items-center justify-center self-start sm:min-w-[6rem]">
           {showScore ? (
             <p
-              className="font-display text-4xl leading-none tracking-[0.02em] tabular-nums sm:text-5xl"
+              className={cn(
+                'leading-none tabular-nums',
+                isLiveStripLayout
+                  ? 'font-mono text-3xl font-bold tracking-[0.02em] sm:text-4xl'
+                  : 'font-display text-4xl tracking-[0.02em] sm:text-5xl',
+              )}
               style={{
                 color: 'var(--match-card-score)',
                 textShadow: 'var(--match-card-score-shadow)',
@@ -425,49 +590,94 @@ export function PremiumMatchCard({
 
       <div
         className={cn(
-          'relative mt-auto flex items-center justify-center gap-2 border-t pt-2 text-[10px] font-medium text-muted-foreground',
+          'relative mt-auto shrink-0 flex items-center justify-center gap-2 border-t pt-2 text-[10px] font-medium text-muted-foreground',
           resolvedCtaLabel && 'justify-between px-1',
+          showMatchesTabPrediction && 'lg:justify-between lg:px-1',
+          liveWatchMode && mode === 'live' && 'justify-center',
+          footerBottomInset && 'lg:pb-5',
         )}
         style={{ borderColor: 'var(--match-card-footer-border)' }}
       >
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Clock3
-            className="h-3 w-3 shrink-0"
-            style={{ color: 'var(--match-card-clock)' }}
-            aria-hidden
-          />
-          <time dateTime={match.kickoff_at} suppressHydrationWarning className="truncate">
-            {formatKickoff(match.kickoff_at)}
-          </time>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {queuePicked ? (
-            <span className="inline-flex items-center gap-0.5 font-semibold text-primary">
-              Picked
-              <span aria-hidden>✓</span>
-            </span>
-          ) : null}
-          {resolvedCtaLabel ? (
+        {liveWatchMode && mode === 'live' ? (
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Clock3
+              className="h-3 w-3 shrink-0"
+              style={{ color: 'var(--match-card-clock)' }}
+              aria-hidden
+            />
             <span
+              className="truncate font-mono tabular-nums"
+              suppressHydrationWarning
+            >
+              {liveClock ?? liveClockFallback ?? 'In progress'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Clock3
+                className="h-3 w-3 shrink-0"
+                style={{ color: 'var(--match-card-clock)' }}
+                aria-hidden
+              />
+              <time dateTime={match.kickoff_at} suppressHydrationWarning className="truncate">
+                {formatKickoff(match.kickoff_at)}
+              </time>
+            </div>
+            <div
               className={cn(
-                'inline-flex items-center gap-1 font-semibold',
-                queuePicked ? 'text-muted-foreground' : 'text-primary',
+                'flex shrink-0 items-center gap-2',
+                showMatchesTabPrediction && 'hidden lg:contents',
               )}
             >
-              {resolvedCtaLabel}
-              <ArrowRight className="h-3 w-3" aria-hidden />
-            </span>
-          ) : null}
-        </div>
+              {queuePicked ? (
+                <span className="inline-flex items-center gap-0.5 font-semibold text-primary">
+                  Picked
+                  <span aria-hidden>✓</span>
+                </span>
+              ) : null}
+              {resolvedCtaLabel ? (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 font-semibold',
+                    queuePicked ? 'text-muted-foreground' : 'text-primary',
+                  )}
+                >
+                  {resolvedCtaLabel}
+                  <ArrowRight className="h-3 w-3" aria-hidden />
+                </span>
+              ) : null}
+            </div>
+            {showMatchesTabPrediction && matchesTabPrediction && matchesTabActionHref ? (
+              <MatchesTabPredictionFooter
+                prediction={matchesTabPrediction}
+                actionHref={matchesTabActionHref}
+              />
+            ) : null}
+          </>
+        )}
       </div>
     </article>
   )
 
-  if (!href) return body
+  if (!cardNavigateHref) return body
+
+  if (showMatchesTabPrediction) {
+    return (
+      <div className="relative block h-full rounded-2xl">
+        <Link
+          href={cardNavigateHref}
+          className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          aria-label={`${match.team1_name} vs ${match.team2_name}. View match details`}
+        />
+        <div className="relative h-full">{body}</div>
+      </div>
+    )
+  }
 
   return (
     <Link
-      href={href}
+      href={cardNavigateHref}
       className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
       aria-label={
         resolvedCtaLabel

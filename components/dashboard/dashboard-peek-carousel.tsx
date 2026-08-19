@@ -22,18 +22,24 @@ export const DASHBOARD_PEEK_CAROUSEL_SCROLL_CLASS = cn(
   'scrollbar-hidden [-webkit-overflow-scrolling:touch]',
 )
 
-export const DASHBOARD_PEEK_CAROUSEL_TRACK_CLASS = 'flex min-w-0'
+export const DASHBOARD_PEEK_CAROUSEL_TRACK_CLASS = 'flex min-w-0 items-start'
 
 type UseDashboardPeekCarouselOptions = {
   visibleCards?: number
   peekFraction?: number
   gapPx?: number
+  /**
+   * Cards keep a fixed CSS width; scroll step is measured from the first
+   * `[data-peek-carousel-item]` instead of resizing cards to fit 3+peek.
+   */
+  measureScrollStepFromDom?: boolean
 }
 
 export function useDashboardPeekCarousel({
   visibleCards = DEFAULT_VISIBLE_CARDS,
   peekFraction = DEFAULT_PEEK_FRACTION,
   gapPx = DEFAULT_GAP_PX,
+  measureScrollStepFromDom = false,
 }: UseDashboardPeekCarouselOptions = {}) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [cardWidthPx, setCardWidthPx] = useState<number | null>(null)
@@ -57,6 +63,11 @@ export function useDashboardPeekCarousel({
   }, [])
 
   const recomputeCardWidth = useCallback(() => {
+    if (measureScrollStepFromDom) {
+      setCardWidthPx(null)
+      return
+    }
+
     const el = scrollRef.current
     if (!el || !isDesktop) {
       setCardWidthPx(null)
@@ -66,7 +77,7 @@ export function useDashboardPeekCarousel({
     const cardW =
       (el.clientWidth - visibleCards * gapPx) / (visibleCards + peekFraction)
     setCardWidthPx(Math.max(0, cardW))
-  }, [gapPx, isDesktop, peekFraction, visibleCards])
+  }, [gapPx, isDesktop, measureScrollStepFromDom, peekFraction, visibleCards])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -95,17 +106,27 @@ export function useDashboardPeekCarousel({
   const scrollByOne = useCallback(
     (direction: 1 | -1) => {
       const el = scrollRef.current
-      if (!el || cardWidthPx == null) return
+      if (!el) return
+
+      let step: number | null = null
+      if (measureScrollStepFromDom) {
+        const item = el.querySelector<HTMLElement>('[data-peek-carousel-item]')
+        if (item) step = item.offsetWidth + gapPx
+      } else if (cardWidthPx != null) {
+        step = cardWidthPx + gapPx
+      }
+
+      if (step == null) return
       el.scrollBy({
-        left: direction * (cardWidthPx + gapPx),
+        left: direction * step,
         behavior: 'smooth',
       })
     },
-    [cardWidthPx, gapPx],
+    [cardWidthPx, gapPx, measureScrollStepFromDom],
   )
 
   const scrollStyle: CSSProperties | undefined =
-    cardWidthPx != null
+    !measureScrollStepFromDom && cardWidthPx != null
       ? ({ '--peek-card-width': `${cardWidthPx}px` } as CSSProperties)
       : undefined
 
@@ -127,6 +148,8 @@ type DashboardPeekCarouselNavProps = {
   onPrev: () => void
   onNext: () => void
   className?: string
+  prevAriaLabel?: string
+  nextAriaLabel?: string
 }
 
 export function DashboardPeekCarouselNav({
@@ -135,6 +158,8 @@ export function DashboardPeekCarouselNav({
   onPrev,
   onNext,
   className,
+  prevAriaLabel = 'Scroll left',
+  nextAriaLabel = 'Scroll right',
 }: DashboardPeekCarouselNavProps) {
   return (
     <div
@@ -148,7 +173,7 @@ export function DashboardPeekCarouselNav({
         className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
         disabled={!canScrollPrev}
         onClick={onPrev}
-        aria-label="Scroll picks left"
+        aria-label={prevAriaLabel}
       >
         <ChevronLeft className="h-4 w-4" aria-hidden />
       </Button>
@@ -159,7 +184,7 @@ export function DashboardPeekCarouselNav({
         className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-30"
         disabled={!canScrollNext}
         onClick={onNext}
-        aria-label="Scroll picks right"
+        aria-label={nextAriaLabel}
       >
         <ChevronRight className="h-4 w-4" aria-hidden />
       </Button>

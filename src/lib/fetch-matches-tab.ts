@@ -10,7 +10,7 @@ import {
 } from '@/src/lib/upcoming-match-horizon'
 
 const MATCHES_TAB_COLUMNS =
-  'id, event_id, kickoff_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round, status_short, result_team1, result_team2, elapsed_minute, is_final'
+  'id, event_id, kickoff_at, locked_at, team1_name, team2_name, team1_flag, team2_flag, team1_logo, team2_logo, group_name, round, status_short, result_team1, result_team2, elapsed_minute, is_final'
 
 /** Full schedule list for the Matches tab (higher than the dashboard slider cap). */
 export const MATCHES_TAB_QUERY_LIMIT = 300
@@ -22,6 +22,7 @@ export type MatchesTabMatch = {
   id: string
   event_id: string | null
   kickoff_at: string
+  locked_at: string | null
   team1_name: string
   team2_name: string
   team1_flag: string | null

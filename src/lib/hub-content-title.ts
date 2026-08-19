@@ -25,7 +25,7 @@ export type HubContentHeader = {
 /** Display titles + nav icons for hub desktop content top bar (lg+). */
 const HUB_NAV_CONTENT_HEADERS: Record<string, HubContentHeader> = {
   dashboard: { title: 'Dashboard', icon: Home },
-  games: { title: 'Matches', icon: Calendar },
+  games: { title: 'Upcoming Matches', icon: Calendar },
   friends: { title: 'Friends', icon: Users },
   discover: { title: 'Discover', icon: Compass },
   profile: { title: 'Profile', icon: User },

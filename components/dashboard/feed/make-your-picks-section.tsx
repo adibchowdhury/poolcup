@@ -144,6 +144,8 @@ function MakeYourPicksSectionView({
             canScrollNext={canScrollNext}
             onPrev={scrollPrev}
             onNext={scrollNext}
+            prevAriaLabel="Scroll picks left"
+            nextAriaLabel="Scroll picks right"
           />
         ) : null}
       </div>

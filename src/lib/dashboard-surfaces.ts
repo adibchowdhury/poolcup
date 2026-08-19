@@ -55,6 +55,58 @@ export const DASHBOARD_FEED_SURFACE_CLASS_LG = cn(
 
 export const DASHBOARD_CARD_HOVER_CLASS = 'transition-colors hover:bg-[#1d1d1d]'
 
+/** Empty/error states on Matches tab — card surface on desktop. */
+export const DASHBOARD_MATCHES_EMPTY_STATE_CLASS = cn(
+  'rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center',
+  'lg:border-solid lg:border-[#292929] lg:bg-[#171717]',
+)
+
+/** Matches tab card grid — full-width hub layout, 4 cols at xl+. */
+export const DASHBOARD_MATCHES_GRID_CLASS =
+  'grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+
+/** Fixed card height — live strip and grid cards stay pixel-identical on desktop. */
+/**
+ * Matches tab PremiumMatchCard stack (px, sm+ / desktop grid):
+ * pt-8 (32) + event min-h-8 (32) + grid mt-2.5 (10)
+ * + team col logo h-16 (64) + mt-1.5 (6) + name min-h-8 (32) = 102
+ * + footer border-t + pt-2 + line (~15) + footer inset lg:pb-5 (20) + pb-3 (12) ≈ 44
+ * → 232 on desktop; + sculpt / subpixel buffer → 240 at lg+.
+ */
+export const DASHBOARD_MATCHES_CARD_FOOTER_INSET_PX = 20
+export const DASHBOARD_MATCHES_CARD_HEIGHT_PX = 220
+export const DASHBOARD_MATCHES_CARD_HEIGHT_DESKTOP_PX = 240
+export const DASHBOARD_MATCHES_CARD_HEIGHT_CLASS = 'h-[220px] lg:h-[240px]'
+
+/**
+ * Live strip cell width — mirrors one column of DASHBOARD_MATCHES_GRID_CLASS
+ * (gap-2.5 = 0.625rem; n cols ⇒ (n − 1) gaps).
+ */
+export const DASHBOARD_MATCHES_CARD_CELL_WIDTH_CLASS = cn(
+  'w-[calc((100cqw-1.25rem)/3)]',
+  'xl:w-[calc((100cqw-1.875rem)/4)]',
+)
+
+export const DASHBOARD_MATCHES_LIVE_STRIP_CARD_CELL_CLASS = cn(
+  'flex-none shrink-0',
+  DASHBOARD_MATCHES_CARD_CELL_WIDTH_CLASS,
+)
+
+/**
+ * Desktop Matches tab carousel item — fixed grid column width + height (no flex stretch).
+ * Width uses cqw against the @container scrollport; peek comes from overflow, not card resize.
+ */
+export const DASHBOARD_MATCHES_CAROUSEL_ITEM_CLASS = cn(
+  'flex-none shrink-0',
+  DASHBOARD_MATCHES_CARD_CELL_WIDTH_CLASS,
+  'h-[240px]',
+)
+
+/** Desktop section panel for Matches tab lists (level 1). Mobile: unstyled. */
+export const DASHBOARD_MATCHES_SECTION_PANEL_CLASS = cn(
+  'lg:rounded-2xl lg:border lg:border-[#292929] lg:bg-[#111111] lg:p-5 xl:p-6',
+)
+
 /** Pool card shell (dashboard + outline surfaces). */
 export const DASHBOARD_POOL_CARD_CLASS = cn(
   'overflow-hidden rounded-2xl border border-[#292929] bg-[#171717] transition-colors hover:bg-[#1d1d1d]',
