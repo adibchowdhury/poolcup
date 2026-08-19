@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { normalizePoolThemeColor } from '@/src/lib/pool-theme'
 
@@ -14,7 +15,7 @@ export type PoolOgData = {
   emblemUrl: string | null
 }
 
-export async function fetchPoolOgData(
+async function fetchPoolOgDataUncached(
   inviteCode: string,
 ): Promise<PoolOgData | null> {
   const code = inviteCode?.trim()
@@ -73,3 +74,10 @@ export async function fetchPoolOgData(
     return null
   }
 }
+
+/** Cached so client navigations back to the pool page are not blocked on OG DB. */
+export const fetchPoolOgData = unstable_cache(
+  fetchPoolOgDataUncached,
+  ['pool-og-data'],
+  { revalidate: 120 },
+)

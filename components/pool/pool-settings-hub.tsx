@@ -1,0 +1,132 @@
+'use client'
+
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import {
+  PoolSettingsCommissionerSection,
+  PoolSettingsCommunicationSection,
+  PoolSettingsDangerSection,
+  PoolSettingsDetailsSection,
+  PoolSettingsMembersSection,
+  PoolSettingsScoringSection,
+  type PoolSettingsTabProps,
+} from '@/components/pool/pool-settings-tab'
+import { PoolSettingsHubList } from '@/components/pool/pool-settings-hub-list'
+import { cn } from '@/lib/utils'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import {
+  isPoolSettingsSectionId,
+  POOL_SETTINGS_SECTIONS,
+  type PoolSettingsSectionId,
+} from '@/src/lib/pool-settings-nav'
+
+const SECTION_SCREENS = {
+  details: PoolSettingsDetailsSection,
+  scoring: PoolSettingsScoringSection,
+  members: PoolSettingsMembersSection,
+  communication: PoolSettingsCommunicationSection,
+  commissioner: PoolSettingsCommissionerSection,
+  danger: PoolSettingsDangerSection,
+} as const
+
+function SettingsBackControl({
+  href,
+  onClick,
+  label,
+}: {
+  href?: string
+  onClick?: () => void
+  label: string
+}) {
+  const className = cn(
+    'inline-flex w-fit items-center gap-1.5 rounded-lg py-1 text-sm text-muted-foreground transition-colors hover:text-foreground',
+    FOCUS_VISIBLE_RING,
+  )
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+        {label}
+      </button>
+    )
+  }
+  if (!href) return null
+  return (
+    <Link href={href} prefetch className={className}>
+      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+      {label}
+    </Link>
+  )
+}
+
+function SettingsSectionScreen({
+  sectionId,
+  onBackToHub,
+  tabProps,
+}: {
+  sectionId: PoolSettingsSectionId
+  onBackToHub?: () => void
+  tabProps: PoolSettingsTabProps
+}) {
+  const section = POOL_SETTINGS_SECTIONS.find((row) => row.id === sectionId)
+  if (!section) return null
+  const SectionScreen = SECTION_SCREENS[sectionId]
+
+  return (
+    <div className="w-full min-w-0 space-y-4">
+      {onBackToHub ? (
+        <SettingsBackControl onClick={onBackToHub} label="Settings menu" />
+      ) : null}
+      <div>
+        <h2
+          className={cn(
+            'font-display text-2xl tracking-wide',
+            section.destructive ? 'text-destructive' : 'text-foreground',
+          )}
+        >
+          {section.title}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{section.subtitle}</p>
+      </div>
+      <SectionScreen {...tabProps} />
+    </div>
+  )
+}
+
+/**
+ * Settings hub + per-section screens. Desktop modal and mobile routes share
+ * the same section content components.
+ */
+export function PoolSettingsHub({
+  section = null,
+  onSelectSection,
+  ...tabProps
+}: PoolSettingsTabProps & {
+  section?: string | null
+  /** When set, section rows swap content in-place (desktop modal) instead of routing. */
+  onSelectSection?: (section: string | null) => void
+}) {
+  const inviteCode = tabProps.inviteCode ?? ''
+  const onBackToHub = onSelectSection
+    ? () => onSelectSection(null)
+    : undefined
+
+  if (isPoolSettingsSectionId(section)) {
+    return (
+      <SettingsSectionScreen
+        sectionId={section}
+        onBackToHub={onBackToHub}
+        tabProps={tabProps}
+      />
+    )
+  }
+
+  return (
+    <PoolSettingsHubList
+      inviteCode={inviteCode}
+      onSelectSection={
+        onSelectSection ? (id) => onSelectSection(id) : undefined
+      }
+    />
+  )
+}

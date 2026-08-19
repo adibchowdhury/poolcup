@@ -1,11 +1,8 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Share2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { WinnerOnlyPredictView } from '@/components/predict/winner-only-predict-view'
-import { cn } from '@/lib/utils'
 import {
   classicMatchTotalCount,
   countClassicPredictedScores,
@@ -27,10 +24,6 @@ type PoolPredictionsTabProps = {
   scoringStyle: string
   predictions: UserPoolPrediction[]
   totalMatchCount: number
-  acceptingMembers?: boolean
-  shareOpen: boolean
-  onToggleShare: () => void
-  inviteCopySlot: React.ReactNode
   poolId?: string
   memberId?: string
   currentUserId?: string
@@ -49,10 +42,6 @@ export function PoolPredictionsTab({
   scoringStyle,
   predictions,
   totalMatchCount,
-  acceptingMembers = true,
-  shareOpen,
-  onToggleShare,
-  inviteCopySlot,
   poolId,
   memberId,
   currentUserId,
@@ -76,24 +65,6 @@ export function PoolPredictionsTab({
 
   return (
     <div className="w-full min-w-0 space-y-4">
-      <Button
-        type="button"
-        size="lg"
-        variant="outline"
-        onClick={onToggleShare}
-        disabled={!acceptingMembers}
-        className={cn(
-          'group h-14 w-full gap-3 border-2 border-border bg-card font-display text-lg tracking-wide hover:border-primary/50 hover-lift',
-          !acceptingMembers &&
-            'cursor-not-allowed border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/30',
-        )}
-      >
-        <Share2 className="h-5 w-5 transition-transform group-hover:scale-110 sm:h-6 sm:w-6" />
-        {acceptingMembers ? 'Share Pool' : 'Invites closed'}
-      </Button>
-
-      {shareOpen && inviteCopySlot}
-
       {isWinnerOnly ? (
         memberId && winnerPool && inviteCode ? (
           <WinnerOnlyPredictView

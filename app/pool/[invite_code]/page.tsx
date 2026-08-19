@@ -1,10 +1,13 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { PoolPageClient } from './pool-page-client'
 import { fetchPoolOgData } from '@/src/lib/og/pool-og-data'
 import { siteUrl } from '@/src/lib/site'
+import { poolSettingsPath } from '@/src/lib/pool-settings-nav'
 
 type PageProps = {
   params: Promise<{ invite_code: string }>
+  searchParams: Promise<{ tab?: string | string[]; section?: string | string[] }>
 }
 
 export async function generateMetadata({
@@ -50,6 +53,13 @@ export async function generateMetadata({
   }
 }
 
-export default function PoolPage() {
+export default async function PoolPage({ params, searchParams }: PageProps) {
+  const { invite_code: inviteCode } = await params
+  const query = await searchParams
+  const tab = Array.isArray(query.tab) ? query.tab[0] : query.tab
+  const section = Array.isArray(query.section) ? query.section[0] : query.section
+  if (tab === 'settings' || tab === 'squad') {
+    redirect(poolSettingsPath(inviteCode, section))
+  }
   return <PoolPageClient />
 }

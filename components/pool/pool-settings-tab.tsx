@@ -28,6 +28,7 @@ import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
 import { ReportPoolControl } from '@/components/pool/report-pool-control'
 import { PoolInviteCard } from '@/components/pool/pool-invite-card'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
+import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { TransferOwnershipDialog } from '@/components/pool/transfer-ownership-dialog'
 import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
 import {
@@ -88,7 +89,7 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { supabase } from '@/src/lib/supabase'
 import { uploadPoolEmblem } from '@/src/lib/upload-pool-emblem'
 
-type PoolSettingsTabProps = {
+export type PoolSettingsTabProps = {
   poolId?: string
   poolName: string
   poolDescription?: string | null
@@ -128,6 +129,10 @@ type PoolSettingsTabProps = {
   onMemberRemoved?: (memberId: string) => void
   onOwnershipTransferred?: (newOwnerUserId: string) => void
   onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
+}
+
+export type PoolSettingsSectionContentProps = PoolSettingsTabProps & {
+  section: import('@/src/lib/pool-settings-nav').PoolSettingsSectionId
 }
 
 function SectionHeading({
@@ -177,7 +182,8 @@ function SubsectionHeading({
   )
 }
 
-export function PoolSettingsTab({
+export function PoolSettingsSectionContent({
+  section,
   poolId,
   poolName,
   poolDescription = null,
@@ -209,7 +215,7 @@ export function PoolSettingsTab({
   onMemberRemoved,
   onOwnershipTransferred,
   onManagedAnnouncementChange,
-}: PoolSettingsTabProps) {
+}: PoolSettingsSectionContentProps) {
   const isOwner =
     typeof isOwnerProp === 'boolean'
       ? isOwnerProp
@@ -779,6 +785,24 @@ export function PoolSettingsTab({
 
   return (
     <div className="w-full min-w-0 space-y-8">
+      {section === 'details' ? (
+      <>
+      <section>
+        <SectionHeading title="Pool type" />
+        <div className="flex flex-wrap items-center gap-2">
+          <ScoringModeBadge scoringStyle={scoringStyle} />
+          <p className="text-sm text-muted-foreground">
+            Set when the pool was created and can’t be changed here.
+          </p>
+        </div>
+      </section>
+      <section>
+        <SectionHeading title="Competition" />
+        <p className="text-sm text-muted-foreground">
+          This pool is tied to its competition from creation. The event can’t be
+          changed in settings.
+        </p>
+      </section>
       <section>
         <SectionHeading title="Pool name" />
         {isEditingName ? (
@@ -1245,43 +1269,19 @@ export function PoolSettingsTab({
           )}
         </section>
       ) : null}
+      </>
+      ) : null}
 
-      {isAdmin ? (
-        <section className="space-y-8">
-          <SectionHeading title="Commissioner tools" />
-
-          {!toolsUnlocked ? (
-            <div className="space-y-4">
-              {isClassicPool ? (
-                <LockedCommissionerFeature
-                  title="Custom scoring"
-                  description="Set exact / winner / draw points"
-                  isOwner={isOwner}
-                  poolId={poolId}
-                />
-              ) : null}
-              <LockedCommissionerFeature
-                title="Exports"
-                description="Leaderboard and predictions CSV, printable view"
-                isOwner={isOwner}
-                poolId={poolId}
-              />
-              <LockedCommissionerFeature
-                title="Announcements"
-                description="Post, edit, and pin announcements"
-                isOwner={isOwner}
-                poolId={poolId}
-              />
-              <LockedCommissionerFeature
-                title="Polls"
-                description="Create and manage pool polls"
-                isOwner={isOwner}
-                poolId={poolId}
-              />
-            </div>
-          ) : (
-            <>
-          {isClassicPool ? (
+      {section === 'scoring' ? (
+      <>
+        {isAdmin && !toolsUnlocked && isClassicPool ? (
+          <LockedCommissionerFeature
+            title="Custom scoring"
+            description="Set exact / winner / draw points"
+            isOwner={isOwner}
+            poolId={poolId}
+          />
+        ) : isClassicPool ? (
             <div>
               <SubsectionHeading title="Custom scoring" />
               <p className="mb-3 text-xs text-muted-foreground">
@@ -1535,19 +1535,34 @@ export function PoolSettingsTab({
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          ) : null}
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Winner Only pools use group ranking points. Custom match scoring
+              does not apply.
+            </p>
+          )}
+      </>
+      ) : null}
 
-          <div>
-            <SubsectionHeading title="Exports" />
-            {poolId ? (
-              <PoolExportsSection poolId={poolId} inviteCode={inviteCode} />
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Pool id unavailable — exports cannot run.
-              </p>
-            )}
+      {section === 'communication' ? (
+      <>
+        {isAdmin && !toolsUnlocked ? (
+          <div className="space-y-4">
+            <LockedCommissionerFeature
+              title="Announcements"
+              description="Post, edit, and pin announcements"
+              isOwner={isOwner}
+              poolId={poolId}
+            />
+            <LockedCommissionerFeature
+              title="Polls"
+              description="Create and manage pool polls"
+              isOwner={isOwner}
+              poolId={poolId}
+            />
           </div>
-
+        ) : isAdmin ? (
+          <>
           <div>
             <SubsectionHeading title="Announcements" />
             <p className="mb-3 text-xs text-muted-foreground">
@@ -1574,9 +1589,58 @@ export function PoolSettingsTab({
               <PoolPollsPanel poolId={poolId} isAdmin showComposer />
             ) : null}
           </div>
-            </>
-          )}
+          </>
+        ) : (
+          <>
+          {poolId ? (
+            <section className="space-y-3">
+              <SectionHeading title="Announcements" />
+              <PoolAnnouncementsPanel
+                poolId={poolId}
+                currentUserId={currentUserId}
+                isAdmin={false}
+                showComposer={false}
+              />
+            </section>
+          ) : null}
+          {poolId ? (
+            <section className="space-y-3">
+              <SectionHeading title="Polls" />
+              <PoolPollsPanel
+                poolId={poolId}
+                isAdmin={false}
+                showComposer={false}
+              />
+            </section>
+          ) : null}
+          </>
+        )}
+      </>
+      ) : null}
 
+      {section === 'commissioner' ? (
+      <>
+        {isAdmin && !toolsUnlocked ? (
+          <LockedCommissionerFeature
+            title="Exports"
+            description="Leaderboard and predictions CSV, printable view"
+            isOwner={isOwner}
+            poolId={poolId}
+          />
+        ) : isAdmin ? (
+          <div>
+            <SubsectionHeading title="Exports" />
+            {poolId ? (
+              <PoolExportsSection poolId={poolId} inviteCode={inviteCode} />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Pool id unavailable — exports cannot run.
+              </p>
+            )}
+          </div>
+        ) : null}
+
+          {isAdmin ? (
           <div>
             <SubsectionHeading title="Membership" />
             <div className="flex items-start justify-between gap-4">
@@ -1661,9 +1725,99 @@ export function PoolSettingsTab({
             {savingIsPublic ? (
               <p className="mt-2 text-xs text-muted-foreground">Saving…</p>
             ) : null}
+          </div>
+          ) : (
+          <p
+            id="accepting-members-status"
+            className="text-sm text-muted-foreground"
+          >
+            {acceptingMembers
+              ? 'This pool is open to new members.'
+              : 'This pool is closed to new members.'}
+          </p>
+          )}
 
-            {acceptingMembers && inviteCode ? (
-              <div className="mt-4">
+      {isAdmin && poolId ? (
+        <div className="space-y-8">
+          {!toolsUnlocked ? (
+            <div className="space-y-4">
+              {isOwner ? (
+                <LockedCommissionerFeature
+                  title="Co-commissioners"
+                  description="Add co-admins to help run the pool"
+                  isOwner={isOwner}
+                  poolId={poolId}
+                />
+              ) : null}
+              <LockedCommissionerFeature
+                title="Members missing predictions"
+                description="See who still needs to predict"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+              <LockedCommissionerFeature
+                title="Moderation log"
+                description="Audit trail of commissioner actions"
+                isOwner={isOwner}
+                poolId={poolId}
+              />
+            </div>
+          ) : (
+            <>
+          {isOwner && poolCreatorUserId ? (
+            <CommissionerCoAdminsSection
+              poolId={poolId}
+              ownerUserId={poolCreatorUserId}
+              members={members}
+              initialCoAdmins={coAdminUserIds.map((userId) => ({
+                userId,
+                displayName:
+                  members.find((m) => m.userId === userId)?.name ?? null,
+                username: null,
+              }))}
+            />
+          ) : null}
+          <CommissionerMissingPredictions
+            poolId={poolId}
+            inviteCode={inviteCode}
+            poolName={poolName}
+          />
+          <CommissionerModerationLog poolId={poolId} />
+            </>
+          )}
+        </div>
+      ) : null}
+
+      <AlertDialog open={publicConfirmOpen} onOpenChange={setPublicConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make this pool public?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anyone will be able to see and join it from the Discover page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={savingIsPublic}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={savingIsPublic}
+              onClick={(e) => {
+                e.preventDefault()
+                setPublicConfirmOpen(false)
+                void persistIsPublic(true)
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
+      ) : null}
+
+      {section === 'members' ? (
+      <>
+            {isAdmin && acceptingMembers && inviteCode ? (
+              <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Invite link
                 </p>
@@ -1675,69 +1829,6 @@ export function PoolSettingsTab({
                 />
               </div>
             ) : null}
-          </div>
-        </section>
-      ) : (
-        <>
-          {isClassicPool ? (
-            <section className="space-y-6">
-              <div>
-                <SectionHeading title="Scoring rules" />
-                <ul className="space-y-1.5 text-sm text-foreground">
-                  <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
-                    <span className="text-muted-foreground">Exact score</span>
-                    <span className="font-display tabular-nums text-primary">
-                      {resolvedScoring.exact} pts
-                    </span>
-                  </li>
-                  <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
-                    <span className="text-muted-foreground">Correct winner</span>
-                    <span className="font-display tabular-nums text-primary">
-                      {resolvedScoring.winner} pts
-                    </span>
-                  </li>
-                  <li className="flex justify-between gap-3 py-1.5">
-                    <span className="text-muted-foreground">Correct draw</span>
-                    <span className="font-display tabular-nums text-primary">
-                      {resolvedScoring.draw} pts
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              {poolId ? <PoolScoringHistory poolId={poolId} /> : null}
-            </section>
-          ) : null}
-          {poolId ? (
-            <section className="space-y-3">
-              <SectionHeading title="Announcements" />
-              <PoolAnnouncementsPanel
-                poolId={poolId}
-                currentUserId={currentUserId}
-                isAdmin={false}
-                showComposer={false}
-              />
-            </section>
-          ) : null}
-          {poolId ? (
-            <section className="space-y-3">
-              <SectionHeading title="Polls" />
-              <PoolPollsPanel
-                poolId={poolId}
-                isAdmin={false}
-                showComposer={false}
-              />
-            </section>
-          ) : null}
-          <p
-            id="accepting-members-help"
-            className="text-sm text-muted-foreground"
-          >
-            {acceptingMembers
-              ? 'This pool is open to new members.'
-              : 'This pool is closed to new members.'}
-          </p>
-        </>
-      )}
 
       <section className="space-y-3">
         <SectionHeading
@@ -1877,136 +1968,34 @@ export function PoolSettingsTab({
         )}
       </section>
 
-      {isAdmin && poolId ? (
-        <div className="space-y-8">
-          {!toolsUnlocked ? (
-            <div className="space-y-4">
-              {isOwner ? (
-                <LockedCommissionerFeature
-                  title="Co-commissioners"
-                  description="Add co-admins to help run the pool"
-                  isOwner={isOwner}
-                  poolId={poolId}
-                />
-              ) : null}
-              <LockedCommissionerFeature
-                title="Members missing predictions"
-                description="See who still needs to predict"
-                isOwner={isOwner}
-                poolId={poolId}
-              />
-              <LockedCommissionerFeature
-                title="Moderation log"
-                description="Audit trail of commissioner actions"
-                isOwner={isOwner}
-                poolId={poolId}
-              />
-            </div>
-          ) : (
-            <>
-          {isOwner && poolCreatorUserId ? (
-            <CommissionerCoAdminsSection
-              poolId={poolId}
-              ownerUserId={poolCreatorUserId}
-              members={members}
-              initialCoAdmins={coAdminUserIds.map((userId) => ({
-                userId,
-                displayName:
-                  members.find((m) => m.userId === userId)?.name ?? null,
-                username: null,
-              }))}
-            />
-          ) : null}
-          <CommissionerMissingPredictions
+      {poolId && isOwner ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            onClick={() => setTransferOpen(true)}
+          >
+            <Crown className="mr-2 h-4 w-4" aria-hidden />
+            Transfer ownership
+          </Button>
+          <TransferOwnershipDialog
+            open={transferOpen}
+            onOpenChange={setTransferOpen}
             poolId={poolId}
-            inviteCode={inviteCode}
             poolName={poolName}
+            currentUserId={currentUserId}
+            members={members}
+            onTransferred={(newOwnerUserId) => {
+              capturePostHog('ownership_transferred', { pool_id: poolId })
+              capturePostHog('commissioner_action', {
+                action: 'ownership_transferred',
+                pool_id: poolId,
+              })
+              onOwnershipTransferred?.(newOwnerUserId)
+            }}
           />
-          <CommissionerModerationLog poolId={poolId} />
-            </>
-          )}
         </div>
-      ) : null}
-
-      {poolId ? (
-        <section className="space-y-4">
-          <SubsectionHeading title="Your membership" />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {isOwner
-              ? 'As owner you can transfer ownership to another member, or leave after transferring. Delete only if you want the pool gone for everyone.'
-              : isAdmin
-                ? 'As co-commissioner you can manage settings and members. Only the owner can transfer or delete the pool.'
-                : 'Leave this pool to remove yourself and your predictions here.'}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {isOwner ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                onClick={() => setTransferOpen(true)}
-              >
-                <Crown className="mr-2 h-4 w-4" aria-hidden />
-                Transfer ownership
-              </Button>
-            ) : null}
-            <LeavePoolDialog
-              poolId={poolId}
-              poolName={poolName}
-              currentUserId={currentUserId}
-              isCreator={isOwner}
-              members={members}
-              onOwnershipTransferred={(newOwnerUserId) => {
-                capturePostHog('ownership_transferred', { pool_id: poolId })
-                onOwnershipTransferred?.(newOwnerUserId)
-              }}
-            />
-            <ReportPoolControl poolId={poolId} />
-          </div>
-
-          {isOwner ? (
-            <div className="pt-2">
-              <SubsectionHeading title="Danger Zone" tone="danger" />
-              <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                Permanently deletes the pool, all members, and every prediction.
-                Prefer closing to new members or transferring ownership instead.
-              </p>
-              <DeletePoolDialog
-                poolId={poolId}
-                poolName={poolName}
-                redirectTo="/dashboard"
-                triggerVariant="outline"
-                triggerClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                onDeleted={() => {
-                  capturePostHog('pool_deleted', { pool_id: poolId })
-                  capturePostHog('commissioner_action', {
-                    action: 'pool_deleted',
-                    pool_id: poolId,
-                  })
-                }}
-              />
-            </div>
-          ) : null}
-
-          {isOwner ? (
-            <TransferOwnershipDialog
-              open={transferOpen}
-              onOpenChange={setTransferOpen}
-              poolId={poolId}
-              poolName={poolName}
-              currentUserId={currentUserId}
-              members={members}
-              onTransferred={(newOwnerUserId) => {
-                capturePostHog('ownership_transferred', { pool_id: poolId })
-                capturePostHog('commissioner_action', {
-                  action: 'ownership_transferred',
-                  pool_id: poolId,
-                })
-                onOwnershipTransferred?.(newOwnerUserId)
-              }}
-            />
-          ) : null}
-        </section>
       ) : null}
 
       <AlertDialog
@@ -2058,30 +2047,87 @@ export function PoolSettingsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </>
+      ) : null}
 
-      <AlertDialog open={publicConfirmOpen} onOpenChange={setPublicConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Make this pool public?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anyone will be able to see and join it from the Discover page.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={savingIsPublic}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={savingIsPublic}
-              onClick={(e) => {
-                e.preventDefault()
-                setPublicConfirmOpen(false)
-                void persistIsPublic(true)
+      {section === 'danger' ? (
+      <>
+      {poolId ? (
+        <section className="space-y-4">
+          <SubsectionHeading title="Your membership" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isOwner
+              ? 'As owner you can leave after transferring ownership. Delete only if you want the pool gone for everyone.'
+              : isAdmin
+                ? 'As co-commissioner you can leave this pool. Only the owner can delete the pool.'
+                : 'Leave this pool to remove yourself and your predictions here.'}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <LeavePoolDialog
+              poolId={poolId}
+              poolName={poolName}
+              currentUserId={currentUserId}
+              isCreator={isOwner}
+              members={members}
+              onOwnershipTransferred={(newOwnerUserId) => {
+                capturePostHog('ownership_transferred', { pool_id: poolId })
+                onOwnershipTransferred?.(newOwnerUserId)
               }}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            />
+            <ReportPoolControl poolId={poolId} />
+          </div>
+
+          {isOwner ? (
+            <div className="pt-2">
+              <SubsectionHeading title="Danger Zone" tone="danger" />
+              <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                Permanently deletes the pool, all members, and every prediction.
+                Prefer closing to new members or transferring ownership instead.
+              </p>
+              <DeletePoolDialog
+                poolId={poolId}
+                poolName={poolName}
+                redirectTo="/dashboard"
+                triggerVariant="outline"
+                triggerClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                onDeleted={() => {
+                  capturePostHog('pool_deleted', { pool_id: poolId })
+                  capturePostHog('commissioner_action', {
+                    action: 'pool_deleted',
+                    pool_id: poolId,
+                  })
+                }}
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+      </>
+      ) : null}
     </div>
   )
+}
+
+export function PoolSettingsDetailsSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="details" />
+}
+
+export function PoolSettingsScoringSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="scoring" />
+}
+
+export function PoolSettingsMembersSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="members" />
+}
+
+export function PoolSettingsCommunicationSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="communication" />
+}
+
+export function PoolSettingsCommissionerSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="commissioner" />
+}
+
+export function PoolSettingsDangerSection(props: PoolSettingsTabProps) {
+  return <PoolSettingsSectionContent {...props} section="danger" />
 }

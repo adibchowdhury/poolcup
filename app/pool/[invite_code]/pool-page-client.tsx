@@ -97,6 +97,44 @@ function formatTimeUntil(iso: string): string {
   return `${minutes}m`
 }
 
+/** In-memory snapshot so returning from settings does not reskeleton the pool. */
+type PoolPageClientSnapshot = {
+  userId: string
+  inviteCode: string
+  poolMeta: PoolHomeMeta
+  members: LeaderboardMember[]
+  userPredictions: UserPoolPrediction[]
+  leaderboardLoading: boolean
+  leaderboardError: string | null
+  poolId: string | null
+  memberId: string | null
+  avatarEntries: Array<[string, MemberAvatarRecord]>
+  poolCreatorUserId: string | null
+  isPoolOwner: boolean
+  isPoolAdmin: boolean
+  poolHasCommissionerTools: boolean
+  coAdminUserIds: string[]
+  poolDescription: string | null
+  profileEntries: Array<[string, PoolChatMemberProfile]>
+  activeAnnouncement: PoolAnnouncement | null
+  leaderboardRefreshCtx: LeaderboardRefreshContext | null
+  predictionsCompletedTracked: boolean
+}
+
+let poolPageClientCache: PoolPageClientSnapshot | null = null
+
+function readPoolPageCache(
+  inviteCode: string,
+  userId: string | undefined,
+): PoolPageClientSnapshot | null {
+  if (typeof window === 'undefined' || !userId) return null
+  const hit = poolPageClientCache
+  if (!hit || hit.inviteCode !== inviteCode || hit.userId !== userId) {
+    return null
+  }
+  return hit
+}
+
 export function PoolPageClient() {
   const params = useParams()
   const router = useRouter()
@@ -104,40 +142,69 @@ export function PoolPageClient() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id
 
-  const predictionsCompletedTrackedRef = useRef(false)
-  const leaderboardRefreshCtxRef = useRef<LeaderboardRefreshContext | null>(
-    null,
+  const cachedPage = readPoolPageCache(inviteCode, userId)
+
+  const predictionsCompletedTrackedRef = useRef(
+    cachedPage?.predictionsCompletedTracked ?? false,
   )
-  const avatarByMemberIdRef = useRef(new Map<string, MemberAvatarRecord>())
+  const leaderboardRefreshCtxRef = useRef<LeaderboardRefreshContext | null>(
+    cachedPage?.leaderboardRefreshCtx ?? null,
+  )
+  const avatarByMemberIdRef = useRef(
+    new Map<string, MemberAvatarRecord>(cachedPage?.avatarEntries ?? []),
+  )
   const leaderboardRefreshInFlightRef = useRef(false)
 
-  const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(null)
-  const [members, setMembers] = useState<LeaderboardMember[]>([])
-  const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>([])
-  const [pageLoading, setPageLoading] = useState(true)
-  const [leaderboardLoading, setLeaderboardLoading] = useState(true)
+  const [poolMeta, setPoolMeta] = useState<PoolHomeMeta | null>(
+    cachedPage?.poolMeta ?? null,
+  )
+  const [members, setMembers] = useState<LeaderboardMember[]>(
+    cachedPage?.members ?? [],
+  )
+  const [userPredictions, setUserPredictions] = useState<UserPoolPrediction[]>(
+    cachedPage?.userPredictions ?? [],
+  )
+  const [pageLoading, setPageLoading] = useState(!cachedPage)
+  const [leaderboardLoading, setLeaderboardLoading] = useState(
+    cachedPage ? cachedPage.leaderboardLoading : true,
+  )
   const [leaderboardRefreshing, setLeaderboardRefreshing] = useState(false)
   const [leaderboardLiveSync, setLeaderboardLiveSync] = useState(false)
-  const [leaderboardError, setLeaderboardError] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
-  const [poolId, setPoolId] = useState<string | null>(null)
-  const [memberId, setMemberId] = useState<string | null>(null)
-  const [canDelete, setCanDelete] = useState(false)
-  const [avatarByMemberId, setAvatarByMemberId] = useState(
-    () => new Map<string, MemberAvatarRecord>(),
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(
+    cachedPage?.leaderboardError ?? null,
   )
-  const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(null)
-  const [isPoolOwner, setIsPoolOwner] = useState(false)
-  const [isPoolAdmin, setIsPoolAdmin] = useState(false)
-  const [poolHasCommissionerTools, setPoolHasCommissionerTools] =
-    useState(false)
-  const [coAdminUserIds, setCoAdminUserIds] = useState<string[]>([])
-  const [poolDescription, setPoolDescription] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
+  const [poolId, setPoolId] = useState<string | null>(cachedPage?.poolId ?? null)
+  const [memberId, setMemberId] = useState<string | null>(
+    cachedPage?.memberId ?? null,
+  )
+  const [avatarByMemberId, setAvatarByMemberId] = useState(
+    () => new Map<string, MemberAvatarRecord>(cachedPage?.avatarEntries ?? []),
+  )
+  const [poolCreatorUserId, setPoolCreatorUserId] = useState<string | null>(
+    cachedPage?.poolCreatorUserId ?? null,
+  )
+  const [isPoolOwner, setIsPoolOwner] = useState(
+    cachedPage?.isPoolOwner ?? false,
+  )
+  const [isPoolAdmin, setIsPoolAdmin] = useState(
+    cachedPage?.isPoolAdmin ?? false,
+  )
+  const [poolHasCommissionerTools, setPoolHasCommissionerTools] = useState(
+    cachedPage?.poolHasCommissionerTools ?? false,
+  )
+  const [coAdminUserIds, setCoAdminUserIds] = useState<string[]>(
+    cachedPage?.coAdminUserIds ?? [],
+  )
+  const [poolDescription, setPoolDescription] = useState<string | null>(
+    cachedPage?.poolDescription ?? null,
+  )
   const [memberProfilesByUserId, setMemberProfilesByUserId] = useState(
-    () => new Map<string, PoolChatMemberProfile>(),
+    () =>
+      new Map<string, PoolChatMemberProfile>(cachedPage?.profileEntries ?? []),
   )
   const [activeAnnouncement, setActiveAnnouncement] =
-    useState<PoolAnnouncement | null>(null)
+    useState<PoolAnnouncement | null>(cachedPage?.activeAnnouncement ?? null)
 
   avatarByMemberIdRef.current = avatarByMemberId
 
@@ -233,7 +300,6 @@ export function PoolPageClient() {
   const handleOwnershipTransferred = useCallback(
     (newOwnerUserId: string) => {
       setPoolCreatorUserId(newOwnerUserId)
-      setCanDelete(newOwnerUserId === userId)
       if (leaderboardRefreshCtxRef.current) {
         leaderboardRefreshCtxRef.current = {
           ...leaderboardRefreshCtxRef.current,
@@ -241,7 +307,7 @@ export function PoolPageClient() {
         }
       }
     },
-    [userId],
+    [],
   )
 
   const handleAnnouncementDismissed = useCallback(
@@ -305,8 +371,32 @@ export function PoolPageClient() {
   const loadPoolData = useCallback(async () => {
     if (!userId) return
 
-    setPageLoading(true)
-    setLeaderboardLoading(true)
+    const cached = readPoolPageCache(inviteCode, userId)
+    if (cached) {
+      setPoolMeta(cached.poolMeta)
+      setMembers(cached.members)
+      setUserPredictions(cached.userPredictions)
+      setLeaderboardLoading(cached.leaderboardLoading)
+      setLeaderboardError(cached.leaderboardError)
+      setPoolId(cached.poolId)
+      setMemberId(cached.memberId)
+      setAvatarByMemberId(new Map(cached.avatarEntries))
+      setPoolCreatorUserId(cached.poolCreatorUserId)
+      setIsPoolOwner(cached.isPoolOwner)
+      setIsPoolAdmin(cached.isPoolAdmin)
+      setPoolHasCommissionerTools(cached.poolHasCommissionerTools)
+      setCoAdminUserIds(cached.coAdminUserIds)
+      setPoolDescription(cached.poolDescription)
+      setMemberProfilesByUserId(new Map(cached.profileEntries))
+      setActiveAnnouncement(cached.activeAnnouncement)
+      leaderboardRefreshCtxRef.current = cached.leaderboardRefreshCtx
+      predictionsCompletedTrackedRef.current =
+        cached.predictionsCompletedTracked
+      setPageLoading(false)
+    } else {
+      setPageLoading(true)
+      setLeaderboardLoading(true)
+    }
     setNotFound(false)
 
     const { data: poolData, error: poolError } = await supabase
@@ -328,7 +418,6 @@ export function PoolPageClient() {
     const pool = poolData as Pool
     setPoolId(pool.id)
     setPoolCreatorUserId(pool.creator_id)
-    setCanDelete(pool.creator_id === userId)
     setIsPoolOwner(pool.creator_id === userId)
     setIsPoolAdmin(pool.creator_id === userId)
     setPoolDescription(
@@ -343,7 +432,6 @@ export function PoolPageClient() {
           if (res.status === 403) {
             setIsPoolAdmin(false)
             setIsPoolOwner(pool.creator_id === userId)
-            setCanDelete(pool.creator_id === userId)
             setPoolHasCommissionerTools(false)
           }
           return
@@ -359,7 +447,6 @@ export function PoolPageClient() {
         setIsPoolOwner(owner)
         setIsPoolAdmin(admin)
         setPoolHasCommissionerTools(Boolean(data.poolHasCommissionerTools))
-        setCanDelete(owner)
         setCoAdminUserIds(
           (data.coCommissioners ?? []).map((c) => c.userId).filter(Boolean),
         )
@@ -794,6 +881,51 @@ export function PoolPageClient() {
     loadPoolData()
   }, [authLoading, userId, router, loadPoolData])
 
+  useEffect(() => {
+    if (!userId || !poolMeta) return
+    poolPageClientCache = {
+      userId,
+      inviteCode,
+      poolMeta,
+      members,
+      userPredictions,
+      leaderboardLoading,
+      leaderboardError,
+      poolId,
+      memberId,
+      avatarEntries: Array.from(avatarByMemberId.entries()),
+      poolCreatorUserId,
+      isPoolOwner,
+      isPoolAdmin,
+      poolHasCommissionerTools,
+      coAdminUserIds,
+      poolDescription,
+      profileEntries: Array.from(memberProfilesByUserId.entries()),
+      activeAnnouncement,
+      leaderboardRefreshCtx: leaderboardRefreshCtxRef.current,
+      predictionsCompletedTracked: predictionsCompletedTrackedRef.current,
+    }
+  }, [
+    userId,
+    inviteCode,
+    poolMeta,
+    members,
+    userPredictions,
+    leaderboardLoading,
+    leaderboardError,
+    poolId,
+    memberId,
+    avatarByMemberId,
+    poolCreatorUserId,
+    isPoolOwner,
+    isPoolAdmin,
+    poolHasCommissionerTools,
+    coAdminUserIds,
+    poolDescription,
+    memberProfilesByUserId,
+    activeAnnouncement,
+  ])
+
   // Safety net if pool bootstrap fails after RLS tighten.
   useEffect(() => {
     if (pageLoading || authLoading || !userId) return
@@ -854,11 +986,25 @@ export function PoolPageClient() {
     }
   }, [pageLoading, notFound, poolId, softRefreshLeaderboard])
 
-  if (authLoading || (!user && !notFound)) {
+  if (!user) {
+    if (notFound) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+            <p className="text-lg font-semibold text-foreground">
+              Taking you to join…
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You’ll need to join this pool before you can view it.
+            </p>
+          </div>
+        </div>
+      )
+    }
     return <PoolPageSkeleton />
   }
 
-  if (pageLoading) {
+  if (!poolMeta && pageLoading) {
     return <PoolPageSkeleton />
   }
 
@@ -882,18 +1028,16 @@ export function PoolPageClient() {
       pool={poolMeta}
       members={members}
       userPredictions={userPredictions}
-      currentUserId={user!.id}
+      currentUserId={user.id}
       leaderboardLoading={leaderboardLoading}
       leaderboardRefreshing={leaderboardRefreshing}
       leaderboardLiveSync={leaderboardLiveSync}
       leaderboardError={leaderboardError}
       onRetryLeaderboard={() => void softRefreshLeaderboard()}
-      canDelete={canDelete}
       poolId={poolId ?? undefined}
       memberId={memberId ?? undefined}
       onPredictionSaved={handlePredictionSaved}
       onPredictionRemoved={handlePredictionRemoved}
-      avatarsByMemberId={avatarByMemberId}
       poolCreatorUserId={poolCreatorUserId ?? undefined}
       memberProfilesByUserId={memberProfilesByUserId}
       isPoolOwner={isPoolOwner}
@@ -904,15 +1048,14 @@ export function PoolPageClient() {
       onPoolDescriptionChange={handlePoolDescriptionChange}
       onAcceptingMembersChange={handleAcceptingMembersChange}
       onIsPublicChange={handleIsPublicChange}
-      onPoolAvatarChange={handlePoolAvatarChange}
       onPoolThemeColorChange={handlePoolThemeColorChange}
       onPoolEmblemUrlChange={handlePoolEmblemUrlChange}
       onPoolScoringChange={handlePoolScoringChange}
       onMemberRemoved={handleMemberRemoved}
       onOwnershipTransferred={handleOwnershipTransferred}
+      onManagedAnnouncementChange={handleManagedAnnouncementChange}
       activeAnnouncement={activeAnnouncement}
       onAnnouncementDismissed={handleAnnouncementDismissed}
-      onManagedAnnouncementChange={handleManagedAnnouncementChange}
     />
   )
 }

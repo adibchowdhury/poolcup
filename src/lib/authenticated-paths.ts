@@ -1,3 +1,5 @@
+import { isPoolSettingsPath } from '@/src/lib/pool-settings-nav'
+
 /**
  * Routes that use the authenticated app shell / bottom nav chrome.
  * Includes public-but-chrome paths like /join and /match — NOT an auth gate.
@@ -18,6 +20,7 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname.startsWith('/pool/')) {
     // Printable export is a chrome-free print surface.
     if (/\/pool\/[^/]+\/print\/?$/.test(pathname)) return false
+    if (isPoolSettingsPath(pathname)) return false
     return true
   }
   if (pathname.startsWith('/join/')) return true

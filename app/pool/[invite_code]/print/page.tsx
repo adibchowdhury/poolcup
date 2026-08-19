@@ -93,7 +93,7 @@ export default async function PoolPrintPage({ params }: PageProps) {
       <ForbiddenOrMissing
         title="Export failed"
         message="Could not load export data. Try again from pool settings."
-        href={`/pool/${encodeURIComponent(inviteCode)}?tab=settings`}
+        href={`/pool/${encodeURIComponent(inviteCode)}/settings/commissioner`}
       />
     )
   }

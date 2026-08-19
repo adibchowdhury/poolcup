@@ -24,8 +24,6 @@ type DeletePoolDialogProps = {
   triggerVariant?: 'ghost' | 'outline' | 'danger'
   /** Icon-only trigger (no "Delete pool" label). */
   iconOnly?: boolean
-  /** Icon-only on mobile; label visible from `sm` up. */
-  mobileIconOnly?: boolean
   /**
    * If the trigger is placed inside a clickable card/Link, enable this to prevent
    * navigation while still allowing the dialog to open.
@@ -41,7 +39,6 @@ export function DeletePoolDialog({
   triggerClassName,
   triggerVariant = 'outline',
   iconOnly = false,
-  mobileIconOnly = false,
   stopPropagation = true,
 }: DeletePoolDialogProps) {
   const router = useRouter()
@@ -94,8 +91,6 @@ export function DeletePoolDialog({
         ? 'inline-flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90'
         : cn(
             'inline-flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/15',
-            mobileIconOnly &&
-              'max-sm:justify-center max-sm:border-0 max-sm:bg-transparent max-sm:p-2 max-sm:hover:bg-destructive/10',
           )
 
   return (
@@ -114,9 +109,7 @@ export function DeletePoolDialog({
         }}
       >
         <Trash2 className="h-4 w-4" />
-        {!iconOnly && (
-          <span className={cn(mobileIconOnly && 'hidden sm:inline')}>Delete pool</span>
-        )}
+        {!iconOnly && <span>Delete pool</span>}
       </button>
 
       <AlertDialog

@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft,
-  Check,
-  Copy,
   MoreVertical,
+  Share2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,18 +19,16 @@ import {
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
-import { DeletePoolDialog } from '@/components/pool/delete-pool-dialog'
 import { ReportPoolControl } from '@/components/pool/report-pool-control'
 import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
-import { PoolInviteCard } from '@/components/pool/pool-invite-card'
 import { SoloInviteNudge } from '@/components/pool/solo-invite-nudge'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
-import { PoolSettingsTab } from '@/components/pool/pool-settings-tab'
 import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
+import { PoolSettingsDialog } from '@/components/pool/pool-settings-dialog'
 import {
   USE_MOCK_LEADERBOARD,
   buildMockLeaderboardMembers,
@@ -40,6 +38,7 @@ import {
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
 import { cn } from '@/lib/utils'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
@@ -50,7 +49,7 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { shareOrCopy } from '@/src/lib/share-client'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
-import type { MemberAvatarRecord } from '@/src/lib/pool-leaderboard'
+import { poolSettingsPath, shouldOpenPoolSettingsModal } from '@/src/lib/pool-settings-nav'
 import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
 
 export type PoolHomeMeta = {
@@ -94,7 +93,6 @@ interface PoolHomeViewProps {
   /** Soft-refresh / cache load failure message. */
   leaderboardError?: string | null
   onRetryLeaderboard?: () => void
-  canDelete?: boolean
   poolId?: string
   memberId?: string
   onPredictionSaved?: (
@@ -104,19 +102,16 @@ interface PoolHomeViewProps {
     advancePick?: number | null,
   ) => void
   onPredictionRemoved?: (matchId: string) => void
-  avatarsByMemberId: Map<string, MemberAvatarRecord>
   poolCreatorUserId?: string
   memberProfilesByUserId?: Map<string, PoolChatMemberProfile>
   isPoolOwner?: boolean
   isPoolAdmin?: boolean
-  /** Owner has Commissioner tier — unlocks gated commissioner tools for this pool. */
   poolHasCommissionerTools?: boolean
   coAdminUserIds?: string[]
   onPoolNameChange?: (name: string) => void
   onPoolDescriptionChange?: (description: string | null) => void
   onAcceptingMembersChange?: (acceptingMembers: boolean) => void
   onIsPublicChange?: (isPublic: boolean) => void
-  onPoolAvatarChange?: (avatar: string) => void
   onPoolThemeColorChange?: (themeColor: string | null) => void
   onPoolEmblemUrlChange?: (emblemUrl: string | null) => void
   onPoolScoringChange?: (scoring: {
@@ -126,9 +121,11 @@ interface PoolHomeViewProps {
   }) => void
   onMemberRemoved?: (memberId: string) => void
   onOwnershipTransferred?: (newOwnerUserId: string) => void
+  onManagedAnnouncementChange?: (
+    announcement: PoolAnnouncement | null,
+  ) => void
   activeAnnouncement?: PoolAnnouncement | null
   onAnnouncementDismissed?: (announcementId: string) => void
-  onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
 }
 
 export function PoolHomeView({
@@ -141,12 +138,10 @@ export function PoolHomeView({
   leaderboardLiveSync = false,
   leaderboardError = null,
   onRetryLeaderboard,
-  canDelete,
   poolId,
   memberId,
   onPredictionSaved,
   onPredictionRemoved,
-  avatarsByMemberId,
   poolCreatorUserId,
   memberProfilesByUserId,
   isPoolOwner,
@@ -157,29 +152,26 @@ export function PoolHomeView({
   onPoolDescriptionChange,
   onAcceptingMembersChange,
   onIsPublicChange,
-  onPoolAvatarChange,
   onPoolThemeColorChange,
   onPoolEmblemUrlChange,
   onPoolScoringChange,
   onMemberRemoved,
   onOwnershipTransferred,
+  onManagedAnnouncementChange,
   activeAnnouncement = null,
   onAnnouncementDismissed,
-  onManagedAnnouncementChange,
 }: PoolHomeViewProps) {
   const [copied, setCopied] = useState(false)
   const router = useRouter()
-  const [shareOpen, setShareOpen] = useState(false)
   const [reportPoolOpen, setReportPoolOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    router.prefetch(poolSettingsPath(pool.inviteCode))
+  }, [pool.inviteCode, router])
   const normalizeTab = (tab: string | null) => {
-    if (tab === 'squad') return 'settings'
-    if (
-      tab === 'chat' ||
-      tab === 'leaderboard' ||
-      tab === 'predictions' ||
-      tab === 'settings'
-    ) {
+    if (tab === 'chat' || tab === 'leaderboard' || tab === 'predictions') {
       return tab
     }
     return 'predictions'
@@ -237,6 +229,17 @@ export function PoolHomeView({
     })
   }
 
+  function openSettingsFromNav(event?: {
+    preventDefault: () => void
+  }) {
+    if (shouldOpenPoolSettingsModal()) {
+      event?.preventDefault()
+      setSettingsOpen(true)
+      return true
+    }
+    return false
+  }
+
   // TEMPORARY — mock standings for design preview; flip USE_MOCK_LEADERBOARD off to restore.
   const leaderboardMembers = USE_MOCK_LEADERBOARD
     ? buildMockLeaderboardMembers(currentUserId)
@@ -257,12 +260,6 @@ export function PoolHomeView({
   const { setMobileChatActive } = useMobileChatChrome()
 
   useEffect(() => {
-    if (!pool.acceptingMembers) {
-      setShareOpen(false)
-    }
-  }, [pool.acceptingMembers])
-
-  useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab === 'chat') {
       setActiveTab(showChatTab ? 'chat' : 'predictions')
@@ -270,9 +267,7 @@ export function PoolHomeView({
     }
     if (
       tab === 'leaderboard' ||
-      tab === 'predictions' ||
-      tab === 'squad' ||
-      tab === 'settings'
+      tab === 'predictions'
     ) {
       setActiveTab(normalizeTab(tab))
     }
@@ -373,7 +368,9 @@ export function PoolHomeView({
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem
                         onSelect={() => {
-                          setActiveTab('settings')
+                          if (!openSettingsFromNav()) {
+                            router.push(poolSettingsPath(pool.inviteCode))
+                          }
                         }}
                       >
                         Pool settings
@@ -415,16 +412,6 @@ export function PoolHomeView({
                         </h1>
                         <ScoringModeBadge scoringStyle={pool.scoringStyle} />
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {pool.acceptingMembers ? (
-                          <>
-                            <span>Invite:</span>
-                            <code className="font-mono text-primary">{pool.inviteCode}</code>
-                          </>
-                        ) : (
-                          <span className="font-medium text-amber-400">Invites closed</span>
-                        )}
-                      </div>
                     </div>
                     <div className="sm:hidden">
                       <h1 className="truncate font-display text-lg tracking-wide text-foreground">
@@ -435,30 +422,32 @@ export function PoolHomeView({
                           scoringStyle={pool.scoringStyle}
                           className="shrink-0"
                         />
-                        {pool.acceptingMembers ? (
-                          <div className="flex min-w-0 items-center gap-1.5 truncate rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                            <span className="shrink-0">Invite:</span>
-                            <code className="truncate font-mono text-primary">
-                              {pool.inviteCode}
-                            </code>
-                          </div>
-                        ) : (
-                          <div className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                            Invites closed
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
-                  {canDelete && poolId ? (
-                    <DeletePoolDialog
-                      poolId={poolId}
-                      poolName={pool.name}
-                      redirectTo="/dashboard"
-                      triggerVariant="outline"
-                      mobileIconOnly
-                    />
-                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={copyInviteLink}
+                    disabled={!pool.acceptingMembers}
+                    aria-label={
+                      pool.acceptingMembers ? 'Share pool' : 'Invites closed'
+                    }
+                    className={cn(
+                      'shrink-0 gap-1.5 font-display tracking-wide',
+                      FOCUS_VISIBLE_RING,
+                      !pool.acceptingMembers &&
+                        'cursor-not-allowed border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-400',
+                    )}
+                  >
+                    <Share2 className="h-4 w-4" aria-hidden />
+                    {pool.acceptingMembers
+                      ? copied
+                        ? 'Copied'
+                        : 'Share Pool'
+                      : 'Invites closed'}
+                  </Button>
                 </>
               )}
             </div>
@@ -513,7 +502,10 @@ export function PoolHomeView({
 
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              if (value === 'settings') return
+              setActiveTab(value)
+            }}
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
               isLeaderboardTab && 'mb-0 flex min-h-0 flex-1 flex-col gap-4',
@@ -544,9 +536,21 @@ export function PoolHomeView({
                     <TabsTrigger value="leaderboard" className="px-2 py-2 text-xs sm:text-sm">
                       Leaderboard
                     </TabsTrigger>
-                    <TabsTrigger value="settings" className="px-2 py-2 text-xs sm:text-sm">
-                      <span className="sm:hidden">Settings</span>
-                      <span className="hidden sm:inline">Pool Settings</span>
+                    <TabsTrigger
+                      value="settings"
+                      asChild
+                      className="px-2 py-2 text-xs sm:text-sm"
+                    >
+                      <Link
+                        href={poolSettingsPath(pool.inviteCode)}
+                        prefetch
+                        onClick={(event) => {
+                          openSettingsFromNav(event)
+                        }}
+                      >
+                        <span className="sm:hidden">Settings</span>
+                        <span className="hidden sm:inline">Pool Settings</span>
+                      </Link>
                     </TabsTrigger>
                   </TabsList>
                   {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
@@ -593,7 +597,6 @@ export function PoolHomeView({
                 scoringStyle={pool.scoringStyle}
                 predictions={userPredictions}
                 totalMatchCount={pool.totalMatches}
-                acceptingMembers={pool.acceptingMembers}
                 poolId={poolId}
                 memberId={memberId}
                 currentUserId={currentUserId}
@@ -611,34 +614,6 @@ export function PoolHomeView({
                 }
                 onPredictionSaved={onPredictionSaved}
                 onPredictionRemoved={onPredictionRemoved}
-                shareOpen={shareOpen}
-                onToggleShare={() => setShareOpen((o) => !o)}
-                inviteCopySlot={
-                  pool.acceptingMembers ? (
-                    <div className="rounded-2xl border border-border bg-card p-6">
-                      <h3 className="mb-4 font-display text-lg">Invite Friends</h3>
-                      <PoolInviteCard
-                        inviteCode={pool.inviteCode}
-                        poolId={poolId}
-                        poolName={pool.name}
-                        source="pool_predictions_share"
-                      />
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        Share this link with friends so they can join your prediction
-                        pool
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
-                      <p className="font-medium text-foreground">Invites closed</p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        New members cannot join while invites are closed. Turn accepting
-                        new members back on in Pool Settings to share your invite link
-                        again.
-                      </p>
-                    </div>
-                  )
-                }
               />
             </TabsContent>
 
@@ -685,42 +660,6 @@ export function PoolHomeView({
               )}
             </TabsContent>
 
-            <TabsContent value="settings" className="mt-0 w-full min-w-0">
-              <PoolSettingsTab
-                poolId={poolId}
-                poolName={pool.name}
-                poolDescription={pool.description}
-                inviteCode={pool.inviteCode}
-                poolThemeColor={pool.themeColor}
-                poolAvatar={pool.avatar}
-                poolEmblemUrl={pool.emblemUrl}
-                scoringStyle={pool.scoringStyle}
-                scoreExactPoints={pool.scoreExactPoints}
-                scoreWinnerPoints={pool.scoreWinnerPoints}
-                scoreDrawPoints={pool.scoreDrawPoints}
-                scoringLocked={pool.scoringLocked}
-                acceptingMembers={pool.acceptingMembers}
-                isPublic={pool.isPublic}
-                members={members}
-                poolCreatorUserId={poolCreatorUserId}
-                currentUserId={currentUserId}
-                isOwner={isPoolOwner}
-                isAdmin={isPoolAdmin}
-                poolHasCommissionerTools={poolHasCommissionerTools}
-                coAdminUserIds={coAdminUserIds}
-                onPoolNameChange={onPoolNameChange}
-                onPoolDescriptionChange={onPoolDescriptionChange}
-                onPoolThemeColorChange={onPoolThemeColorChange}
-                onPoolEmblemUrlChange={onPoolEmblemUrlChange}
-                onPoolScoringChange={onPoolScoringChange}
-                onAcceptingMembersChange={onAcceptingMembersChange}
-                onIsPublicChange={onIsPublicChange}
-                onMemberRemoved={onMemberRemoved}
-                onOwnershipTransferred={onOwnershipTransferred}
-                onManagedAnnouncementChange={onManagedAnnouncementChange}
-              />
-            </TabsContent>
-
             {showChatTab && poolId && poolCreatorUserId && memberProfilesByUserId ? (
               <TabsContent
                 value="chat"
@@ -747,6 +686,43 @@ export function PoolHomeView({
           </Tabs>
         </main>
       </div>
+      <PoolSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        tabProps={{
+          poolId,
+          poolName: pool.name,
+          poolDescription: pool.description,
+          inviteCode: pool.inviteCode,
+          poolThemeColor: pool.themeColor,
+          poolAvatar: pool.avatar,
+          poolEmblemUrl: pool.emblemUrl,
+          scoringStyle: pool.scoringStyle,
+          scoreExactPoints: pool.scoreExactPoints,
+          scoreWinnerPoints: pool.scoreWinnerPoints,
+          scoreDrawPoints: pool.scoreDrawPoints,
+          scoringLocked: pool.scoringLocked,
+          acceptingMembers: pool.acceptingMembers,
+          isPublic: pool.isPublic,
+          members,
+          poolCreatorUserId,
+          currentUserId,
+          isOwner: isPoolOwner,
+          isAdmin: isPoolAdmin,
+          poolHasCommissionerTools,
+          coAdminUserIds,
+          onPoolNameChange,
+          onPoolDescriptionChange,
+          onPoolThemeColorChange,
+          onPoolEmblemUrlChange,
+          onPoolScoringChange,
+          onAcceptingMembersChange,
+          onIsPublicChange,
+          onMemberRemoved,
+          onOwnershipTransferred,
+          onManagedAnnouncementChange,
+        }}
+      />
     </PoolThemeScope>
   )
 }
