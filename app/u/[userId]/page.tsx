@@ -134,7 +134,7 @@ export default async function PublicProfilePage({
   return (
     <main
       className={cn(
-        'mx-auto min-h-screen w-full max-w-lg bg-app-background px-4 py-6 sm:py-8',
+        'mx-auto min-h-screen w-full max-w-lg bg-app-background px-4 py-6 sm:py-8 lg:max-w-6xl',
         MOBILE_BOTTOM_NAV_PAD_CLASS,
       )}
     >

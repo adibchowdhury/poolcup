@@ -305,10 +305,12 @@ function YourPoolsSection({
   pools,
   loading,
   isPublic,
+  className,
 }: {
   pools: ProfilePoolSummary[]
   loading: boolean
   isPublic: boolean
+  className?: string
 }) {
   const [showAll, setShowAll] = useState(false)
   const PREVIEW_COUNT = 4
@@ -317,7 +319,7 @@ function YourPoolsSection({
     showAll || !hasMore ? pools : pools.slice(0, PREVIEW_COUNT)
 
   return (
-    <section>
+    <section className={className}>
       <h2 className="mb-2.5 font-display text-xl tracking-wide text-foreground">
         {isPublic ? 'Pools' : 'Your Pools'}
       </h2>
@@ -333,7 +335,7 @@ function YourPoolsSection({
         </p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3 xl:grid-cols-4">
             {visiblePools.map((pool) => (
               <ProfilePoolCard key={pool.id} pool={pool} />
             ))}
@@ -369,14 +371,16 @@ function SportsYouFollowSection({
   loading,
   hasPools,
   isPublic,
+  className,
 }: {
   sports: ProfileSportSummary[]
   loading: boolean
   hasPools: boolean
   isPublic: boolean
+  className?: string
 }) {
   return (
-    <section>
+    <section className={className}>
       <div className="mb-2.5">
         <h2 className="font-display text-xl tracking-wide text-foreground">
           {isPublic ? 'Sports played' : 'Sports You Play'}
@@ -700,17 +704,18 @@ export function ProfileShowcase({
   const showViewAllAchievements = !isPublic || isOwnPublicProfile
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-3 pb-8">
-      {/* ── Hero: avatar|name left, XP below ── */}
-      <section className="hue-card-surface relative overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
-        <div className="relative h-[104px] w-full sm:h-[120px]">
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-y-5 pb-8 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-6">
+      <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
+      {/* ── Hero: avatar|name left, XP below (lg: name + XP stack beside avatar) ── */}
+      <section className="hue-card-surface relative max-lg:order-1 overflow-hidden rounded-[22px] border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.06] shadow-[0_14px_36px_rgba(0,0,0,0.32)]">
+        <div className="relative h-[104px] w-full sm:h-[120px] lg:h-[148px]">
           <Image
             src="/background_01.png"
             alt=""
             fill
             priority
             className="object-cover object-[center_35%]"
-            sizes="(max-width: 512px) 100vw, 512px"
+            sizes="(max-width: 1023px) 100vw, 66vw"
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_55%)]" />
@@ -724,10 +729,10 @@ export function ProfileShowcase({
           ) : null}
         </div>
 
-        <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6">
-          {/* Identity row: larger circle + tightened text, top-aligned */}
-          <div className="relative z-10 -mt-11 flex items-start gap-3.5 sm:-mt-12 sm:gap-4">
-            <div className="relative h-28 w-28 shrink-0 sm:h-32 sm:w-32">
+        <div className="relative px-4 pb-5 pt-1 sm:px-5 sm:pb-6 lg:px-8 lg:pb-8">
+          {/* Identity: mobile avatar|name then XP; lg avatar left, name + XP right */}
+          <div className="relative z-10 -mt-11 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3.5 gap-y-5 sm:-mt-12 sm:gap-x-4 sm:gap-y-6 lg:-mt-14 lg:gap-x-6 lg:gap-y-4">
+            <div className="relative h-28 w-28 shrink-0 sm:h-32 sm:w-32 lg:row-span-2 lg:h-36 lg:w-36">
               <div className="h-full w-full overflow-hidden rounded-full border border-border bg-[#0b1711] shadow-[0_10px_22px_rgba(0,0,0,0.45)] ring-2 ring-background">
                 <UserAvatarImage
                   avatar={avatar}
@@ -752,14 +757,14 @@ export function ProfileShowcase({
               ) : null}
             </div>
 
-            <div className="min-w-0 flex-1 pt-0.5">
+            <div className="min-w-0 flex-1 pt-0.5 lg:pt-1">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px]">
+                  <h1 className="truncate font-display text-[22px] leading-none tracking-wide text-foreground sm:text-[26px] lg:text-[34px] lg:leading-[1.05]">
                     {displayName}
                   </h1>
                   {handle ? (
-                    <p className="mt-1 truncate text-sm leading-snug text-muted-foreground">
+                    <p className="mt-1 truncate text-sm leading-snug text-muted-foreground lg:text-base">
                       @{handle}
                     </p>
                   ) : null}
@@ -810,12 +815,10 @@ export function ProfileShowcase({
                 ) : null}
               </div>
             </div>
-          </div>
 
-          {/* Level + XP */}
-          <div className="mt-5 sm:mt-6">
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="font-display text-base tracking-wide text-foreground sm:text-lg">
+              <span className="font-display text-base tracking-wide text-foreground sm:text-lg lg:text-xl">
                 Level {level?.level ?? 1}
               </span>
               <span className="font-mono text-[10px] tabular-nums text-muted-foreground sm:text-[11px]">
@@ -840,6 +843,7 @@ export function ProfileShowcase({
                 style={{ width: `${level?.progressPct ?? 0}%` }}
               />
             </div>
+          </div>
           </div>
 
           {isPublic && !isOwnPublicProfile ? (
@@ -874,7 +878,7 @@ export function ProfileShowcase({
       </section>
 
       {sectionError ? (
-        <div className="rounded-2xl border border-border bg-card/70 px-4 py-6 text-center">
+        <div className="max-lg:order-2 rounded-2xl border border-border bg-card/70 px-4 py-6 text-center">
           <p className="text-sm text-destructive">{sectionError}</p>
           <Button
             type="button"
@@ -887,8 +891,19 @@ export function ProfileShowcase({
         </div>
       ) : null}
 
-      <div className="mt-1 space-y-5">
-        <section>
+        <section className="max-lg:order-9">
+          <div className="mb-2.5">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Career Highlights
+            </h2>
+            <p className="text-[10px] text-muted-foreground">
+              Your PoolCup career at a glance
+            </p>
+          </div>
+          <CareerHighlightsResume data={careerHighlights} />
+        </section>
+
+        <section className="max-lg:order-3">
           <div className="mb-2 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl tracking-wide text-foreground">
@@ -924,7 +939,7 @@ export function ProfileShowcase({
                 : 'Earn badges to feature them here.'}
             </p>
           ) : (
-            <div className="grid grid-cols-4 gap-x-1 gap-y-2">
+            <div className="grid grid-cols-4 gap-x-1 gap-y-2 lg:gap-x-3 lg:gap-y-3">
               {featuredBadges.map((badge) => {
                 const rarity = achievementRarityLabel(badge.rarity)
                 const rarityStyle = ACHIEVEMENT_RARITY_STYLES[rarity]
@@ -933,7 +948,7 @@ export function ProfileShowcase({
                     key={badge.id}
                     className="flex w-full min-w-0 flex-col items-center px-0.5 text-center"
                   >
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden sm:h-[4.5rem] sm:w-[4.5rem]">
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden sm:h-[4.5rem] sm:w-[4.5rem] lg:h-[5.5rem] lg:w-[5.5rem]">
                       <AchievementBadgeArt
                         achievementId={badge.id}
                         artFilename={badge.art_filename}
@@ -958,8 +973,81 @@ export function ProfileShowcase({
           )}
         </section>
 
+        <YourPoolsSection
+          className="max-lg:order-5"
+          pools={profilePools}
+          loading={poolsLoading}
+          isPublic={isPublic}
+        />
+
+        {liveFavorites.length > 0 ? (
+          <section className="max-lg:order-6">
+            <h2 className="font-display text-xl tracking-wide text-foreground">
+              Favorite sports
+            </h2>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {liveFavorites.map((sport) => (
+                <span
+                  key={sport.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-2.5 py-1 text-xs font-medium text-foreground"
+                >
+                  {sport.ballSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sport.ballSrc}
+                      alt=""
+                      className="h-4 w-4 object-contain"
+                    />
+                  ) : null}
+                  {sport.label}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <SportsYouFollowSection
+          className="max-lg:order-7"
+          sports={profileSports}
+          loading={poolsLoading}
+          hasPools={profilePools.length > 0}
+          isPublic={isPublic}
+        />
+      </div>
+
+      <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-6">
+        <section className="max-lg:order-8 rounded-2xl border border-border/90 bg-card/90 p-4">
+          <h2 className="font-display text-xl tracking-wide text-foreground">
+            Prediction Accuracy
+          </h2>
+          <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
+            {accuracy == null ? '—' : `${accuracy}%`}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Correct winner picks across classic match predictions
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Exact
+              </p>
+              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                {resolvedExactScores.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Points
+              </p>
+              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+                {(resolvedTotalPoints ?? 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </section>
+
         {!isPublic ? (
-          <section className="hue-card-surface overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+          <section className="hue-card-surface max-lg:order-4 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-[#0c1410] to-primary/[0.06] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Next Unlock
@@ -1013,90 +1101,11 @@ export function ProfileShowcase({
           </section>
         ) : null}
 
-        <YourPoolsSection
-          pools={profilePools}
-          loading={poolsLoading}
-          isPublic={isPublic}
-        />
-
-        {liveFavorites.length > 0 ? (
-          <section>
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              Favorite sports
-            </h2>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {liveFavorites.map((sport) => (
-                <span
-                  key={sport.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-2.5 py-1 text-xs font-medium text-foreground"
-                >
-                  {sport.ballSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={sport.ballSrc}
-                      alt=""
-                      className="h-4 w-4 object-contain"
-                    />
-                  ) : null}
-                  {sport.label}
-                </span>
-              ))}
-            </div>
-          </section>
+        {showViewAllAchievements ? (
+          <ProfileAnalyticsEntry className="max-lg:order-10" />
         ) : null}
 
-        <SportsYouFollowSection
-          sports={profileSports}
-          loading={poolsLoading}
-          hasPools={profilePools.length > 0}
-          isPublic={isPublic}
-        />
-
-        <section className="rounded-2xl border border-border/90 bg-card/90 p-4">
-          <h2 className="font-display text-xl tracking-wide text-foreground">
-            Prediction Accuracy
-          </h2>
-          <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
-            {accuracy == null ? '—' : `${accuracy}%`}
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Correct winner picks across classic match predictions
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Exact
-              </p>
-              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                {resolvedExactScores.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Points
-              </p>
-              <p className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
-                {(resolvedTotalPoints ?? 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-2.5">
-            <h2 className="font-display text-xl tracking-wide text-foreground">
-              Career Highlights
-            </h2>
-            <p className="text-[10px] text-muted-foreground">
-              Your PoolCup career at a glance
-            </p>
-          </div>
-          <CareerHighlightsResume data={careerHighlights} />
-        </section>
-
-        {showViewAllAchievements ? <ProfileAnalyticsEntry /> : null}
-
-        <section>
+        <section className="max-lg:order-11">
           <div className="mb-2.5 flex flex-wrap items-end justify-between gap-2">
             <h2 className="font-display text-xl tracking-wide text-foreground">
               Recent activity
