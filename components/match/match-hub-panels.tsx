@@ -20,6 +20,7 @@ import {
   type TeamFormEntry,
 } from '@/src/lib/match-hub-data'
 import { isMatchLocked } from '@/src/lib/match-lock'
+import { markMakeYourPicksMatchPicked } from '@/src/lib/make-your-picks-session'
 import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
 import {
   clampPredictionScoreValue,
@@ -243,6 +244,7 @@ function YourPredictionCard({
       match_id: matchId,
       pool_id: writablePools[0]?.poolId,
     })
+    markMakeYourPicksMatchPicked(matchId)
     void import('@/components/push/push-nudge-host').then(
       ({ markFirstPredictionForPushNudge }) => {
         markFirstPredictionForPushNudge()

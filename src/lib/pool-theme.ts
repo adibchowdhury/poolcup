@@ -139,3 +139,23 @@ export function poolThemeCssVariables(
     ['--match-live' as string]: color,
   }
 }
+
+/**
+ * @deprecated Import from `@/src/lib/dashboard-surfaces` — re-exported for callers on pool-theme.
+ */
+export {
+  DASHBOARD_CARD_BG as POOL_CARD_NEUTRAL_BACKGROUND,
+  DASHBOARD_CARD_BG_HOVER as POOL_CARD_NEUTRAL_BACKGROUND_HOVER,
+  DASHBOARD_CARD_INNER_SURFACE as POOL_CARD_INNER_SURFACE,
+  DASHBOARD_CARD_INNER_SUBTLE as POOL_CARD_INNER_SURFACE_SUBTLE,
+} from '@/src/lib/dashboard-surfaces'
+
+/**
+ * Accent for dashboard pool card strip / micro-details.
+ * Custom theme_color when set; otherwise brand green (official + invite pools).
+ */
+export function resolvePoolCardAccentColor(
+  themeColor: string | null | undefined,
+): string {
+  return normalizePoolThemeColor(themeColor) ?? DEFAULT_POOL_THEME_COLOR
+}

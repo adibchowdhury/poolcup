@@ -37,7 +37,7 @@ export function isDashboardBottomNavId(
 }
 
 export const MOBILE_BOTTOM_NAV_PAD_CLASS =
-  'max-sm:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
+  'max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
 
 /**
  * Full-width bottom nav footprint: bar (~4.25rem) + elevated home overhang +
@@ -51,14 +51,14 @@ export const SAVE_BAR_HEIGHT_CSS = '4.25rem'
 
 /** Combined scroll inset when a fixed save bar sits above the mobile bottom nav. */
 export const MOBILE_SAVE_BAR_WITH_NAV_SCROLL_PAD_CLASS =
-  'max-sm:pb-[calc(4.25rem+5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-20'
+  'max-lg:pb-[calc(4.25rem+5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-20'
 
 /**
  * Extra scroll inset for the save bar when an ancestor already applies
  * MOBILE_BOTTOM_NAV_PAD_CLASS (e.g. pool home).
  */
 export const MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS =
-  'max-sm:pb-[4.25rem] sm:pb-20'
+  'max-lg:pb-[4.25rem] lg:pb-20'
 
 /**
  * Scroll inset when the save bar is the only fixed bottom chrome (e.g. /predict;
@@ -68,7 +68,7 @@ export const SAVE_BAR_SOLO_SCROLL_PAD_CLASS = 'pb-20'
 
 /** Tailwind `bottom` offset for SaveBar when stacked above MobileBottomNav. */
 export const SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS =
-  'max-sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
+  'max-lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
 
 export const DASHBOARD_TAB_HREFS = {
   profile: '/dashboard?tab=profile',
@@ -78,6 +78,12 @@ export const DASHBOARD_TAB_HREFS = {
   upcoming: '/dashboard?tab=upcoming',
   'how-it-works': '/dashboard?tab=how-it-works',
 } as const
+
+/** Matches tab filter: only events from the user's classic pools. */
+export const MATCHES_MINE_FILTER = 'mine' as const
+
+export const DASHBOARD_MATCHES_MINE_HREF =
+  `/dashboard?tab=upcoming&filter=${MATCHES_MINE_FILTER}` as const
 
 export const CHAT_INBOX_HREF = '/chat'
 export const DISCOVER_HREF = '/discover'

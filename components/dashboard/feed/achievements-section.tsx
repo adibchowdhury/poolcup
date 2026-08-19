@@ -23,7 +23,9 @@ type AchievementsFeedContentProps = {
   onEmptyChange?: (empty: boolean) => void
 }
 
-const SURFACE = 'rounded-xl border border-border/90 bg-card/90'
+const SURFACE = cn(
+  'rounded-xl border border-border/90 bg-card/90 lg:bg-transparent',
+)
 
 /** Achievements body for the dashboard feed (no section chrome — embed under Your Progress). */
 export function AchievementsFeedContent({

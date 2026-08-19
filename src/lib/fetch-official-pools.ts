@@ -16,6 +16,14 @@ export type OfficialPoolListItem = {
   scoringStyle: string
   memberCount: number
   isMember: boolean
+  /** sporting_events.sport — official sport-ball logo. */
+  sport: string | null
+  /** Preset squad photo under /pool_avatars. */
+  avatar: string | null
+  /** Custom uploaded emblem URL. */
+  emblemUrl: string | null
+  /** pools.theme_color — banner tint on discover cards. */
+  themeColor: string | null
 }
 
 type PoolRow = {
@@ -25,6 +33,9 @@ type PoolRow = {
   event_id: string | null
   event_name: string | null
   scoring_style: string
+  avatar: string | null
+  emblem_url: string | null
+  theme_color: string | null
 }
 
 type EventRow = {
@@ -34,6 +45,7 @@ type EventRow = {
   start_date: string | null
   end_date: string | null
   provider_season: string | null
+  sport: string | null
 }
 
 /** Strip "Official"/Pool/year so the card can show the league name as text only. */
@@ -120,7 +132,9 @@ export async function fetchOfficialPublicPools(
 ): Promise<{ pools: OfficialPoolListItem[]; error: string | null }> {
   const { data: poolRows, error: poolsError } = await supabase
     .from('pools')
-    .select('id, name, invite_code, event_id, event_name, scoring_style')
+    .select(
+      'id, name, invite_code, event_id, event_name, scoring_style, avatar, emblem_url, theme_color',
+    )
     .eq('is_official', true)
     .eq('is_public', true)
     .order('name', { ascending: true })
@@ -148,7 +162,9 @@ export async function fetchOfficialPublicPools(
     eventIds.length > 0
       ? supabase
           .from('sporting_events')
-          .select('id, name, status, start_date, end_date, provider_season')
+          .select(
+            'id, name, status, start_date, end_date, provider_season, sport',
+          )
           .in('id', eventIds)
       : Promise.resolve({ data: [] as EventRow[], error: null }),
     supabase.from('pool_members').select('pool_id').in('pool_id', poolIds),
@@ -212,6 +228,10 @@ export async function fetchOfficialPublicPools(
       scoringStyle: pool.scoring_style || 'classic',
       memberCount: memberCounts.get(pool.id) ?? 0,
       isMember: myPoolIds.has(pool.id),
+      sport: event?.sport ?? null,
+      avatar: pool.avatar ?? null,
+      emblemUrl: pool.emblem_url ?? null,
+      themeColor: pool.theme_color ?? null,
     }
   })
 

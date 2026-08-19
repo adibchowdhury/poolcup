@@ -1,49 +1,77 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { EventPillsRow } from '@/components/dashboard/event-pills-row'
+import { MyMatchesFilterChip } from '@/components/dashboard/my-matches-filter-chip'
 import { SportBubblesRow } from '@/components/dashboard/sport-bubbles-row'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { cn } from '@/lib/utils'
 
 /**
  * Dashboard sport bubbles + event pills with shared filter state.
- * Default: favorite sport bubble when provided, else no sport (all sports) + event "All".
- * Deselecting a bubble clears to null = all sports.
+ * Default: no sport selected (all sports). Tap a bubble to filter; tap again to clear.
  */
 export function DashboardMatchFilters({
   className,
   sportRowClassName,
-  defaultSportId = null,
+  hideMatchSlider = false,
+  selectedSportId: controlledSportId,
+  onSelectedSportIdChange,
+  selectedEventId,
+  onSelectedEventIdChange,
+  myMatchesActive = false,
+  onMyMatchesToggle,
 }: {
   className?: string
   sportRowClassName?: string
-  /** Sport bubble id from users.favorite_sports mapping; null = all sports. */
-  defaultSportId?: string | null
+  hideMatchSlider?: boolean
+  selectedSportId?: string | null
+  onSelectedSportIdChange?: (sportId: string | null) => void
+  selectedEventId?: string
+  onSelectedEventIdChange?: (eventId: string) => void
+  /** When set, renders the My matches toggle chip above sport bubbles. */
+  myMatchesActive?: boolean
+  onMyMatchesToggle?: () => void
 }) {
-  const [selectedSportId, setSelectedSportId] = useState<string | null>(
-    defaultSportId,
-  )
-
-  useEffect(() => {
-    setSelectedSportId(defaultSportId)
-  }, [defaultSportId])
+  const [internalSportId, setInternalSportId] = useState<string | null>(null)
+  const selectedSportId = controlledSportId ?? internalSportId
 
   function handleSportChange(next: string | null) {
-    setSelectedSportId(next)
+    if (onSelectedSportIdChange) {
+      onSelectedSportIdChange(next)
+    } else {
+      setInternalSportId(next)
+    }
     capturePostHog('sport_filter_changed', {
       sport_id: next,
     })
   }
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={className}>
+      <h2 className="font-display text-xl leading-none tracking-wide text-foreground">
+        Upcoming Matches
+      </h2>
+      {onMyMatchesToggle ? (
+        <div className="mt-2.5 flex min-w-0 items-center">
+          <MyMatchesFilterChip
+            active={myMatchesActive}
+            onToggle={onMyMatchesToggle}
+          />
+        </div>
+      ) : null}
       <SportBubblesRow
-        className={sportRowClassName}
+        className={cn('mt-2', sportRowClassName)}
         selectedSportId={selectedSportId}
         onSelectedSportIdChange={handleSportChange}
       />
-      <EventPillsRow selectedSportId={selectedSportId} />
+      <EventPillsRow
+        selectedSportId={selectedSportId}
+        hideMatchSlider={hideMatchSlider}
+        selectedEventId={selectedEventId}
+        onSelectedEventIdChange={onSelectedEventIdChange}
+        className="mt-3"
+      />
     </div>
   )
 }

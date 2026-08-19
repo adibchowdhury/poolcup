@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Calendar } from 'lucide-react'
-import {
-  EventSelector,
-  type EventSelectorItem,
-} from '@/components/dashboard/event-selector'
+import { DashboardMatchFilters } from '@/components/dashboard/dashboard-match-filters'
+import { DASHBOARD_ALL_EVENT_ID } from '@/components/dashboard/event-pills-row'
 import { PremiumMatchCard } from '@/components/dashboard/premium-match-card'
 import { MatchLifecycleSections } from '@/components/predict/match-lifecycle-sections'
+import { eventMatchesSportBubble } from '@/components/dashboard/sport-bubbles-row'
 import {
   listSportingEvents,
   type SportingEvent,
@@ -22,25 +23,22 @@ import {
   getMatchLifecycleSection,
   partitionByLifecycleSection,
 } from '@/src/lib/match-lifecycle-section'
+import {
+  DISCOVER_HREF,
+  MATCHES_MINE_FILTER,
+} from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
+import {
+  fetchUserClassicPoolEvents,
+  matchEventIsInUserPools,
+} from '@/src/lib/user-pool-events'
 import { UPCOMING_HORIZON_DAYS } from '@/src/lib/upcoming-match-horizon'
-import { sportIconPng } from '@/src/lib/sport-display'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
 const MATCH_CARD_GRID =
   'grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3'
 
-const ALL_EVENT_ID = 'all'
-
-function toSelectorItems(events: SportingEvent[]): EventSelectorItem[] {
-  return [
-    { id: ALL_EVENT_ID, label: 'All', iconPng: null },
-    ...events.map((event) => ({
-      id: event.id,
-      label: event.name,
-      iconPng: sportIconPng(event.sport),
-    })),
-  ]
-}
+const ALL_EVENT_ID = DASHBOARD_ALL_EVENT_ID
 
 type PrefetchCache = {
   events: SportingEvent[]
@@ -122,26 +120,54 @@ function MatchesContentSkeleton() {
   )
 }
 
+type UpcomingGamesTabProps = {
+  userId: string
+}
+
 /**
  * Matches tab — real sporting_events + in-horizon matches only.
  * Selector mirrors dashboard event pills (events with live / upcoming ≤30d).
  */
-export function UpcomingGamesTab() {
+export function UpcomingGamesTab({ userId }: UpcomingGamesTabProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const myMatchesActive = searchParams.get('filter') === MATCHES_MINE_FILTER
+
+  const [selectedSportId, setSelectedSportId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState(ALL_EVENT_ID)
   const [events, setEvents] = useState<SportingEvent[]>([])
   const [matches, setMatches] = useState<MatchesTabMatch[]>([])
+  const [memberEventIdSet, setMemberEventIdSet] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [hasClassicPools, setHasClassicPools] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const toggleMyMatches = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (myMatchesActive) {
+      params.delete('filter')
+    } else {
+      params.set('filter', MATCHES_MINE_FILTER)
+    }
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false })
+  }, [myMatchesActive, router, searchParams])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      // Bust stale prefetch after errors; reuse warm cache on happy path.
-      const data = await loadMatchesTabData()
+      const [data, poolEvents] = await Promise.all([
+        loadMatchesTabData(),
+        fetchUserClassicPoolEvents(supabase, userId),
+      ])
+
       setEvents(data.events)
       setMatches(data.matches)
+      setMemberEventIdSet(poolEvents.memberEventIdSet)
+      setHasClassicPools(poolEvents.hasClassicPools)
       setSelectedEventId((prev) => {
         if (prev === ALL_EVENT_ID) return prev
         if (data.events.some((event) => event.id === prev)) return prev
@@ -152,17 +178,24 @@ export function UpcomingGamesTab() {
       prefetchPromise = null
       setEvents([])
       setMatches([])
+      setMemberEventIdSet(new Set())
+      setHasClassicPools(false)
       setError(err instanceof Error ? err.message : 'Failed to load matches')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const selectorEvents = useMemo(() => toSelectorItems(events), [events])
+  const sportFilteredEvents = useMemo(() => {
+    if (!selectedSportId) return events
+    return events.filter((event) =>
+      eventMatchesSportBubble(event.sport, selectedSportId),
+    )
+  }, [events, selectedSportId])
 
   const eventNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -171,9 +204,33 @@ export function UpcomingGamesTab() {
   }, [events])
 
   const visibleMatches = useMemo(() => {
-    if (selectedEventId === ALL_EVENT_ID) return matches
-    return matches.filter((match) => match.event_id === selectedEventId)
-  }, [matches, selectedEventId])
+    const sportEventIds = selectedSportId
+      ? new Set(sportFilteredEvents.map((event) => event.id))
+      : null
+
+    return matches.filter((match) => {
+      if (myMatchesActive && !matchEventIsInUserPools(match.event_id, memberEventIdSet)) {
+        return false
+      }
+      if (selectedEventId !== ALL_EVENT_ID && match.event_id !== selectedEventId) {
+        return false
+      }
+      if (sportEventIds && match.event_id && !sportEventIds.has(match.event_id)) {
+        return false
+      }
+      if (sportEventIds && !match.event_id) {
+        return false
+      }
+      return true
+    })
+  }, [
+    matches,
+    selectedEventId,
+    selectedSportId,
+    sportFilteredEvents,
+    myMatchesActive,
+    memberEventIdSet,
+  ])
 
   const lifecycleBuckets = useMemo(
     () =>
@@ -183,23 +240,24 @@ export function UpcomingGamesTab() {
     [visibleMatches],
   )
 
+  const hasExtraFilters =
+    selectedSportId != null || selectedEventId !== ALL_EVENT_ID
+
+  const showMyMatchesEmpty =
+    myMatchesActive && !loading && !error && visibleMatches.length === 0
+
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="mb-5">
-        {loading && events.length === 0 ? (
-          <div className="flex gap-3 overflow-hidden py-1.5" aria-hidden>
-            <div className="h-10 w-16 animate-pulse rounded bg-muted/40" />
-            <div className="h-10 w-28 animate-pulse rounded bg-muted/40" />
-            <div className="h-10 w-24 animate-pulse rounded bg-muted/40" />
-          </div>
-        ) : events.length > 0 ? (
-          <EventSelector
-            events={selectorEvents}
-            selectedId={selectedEventId}
-            onSelect={setSelectedEventId}
-          />
-        ) : null}
-      </div>
+      <DashboardMatchFilters
+        className="mb-5 pt-3 sm:pt-4"
+        hideMatchSlider
+        selectedSportId={selectedSportId}
+        onSelectedSportIdChange={setSelectedSportId}
+        selectedEventId={selectedEventId}
+        onSelectedEventIdChange={setSelectedEventId}
+        myMatchesActive={myMatchesActive}
+        onMyMatchesToggle={toggleMyMatches}
+      />
 
       {loading && matches.length === 0 ? (
         <MatchesContentSkeleton />
@@ -216,6 +274,47 @@ export function UpcomingGamesTab() {
           >
             Try again
           </button>
+        </div>
+      ) : showMyMatchesEmpty ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">
+          <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          {!hasClassicPools ? (
+            <>
+              <p className="font-display text-xl tracking-wide text-foreground">
+                Join a pool to see your matches
+              </p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                My matches shows fixtures from competitions your pools follow.
+              </p>
+            </>
+          ) : hasExtraFilters ? (
+            <>
+              <p className="font-display text-xl tracking-wide text-foreground">
+                No matches match your filters
+              </p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                Try clearing the sport or event filter, or turn off My matches.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-xl tracking-wide text-foreground">
+                No upcoming matches in your pools
+              </p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                Nothing in the next {UPCOMING_HORIZON_DAYS} days for your pool
+                competitions.
+              </p>
+            </>
+          )}
+          {!hasClassicPools || !hasExtraFilters ? (
+            <Link
+              href={DISCOVER_HREF}
+              className={`mt-4 inline-flex text-sm font-semibold text-primary hover:underline ${FOCUS_VISIBLE_RING} rounded-sm`}
+            >
+              Discover pools →
+            </Link>
+          ) : null}
         </div>
       ) : visibleMatches.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 px-5 py-12 text-center">

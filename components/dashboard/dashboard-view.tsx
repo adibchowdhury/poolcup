@@ -8,16 +8,24 @@ import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { useHubChromeProfileOptional } from '@/components/dashboard/hub-chrome-profile'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
-import { ContinuePredictingSection } from '@/components/dashboard/feed/continue-predicting-section'
 import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
 import { GlobalActivitySection } from '@/components/dashboard/feed/global-activity-section'
 import { LiveNowSection } from '@/components/dashboard/feed/live-now-section'
 import { NewsSection } from '@/components/dashboard/feed/news-section'
 import { OfficialPoolsSection } from '@/components/dashboard/feed/official-pools-section'
-import { RecentResultsSection } from '@/components/dashboard/feed/recent-results-section'
 import { YourPoolsSection } from '@/components/dashboard/feed/your-pools-section'
 import { ProfileShowcase } from '@/components/dashboard/profile-showcase'
-import { DashboardMatchFilters } from '@/components/dashboard/dashboard-match-filters'
+import { MakeYourPicksSection } from '@/components/dashboard/feed/make-your-picks-section'
+import { DashboardHomeWelcome } from '@/components/dashboard/feed/dashboard-home-welcome'
+import {
+  DashboardHomePanel,
+  DASHBOARD_HOME_DESKTOP_GRID_CLASS,
+  DASHBOARD_HOME_DESKTOP_STACK_CLASS,
+  DASHBOARD_HOME_MAIN_SECTIONS_CLASS,
+  DASHBOARD_HOME_RAIL_STACK_CLASS,
+} from '@/components/dashboard/feed/dashboard-home-layout'
+import { DASHBOARD_HOME_MUTED_SCOPE_CLASS } from '@/src/lib/dashboard-surfaces'
+import { MakeYourPicksQueueProvider } from '@/hooks/use-make-your-picks-queue'
 import { KnockoutBracketSetBanner } from '@/components/dashboard/knockout-bracket-set-banner'
 import { ScoringUpdateNoticeBanner } from '@/components/dashboard/scoring-update-notice-banner'
 import { SupportPromptDialog } from '@/components/dashboard/support-prompt-dialog'
@@ -84,7 +92,7 @@ interface DashboardViewProps {
   customAvatarUrl?: string | null
   createdAt?: string | null
   supportPromptLastShownAt?: string | null
-  /** From users.favorite_sports — seeds the home sport filter. */
+  /** From users.favorite_sports — profile chips + analytics. */
   favoriteSports?: string[]
   quickStats: DashboardQuickStats
   passwordResetSuccess?: boolean
@@ -128,7 +136,7 @@ function DashboardViewContent({
   passwordResetSuccess,
   errorMessage,
 }: DashboardViewProps) {
-  const defaultSportId = useMemo(
+  const favoriteSportBubbleId = useMemo(
     () => defaultSportBubbleFromFavorites(favoriteSports),
     [favoriteSports],
   )
@@ -294,10 +302,10 @@ function DashboardViewContent({
     if (dashboardViewedRef.current) return
     dashboardViewedRef.current = true
     capturePostHog('dashboard_viewed', {
-      default_sport_id: defaultSportId,
+      favorite_sport_bubble_id: favoriteSportBubbleId,
       favorite_sports_count: favoriteSports.length,
     })
-  }, [activeTab, defaultSportId, favoriteSports.length])
+  }, [activeTab, favoriteSportBubbleId, favoriteSports.length])
 
   useEffect(() => {
     const channel = supabase
@@ -475,6 +483,7 @@ function DashboardViewContent({
       avatar={selectedAvatar}
       customAvatarUrl={customAvatarUrl}
       hubActiveNav={activeTab}
+      mainClassName="lg:max-w-none"
     >
       <div className="mb-4 flex flex-col gap-3 empty:mb-0 empty:hidden sm:mb-6 sm:gap-4 sm:empty:mb-0">
         <KnockoutBracketSetBanner userId={userId} />
@@ -665,40 +674,75 @@ function DashboardViewContent({
 
             <TabsContent
               value="dashboard"
-              className="min-w-0 space-y-6 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+              className={cn(
+                'min-w-0 pb-8 max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]',
+                DASHBOARD_HOME_MUTED_SCOPE_CLASS,
+              )}
             >
-              <DashboardMatchFilters
-                sportRowClassName="-mt-6 mb-6 sm:-mt-8"
-                defaultSportId={defaultSportId}
-              />
+              <MakeYourPicksQueueProvider userId={userId}>
+                <div className="space-y-6 lg:hidden">
+                  <MakeYourPicksSection surface="carousel" />
 
-              <DashboardFeed>
-                <LiveNowSection userId={userId} />
-                <ContinuePredictingSection
-                  pools={dashboardPools}
-                  loading={dashboardPoolsLoading}
-                />
-                <YourPoolsSection
-                  userId={userId}
-                  pools={dashboardPools}
-                  loading={dashboardPoolsLoading}
-                  error={dashboardPoolsError}
-                  onPoolDeleted={handleDashboardPoolDeleted}
-                />
-                <OfficialPoolsSection
-                  userId={userId}
-                  email={email}
-                  onJoined={() => void loadDashboardPools()}
-                />
-                <RecentResultsSection userId={userId} />
-                <GlobalActivitySection userId={userId} />
-                <FriendsActivitySection />
-                <NewsSection />
-              </DashboardFeed>
+                  <DashboardFeed>
+                    <LiveNowSection userId={userId} />
+                    <YourPoolsSection
+                      userId={userId}
+                      pools={dashboardPools}
+                      loading={dashboardPoolsLoading}
+                      error={dashboardPoolsError}
+                      onPoolDeleted={handleDashboardPoolDeleted}
+                    />
+                    <OfficialPoolsSection
+                      userId={userId}
+                      email={email}
+                      onJoined={() => void loadDashboardPools()}
+                    />
+                    <GlobalActivitySection userId={userId} />
+                    <FriendsActivitySection />
+                    <NewsSection />
+                  </DashboardFeed>
+                </div>
+
+                <div className={DASHBOARD_HOME_DESKTOP_STACK_CLASS}>
+                  <DashboardHomeWelcome
+                    displayName={headerName}
+                    username={username}
+                  />
+                  <LiveNowSection userId={userId} />
+
+                  <div className={DASHBOARD_HOME_DESKTOP_GRID_CLASS}>
+                    <div className={DASHBOARD_HOME_MAIN_SECTIONS_CLASS}>
+                      <YourPoolsSection
+                        userId={userId}
+                        pools={dashboardPools}
+                        loading={dashboardPoolsLoading}
+                        error={dashboardPoolsError}
+                        onPoolDeleted={handleDashboardPoolDeleted}
+                        desktopPanel
+                      />
+                      <OfficialPoolsSection
+                        userId={userId}
+                        email={email}
+                        onJoined={() => void loadDashboardPools()}
+                        desktopPanel
+                      />
+                      <FriendsActivitySection desktopPanel />
+                      <NewsSection desktopPanel />
+                    </div>
+
+                    <DashboardHomePanel id="dashboard-home-rail">
+                      <div className={DASHBOARD_HOME_RAIL_STACK_CLASS}>
+                        <MakeYourPicksSection surface="rail" />
+                        <GlobalActivitySection userId={userId} layout="rail" />
+                      </div>
+                    </DashboardHomePanel>
+                  </div>
+                </div>
+              </MakeYourPicksQueueProvider>
             </TabsContent>
 
             <TabsContent value="games" className="min-w-0 mt-2">
-              <UpcomingGamesTab />
+              <UpcomingGamesTab userId={userId} />
             </TabsContent>
 
             <TabsContent value="how-it-works" className="min-w-0 mt-4">

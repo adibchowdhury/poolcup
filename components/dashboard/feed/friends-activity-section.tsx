@@ -184,7 +184,11 @@ function FriendsActivityRow({ item }: { item: FriendActivityRow }) {
 }
 
 /** Dashboard feed: friends' badges, pool joins, and post-lock prediction results. */
-export function FriendsActivitySection() {
+export function FriendsActivitySection({
+  desktopPanel = false,
+}: {
+  desktopPanel?: boolean
+} = {}) {
   const [rows, setRows] = useState<FriendActivityRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -213,6 +217,7 @@ export function FriendsActivitySection() {
     <DashboardFeedSection
       id="friends-activity"
       title="Friends Activity"
+      desktopPanel={desktopPanel}
       action={
         <Link
           href="/friends"

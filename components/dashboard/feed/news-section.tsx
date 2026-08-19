@@ -8,6 +8,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { cn } from '@/lib/utils'
+import {
+  DASHBOARD_CARD_HOVER_CLASS,
+  DASHBOARD_FEED_SURFACE_CLASS_LG,
+} from '@/src/lib/dashboard-surfaces'
 import type { FootballNewsItem } from '@/src/lib/fetch-football-news'
 import { formatRelativeTimestamp } from '@/src/lib/points-transaction-feed'
 
@@ -34,12 +38,13 @@ function NewsCard({ item }: { item: FootballNewsItem }) {
       rel="noopener noreferrer"
       className={cn(
         'group flex min-w-0 flex-col overflow-hidden',
-        'rounded-2xl border border-white/10 bg-card/90',
-        'shadow-[0_12px_32px_rgba(0,0,0,0.28),0_1px_0_rgba(255,255,255,0.05)_inset]',
-        'transition-[border-color,transform] hover:-translate-y-0.5 hover:border-primary/35',
+        DASHBOARD_FEED_SURFACE_CLASS_LG,
+        DASHBOARD_CARD_HOVER_CLASS,
+        'shadow-[0_12px_32px_rgba(0,0,0,0.28)]',
+        'hover:-translate-y-0.5 hover:border-primary/35',
       )}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/40">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#222222]">
         {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- RSS hostnames vary; next/image remote allowlist not practical here
           <img
@@ -51,7 +56,7 @@ function NewsCard({ item }: { item: FootballNewsItem }) {
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="hue-card-surface flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--primary)_16%,transparent),transparent_55%),linear-gradient(160deg,#111a27,#080b0f)]">
+          <div className="flex h-full w-full items-center justify-center bg-[#222222]">
             <Newspaper className="h-8 w-8 text-primary/70" aria-hidden />
           </div>
         )}
@@ -91,7 +96,7 @@ function NewsSkeleton() {
       {Array.from({ length: DASHBOARD_NEWS_ITEM_LIMIT }, (_, index) => (
         <div
           key={index}
-          className="min-w-0 overflow-hidden rounded-2xl border border-border/60"
+          className="min-w-0 overflow-hidden rounded-2xl border border-[#292929]"
         >
           <ShimmerBlock className="aspect-[16/10] w-full rounded-none" />
           <div className="space-y-2 p-3.5">
@@ -109,7 +114,7 @@ function NewsSkeleton() {
  * Dashboard football news grid — RSS headline teasers with link-out only.
  * No full article text is fetched or displayed.
  */
-export function NewsSection() {
+export function NewsSection({ desktopPanel = false }: { desktopPanel?: boolean } = {}) {
   const [items, setItems] = useState<FootballNewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -150,11 +155,11 @@ export function NewsSection() {
   }
 
   return (
-    <DashboardFeedSection id="news-highlights" title="News & Highlights">
+    <DashboardFeedSection id="news-highlights" title="News & Highlights" desktopPanel={desktopPanel}>
       {loading ? (
         <NewsSkeleton />
       ) : error && items.length === 0 ? (
-        <div className="rounded-2xl border border-border/80 bg-card/80 px-4 py-6 text-center">
+        <div className="rounded-2xl border border-[#292929] bg-[#171717] px-4 py-6 text-center">
           <p className="text-sm text-muted-foreground">{error}</p>
           <Button
             type="button"

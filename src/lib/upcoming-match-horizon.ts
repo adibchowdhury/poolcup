@@ -6,14 +6,25 @@
  */
 export const UPCOMING_HORIZON_DAYS = 30
 
+/** Dashboard Make Your Picks queue — shorter urgency window than browse lists. */
+export const MAKE_YOUR_PICKS_HORIZON_DAYS = 7
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 export function getUpcomingHorizonEndMs(nowMs: number = Date.now()): number {
   return nowMs + UPCOMING_HORIZON_DAYS * MS_PER_DAY
 }
 
+export function getMakeYourPicksHorizonEndMs(nowMs: number = Date.now()): number {
+  return nowMs + MAKE_YOUR_PICKS_HORIZON_DAYS * MS_PER_DAY
+}
+
 export function getUpcomingHorizonEndIso(nowMs: number = Date.now()): string {
   return new Date(getUpcomingHorizonEndMs(nowMs)).toISOString()
+}
+
+export function getMakeYourPicksHorizonEndIso(nowMs: number = Date.now()): string {
+  return new Date(getMakeYourPicksHorizonEndMs(nowMs)).toISOString()
 }
 
 /**

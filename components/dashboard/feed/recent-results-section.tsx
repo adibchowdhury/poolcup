@@ -10,6 +10,7 @@ import { AchievementsFeedContent } from '@/components/dashboard/feed/achievement
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { cn } from '@/lib/utils'
+import { DASHBOARD_FEED_SURFACE_CLASS } from '@/components/dashboard/feed/dashboard-home-layout'
 import {
   fetchRecentResultsFeed,
   type BestPrediction,
@@ -26,8 +27,7 @@ type RecentResultsSectionProps = {
   userId: string
 }
 
-const SURFACE =
-  'rounded-xl border border-border/90 bg-card/90'
+const SURFACE = cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3.5 py-3 sm:px-4')
 
 /** Deduplicate prediction_scored when users re-open the dashboard. */
 const scoredSeenKeys = new Set<string>()
@@ -42,7 +42,7 @@ function InlineStat({
   value: string
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-background/40 px-2 py-1 text-[11px] text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-background/40 px-2 py-1 text-[11px] text-muted-foreground lg:bg-transparent">
       <Icon className="h-3 w-3 shrink-0 text-primary" aria-hidden />
       <span className="font-medium uppercase tracking-[0.08em]">{label}</span>
       <span className="font-mono tabular-nums text-foreground">{value}</span>

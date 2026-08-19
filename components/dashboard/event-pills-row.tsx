@@ -33,6 +33,11 @@ type EventPillsRowProps = {
   className?: string
   /** null = all sports. Bubble id from SportBubblesRow. */
   selectedSportId?: string | null
+  /** Hide the inline match slider (filters-only mode for Matches tab). */
+  hideMatchSlider?: boolean
+  /** Controlled event pill selection (optional). */
+  selectedEventId?: string
+  onSelectedEventIdChange?: (eventId: string) => void
 }
 
 /**
@@ -44,11 +49,23 @@ type EventPillsRowProps = {
 export function EventPillsRow({
   className,
   selectedSportId = null,
+  hideMatchSlider = false,
+  selectedEventId: controlledEventId,
+  onSelectedEventIdChange,
 }: EventPillsRowProps) {
   const [events, setEvents] = useState<SportingEvent[]>([])
-  const [selectedEventId, setSelectedEventId] = useState<string>(
+  const [internalEventId, setInternalEventId] = useState<string>(
     DASHBOARD_ALL_EVENT_ID,
   )
+  const selectedEventId = controlledEventId ?? internalEventId
+
+  function setSelectedEventId(next: string) {
+    if (onSelectedEventIdChange) {
+      onSelectedEventIdChange(next)
+    } else {
+      setInternalEventId(next)
+    }
+  }
   const [matchesByEventId, setMatchesByEventId] = useState<
     Record<string, PrefetchEntry>
   >({})
@@ -74,13 +91,15 @@ export function EventPillsRow({
         )
 
         setEvents(qualifying)
-        setSelectedEventId((prev) => {
-          if (prev === DASHBOARD_ALL_EVENT_ID) return DASHBOARD_ALL_EVENT_ID
-          if (prev && qualifying.some((e) => e.id === prev)) return prev
-          return DASHBOARD_ALL_EVENT_ID
-        })
+        if (controlledEventId == null) {
+          setInternalEventId((prev) => {
+            if (prev === DASHBOARD_ALL_EVENT_ID) return DASHBOARD_ALL_EVENT_ID
+            if (prev && qualifying.some((e) => e.id === prev)) return prev
+            return DASHBOARD_ALL_EVENT_ID
+          })
+        }
 
-        if (qualifying.length === 0) {
+        if (qualifying.length === 0 || hideMatchSlider) {
           setMatchesByEventId({})
           return
         }
@@ -130,7 +149,7 @@ export function EventPillsRow({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [hideMatchSlider])
 
   const visibleEvents = useMemo(() => {
     if (!selectedSportId) return events
@@ -269,7 +288,7 @@ export function EventPillsRow({
         </div>
       </div>
 
-      {prefetchLoading ? (
+      {hideMatchSlider ? null : prefetchLoading ? (
         <div
           className="@container flex min-w-0 gap-3 px-1"
           aria-busy="true"

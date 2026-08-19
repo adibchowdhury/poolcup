@@ -146,7 +146,7 @@ function MobileBottomNavContent() {
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 overflow-visible sm:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 overflow-visible lg:hidden"
       aria-label="Main navigation"
     >
       <div

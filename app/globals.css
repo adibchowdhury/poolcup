@@ -327,12 +327,14 @@ html.light {
   background-color: color-mix(in srgb, var(--match-data) 70%, transparent);
 }
 
-.scrollbar-none {
+.scrollbar-none,
+.scrollbar-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
 
@@ -793,6 +795,263 @@ button.onboarding-3d-btn:disabled {
       var(--onboarding-btn-hover-sink)
     );
     box-shadow: var(--onboarding-btn-shadow-hover);
+  }
+}
+
+/*
+  Site-wide tactile buttons — plain CSS (Tailwind v4 scale ≠ transform).
+  Applied via `ui-tactile-btn` on shared Button variants + opt-in anchors.
+  Onboarding keeps `button.onboarding-3d-btn`. Link variant excluded.
+*/
+button.ui-tactile-btn,
+a.ui-tactile-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  cursor: pointer;
+  transform: scale(1);
+  box-shadow: var(--tactile-shadow-rest, none);
+  transition-property: transform, box-shadow, background, background-color, border-color,
+    color;
+  transition-duration: 270ms, 270ms, 180ms, 180ms, 180ms, 180ms;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-out, ease-out, ease-out,
+    ease-out, ease-out;
+}
+
+button.ui-tactile-btn:active:not(:disabled),
+button.ui-tactile-btn[data-pressed]:not(:disabled),
+a.ui-tactile-btn:active,
+a.ui-tactile-btn[data-pressed] {
+  transform: scale(0.97);
+  box-shadow: var(--tactile-shadow-active, var(--tactile-shadow-rest, none));
+  transition-duration: 150ms, 150ms, 150ms, 150ms, 150ms, 150ms;
+  transition-timing-function: ease-out, ease-out, ease-out, ease-out, ease-out, ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.ui-tactile-btn:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn:hover:not(:active):not([data-pressed]) {
+    transform: scale(1.02);
+    box-shadow: var(--tactile-shadow-hover, var(--tactile-shadow-rest, none));
+    transition-duration: 180ms, 180ms, 180ms, 180ms, 180ms, 180ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease-out, ease-out, ease-out,
+      ease-out, ease-out;
+  }
+}
+
+button.ui-tactile-btn:disabled {
+  transform: scale(1);
+  box-shadow: var(--tactile-shadow-rest, none);
+}
+
+/* Primary (default / green) */
+.ui-tactile-btn--primary {
+  --tactile-edge: color-mix(in srgb, var(--primary) 40%, #000000);
+  --tactile-glow: color-mix(in srgb, var(--primary) 38%, transparent);
+  --tactile-highlight: color-mix(in srgb, #ffffff 30%, transparent);
+  --tactile-shadow-rest:
+    inset 0 1px 0 0 var(--tactile-highlight),
+    0 3px 0 0 var(--tactile-edge);
+  --tactile-shadow-hover:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 36%, transparent),
+    0 4px 0 0 var(--tactile-edge),
+    0 0 20px 0 var(--tactile-glow);
+  --tactile-shadow-active:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 16%, transparent),
+    0 1px 0 0 var(--tactile-edge);
+  border: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 72%, #ffffff),
+    var(--primary)
+  );
+  color: var(--primary-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-tactile-btn--primary:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn--primary:hover:not(:active):not([data-pressed]) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 68%, #ffffff),
+      color-mix(in srgb, var(--primary) 96%, #ffffff)
+    );
+  }
+}
+
+/* Destructive — same motion, red glow */
+.ui-tactile-btn--destructive {
+  --tactile-edge: color-mix(in srgb, var(--destructive) 45%, #000000);
+  --tactile-glow: color-mix(in srgb, var(--destructive) 36%, transparent);
+  --tactile-highlight: color-mix(in srgb, #ffffff 22%, transparent);
+  --tactile-shadow-rest:
+    inset 0 1px 0 0 var(--tactile-highlight),
+    0 3px 0 0 var(--tactile-edge);
+  --tactile-shadow-hover:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 28%, transparent),
+    0 4px 0 0 var(--tactile-edge),
+    0 0 20px 0 var(--tactile-glow);
+  --tactile-shadow-active:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 12%, transparent),
+    0 1px 0 0 var(--tactile-edge);
+  border: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--destructive) 78%, #ffffff),
+    var(--destructive)
+  );
+  color: var(--destructive-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-tactile-btn--destructive:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn--destructive:hover:not(:active):not([data-pressed]) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--destructive) 74%, #ffffff),
+      color-mix(in srgb, var(--destructive) 96%, #ffffff)
+    );
+  }
+}
+
+.dark .ui-tactile-btn--destructive {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--destructive) 85%, #1a0505),
+    color-mix(in srgb, var(--destructive) 72%, #000000)
+  );
+}
+
+/* Secondary — amber fill, subtler depth, no colored glow */
+.ui-tactile-btn--secondary {
+  --tactile-edge: color-mix(in srgb, var(--secondary) 38%, #000000);
+  --tactile-highlight: color-mix(in srgb, #ffffff 24%, transparent);
+  --tactile-shadow-rest:
+    inset 0 1px 0 0 var(--tactile-highlight),
+    0 2px 0 0 var(--tactile-edge);
+  --tactile-shadow-hover:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 30%, transparent),
+    0 3px 0 0 var(--tactile-edge),
+    0 0 12px 0 color-mix(in srgb, #000000 35%, transparent);
+  --tactile-shadow-active:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 14%, transparent),
+    0 1px 0 0 var(--tactile-edge);
+  border: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--secondary) 70%, #ffffff),
+    var(--secondary)
+  );
+  color: var(--secondary-foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-tactile-btn--secondary:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn--secondary:hover:not(:active):not([data-pressed]) {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--secondary) 66%, #ffffff),
+      color-mix(in srgb, var(--secondary) 94%, #ffffff)
+    );
+  }
+}
+
+/* Outline — neutral depth, brightness on hover */
+.ui-tactile-btn--outline {
+  --tactile-edge: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --tactile-shadow-rest:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 2px 0 0 var(--tactile-edge);
+  --tactile-shadow-hover:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 12%, transparent),
+    0 3px 0 0 var(--tactile-edge),
+    0 0 14px 0 color-mix(in srgb, #000000 28%, transparent);
+  --tactile-shadow-active:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 6%, transparent),
+    0 1px 0 0 var(--tactile-edge);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-tactile-btn--outline:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn--outline:hover:not(:active):not([data-pressed]) {
+    background-color: color-mix(in srgb, var(--accent) 8%, var(--background));
+  }
+}
+
+.dark .ui-tactile-btn--outline:hover:not(:active):not([data-pressed]):not(:disabled) {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--background));
+}
+
+/* Ghost — motion + minimal hover fill */
+.ui-tactile-btn--ghost {
+  --tactile-shadow-rest: inset 0 1px 0 0 transparent;
+  --tactile-shadow-hover:
+    inset 0 1px 0 0 color-mix(in srgb, #ffffff 8%, transparent),
+    0 0 10px 0 color-mix(in srgb, #000000 22%, transparent);
+  --tactile-shadow-active: inset 0 1px 0 0 color-mix(in srgb, #ffffff 4%, transparent);
+  border: none;
+  background: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled),
+  a.ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]) {
+    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent-foreground);
+  }
+}
+
+.dark .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.ui-tactile-btn,
+  a.ui-tactile-btn {
+    transform: none !important;
+    transition: background-color 150ms ease, background 150ms ease, box-shadow 150ms ease,
+      border-color 150ms ease, color 150ms ease;
+  }
+
+  button.ui-tactile-btn:active:not(:disabled),
+  button.ui-tactile-btn[data-pressed]:not(:disabled),
+  button.ui-tactile-btn:hover:not(:disabled),
+  a.ui-tactile-btn:active,
+  a.ui-tactile-btn[data-pressed],
+  a.ui-tactile-btn:hover {
+    transform: none !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ui-tactile-btn--primary:hover:not(:active):not([data-pressed]):not(:disabled),
+    a.ui-tactile-btn--primary:hover:not(:active):not([data-pressed]) {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--primary) 65%, #ffffff),
+        var(--primary)
+      );
+      box-shadow: var(--tactile-shadow-rest);
+    }
+
+    .ui-tactile-btn--destructive:hover:not(:active):not([data-pressed]):not(:disabled),
+    a.ui-tactile-btn--destructive:hover:not(:active):not([data-pressed]) {
+      box-shadow: var(--tactile-shadow-rest);
+    }
+
+    .ui-tactile-btn--secondary:hover:not(:active):not([data-pressed]):not(:disabled),
+    a.ui-tactile-btn--secondary:hover:not(:active):not([data-pressed]) {
+      box-shadow: var(--tactile-shadow-rest);
+    }
+
+    .ui-tactile-btn--outline:hover:not(:active):not([data-pressed]):not(:disabled),
+    a.ui-tactile-btn--outline:hover:not(:active):not([data-pressed]) {
+      box-shadow: var(--tactile-shadow-rest);
+    }
+
+    .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled),
+    a.ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]) {
+      box-shadow: none;
+    }
   }
 }
 

@@ -1,39 +1,66 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Users } from 'lucide-react'
+import { BadgeCheck, Shield, Users } from 'lucide-react'
 import {
   DashboardFeedSection,
 } from '@/components/dashboard/feed/dashboard-feed'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
   fetchOfficialPublicPools,
   formatOfficialStatusLabel,
-  formatPlayerCountLabel,
   joinPublicPool,
   type OfficialPoolListItem,
 } from '@/src/lib/fetch-official-pools'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
+import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
+import { resolvePoolCardAccentColor } from '@/src/lib/pool-theme'
+import { sportIconPng } from '@/src/lib/sport-display'
+import { DASHBOARD_POOL_CARD_CLASS } from '@/src/lib/dashboard-surfaces'
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
+import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 
-/** Default card art — swap per league later via `backgroundImage` on each card. */
+/** Default card art — mobile poster only. */
 const DEFAULT_OFFICIAL_POOL_BACKGROUND = '/background_01.png'
+
+/** Desktop dashboard: max recommended pools (3 cols × up to 2 rows). */
+const DASHBOARD_DISCOVER_DESKTOP_LIMIT = 6
+
+/** Banner strip height (logo overlaps into body below). */
+const DISCOVER_CARD_BANNER_H = 48
+
+/**
+ * Desktop card body stack (px):
+ * pt-5 (20) + title h-5 (20) + meta gap (2) + meta h-4 (16) + footer mt (8)
+ * + footer row max(stats 2-line ~40, button h-8 32) = 44 + pb-3 (12) = 122
+ * + banner 48 = 170 total.
+ */
+const DASHBOARD_DISCOVER_DESKTOP_CARD_H = 170
+
+const DASHBOARD_DISCOVER_DESKTOP_CARD_ROW = `${DASHBOARD_DISCOVER_DESKTOP_CARD_H}px`
+
+/** Logo slot width (40px mark + 12px gap after pl-3 anchor). */
+const DISCOVER_CARD_LOGO_CLEARANCE_PL = '3.5rem'
 
 type OfficialPoolsSectionProps = {
   userId: string
   email: string
   /** Called after a successful join so "Your Pools" can refresh. */
   onJoined?: () => void
+  desktopPanel?: boolean
 }
 
 export function OfficialPoolsSection({
   userId,
   email,
   onJoined,
+  desktopPanel = false,
 }: OfficialPoolsSectionProps) {
   const router = useRouter()
   const [pools, setPools] = useState<OfficialPoolListItem[]>([])
@@ -121,10 +148,13 @@ export function OfficialPoolsSection({
     return null
   }
 
+  const desktopPools = pools.slice(0, DASHBOARD_DISCOVER_DESKTOP_LIMIT)
+
   return (
     <DashboardFeedSection
       id="official-pools"
       title="Discover Pools"
+      desktopPanel={desktopPanel}
       action={
         <Link
           href="/discover"
@@ -138,28 +168,39 @@ export function OfficialPoolsSection({
       }
     >
       {loading ? (
-        <div
-          className={cn(
-            '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain',
-            '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          )}
-          aria-busy="true"
-          aria-label="Discover pools"
-        >
+        <>
           <div
-            className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
-            style={{
-              gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
-            }}
+            className="hidden min-w-0 gap-4 lg:grid lg:grid-cols-3"
+            style={{ gridAutoRows: DASHBOARD_DISCOVER_DESKTOP_CARD_ROW }}
+            aria-busy="true"
+            aria-label="Discover pools"
           >
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
+            {Array.from({ length: 3 }, (_, index) => (
+              <DesktopCardSkeleton key={index} />
+            ))}
           </div>
-        </div>
+          <div
+            className={cn(
+              '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain lg:hidden',
+              '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            )}
+            aria-busy="true"
+          >
+            <div
+              className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
+              style={{
+                gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
+              }}
+            >
+              <MobileCardSkeleton />
+              <MobileCardSkeleton />
+              <MobileCardSkeleton />
+              <MobileCardSkeleton />
+            </div>
+          </div>
+        </>
       ) : error ? (
-        <div className="rounded-xl border border-border bg-card/50 px-4 py-6 text-center">
+        <div className="rounded-xl border border-[#292929] bg-[#171717] px-4 py-6 text-center">
           <p className="text-sm text-muted-foreground">{error}</p>
           <button
             type="button"
@@ -173,26 +214,17 @@ export function OfficialPoolsSection({
           </button>
         </div>
       ) : (
-        <div
-          className={cn(
-            '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain pb-0.5',
-            '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-            'snap-x snap-mandatory',
-          )}
-          role="list"
-          aria-label="Official pools"
-        >
+        <>
           <div
-            className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
-            style={{
-              gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
-            }}
+            className="hidden min-w-0 gap-4 lg:grid lg:grid-cols-3"
+            style={{ gridAutoRows: DASHBOARD_DISCOVER_DESKTOP_CARD_ROW }}
+            role="list"
+            aria-label="Recommended pools"
           >
-            {pools.map((pool) => (
-              <OfficialPoolCard
+            {desktopPools.map((pool) => (
+              <OfficialPoolCardDesktop
                 key={pool.id}
                 pool={pool}
-                backgroundImage={DEFAULT_OFFICIAL_POOL_BACKGROUND}
                 joining={joiningPoolId === pool.id}
                 joinDisabled={joiningPoolId != null}
                 joinError={joinErrorByPool[pool.id]}
@@ -200,26 +232,287 @@ export function OfficialPoolsSection({
               />
             ))}
           </div>
-        </div>
+
+          <div
+            className={cn(
+              '@container min-w-0 max-w-full w-full overflow-x-auto overscroll-x-contain pb-0.5 lg:hidden',
+              '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+              'snap-x snap-mandatory',
+            )}
+            role="list"
+            aria-label="Official pools"
+          >
+            <div
+              className="grid min-w-0 grid-flow-col grid-rows-2 gap-2.5"
+              style={{
+                gridAutoColumns: 'calc((100cqw - 0.625rem) / 2)',
+              }}
+            >
+              {pools.map((pool) => (
+                <OfficialPoolCardMobile
+                  key={pool.id}
+                  pool={pool}
+                  backgroundImage={DEFAULT_OFFICIAL_POOL_BACKGROUND}
+                  joining={joiningPoolId === pool.id}
+                  joinDisabled={joiningPoolId != null}
+                  joinError={joinErrorByPool[pool.id]}
+                  onJoin={() => void handleJoin(pool)}
+                />
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </DashboardFeedSection>
   )
 }
 
+function seasonAlreadyInCopy(
+  leagueName: string,
+  poolName: string,
+  seasonLabel: string | null,
+): boolean {
+  if (!seasonLabel?.trim()) return true
+  const haystack = `${poolName} ${leagueName}`.toLowerCase()
+  const year = seasonLabel.match(/\d{4}/)?.[0]
+  if (year && haystack.includes(year)) return true
+  return haystack.includes(seasonLabel.trim().toLowerCase())
+}
+
+function buildDiscoverMetadataLine(pool: OfficialPoolListItem): string {
+  const format = formatScoringStyleLabel(pool.scoringStyle)
+  let leaguePart = pool.leagueName
+  if (
+    pool.seasonLabel &&
+    !seasonAlreadyInCopy(pool.leagueName, pool.name, pool.seasonLabel)
+  ) {
+    leaguePart = `${pool.leagueName} ${pool.seasonLabel}`
+  }
+  return `${leaguePart} · ${format}`
+}
+
+function isRemoteEmblemUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+  return /^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')
+}
+
+function DiscoverPoolLogo({
+  pool,
+  size,
+}: {
+  pool: OfficialPoolListItem
+  size: number
+}) {
+  const markClassName = 'max-h-full max-w-full object-contain'
+  const emblem = pool.emblemUrl?.trim() || null
+
+  const shell = (
+    inner: ReactNode,
+  ) => (
+    <div
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#292929] bg-[#202020]"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      {inner}
+    </div>
+  )
+
+  const sportPng = pool.sport ? sportIconPng(pool.sport) : null
+  if (sportPng) {
+    return shell(
+      <Image
+        src={`/sports/${sportPng}`}
+        alt=""
+        width={size}
+        height={size}
+        className={markClassName}
+      />,
+    )
+  }
+
+  if (emblem && isRemoteEmblemUrl(emblem)) {
+    return shell(
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={emblem} alt="" className={markClassName} />,
+    )
+  }
+
+  const presetSrc = getPoolAvatarSrc(pool.avatar)
+  if (presetSrc) {
+    return shell(
+      <Image
+        src={presetSrc}
+        alt=""
+        width={size}
+        height={size}
+        className={markClassName}
+      />,
+    )
+  }
+
+  return shell(<Shield className="h-5 w-5 text-muted-foreground" aria-hidden />)
+}
+
+function LiveStatusChip() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+        aria-hidden
+      />
+      Live
+    </span>
+  )
+}
+
+function StartsStatusChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-[#292929] bg-[#202020] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+      {label}
+    </span>
+  )
+}
+
 type OfficialPoolCardProps = {
   pool: OfficialPoolListItem
-  /** Per-card art URL (all use background_01 for now; swap per league later). */
-  backgroundImage?: string
   joining: boolean
   joinDisabled: boolean
   joinError?: string
   onJoin: () => void
 }
 
-/**
- * Original verified mark — check in a circle (brand green).
- * Not a league logo or trademarked badge.
- */
+function OfficialPoolCardDesktop({
+  pool,
+  joining,
+  joinDisabled,
+  joinError,
+  onJoin,
+}: OfficialPoolCardProps) {
+  const poolHref = `/pool/${pool.inviteCode}`
+  const status = formatOfficialStatusLabel(
+    pool.eventStatus,
+    pool.eventStartDate,
+  )
+  const accent = resolvePoolCardAccentColor(pool.themeColor)
+  const metadata = buildDiscoverMetadataLine(pool)
+  const playersLabel = `${pool.memberCount} ${pool.memberCount === 1 ? 'player' : 'players'}`
+
+  return (
+    <article
+      role="listitem"
+      className={cn(
+        DASHBOARD_POOL_CARD_CLASS,
+        'relative flex h-full flex-col overflow-visible',
+      )}
+    >
+      <Link
+        href={poolHref}
+        className="absolute inset-0 z-0 rounded-2xl"
+        aria-label={`View ${pool.name}`}
+      />
+      <div className="relative z-10 flex h-full flex-col pointer-events-none">
+        <div
+          className="relative shrink-0 overflow-hidden rounded-t-2xl"
+          style={{ height: DISCOVER_CARD_BANNER_H }}
+        >
+          <div
+            className="absolute inset-0 bg-[#222222]"
+            style={{
+              backgroundImage: `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, #222222), #222222 55%)`,
+            }}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-white/[0.07] to-transparent"
+            aria-hidden
+          />
+        </div>
+
+        <div className="relative flex shrink-0 flex-col px-3 pb-3 pt-5">
+          <div
+            className="absolute left-3 top-0 z-10 -translate-y-1/2"
+            aria-hidden
+          >
+            <DiscoverPoolLogo pool={pool} size={40} />
+          </div>
+
+          <div
+            className="min-w-0 shrink-0"
+            style={{ paddingLeft: DISCOVER_CARD_LOGO_CLEARANCE_PL }}
+          >
+            <h3
+              className="h-5 min-w-0 truncate leading-5 font-display text-base font-semibold tracking-wide text-foreground"
+              title={pool.name}
+            >
+              {pool.name}
+            </h3>
+            <p
+              className="mt-0.5 h-4 min-w-0 truncate leading-4 text-xs text-muted-foreground"
+              title={metadata}
+            >
+              {metadata}
+            </p>
+          </div>
+
+          <div className="mt-2 flex shrink-0 items-center justify-between gap-2">
+            <div className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs tabular-nums text-muted-foreground">
+                <Users className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                {playersLabel}
+              </span>
+              {status.kind === 'live' ? <LiveStatusChip /> : null}
+              {status.kind === 'starts' && status.label ? (
+                <StartsStatusChip label={status.label} />
+              ) : null}
+              {status.kind === 'ended' && status.label ? (
+                <StartsStatusChip label={status.label} />
+              ) : null}
+            </div>
+
+            {pool.isMember ? (
+              <Button
+                asChild
+                size="sm"
+                className={cn('pointer-events-auto shrink-0', FOCUS_VISIBLE_RING)}
+              >
+                <Link href={poolHref} onClick={(event) => event.stopPropagation()}>
+                  Open →
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className={cn('pointer-events-auto shrink-0', FOCUS_VISIBLE_RING)}
+                disabled={joining || joinDisabled}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onJoin()
+                }}
+              >
+                {joining ? 'Joining…' : 'Join →'}
+              </Button>
+            )}
+          </div>
+
+          {joinError ? (
+            <p className="pointer-events-auto mt-1 line-clamp-2 text-[11px] leading-snug text-destructive">
+              {joinError}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  )
+}
+
+type OfficialPoolCardMobileProps = OfficialPoolCardProps & {
+  backgroundImage?: string
+}
+
 function OfficialVerifiedBadge({ className }: { className?: string }) {
   return (
     <span
@@ -236,21 +529,21 @@ function OfficialVerifiedBadge({ className }: { className?: string }) {
   )
 }
 
-function OfficialPoolCard({
+/** Mobile poster card — unchanged layout (lg:hidden wrapper in parent). */
+function OfficialPoolCardMobile({
   pool,
   backgroundImage = DEFAULT_OFFICIAL_POOL_BACKGROUND,
   joining,
   joinDisabled,
   joinError,
   onJoin,
-}: OfficialPoolCardProps) {
+}: OfficialPoolCardMobileProps) {
   const status = formatOfficialStatusLabel(
     pool.eventStatus,
     pool.eventStartDate,
   )
-  const playersLabel = formatPlayerCountLabel(pool.memberCount)
+  const playersLabel = `${pool.memberCount} ${pool.memberCount === 1 ? 'player' : 'players'}`
   const typeLabel = formatScoringStyleLabel(pool.scoringStyle)
-  /** Match PoolCard `getPoolTypePillTheme` (Your Pools) for consistency. */
   const typePillStyle =
     pool.scoringStyle === 'winner'
       ? {
@@ -278,16 +571,13 @@ function OfficialPoolCard({
         style={{ backgroundImage: `url(${backgroundImage})` }}
         aria-hidden
       />
-      {/* Full-card dark scrim (~60%) so large white type pops; keep artwork visible underneath */}
       <div className="absolute inset-0 bg-black/60" aria-hidden />
-      {/* Extra bottom weight for the title block + bar */}
       <div
         className="absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
         aria-hidden
       />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col justify-between">
-        {/* League identity stays anchored at the top-left. */}
         <div className="min-w-0 px-3 pt-3.5 sm:px-3.5 sm:pt-4">
           <div className="flex min-w-0 items-start gap-1.5 sm:gap-2">
             <h3
@@ -311,7 +601,10 @@ function OfficialPoolCard({
           </span>
 
           <div className="mt-2 flex flex-col items-start gap-1 text-sm font-semibold text-white/85 sm:mt-2.5 sm:text-base">
-            {pool.seasonLabel ? <span className="block">{pool.seasonLabel}</span> : null}
+            {pool.seasonLabel &&
+            !seasonAlreadyInCopy(pool.leagueName, pool.name, pool.seasonLabel) ? (
+              <span className="block">{pool.seasonLabel}</span>
+            ) : null}
             {status.kind !== 'none' && status.label ? (
               <span
                 className={cn(
@@ -335,7 +628,6 @@ function OfficialPoolCard({
           ) : null}
         </div>
 
-        {/* Bottom stack: full player count, then a full-width Join/Open action. */}
         <div
           className={cn(
             'flex flex-col gap-2 border-t border-white/10',
@@ -347,7 +639,6 @@ function OfficialPoolCard({
             <span>{playersLabel}</span>
           </p>
 
-          {/* Reserved for future entry fee, e.g. "1 🎟️ Entry ·" — free for now */}
           <span className="sr-only">Free entry</span>
 
           {pool.isMember ? (
@@ -382,10 +673,29 @@ function OfficialPoolCard({
   )
 }
 
-function CardSkeleton() {
+function DesktopCardSkeleton() {
   return (
     <div
-      className="aspect-[3/4] animate-pulse rounded-3xl border border-border/60 bg-muted/40 shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
+      className="h-full animate-pulse overflow-hidden rounded-2xl border border-[#292929] bg-[#171717]"
+      aria-hidden
+    >
+      <div className="h-12 bg-[#222222]" />
+      <div className="space-y-2 px-3 pt-6 pb-3">
+        <div className="h-4 w-3/4 rounded bg-[#222222]" />
+        <div className="h-3 w-1/2 rounded bg-[#222222]" />
+        <div className="mt-4 flex justify-between">
+          <div className="h-3 w-24 rounded bg-[#222222]" />
+          <div className="h-8 w-16 rounded-md bg-[#222222]" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MobileCardSkeleton() {
+  return (
+    <div
+      className="aspect-[3/4] animate-pulse rounded-3xl border border-[#292929] bg-[#171717] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
       aria-hidden
     />
   )

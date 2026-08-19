@@ -2,8 +2,12 @@
 
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
-import { Clock3 } from 'lucide-react'
+import { ArrowRight, Clock3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  FeaturedMatchCountdownDisplay,
+  useKickoffCountdown,
+} from '@/components/dashboard/live-scoreboard'
 import type { FeaturedMatchMode } from '@/src/lib/featured-match'
 import { isTeamLogoUrl } from '@/src/lib/team-logos'
 import {
@@ -89,6 +93,32 @@ function formatKickoff(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+function QueueStatusNotch({ kickoffAt }: { kickoffAt: string }) {
+  const countdown = useKickoffCountdown(kickoffAt)
+
+  return (
+    <div
+      className={cn(
+        'absolute left-1/2 top-0 z-20 flex h-6 min-w-20 max-w-[90%] -translate-x-1/2 items-center justify-center px-3.5',
+        'bg-[linear-gradient(180deg,#e84b55,#ba2532)] text-white shadow-[0_4px_12px_rgba(220,38,52,0.28)]',
+        'text-[9px] font-bold uppercase tracking-[0.13em]',
+      )}
+      style={{
+        clipPath:
+          'polygon(0 0, 100% 0, 100% 58%, 88% 100%, 12% 100%, 0 58%)',
+      }}
+    >
+      {countdown.isKickingOff ? (
+        <span className="truncate" suppressHydrationWarning>
+          Kicking off
+        </span>
+      ) : (
+        <FeaturedMatchCountdownDisplay compact {...countdown} />
+      )}
+    </div>
+  )
 }
 
 function StatusNotch({
@@ -194,18 +224,55 @@ function TeamMark({
   )
 }
 
+function QueuePoolContextLine({ poolNames }: { poolNames: string[] }) {
+  if (poolNames.length === 0) return null
+
+  if (poolNames.length === 1) {
+    return (
+      <p className="min-w-0 truncate text-center text-[10px] font-medium text-muted-foreground">
+        {poolNames[0]}
+      </p>
+    )
+  }
+
+  const label = `${poolNames[0]} +${poolNames.length - 1}`
+  return (
+    <p
+      className="min-w-0 truncate text-center text-[10px] font-medium text-muted-foreground"
+      title={poolNames.join(', ')}
+    >
+      {label}
+    </p>
+  )
+}
+
 export function PremiumMatchCard({
   match,
   mode,
   competitionName,
   href,
   className,
+  showQueueCountdown = false,
+  queuePoolNames,
+  queuePicked = false,
+  predictCtaLabel,
+  queueMode = false,
 }: {
   match: PremiumMatchCardMatch
   mode: FeaturedMatchMode
   competitionName?: string | null
   href?: string | null
   className?: string
+  /** Queue: countdown in status notch (upcoming only). */
+  showQueueCountdown?: boolean
+  /** Queue: pool names still needing this pick. */
+  queuePoolNames?: string[]
+  /** Queue: user picked this match in the current session. */
+  queuePicked?: boolean
+  /** Queue: footer CTA copy; card href still navigates to predict flow. */
+  predictCtaLabel?: string
+  /** Queue: omit generic competition fallback. */
+  queueMode?: boolean
 }) {
   const voidLabel = getVoidMatchStatusLabel(match.status_short)
   const isVoid = isVoidMatchStatus(match.status_short)
@@ -216,12 +283,21 @@ export function PremiumMatchCard({
   const surfaceGradientId = `match-surface-${id}`
   const surfaceGlowId = `match-glow-${id}`
 
+  const resolvedCtaLabel = queuePicked ? 'Edit' : predictCtaLabel
+  const eventLabel =
+    queueMode && competitionName?.trim()
+      ? competitionName.trim()
+      : queueMode
+        ? null
+        : competitionName || 'PoolCup'
+
   const body = (
     <article
       className={cn(
         'premium-match-card group relative isolate flex h-full min-h-[12.25rem] flex-col overflow-hidden',
         'px-3.5 pb-3 pt-8',
         'transition-[transform,box-shadow] hover:-translate-y-0.5',
+        queuePicked && 'ring-1 ring-primary/35',
         className,
       )}
       aria-label={`${match.team1_name} vs ${match.team2_name}`}
@@ -288,16 +364,27 @@ export function PremiumMatchCard({
         />
       </svg>
 
-      <StatusNotch
-        mode={mode}
-        elapsedMinute={match.elapsed_minute}
-        kickoffAt={match.kickoff_at}
-        voidLabel={voidLabel}
-      />
+      {showQueueCountdown && mode === 'upcoming' ? (
+        <QueueStatusNotch kickoffAt={match.kickoff_at} />
+      ) : (
+        <StatusNotch
+          mode={mode}
+          elapsedMinute={match.elapsed_minute}
+          kickoffAt={match.kickoff_at}
+          voidLabel={voidLabel}
+        />
+      )}
 
-      <p className="relative truncate text-center text-[10px] font-medium uppercase tracking-[0.11em] text-muted-foreground">
-        {competitionName || 'PoolCup'}
-      </p>
+      <div className="relative flex min-h-[2rem] flex-col items-center justify-center gap-0.5">
+        {eventLabel ? (
+          <p className="min-w-0 truncate text-center text-[10px] font-medium uppercase tracking-[0.11em] text-muted-foreground">
+            {eventLabel}
+          </p>
+        ) : null}
+        {queueMode ? (
+          <QueuePoolContextLine poolNames={queuePoolNames ?? []} />
+        ) : null}
+      </div>
 
       <div className="relative mt-2.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-1.5">
         <TeamMark name={match.team1_name} logoUrl={match.team1_logo} />
@@ -337,17 +424,41 @@ export function PremiumMatchCard({
       </div>
 
       <div
-        className="relative mt-auto flex items-center justify-center gap-1.5 border-t pt-2 text-[10px] font-medium text-muted-foreground"
+        className={cn(
+          'relative mt-auto flex items-center justify-center gap-2 border-t pt-2 text-[10px] font-medium text-muted-foreground',
+          resolvedCtaLabel && 'justify-between px-1',
+        )}
         style={{ borderColor: 'var(--match-card-footer-border)' }}
       >
-        <Clock3
-          className="h-3 w-3"
-          style={{ color: 'var(--match-card-clock)' }}
-          aria-hidden
-        />
-        <time dateTime={match.kickoff_at} suppressHydrationWarning>
-          {formatKickoff(match.kickoff_at)}
-        </time>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Clock3
+            className="h-3 w-3 shrink-0"
+            style={{ color: 'var(--match-card-clock)' }}
+            aria-hidden
+          />
+          <time dateTime={match.kickoff_at} suppressHydrationWarning className="truncate">
+            {formatKickoff(match.kickoff_at)}
+          </time>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {queuePicked ? (
+            <span className="inline-flex items-center gap-0.5 font-semibold text-primary">
+              Picked
+              <span aria-hidden>✓</span>
+            </span>
+          ) : null}
+          {resolvedCtaLabel ? (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 font-semibold',
+                queuePicked ? 'text-muted-foreground' : 'text-primary',
+              )}
+            >
+              {resolvedCtaLabel}
+              <ArrowRight className="h-3 w-3" aria-hidden />
+            </span>
+          ) : null}
+        </div>
       </div>
     </article>
   )
@@ -358,7 +469,11 @@ export function PremiumMatchCard({
     <Link
       href={href}
       className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-      aria-label={`${match.team1_name} vs ${match.team2_name}. View match details`}
+      aria-label={
+        resolvedCtaLabel
+          ? `${match.team1_name} vs ${match.team2_name}. ${queuePicked ? 'Picked. ' : ''}${resolvedCtaLabel}`
+          : `${match.team1_name} vs ${match.team2_name}. View match details`
+      }
     >
       {body}
     </Link>

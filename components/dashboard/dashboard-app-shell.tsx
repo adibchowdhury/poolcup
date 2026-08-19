@@ -3,29 +3,16 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { Heart, Mail, Settings, CircleHelp, Users, CreditCard, History, BarChart3 } from 'lucide-react'
-import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { BadgeUnlockProvider } from '@/components/achievements/badge-unlock-provider'
 import { useDashboardSignOut } from '@/components/dashboard-sign-out'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { ThemeAppearanceSetting } from '@/components/theme-appearance-setting'
-import { PoolCupLogo } from '@/components/poolcup-logo'
-import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { WebMobileAppDrawer } from '@/components/dashboard/web-mobile-app-drawer'
 import { WebMobileProfilePopover } from '@/components/dashboard/web-mobile-profile-popover'
 import { WebMobileTopBar } from '@/components/dashboard/web-mobile-top-bar'
-import { HeaderChatButton } from '@/components/dashboard/header-chat-button'
-import { HeaderNotificationBell } from '@/components/dashboard/header-notification-bell'
-import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
+import { HubDesktopSidebar } from '@/components/dashboard/hub-desktop-sidebar'
+import { HubDesktopContentTopBar } from '@/components/dashboard/hub-desktop-content-top-bar'
 import {
   Dialog,
   DialogContent,
@@ -36,20 +23,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { useHubChromeProfileOptional } from '@/components/dashboard/hub-chrome-profile'
 import { useHubLayoutNested } from '@/components/dashboard/hub-layout-context'
 import {
-  HUB_DESKTOP_NAV_STRIP_CLASS,
+  HUB_DESKTOP_CONTENT_GUTTER_CLASS,
   type HubDesktopNavId,
 } from '@/components/dashboard/hub-desktop-nav-frame'
+import {
+  DASHBOARD_CANVAS_CLASS,
+  isDashboardRoutePath,
+} from '@/src/lib/dashboard-surfaces'
 import { cn } from '@/lib/utils'
 import {
   MOBILE_BOTTOM_NAV_PAD_CLASS,
-  DASHBOARD_TAB_HREFS,
   resolveHubDesktopNavValue,
 } from '@/src/lib/mobile-bottom-nav-routes'
-import { UserAvatarImage } from '@/components/user-avatar-image'
 import { supabase } from '@/src/lib/supabase'
 
 export type DashboardAppShellProps = {
@@ -59,6 +47,8 @@ export type DashboardAppShellProps = {
   avatar?: string | null
   customAvatarUrl?: string | null
   children: React.ReactNode
+  /** Dashboard route canvas override (e.g. #0D0D0D); does not change global tokens. */
+  hubCanvasClassName?: string
   mainClassName?: string
   /** Desktop primary nav active item; nav renders outside content max-width. */
   hubActiveNav?: HubDesktopNavId | string
@@ -66,6 +56,8 @@ export type DashboardAppShellProps = {
   linkDashboardTabs?: boolean
   /** Always render the hub desktop nav (hub layout). */
   forceHubNav?: boolean
+  /** Optional desktop top-bar title override. */
+  contentTitle?: string
 }
 
 export function DashboardAppShell({
@@ -75,16 +67,17 @@ export function DashboardAppShell({
   avatar,
   customAvatarUrl,
   children,
+  hubCanvasClassName,
   mainClassName,
   hubActiveNav,
-  linkDashboardTabs = true,
+  linkDashboardTabs: _linkDashboardTabs = true,
   forceHubNav = false,
+  contentTitle,
 }: DashboardAppShellProps) {
   const nestedInHubLayout = useHubLayoutNested()
   const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
   const chrome = useHubChromeProfileOptional()
-  const { count: friendRequestCount } = useFriendRequestCount()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
@@ -176,144 +169,57 @@ export function DashboardAppShell({
     }
   }
 
+  const showHubNav = forceHubNav || resolvedHubNav != null
+  const isDashboardCanvas = isDashboardRoutePath(pathname)
+  const canvasClass =
+    hubCanvasClassName ??
+    (isDashboardCanvas ? DASHBOARD_CANVAS_CLASS : 'bg-app-background')
+  const chromeSurfaceClass = isDashboardCanvas
+    ? 'bg-[#0D0D0D]/95'
+    : 'bg-[#0A0E0E]/95'
+
   return (
     <BadgeUnlockProvider>
-    <div className="min-h-screen max-w-full min-w-0 overflow-x-clip bg-app-background">
-      <div className="relative max-w-full min-w-0">
-        <div className="z-50 bg-app-background md:sticky md:top-0">
-          {/*
-            Safe-area spacer only (notch/status bar). Extra breathing room
-            above the logo/menu was removed — height is env(safe-area-inset-top).
-          */}
-          <div
-            aria-hidden
-            className="dashboard-header-top-gap w-full shrink-0"
+      <div className={cn('min-h-screen max-w-full min-w-0 overflow-x-clip lg:flex', canvasClass)}>
+        {showHubNav ? (
+          <HubDesktopSidebar
+            userId={userId}
+            email={email}
+            displayName={headerName}
+            avatar={headerAvatar}
+            customAvatarUrl={headerCustomAvatarUrl}
+            onOpenSettings={() => setSettingsOpen(true)}
+            signOutLoading={signOutLoading}
+            onSignOut={() => {
+              void handleSignOut()
+            }}
           />
-          <header className="border-b border-border bg-app-background/80 backdrop-blur-xl">
-            <div className="mx-auto max-w-6xl px-4">
-              {/* Mobile-only header (app layout): hamburger | logo | profile */}
-              <WebMobileTopBar
-                className="sm:hidden"
-                displayName={headerName}
-                avatar={headerAvatar}
-                customAvatarUrl={headerCustomAvatarUrl}
-                onOpenDrawer={() => {
-                  setProfilePopoverOpen(false)
-                  setDrawerOpen(true)
-                }}
-                onOpenProfilePopover={() => {
-                  setDrawerOpen(false)
-                  setProfilePopoverOpen(true)
-                }}
-              />
+        ) : null}
 
-              {/* Desktop header */}
-              <div className="hidden items-center justify-between gap-2 py-4 sm:flex sm:gap-3">
-                <PoolCupLogo href="/dashboard" />
-
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-2">
-                  <ReportIssueButton />
-
-                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                    <HeaderChatButton />
-                    <HeaderNotificationBell />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        >
-                          <span className="max-w-[10rem] truncate text-sm font-medium text-foreground">
-                            {headerName.trim() || 'Account'}
-                          </span>
-                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-border bg-muted ring-1 ring-border/80">
-                            <UserAvatarImage
-                              avatar={headerAvatar}
-                              customAvatarUrl={headerCustomAvatarUrl}
-                              className="size-full rounded-full border-0"
-                            />
-                          </div>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-                          {email}
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href="/friends" className="relative">
-                            <Users className="h-4 w-4" />
-                            Friends
-                            {friendRequestCount > 0 ? (
-                              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold tabular-nums text-primary-foreground">
-                                {friendRequestCount > 9
-                                  ? '9+'
-                                  : friendRequestCount}
-                              </span>
-                            ) : null}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/history">
-                            <History className="h-4 w-4" />
-                            Prediction history
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/analytics">
-                            <BarChart3 className="h-4 w-4" />
-                            Analytics
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
-                          <Settings className="h-4 w-4" />
-                          Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/settings/billing">
-                            <CreditCard className="h-4 w-4" />
-                            Billing
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a
-                            href={buildStripeDonateUrl(userId)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Heart className="h-4 w-4" />
-                            Support Us
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={DASHBOARD_TAB_HREFS['how-it-works']}>
-                            <CircleHelp className="h-4 w-4" />
-                            Help
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/contact">
-                            <Mail className="h-4 w-4" />
-                            Contact
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={signOutLoading}
-                          onSelect={(event) => {
-                            event.preventDefault()
-                            void handleSignOut()
-                          }}
-                        >
-                          {signOutLoading ? 'Signing out…' : 'Sign out'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+        <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
+          <div className={cn('z-50 shrink-0 lg:hidden', canvasClass)}>
+            <div
+              aria-hidden
+              className="dashboard-header-top-gap w-full shrink-0"
+            />
+            <header className={cn('border-b border-border backdrop-blur-xl', canvasClass, 'bg-opacity-80')}>
+              <div className="mx-auto max-w-6xl px-4">
+                <WebMobileTopBar
+                  displayName={headerName}
+                  avatar={headerAvatar}
+                  customAvatarUrl={headerCustomAvatarUrl}
+                  onOpenDrawer={() => {
+                    setProfilePopoverOpen(false)
+                    setDrawerOpen(true)
+                  }}
+                  onOpenProfilePopover={() => {
+                    setDrawerOpen(false)
+                    setProfilePopoverOpen(true)
+                  }}
+                />
               </div>
-            </div>
-          </header>
+            </header>
+          </div>
 
           <WebMobileAppDrawer
             open={drawerOpen}
@@ -334,6 +240,13 @@ export function DashboardAppShell({
             customAvatarUrl={headerCustomAvatarUrl}
             onClose={() => setProfilePopoverOpen(false)}
           />
+
+          {showHubNav ? (
+            <HubDesktopContentTopBar
+              title={contentTitle}
+              chromeSurfaceClass={chromeSurfaceClass}
+            />
+          ) : null}
 
           <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
             <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl">
@@ -492,36 +405,21 @@ export function DashboardAppShell({
               </div>
             </DialogContent>
           </Dialog>
-        </div>
 
-        {forceHubNav || resolvedHubNav != null ? (
-          <div className="flex flex-col gap-8">
-            <div className={HUB_DESKTOP_NAV_STRIP_CLASS}>
-              <DashboardDesktopNav linkDashboardTabs={linkDashboardTabs} />
-            </div>
-            <main
-              className={cn(
-                'mx-auto w-full min-w-0 max-w-6xl px-4 py-6 sm:pb-8 sm:pt-0',
-                MOBILE_BOTTOM_NAV_PAD_CLASS,
-                mainClassName,
-              )}
-            >
-              {children}
-            </main>
-          </div>
-        ) : (
           <main
             className={cn(
-              'mx-auto w-full min-w-0 max-w-6xl px-4 py-8',
+              'mx-auto w-full min-w-0 flex-1 bg-transparent py-6 lg:py-8',
+              showHubNav
+                ? cn('lg:max-w-none', HUB_DESKTOP_CONTENT_GUTTER_CLASS)
+                : 'max-w-6xl px-4',
               MOBILE_BOTTOM_NAV_PAD_CLASS,
               mainClassName,
             )}
           >
             {children}
           </main>
-        )}
+        </div>
       </div>
-    </div>
     </BadgeUnlockProvider>
   )
 }

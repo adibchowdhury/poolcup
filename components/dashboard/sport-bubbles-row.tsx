@@ -13,8 +13,8 @@ export type SportBubble = {
 }
 
 /**
- * All ball PNGs in public/sports/, plus UFC (no ball image → icon).
- * Order: World Cup / soccer first, then major US leagues, then remaining, UFC last.
+ * Supported sport bubbles for the dashboard filter.
+ * Order: soccer first, then major US leagues.
  */
 export const SPORT_BUBBLES: SportBubble[] = [
   { id: 'wc', label: 'Futbol', iconPng: 'soccer.png' },
@@ -22,10 +22,6 @@ export const SPORT_BUBBLES: SportBubble[] = [
   { id: 'nfl', label: 'NFL', iconPng: 'football.png' },
   { id: 'nhl', label: 'NHL', iconPng: 'hockey.png' },
   { id: 'mlb', label: 'MLB', iconPng: 'baseball.png' },
-  { id: 'cricket', label: 'Cricket', iconPng: 'cricket.png' },
-  { id: 'tennis', label: 'Tennis', iconPng: 'tennis.png' },
-  { id: 'volleyball', label: 'Volleyball', iconPng: 'volleyball.png' },
-  { id: 'ufc', label: 'UFC', iconPng: null },
 ]
 
 /** Map bubble id → normalizeSportKey bucket for sporting_events.sport. */
@@ -35,10 +31,6 @@ const SPORT_BUBBLE_KEY: Record<string, string> = {
   nfl: 'american_football',
   nhl: 'hockey',
   mlb: 'baseball',
-  cricket: 'cricket',
-  tennis: 'tennis',
-  volleyball: 'volleyball',
-  ufc: 'ufc',
 }
 
 /** Resolve a sport bubble id to the normalized sport key used on events. */
@@ -154,7 +146,7 @@ export function SportBubblesRow({
       role="list"
       aria-label="Sports"
     >
-      <div className="flex w-full min-w-0 items-start justify-start gap-2.5 sm:justify-between sm:gap-2 md:justify-center md:gap-5">
+      <div className="flex w-full min-w-0 items-start justify-start gap-2.5 sm:gap-3">
         {SPORT_BUBBLES.map((sport) => {
           const selected = sport.id === selectedSportId
           return (

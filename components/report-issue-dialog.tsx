@@ -8,6 +8,7 @@ import {
   useState,
   type FormEvent,
 } from 'react'
+import { useAuth } from '@/src/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -59,6 +60,7 @@ export function ReportIssueProvider({
 }: {
   children: React.ReactNode
 }) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -104,6 +106,8 @@ export function ReportIssueProvider({
           page_url: window.location.href,
           user_agent: navigator.userAgent,
           metadata: {
+            user_id: user?.id ?? null,
+            pathname: window.location.pathname,
             viewport: {
               w: window.innerWidth,
               h: window.innerHeight,

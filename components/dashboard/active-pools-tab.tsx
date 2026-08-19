@@ -18,7 +18,7 @@ const POOL_CAROUSEL_ITEM_CLASS =
   'w-[calc(100cqi/1.12)] max-w-[300px] shrink-0 snap-start sm:w-[280px] md:w-[300px] lg:w-[320px]'
 
 const POOL_CAROUSEL_SCROLL_CLASS = cn(
-  '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
+  '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory lg:hidden',
   '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
   '[scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]',
   '[&::-webkit-scrollbar]:h-1',
@@ -28,12 +28,35 @@ const POOL_CAROUSEL_SCROLL_CLASS = cn(
 
 const POOL_CAROUSEL_TRACK_CLASS = 'flex w-max min-w-full gap-4 px-4 pb-1'
 
+const POOL_DESKTOP_GRID_CLASS =
+  'hidden min-w-0 gap-4 lg:grid lg:auto-rows-[23.5rem] lg:grid-cols-2 xl:grid-cols-3'
+
 interface ActivePoolsTabProps {
   userId: string
   pools?: DashboardPoolCardData[]
   loading?: boolean
   error?: string | null
   onPoolDeleted?: (poolId: string) => void
+  /** lg+ grid: cap visible pools (desktop dashboard preview). */
+  desktopPreviewLimit?: number
+}
+
+function ActivePoolsDesktopSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div
+      className={POOL_DESKTOP_GRID_CLASS}
+      aria-busy="true"
+      aria-label="Loading your pools"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <div
+          key={index}
+          className="h-[18rem] animate-pulse rounded-2xl border border-[#292929] bg-[#171717]"
+          aria-hidden
+        />
+      ))}
+    </div>
+  )
 }
 
 export function ActivePoolsTab({
@@ -42,6 +65,7 @@ export function ActivePoolsTab({
   loading: externalLoading,
   error: externalError,
   onPoolDeleted: externalOnPoolDeleted,
+  desktopPreviewLimit,
 }: ActivePoolsTabProps) {
   const isControlled = externalPools !== undefined
   const [pools, setPools] = useState<DashboardPoolCardData[]>([])
@@ -73,6 +97,11 @@ export function ActivePoolsTab({
   const resolvedLoading = isControlled ? (externalLoading ?? false) : loading
   const resolvedError = isControlled ? externalError : error
 
+  const desktopPools =
+    desktopPreviewLimit != null
+      ? resolvedPools.slice(0, desktopPreviewLimit)
+      : resolvedPools
+
   function handlePoolDeleted(poolId: string) {
     if (externalOnPoolDeleted) {
       externalOnPoolDeleted(poolId)
@@ -83,7 +112,12 @@ export function ActivePoolsTab({
   }
 
   if (resolvedLoading) {
-    return <ActivePoolsSkeleton />
+    return (
+      <>
+        <ActivePoolsSkeleton />
+        <ActivePoolsDesktopSkeleton />
+      </>
+    )
   }
 
   if (resolvedError) {
@@ -97,6 +131,20 @@ export function ActivePoolsTab({
 
   return (
     <>
+      <div className={POOL_DESKTOP_GRID_CLASS}>
+        {desktopPools.map((pool) => (
+          <div key={pool.id} className="h-full min-h-0">
+            <PoolCard
+              pool={pool}
+              onPoolDeleted={handlePoolDeleted}
+              surface="dashboard"
+              hideInviteFriends
+              uniformSize
+            />
+          </div>
+        ))}
+      </div>
+
       <div className={POOL_CAROUSEL_SCROLL_CLASS}>
         <div className={POOL_CAROUSEL_TRACK_CLASS}>
           {resolvedPools.map((pool) => (

@@ -17,6 +17,7 @@ import {
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { ordinalPlace } from '@/components/pool/leaderboard-grouped-list'
 import { cn } from '@/lib/utils'
+import { DASHBOARD_FEED_SURFACE_CLASS } from '@/components/dashboard/feed/dashboard-home-layout'
 import {
   formatFeaturedMatchRoundLabel,
   formatFeaturedMatchStatusLabel,
@@ -60,7 +61,7 @@ function PickTrackBadge({ pick }: { pick: LiveNowPickProjection }) {
     pick.kind === 'wrong'
       ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
       : pick.kind === 'pending'
-        ? 'border-border bg-muted/40 text-muted-foreground'
+        ? 'border-[#292929] bg-[#222222] text-muted-foreground'
         : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
 
   return (
@@ -120,7 +121,7 @@ function LiveMatchCard({ item }: { item: LiveNowMatchItem }) {
   )
 
   return (
-    <div className="rounded-xl border border-border/70 bg-background/40 px-3.5 py-3 sm:px-4">
+    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3.5 py-3 sm:px-4')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <LiveClockLabel match={match} />
@@ -213,7 +214,7 @@ function StandingsSnapshot({
   if (standings.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-3.5 py-3 sm:px-4">
+    <div className="rounded-xl border border-dashed border-[#292929] bg-[#171717] px-3.5 py-3 sm:px-4">
       <div className="flex flex-col gap-0.5">
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           Pool standings

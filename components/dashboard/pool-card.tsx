@@ -1,13 +1,16 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useClientNow } from '@/hooks/use-client-now'
+import { useFitText } from '@/hooks/use-fit-text'
 import {
   ArrowRight,
   Check,
   Copy,
   MoreVertical,
+  Shield,
   Target,
   Trophy,
   UserPlus,
@@ -30,8 +33,15 @@ import { trackEvent } from '@/src/lib/track'
 import { useAuth } from '@/src/lib/auth-context'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import {
+  DASHBOARD_POOL_CARD_CLASS,
+} from '@/src/lib/dashboard-surfaces'
+import { resolvePoolCardAccentColor } from '@/src/lib/pool-theme'
+import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
+import { sportIconPng } from '@/src/lib/sport-display'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
+import { bindTactilePress } from '@/src/lib/tactile-press'
 
 export type PoolMemberAvatar = {
   displayName: string
@@ -70,29 +80,155 @@ export type DashboardPoolCardData = {
   canDelete?: boolean
   /** PoolCup-generated official event pool (vs invite/user pool). */
   isOfficial?: boolean
+  /** pools.theme_color — top accent strip + micro-accents when set. */
+  themeColor?: string | null
+  /** Preset squad photo under /pool_avatars. */
+  avatar?: string | null
+  /** Custom uploaded emblem URL. */
+  emblemUrl?: string | null
+  /** sporting_events.sport — official pool logo on desktop. */
+  sport?: string | null
 }
 
 const MAX_VISIBLE_MEMBER_AVATARS = 4
 
-type PoolTypePillTheme = {
-  accent: string
-  accentBg: string
-  accentBorder: string
+const POOL_CARD_ACCENT_STRIP_PX = 3
+
+/**
+ * Desktop lg+ logo band — locked height for uniform 23.5rem grid rows.
+ * 376px row − 3 accent − ~72px header − ~155px body − ~54px actions ≈ 92px.
+ */
+const POOL_CARD_DESKTOP_LOGO_ZONE_H = 92
+
+/** Vertical inset inside the logo band (top + bottom each). */
+const POOL_CARD_DESKTOP_LOGO_ZONE_PY = 10
+
+/** Reserved medal row so body height stays fixed when rank is outside top 3. */
+const POOL_CARD_MEDAL_SLOT_MIN_H = 28
+
+const POOL_CARD_OPEN_BTN_CLASS =
+  'ui-tactile-btn ui-tactile-btn--primary inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium has-[>svg]:px-2.5'
+
+function poolLogoAccentGlowStyle(accent: string): CSSProperties {
+  return {
+    background: `radial-gradient(ellipse 75% 85% at 50% 45%, color-mix(in srgb, ${accent} 16%, transparent), transparent 72%)`,
+  }
 }
 
-function getPoolTypePillTheme(scoringStyle: string): PoolTypePillTheme {
-  if (scoringStyle === 'winner') {
-    return {
-      accent: '#f59e0b',
-      accentBg: 'rgba(245,158,11,0.10)',
-      accentBorder: 'rgba(245,158,11,0.35)',
+function isRemoteEmblemUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+  return /^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')
+}
+
+function PoolCardLogoMark({ pool }: { pool: DashboardPoolCardData }) {
+  const markClassName = 'max-h-full max-w-full object-contain'
+  const emblem = pool.emblemUrl?.trim() || null
+  const [emblemFailed, setEmblemFailed] = useState(false)
+
+  useEffect(() => {
+    setEmblemFailed(false)
+  }, [emblem])
+
+  if (pool.isOfficial) {
+    const png = pool.sport ? sportIconPng(pool.sport) : null
+    if (png) {
+      return (
+        <Image
+          src={`/sports/${png}`}
+          alt=""
+          width={120}
+          height={120}
+          className={markClassName}
+          sizes="(min-width: 1024px) 320px"
+        />
+      )
     }
+    return <Shield className="h-12 w-12 text-muted-foreground" aria-hidden />
   }
 
+  if (emblem && isRemoteEmblemUrl(emblem) && !emblemFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- Supabase public emblem URL
+      <img
+        src={emblem}
+        alt=""
+        className={markClassName}
+        onError={() => setEmblemFailed(true)}
+      />
+    )
+  }
+
+  const presetSrc = getPoolAvatarSrc(pool.avatar)
+  if (presetSrc) {
+    return (
+      <Image
+        src={presetSrc}
+        alt=""
+        width={160}
+        height={120}
+        className={markClassName}
+        sizes="(min-width: 1024px) 320px"
+      />
+    )
+  }
+
+  return <Shield className="h-12 w-12 text-muted-foreground" aria-hidden />
+}
+
+function PoolCardDesktopLogoZone({
+  pool,
+  accentColor,
+}: {
+  pool: DashboardPoolCardData
+  accentColor: string
+}) {
+  return (
+    <div
+      className="relative hidden w-full shrink-0 lg:block"
+      style={{ height: POOL_CARD_DESKTOP_LOGO_ZONE_H }}
+      aria-hidden
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={poolLogoAccentGlowStyle(accentColor)}
+      />
+      <div
+        className="relative box-border flex h-full w-full flex-col px-[15px]"
+        style={{ paddingTop: POOL_CARD_DESKTOP_LOGO_ZONE_PY, paddingBottom: POOL_CARD_DESKTOP_LOGO_ZONE_PY }}
+      >
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <PoolCardLogoMark pool={pool} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function poolAccentBorder(accent: string, mix = 40): string {
+  return `color-mix(in srgb, ${accent} ${mix}%, transparent)`
+}
+
+function poolAccentPillStyle(accent: string): CSSProperties {
   return {
-    accent: '#22c55e',
-    accentBg: 'rgba(34,197,94,0.10)',
-    accentBorder: 'rgba(34,197,94,0.35)',
+    color: accent,
+    backgroundColor: poolAccentBorder(accent, 11),
+    borderColor: poolAccentBorder(accent, 30),
+  }
+}
+
+function getLegacyTypePillStyle(scoringStyle: string): CSSProperties {
+  if (scoringStyle === 'winner') {
+    return {
+      color: '#f59e0b',
+      backgroundColor: 'rgba(245,158,11,0.10)',
+      borderColor: 'rgba(245,158,11,0.35)',
+    }
+  }
+  return {
+    color: '#22c55e',
+    backgroundColor: 'rgba(34,197,94,0.10)',
+    borderColor: 'rgba(34,197,94,0.35)',
   }
 }
 
@@ -131,22 +267,27 @@ interface PoolCardProps {
   pool: DashboardPoolCardData
   onPoolDeleted?: (poolId: string) => void
   /**
-   * Card chrome only. `dashboard` = deep near-black + subtle green tint
-   * (dashboard vibe). `default` = flat bg-card (pre-restyle; use to revert).
+   * Card chrome only. `dashboard` = calm neutral surface + theme accent strip.
+   * `default` = flat bg-card (landing preview).
    */
-  surface?: 'default' | 'dashboard'
+  surface?: 'default' | 'dashboard' | 'outline'
   /**
    * Marketing / landing preview: all CTAs navigate here instead of in-app pool
    * routes. Hides delete + invite-copy side effects (safe on logged-out pages).
    */
   previewActionHref?: string
+  /** Dashboard grid: hide invite-friends row. */
+  hideInviteFriends?: boolean
+  /** Dashboard grid: fixed height + single-line shrinking title. */
+  uniformSize?: boolean
 }
+
+const POOL_CARD_NEUTRAL_SURFACE_CLASS = DASHBOARD_POOL_CARD_CLASS
 
 const POOL_CARD_SURFACE_CLASS = {
   default: 'overflow-hidden rounded-2xl border border-border/90 bg-card/90',
-  /** Matches page bg (#080b0f) with a light primary green wash — solid --card in light. */
-  dashboard:
-    'hue-card-surface overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[#080b0f] via-[#0c1410] to-primary/[0.08]',
+  dashboard: POOL_CARD_NEUTRAL_SURFACE_CLASS,
+  outline: POOL_CARD_NEUTRAL_SURFACE_CLASS,
 } as const
 
 export function PoolCard({
@@ -154,6 +295,8 @@ export function PoolCard({
   onPoolDeleted,
   surface = 'dashboard',
   previewActionHref,
+  hideInviteFriends = false,
+  uniformSize = false,
 }: PoolCardProps) {
   const isPreview = Boolean(previewActionHref)
   const { user } = useAuth()
@@ -162,7 +305,8 @@ export function PoolCard({
   const { mounted, nowMs } = useClientNow(1000)
   const TypeIcon = pool.scoringStyle === 'winner' ? Trophy : Target
   const typeLabel = formatScoringStyleLabel(pool.scoringStyle)
-  const typePillTheme = getPoolTypePillTheme(pool.scoringStyle)
+  const accentColor = resolvePoolCardAccentColor(pool.themeColor)
+  const usesDashboardChrome = surface === 'dashboard' || surface === 'outline'
   const totalMatches = pool.totalPredictions > 0 ? pool.totalPredictions : 72
   const progressPercent =
     totalMatches > 0 ? (pool.yourPredictions / totalMatches) * 100 : 0
@@ -193,6 +337,12 @@ export function PoolCard({
   const picksNeeded = Math.max(0, pool.picksNeeded ?? 0)
   const showPicksNeededBadge =
     !isPreview && showPredictButton && picksNeeded > 0
+
+  const titleFit = useFitText<HTMLHeadingElement>({
+    maxSize: 24,
+    minSize: 14,
+    deps: [pool.name, uniformSize],
+  })
 
   const copyCode = () => {
     if (isPreview) return
@@ -237,23 +387,54 @@ export function PoolCard({
   }
 
   return (
-    <div className="dashboard-pool-card rounded-2xl">
-      <div className={POOL_CARD_SURFACE_CLASS[surface]}>
-      <div className="border-b border-border px-[15px] py-[13px]">
+    <div
+      className={cn(
+        'dashboard-pool-card rounded-2xl',
+        uniformSize && 'h-full min-h-0',
+      )}
+    >
+      <div
+        className={cn(
+          POOL_CARD_SURFACE_CLASS[surface],
+          uniformSize && 'flex h-full min-h-0 flex-col overflow-hidden',
+        )}
+      >
+        {usesDashboardChrome ? (
+          <div
+            className="w-full shrink-0"
+            style={{
+              height: POOL_CARD_ACCENT_STRIP_PX,
+              backgroundColor: accentColor,
+            }}
+            aria-hidden
+          />
+        ) : null}
+      <div
+        className={cn(
+          'shrink-0 border-b border-border px-[15px] py-[13px]',
+          uniformSize && 'min-h-[4.5rem]',
+        )}
+      >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex flex-col gap-1">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <span
                 className="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  color: typePillTheme.accent,
-                  backgroundColor: typePillTheme.accentBg,
-                  borderColor: typePillTheme.accentBorder,
-                }}
+                style={
+                  usesDashboardChrome
+                    ? poolAccentPillStyle(accentColor)
+                    : getLegacyTypePillStyle(pool.scoringStyle)
+                }
               >
                 <TypeIcon
                   className="h-3 w-3 shrink-0"
-                  style={{ color: typePillTheme.accent }}
+                  style={
+                    usesDashboardChrome
+                      ? { color: accentColor }
+                      : {
+                          color: getLegacyTypePillStyle(pool.scoringStyle).color,
+                        }
+                  }
                   aria-hidden
                 />
                 {typeLabel}
@@ -261,9 +442,9 @@ export function PoolCard({
               <span
                 className={cn(
                   'inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                  pool.isOfficial
-                    ? 'border-primary/35 bg-primary/10 text-primary'
-                    : 'border-border bg-muted/40 text-muted-foreground',
+                  usesDashboardChrome
+                    ? 'border-[#292929] bg-[#202020] text-muted-foreground'
+                    : 'border-border/80 bg-muted/30 text-muted-foreground',
                 )}
               >
                 {pool.isOfficial ? 'Official' : 'Invite'}
@@ -330,14 +511,28 @@ export function PoolCard({
         </div>
       </div>
 
-      <div className="px-[15px] pt-[14px]">
-        <Link href={nameHref} className="block">
-          <h3 className="font-display text-2xl tracking-wide text-foreground transition-colors hover:text-primary">
+      <div className="shrink-0 px-[15px] pt-[14px]">
+        <Link href={nameHref} className="block min-w-0">
+          <h3
+            ref={uniformSize ? titleFit.ref : undefined}
+            className={cn(
+              'min-w-0 font-display tracking-wide text-foreground transition-colors hover:text-primary',
+              uniformSize
+                ? 'h-8 truncate leading-none'
+                : 'text-2xl',
+            )}
+            style={
+              uniformSize
+                ? { fontSize: `${titleFit.fontSize}px` }
+                : undefined
+            }
+            title={pool.name}
+          >
             {pool.name}
           </h3>
         </Link>
 
-        <div className="mt-2.5">
+        <div className="mt-2.5 min-h-[1.75rem]">
           <div className="flex items-center gap-2">
             <div className="flex items-center">
               {visibleAvatars.map((member, index) => (
@@ -347,14 +542,22 @@ export function PoolCard({
                   customAvatarUrl={member.customAvatarUrl}
                   alt={member.displayName}
                   className={cn(
-                    'h-[26px] w-[26px] border-2 border-card ring-2 ring-card',
+                    'h-[26px] w-[26px] border-2 ring-2',
+                    usesDashboardChrome
+                      ? 'border-[#171717] ring-[#171717]'
+                      : 'border-card ring-card',
                     index > 0 && '-ml-[7px]',
                   )}
                 />
               ))}
               {overflowCount > 0 ? (
                 <div
-                  className="-ml-[7px] flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 border-card bg-[#1a2535] text-[10px] font-semibold text-primary ring-2 ring-card"
+                  className={cn(
+                    '-ml-[7px] flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-semibold text-primary ring-2',
+                    usesDashboardChrome
+                      ? 'border-[#171717] bg-[#222222] ring-[#171717]'
+                      : 'border-card bg-[#1a2535] ring-card',
+                  )}
                   aria-label={`${overflowCount} more players`}
                 >
                   +{overflowCount}
@@ -363,17 +566,29 @@ export function PoolCard({
             </div>
             <span className="text-sm text-muted-foreground">{playersLabel}</span>
           </div>
-          <RankMedalChip place={pool.yourRank} />
+          <div
+            className={cn(
+              'mt-1',
+              uniformSize && usesDashboardChrome && 'min-h-[28px]',
+            )}
+          >
+            <RankMedalChip place={pool.yourRank} />
+          </div>
         </div>
 
-        <div className="mt-3.5 pb-[14px]">
+        <div className="mt-3.5">
           <div className="mb-1 flex items-center justify-between gap-2 text-xs">
             <span className="text-muted-foreground">Your predictions</span>
             <span className="font-mono text-primary">
               {pool.yourPredictions} / {totalMatches}
             </span>
           </div>
-          <div className="h-[7px] overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn(
+              'h-[7px] overflow-hidden rounded-full',
+              usesDashboardChrome ? 'bg-[#222222]' : 'bg-muted',
+            )}
+          >
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-500"
               style={{ width: `${Math.min(progressPercent, 100)}%` }}
@@ -382,7 +597,11 @@ export function PoolCard({
         </div>
       </div>
 
-      <div className="px-[15px] pb-[14px]">
+      {usesDashboardChrome ? (
+        <PoolCardDesktopLogoZone pool={pool} accentColor={accentColor} />
+      ) : null}
+
+      <div className="shrink-0 px-[15px] pb-[14px]">
         <div className="flex flex-nowrap gap-2">
           {showPredictButton ? (
             <Link
@@ -400,13 +619,23 @@ export function PoolCard({
           ) : null}
           <Link
             href={leaderboardHref}
+            onPointerDown={
+              usesDashboardChrome
+                ? (event) => bindTactilePress(event.currentTarget)
+                : undefined
+            }
             className={cn(
-              'inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border bg-transparent px-2.5 py-[11px] text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-3',
+              usesDashboardChrome
+                ? POOL_CARD_OPEN_BTN_CLASS
+                : cn(
+                    'inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-border bg-transparent px-2.5 py-[11px] text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-3',
+                    'hover:bg-muted',
+                  ),
               FOCUS_VISIBLE_RING,
               showPredictButton ? undefined : 'w-full',
             )}
           >
-            View Leaderboard
+            Open Pool
             <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         </div>
@@ -415,7 +644,8 @@ export function PoolCard({
           <Link
             href={previewActionHref!}
             className={cn(
-              'relative mt-2 flex w-full items-center gap-2 overflow-hidden rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted',
+              'relative mt-2 flex w-full items-center gap-2 overflow-hidden rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors',
+              usesDashboardChrome ? 'hover:bg-[#1d1d1d]' : 'hover:bg-muted',
               FOCUS_VISIBLE_RING,
             )}
           >
@@ -429,12 +659,13 @@ export function PoolCard({
             </span>
             <ArrowRight className="relative h-4 w-4 shrink-0 text-primary" aria-hidden />
           </Link>
-        ) : (
+        ) : hideInviteFriends ? null : (
           <button
             type="button"
             onClick={copyCode}
             className={cn(
-              'mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-muted',
+              'mt-2 flex w-full items-center gap-2 rounded-[10px] border border-border bg-transparent px-3 py-1.5 text-left transition-colors',
+              usesDashboardChrome ? 'hover:bg-[#1d1d1d]' : 'hover:bg-muted',
               FOCUS_VISIBLE_RING,
             )}
           >

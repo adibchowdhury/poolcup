@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, GitBranch, TrendingUp, Users } from 'lucide-react'
-import {
-  DashboardFeedSection,
-} from '@/components/dashboard/feed/dashboard-feed'
+import { DashboardFeedSection } from '@/components/dashboard/feed/dashboard-feed'
 import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
+import { cn } from '@/lib/utils'
+import { DASHBOARD_FEED_SURFACE_CLASS } from '@/components/dashboard/feed/dashboard-home-layout'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
@@ -26,6 +26,9 @@ import { supabase } from '@/src/lib/supabase'
 
 type GlobalActivitySectionProps = {
   userId: string
+  /** Compact heading for desktop home rail; omits outer plain card wrapper. */
+  layout?: 'feed' | 'rail'
+  className?: string
 }
 
 function CompactMatchHeader({
@@ -81,7 +84,7 @@ function CompactMatchHeader({
 
 export function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2.5 sm:px-3.5">
+    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
       <CompactMatchHeader match={match} eyebrow="Most predicted" />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 font-medium text-foreground">
@@ -117,7 +120,7 @@ export function ClosestCallCard({ item }: { item: ClosestCallActivity }) {
   const splitPct = Math.round(item.maxShare * 100)
 
   return (
-    <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2.5 sm:px-3.5">
+    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
       <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         <GitBranch className="h-3.5 w-3.5" aria-hidden />
         Closest call
@@ -141,7 +144,7 @@ export function BiggestCommunityClimbCard({
   item: BiggestCommunityClimb
 }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2.5 sm:px-3.5">
+    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
       <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         <TrendingUp className="h-3.5 w-3.5 text-primary" aria-hidden />
         Biggest climb
@@ -180,7 +183,11 @@ export function GlobalActivitySkeleton({ rows = 2 }: { rows?: number }) {
  * Compact community strip — max 2 cards.
  * Full highlights (incl. biggest climb): /activity
  */
-export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
+export function GlobalActivitySection({
+  userId,
+  layout = 'feed',
+  className,
+}: GlobalActivitySectionProps) {
   const [data, setData] = useState<GlobalActivityFeedData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -203,10 +210,66 @@ export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
     return null
   }
 
+  const body =
+    loading && !data ? (
+      <GlobalActivitySkeleton />
+    ) : data?.error && data.isEmpty ? (
+      <div className="space-y-3 py-1 text-center">
+        <p className="text-sm text-destructive">{data.error}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void load()}
+        >
+          Try again
+        </Button>
+      </div>
+    ) : data ? (
+      <div className="space-y-2">
+        {data.mostPredicted ? (
+          <MostPredictedCard match={data.mostPredicted} />
+        ) : null}
+        {data.closestCall &&
+        data.closestCall.match.id !== data.mostPredicted?.id ? (
+          <ClosestCallCard item={data.closestCall} />
+        ) : null}
+      </div>
+    ) : null
+
+  if (layout === 'rail') {
+    return (
+      <section
+        data-feed-section="global-activity"
+        data-layout="rail"
+        className={cn('min-w-0 space-y-3', className)}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="min-w-0 truncate font-display text-lg leading-none tracking-wide text-foreground">
+            Global PoolCup Activity
+          </h2>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground"
+          >
+            <Link href="/activity">
+              View all
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </Button>
+        </div>
+        {body}
+      </section>
+    )
+  }
+
   return (
     <DashboardFeedSection
       id="global-activity"
       title="Global PoolCup Activity"
+      className={className}
       action={
         <Button asChild variant="outline" size="sm" className="gap-1.5">
           <Link href="/activity">
@@ -216,33 +279,7 @@ export function GlobalActivitySection({ userId }: GlobalActivitySectionProps) {
         </Button>
       }
     >
-      <DashboardPlainCard className="p-3 sm:p-4">
-        {loading && !data ? (
-          <GlobalActivitySkeleton />
-        ) : data?.error && data.isEmpty ? (
-          <div className="space-y-3 py-1 text-center">
-            <p className="text-sm text-destructive">{data.error}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void load()}
-            >
-              Try again
-            </Button>
-          </div>
-        ) : data ? (
-          <div className="space-y-2">
-            {data.mostPredicted ? (
-              <MostPredictedCard match={data.mostPredicted} />
-            ) : null}
-            {data.closestCall &&
-            data.closestCall.match.id !== data.mostPredicted?.id ? (
-              <ClosestCallCard item={data.closestCall} />
-            ) : null}
-          </div>
-        ) : null}
-      </DashboardPlainCard>
+      <DashboardPlainCard className="p-3 sm:p-4">{body}</DashboardPlainCard>
     </DashboardFeedSection>
   )
 }

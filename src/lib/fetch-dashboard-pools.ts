@@ -31,8 +31,12 @@ type MembershipRow = {
     invite_code: string
     creator_id: string
     event_name: string
+    event_id: string | null
     scoring_style: string
     is_official: boolean | null
+    theme_color: string | null
+    avatar: string | null
+    emblem_url: string | null
   } | null
 }
 
@@ -76,8 +80,12 @@ export async function fetchDashboardPools(
         invite_code,
         creator_id,
         event_name,
+        event_id,
         scoring_style,
-        is_official
+        is_official,
+        theme_color,
+        avatar,
+        emblem_url
       )
     `,
     )
@@ -137,6 +145,27 @@ export async function fetchDashboardPools(
   const { count: matchesPlayed } = await matchesPlayedQuery
 
   const matchesPlayedCount = matchesPlayed ?? 0
+
+  const eventIds = [
+    ...new Set(
+      validMemberships
+        .map((row) => row.pools!.event_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
+  const sportByEventId = new Map<string, string>()
+  if (eventIds.length > 0) {
+    const { data: eventRows } = await supabase
+      .from('sporting_events')
+      .select('id, sport')
+      .in('id', eventIds)
+
+    for (const row of eventRows ?? []) {
+      if (row.sport) {
+        sportByEventId.set(row.id, row.sport)
+      }
+    }
+  }
 
   const memberCountByPool = new Map<string, number>()
   const memberAvatarsByPool = new Map<
@@ -430,6 +459,10 @@ export async function fetchDashboardPools(
       predictionsLocked,
       canDelete: pool.creator_id === userId,
       isOfficial: Boolean(pool.is_official),
+      themeColor: pool.theme_color ?? null,
+      avatar: pool.avatar ?? null,
+      emblemUrl: pool.emblem_url ?? null,
+      sport: pool.event_id ? (sportByEventId.get(pool.event_id) ?? null) : null,
     }
   })
 
