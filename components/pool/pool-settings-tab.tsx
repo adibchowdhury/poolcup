@@ -53,6 +53,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { poolSettingsControlElementId } from '@/src/lib/pool-settings-nav'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
 import {
@@ -178,6 +179,26 @@ function SubsectionHeading({
             : 'bg-gradient-to-r from-border to-transparent',
         )}
       />
+    </div>
+  )
+}
+
+function SettingsControlBlock({
+  controlId,
+  children,
+  className,
+}: {
+  controlId: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      id={poolSettingsControlElementId(controlId)}
+      data-pool-setting={controlId}
+      className={cn('scroll-mt-28 lg:scroll-mt-4', className)}
+    >
+      {children}
     </div>
   )
 }
@@ -787,6 +808,7 @@ export function PoolSettingsSectionContent({
     <div className="w-full min-w-0 space-y-8">
       {section === 'details' ? (
       <>
+      <SettingsControlBlock controlId="details-pool-type">
       <section>
         <SectionHeading title="Pool type" />
         <div className="flex flex-wrap items-center gap-2">
@@ -796,6 +818,8 @@ export function PoolSettingsSectionContent({
           </p>
         </div>
       </section>
+      </SettingsControlBlock>
+      <SettingsControlBlock controlId="details-competition">
       <section>
         <SectionHeading title="Competition" />
         <p className="text-sm text-muted-foreground">
@@ -803,6 +827,8 @@ export function PoolSettingsSectionContent({
           changed in settings.
         </p>
       </section>
+      </SettingsControlBlock>
+      <SettingsControlBlock controlId="details-name">
       <section>
         <SectionHeading title="Pool name" />
         {isEditingName ? (
@@ -871,8 +897,10 @@ export function PoolSettingsSectionContent({
           </div>
         )}
       </section>
+      </SettingsControlBlock>
 
       {isAdmin ? (
+        <SettingsControlBlock controlId="details-description">
         <section className="space-y-3">
           <SectionHeading title="Description" />
           <Textarea
@@ -907,16 +935,20 @@ export function PoolSettingsSectionContent({
             </p>
           ) : null}
         </section>
+        </SettingsControlBlock>
       ) : poolDescription ? (
+        <SettingsControlBlock controlId="details-description">
         <section>
           <SectionHeading title="Description" />
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">
             {poolDescription}
           </p>
         </section>
+        </SettingsControlBlock>
       ) : null}
 
       {isAdmin && poolId ? (
+        <SettingsControlBlock controlId="details-activity">
         <section className="rounded-2xl border border-border bg-card/50 px-4 py-4">
           <SectionHeading title="Activity summary" />
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -951,20 +983,24 @@ export function PoolSettingsSectionContent({
             </p>
           ) : null}
         </section>
+        </SettingsControlBlock>
       ) : null}
 
       {isAdmin ? (
         <section className="min-w-0 space-y-6">
           <SectionHeading title="Pool branding" />
           {!toolsUnlocked ? (
+            <SettingsControlBlock controlId="details-logo">
             <LockedCommissionerFeature
               title="Pool branding"
               description="Theme color and pool logo"
               isOwner={isOwner}
               poolId={poolId}
             />
+            </SettingsControlBlock>
           ) : (
           <>
+          <SettingsControlBlock controlId="details-logo">
           <div className="space-y-3">
             <SubsectionHeading title="Pool logo" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -1057,7 +1093,9 @@ export function PoolSettingsSectionContent({
               </div>
             </div>
           </div>
+          </SettingsControlBlock>
 
+          <SettingsControlBlock controlId="details-color">
           <div className="space-y-3">
             <SubsectionHeading title="Pool color" />
             <div className="flex flex-wrap items-center gap-3">
@@ -1265,6 +1303,7 @@ export function PoolSettingsSectionContent({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </SettingsControlBlock>
           </>
           )}
         </section>
@@ -1275,14 +1314,17 @@ export function PoolSettingsSectionContent({
       {section === 'scoring' ? (
       <>
         {isAdmin && !toolsUnlocked && isClassicPool ? (
+          <SettingsControlBlock controlId="scoring-rules">
           <LockedCommissionerFeature
             title="Custom scoring"
             description="Set exact / winner / draw points"
             isOwner={isOwner}
             poolId={poolId}
           />
+          </SettingsControlBlock>
         ) : isClassicPool ? (
             <div>
+              <SettingsControlBlock controlId="scoring-rules">
               <SubsectionHeading title="Custom scoring" />
               <p className="mb-3 text-xs text-muted-foreground">
                 Points for exact scores, winners, and draws in this pool.
@@ -1490,13 +1532,15 @@ export function PoolSettingsSectionContent({
                 </ul>
               )}
 
+              </SettingsControlBlock>
+
               {poolId ? (
-                <div className="mt-6">
+                <SettingsControlBlock controlId="scoring-history" className="mt-6">
                   <PoolScoringHistory
                     poolId={poolId}
                     refreshKey={scoringHistoryKey}
                   />
-                </div>
+                </SettingsControlBlock>
               ) : null}
 
               <AlertDialog
@@ -1536,10 +1580,12 @@ export function PoolSettingsSectionContent({
               </AlertDialog>
             </div>
           ) : (
+            <SettingsControlBlock controlId="scoring-rules">
             <p className="text-sm text-muted-foreground">
               Winner Only pools use group ranking points. Custom match scoring
               does not apply.
             </p>
+            </SettingsControlBlock>
           )}
       </>
       ) : null}
@@ -1548,21 +1594,26 @@ export function PoolSettingsSectionContent({
       <>
         {isAdmin && !toolsUnlocked ? (
           <div className="space-y-4">
+            <SettingsControlBlock controlId="communication-announcements">
             <LockedCommissionerFeature
               title="Announcements"
               description="Post, edit, and pin announcements"
               isOwner={isOwner}
               poolId={poolId}
             />
+            </SettingsControlBlock>
+            <SettingsControlBlock controlId="communication-polls">
             <LockedCommissionerFeature
               title="Polls"
               description="Create and manage pool polls"
               isOwner={isOwner}
               poolId={poolId}
             />
+            </SettingsControlBlock>
           </div>
         ) : isAdmin ? (
           <>
+          <SettingsControlBlock controlId="communication-announcements">
           <div>
             <SubsectionHeading title="Announcements" />
             <p className="mb-3 text-xs text-muted-foreground">
@@ -1579,7 +1630,9 @@ export function PoolSettingsSectionContent({
               />
             ) : null}
           </div>
+          </SettingsControlBlock>
 
+          <SettingsControlBlock controlId="communication-polls">
           <div>
             <SubsectionHeading title="Polls" />
             <p className="mb-3 text-xs text-muted-foreground">
@@ -1589,10 +1642,12 @@ export function PoolSettingsSectionContent({
               <PoolPollsPanel poolId={poolId} isAdmin showComposer />
             ) : null}
           </div>
+          </SettingsControlBlock>
           </>
         ) : (
           <>
           {poolId ? (
+            <SettingsControlBlock controlId="communication-announcements">
             <section className="space-y-3">
               <SectionHeading title="Announcements" />
               <PoolAnnouncementsPanel
@@ -1602,8 +1657,10 @@ export function PoolSettingsSectionContent({
                 showComposer={false}
               />
             </section>
+            </SettingsControlBlock>
           ) : null}
           {poolId ? (
+            <SettingsControlBlock controlId="communication-polls">
             <section className="space-y-3">
               <SectionHeading title="Polls" />
               <PoolPollsPanel
@@ -1612,6 +1669,7 @@ export function PoolSettingsSectionContent({
                 showComposer={false}
               />
             </section>
+            </SettingsControlBlock>
           ) : null}
           </>
         )}
@@ -1621,13 +1679,16 @@ export function PoolSettingsSectionContent({
       {section === 'commissioner' ? (
       <>
         {isAdmin && !toolsUnlocked ? (
+          <SettingsControlBlock controlId="commissioner-exports">
           <LockedCommissionerFeature
             title="Exports"
             description="Leaderboard and predictions CSV, printable view"
             isOwner={isOwner}
             poolId={poolId}
           />
+          </SettingsControlBlock>
         ) : isAdmin ? (
+          <SettingsControlBlock controlId="commissioner-exports">
           <div>
             <SubsectionHeading title="Exports" />
             {poolId ? (
@@ -1638,11 +1699,13 @@ export function PoolSettingsSectionContent({
               </p>
             )}
           </div>
+          </SettingsControlBlock>
         ) : null}
 
           {isAdmin ? (
           <div>
             <SubsectionHeading title="Membership" />
+            <SettingsControlBlock controlId="commissioner-join-approval">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1 space-y-1">
                 <Label
@@ -1693,7 +1756,9 @@ export function PoolSettingsSectionContent({
                 Close to new members
               </Button>
             ) : null}
+            </SettingsControlBlock>
 
+            <SettingsControlBlock controlId="commissioner-privacy">
             <div className="mt-6 flex items-start justify-between gap-4 border-t border-border/60 pt-5">
               <div className="min-w-0 flex-1 space-y-1">
                 <Label
@@ -1725,8 +1790,10 @@ export function PoolSettingsSectionContent({
             {savingIsPublic ? (
               <p className="mt-2 text-xs text-muted-foreground">Saving…</p>
             ) : null}
+            </SettingsControlBlock>
           </div>
           ) : (
+          <SettingsControlBlock controlId="commissioner-join-approval">
           <p
             id="accepting-members-status"
             className="text-sm text-muted-foreground"
@@ -1735,6 +1802,7 @@ export function PoolSettingsSectionContent({
               ? 'This pool is open to new members.'
               : 'This pool is closed to new members.'}
           </p>
+          </SettingsControlBlock>
           )}
 
       {isAdmin && poolId ? (
@@ -1742,29 +1810,36 @@ export function PoolSettingsSectionContent({
           {!toolsUnlocked ? (
             <div className="space-y-4">
               {isOwner ? (
+                <SettingsControlBlock controlId="commissioner-co-admins">
                 <LockedCommissionerFeature
                   title="Co-commissioners"
                   description="Add co-admins to help run the pool"
                   isOwner={isOwner}
                   poolId={poolId}
                 />
+                </SettingsControlBlock>
               ) : null}
+              <SettingsControlBlock controlId="commissioner-missing-predictions">
               <LockedCommissionerFeature
                 title="Members missing predictions"
                 description="See who still needs to predict"
                 isOwner={isOwner}
                 poolId={poolId}
               />
+              </SettingsControlBlock>
+              <SettingsControlBlock controlId="commissioner-moderation-log">
               <LockedCommissionerFeature
                 title="Moderation log"
                 description="Audit trail of commissioner actions"
                 isOwner={isOwner}
                 poolId={poolId}
               />
+              </SettingsControlBlock>
             </div>
           ) : (
             <>
           {isOwner && poolCreatorUserId ? (
+            <SettingsControlBlock controlId="commissioner-co-admins">
             <CommissionerCoAdminsSection
               poolId={poolId}
               ownerUserId={poolCreatorUserId}
@@ -1776,13 +1851,18 @@ export function PoolSettingsSectionContent({
                 username: null,
               }))}
             />
+            </SettingsControlBlock>
           ) : null}
+          <SettingsControlBlock controlId="commissioner-missing-predictions">
           <CommissionerMissingPredictions
             poolId={poolId}
             inviteCode={inviteCode}
             poolName={poolName}
           />
+          </SettingsControlBlock>
+          <SettingsControlBlock controlId="commissioner-moderation-log">
           <CommissionerModerationLog poolId={poolId} />
+          </SettingsControlBlock>
             </>
           )}
         </div>
@@ -1817,6 +1897,7 @@ export function PoolSettingsSectionContent({
       {section === 'members' ? (
       <>
             {isAdmin && acceptingMembers && inviteCode ? (
+              <SettingsControlBlock controlId="members-invite-link">
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Invite link
@@ -1828,8 +1909,10 @@ export function PoolSettingsSectionContent({
                   source="pool_settings"
                 />
               </div>
+              </SettingsControlBlock>
             ) : null}
 
+      <SettingsControlBlock controlId="members-list">
       <section className="space-y-3">
         <SectionHeading
           title={isAdmin ? 'Manage members' : 'Members'}
@@ -1967,8 +2050,10 @@ export function PoolSettingsSectionContent({
           </ul>
         )}
       </section>
+      </SettingsControlBlock>
 
       {poolId && isOwner ? (
+        <SettingsControlBlock controlId="members-transfer">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
@@ -1996,6 +2081,7 @@ export function PoolSettingsSectionContent({
             }}
           />
         </div>
+        </SettingsControlBlock>
       ) : null}
 
       <AlertDialog
@@ -2063,6 +2149,7 @@ export function PoolSettingsSectionContent({
                 : 'Leave this pool to remove yourself and your predictions here.'}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <SettingsControlBlock controlId="danger-leave">
             <LeavePoolDialog
               poolId={poolId}
               poolName={poolName}
@@ -2074,10 +2161,14 @@ export function PoolSettingsSectionContent({
                 onOwnershipTransferred?.(newOwnerUserId)
               }}
             />
+            </SettingsControlBlock>
+            <SettingsControlBlock controlId="danger-report">
             <ReportPoolControl poolId={poolId} />
+            </SettingsControlBlock>
           </div>
 
           {isOwner ? (
+            <SettingsControlBlock controlId="danger-delete">
             <div className="pt-2">
               <SubsectionHeading title="Danger Zone" tone="danger" />
               <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
@@ -2099,6 +2190,7 @@ export function PoolSettingsSectionContent({
                 }}
               />
             </div>
+            </SettingsControlBlock>
           ) : null}
         </section>
       ) : null}

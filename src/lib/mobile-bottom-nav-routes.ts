@@ -83,6 +83,25 @@ export const CHAT_INBOX_HREF = '/chat'
 export const DISCOVER_HREF = '/discover'
 export const FRIENDS_HREF = '/friends'
 
+/** Desktop hub nav Tabs value from the current pathname (null = hide hub nav). */
+export function resolveHubDesktopNavValue(
+  pathname: string,
+  tabParam: string | null,
+): string | null {
+  if (pathname === '/friends' || pathname.startsWith('/friends')) {
+    return 'friends'
+  }
+  if (pathname === '/discover') return 'discover'
+  if (pathname === '/chat') return 'inbox'
+  if (pathname === '/dashboard') {
+    if (tabParam === 'profile') return 'profile'
+    if (tabParam === 'upcoming') return 'games'
+    if (tabParam === 'how-it-works') return 'how-it-works'
+    return 'dashboard'
+  }
+  return null
+}
+
 export function resolveMobileBottomNavActive(
   pathname: string,
   tabParam: string | null,

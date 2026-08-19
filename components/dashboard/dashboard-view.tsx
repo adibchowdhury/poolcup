@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
-import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
+import { useHubChromeProfileOptional } from '@/components/dashboard/hub-chrome-profile'
 import { DashboardFeed } from '@/components/dashboard/feed/dashboard-feed'
 import { ContinuePredictingSection } from '@/components/dashboard/feed/continue-predicting-section'
 import { FriendsActivitySection } from '@/components/dashboard/feed/friends-activity-section'
@@ -28,6 +28,7 @@ import {
 } from '@/components/dashboard/upcoming-games-tab'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { fetchDashboardPools } from '@/src/lib/fetch-dashboard-pools'
+import { fetchDashboardQuickStats } from '@/src/lib/dashboard-quick-stats'
 import { defaultSportBubbleFromFavorites } from '@/src/lib/favorite-sports'
 import { favoriteSportChips } from '@/src/lib/fetch-public-profile'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -123,7 +124,7 @@ function DashboardViewContent({
   createdAt = null,
   supportPromptLastShownAt = null,
   favoriteSports = [],
-  quickStats,
+  quickStats: initialQuickStats,
   passwordResetSuccess,
   errorMessage,
 }: DashboardViewProps) {
@@ -152,7 +153,11 @@ function DashboardViewContent({
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [liveTotalPoints, setLiveTotalPoints] = useState(quickStats.totalPoints)
+  const [liveTotalPoints, setLiveTotalPoints] = useState(
+    initialQuickStats.totalPoints,
+  )
+  const [quickStats, setQuickStats] = useState(initialQuickStats)
+  const chrome = useHubChromeProfileOptional()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { registerDashboardNavHandler, setActiveNavId } = useDashboardTab()
@@ -249,8 +254,33 @@ function DashboardViewContent({
   }, [displayName])
 
   useEffect(() => {
-    setLiveTotalPoints(quickStats.totalPoints)
-  }, [quickStats.totalPoints])
+    setLiveTotalPoints(initialQuickStats.totalPoints)
+  }, [initialQuickStats.totalPoints])
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchDashboardQuickStats(
+      supabase,
+      userId,
+      initialQuickStats.totalPoints,
+    ).then((stats) => {
+      if (!cancelled) {
+        setQuickStats(stats)
+        setLiveTotalPoints(stats.totalPoints)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, initialQuickStats.totalPoints])
+
+  useEffect(() => {
+    chrome?.setProfile({
+      displayName: headerName,
+      avatar: selectedAvatar,
+      customAvatarUrl,
+    })
+  }, [chrome, headerName, selectedAvatar, customAvatarUrl])
 
   useEffect(() => {
     void refreshUserPoints()
@@ -444,9 +474,7 @@ function DashboardViewContent({
       displayName={headerName}
       avatar={selectedAvatar}
       customAvatarUrl={customAvatarUrl}
-      mainClassName={
-        activeTab === 'profile' ? 'pt-3 pb-8 sm:pt-4' : undefined
-      }
+      hubActiveNav={activeTab}
     >
       <div className="mb-4 flex flex-col gap-3 empty:mb-0 empty:hidden sm:mb-6 sm:gap-4 sm:empty:mb-0">
         <KnockoutBracketSetBanner userId={userId} />
@@ -468,12 +496,8 @@ function DashboardViewContent({
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className={
-              activeTab === 'profile' ? 'min-w-0 gap-3' : 'min-w-0 gap-10'
-            }
+            className="min-w-0"
           >
-            <DashboardDesktopNav />
-
             <TabsContent value="profile" className="min-w-0 mt-0">
               <ProfileShowcase
                 userId={userId}

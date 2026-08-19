@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { Heart, Mail, Settings, CircleHelp, Users, CreditCard, History, BarChart3 } from 'lucide-react'
 import { useFriendRequestCount } from '@/hooks/use-friend-request-count'
@@ -35,8 +36,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
+import { useHubChromeProfileOptional } from '@/components/dashboard/hub-chrome-profile'
+import { useHubLayoutNested } from '@/components/dashboard/hub-layout-context'
+import {
+  HUB_DESKTOP_NAV_STRIP_CLASS,
+  type HubDesktopNavId,
+} from '@/components/dashboard/hub-desktop-nav-frame'
 import { cn } from '@/lib/utils'
-import { MOBILE_BOTTOM_NAV_PAD_CLASS, DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
+import {
+  MOBILE_BOTTOM_NAV_PAD_CLASS,
+  DASHBOARD_TAB_HREFS,
+  resolveHubDesktopNavValue,
+} from '@/src/lib/mobile-bottom-nav-routes'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { supabase } from '@/src/lib/supabase'
 
@@ -48,6 +60,12 @@ export type DashboardAppShellProps = {
   customAvatarUrl?: string | null
   children: React.ReactNode
   mainClassName?: string
+  /** Desktop primary nav active item; nav renders outside content max-width. */
+  hubActiveNav?: HubDesktopNavId | string
+  /** Link Home / Matches / Profile to /dashboard tabs (unused; nav always links). */
+  linkDashboardTabs?: boolean
+  /** Always render the hub desktop nav (hub layout). */
+  forceHubNav?: boolean
 }
 
 export function DashboardAppShell({
@@ -58,7 +76,14 @@ export function DashboardAppShell({
   customAvatarUrl,
   children,
   mainClassName,
+  hubActiveNav,
+  linkDashboardTabs = true,
+  forceHubNav = false,
 }: DashboardAppShellProps) {
+  const nestedInHubLayout = useHubLayoutNested()
+  const pathname = usePathname() ?? ''
+  const searchParams = useSearchParams()
+  const chrome = useHubChromeProfileOptional()
   const { count: friendRequestCount } = useFriendRequestCount()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -72,10 +97,27 @@ export function DashboardAppShell({
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const { handleSignOut, loading: signOutLoading } = useDashboardSignOut()
-
-  const headerName = displayName ?? ''
-
   const canSaveEmail = useMemo(() => Boolean(newEmail.trim()), [newEmail])
+
+  const resolvedHubNav =
+    hubActiveNav ??
+    resolveHubDesktopNavValue(pathname, searchParams.get('tab'))
+  const headerName = chrome?.displayName ?? displayName ?? ''
+  const headerAvatar = chrome?.avatar ?? avatar
+  const headerCustomAvatarUrl = chrome?.customAvatarUrl ?? customAvatarUrl
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    setAccountMessage(null)
+    setPasswordMessage(null)
+  }, [settingsOpen])
+
+  if (nestedInHubLayout) {
+    if (!mainClassName) return children
+    return (
+      <div className={cn('mx-auto w-full', mainClassName)}>{children}</div>
+    )
+  }
 
   async function handleSaveEmail() {
     setAccountSaving(true)
@@ -134,12 +176,6 @@ export function DashboardAppShell({
     }
   }
 
-  useEffect(() => {
-    if (!settingsOpen) return
-    setAccountMessage(null)
-    setPasswordMessage(null)
-  }, [settingsOpen])
-
   return (
     <BadgeUnlockProvider>
     <div className="min-h-screen max-w-full min-w-0 overflow-x-clip bg-app-background">
@@ -159,8 +195,8 @@ export function DashboardAppShell({
               <WebMobileTopBar
                 className="sm:hidden"
                 displayName={headerName}
-                avatar={avatar}
-                customAvatarUrl={customAvatarUrl}
+                avatar={headerAvatar}
+                customAvatarUrl={headerCustomAvatarUrl}
                 onOpenDrawer={() => {
                   setProfilePopoverOpen(false)
                   setDrawerOpen(true)
@@ -192,8 +228,8 @@ export function DashboardAppShell({
                           </span>
                           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-border bg-muted ring-1 ring-border/80">
                             <UserAvatarImage
-                              avatar={avatar}
-                              customAvatarUrl={customAvatarUrl}
+                              avatar={headerAvatar}
+                              customAvatarUrl={headerCustomAvatarUrl}
                               className="size-full rounded-full border-0"
                             />
                           </div>
@@ -294,8 +330,8 @@ export function DashboardAppShell({
             open={profilePopoverOpen}
             displayName={headerName}
             email={email}
-            avatar={avatar}
-            customAvatarUrl={customAvatarUrl}
+            avatar={headerAvatar}
+            customAvatarUrl={headerCustomAvatarUrl}
             onClose={() => setProfilePopoverOpen(false)}
           />
 
@@ -451,22 +487,39 @@ export function DashboardAppShell({
 
                   <Separator />
 
-                  <DeleteAccountSection userId={userId} avatar={avatar} />
+                  <DeleteAccountSection userId={userId} avatar={headerAvatar} />
                 </div>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        <main
-          className={cn(
-            'mx-auto w-full min-w-0 max-w-6xl px-4 py-8',
-            MOBILE_BOTTOM_NAV_PAD_CLASS,
-            mainClassName,
-          )}
-        >
-          {children}
-        </main>
+        {forceHubNav || resolvedHubNav != null ? (
+          <div className="flex flex-col gap-8">
+            <div className={HUB_DESKTOP_NAV_STRIP_CLASS}>
+              <DashboardDesktopNav linkDashboardTabs={linkDashboardTabs} />
+            </div>
+            <main
+              className={cn(
+                'mx-auto w-full min-w-0 max-w-6xl px-4 py-6 sm:pb-8 sm:pt-0',
+                MOBILE_BOTTOM_NAV_PAD_CLASS,
+                mainClassName,
+              )}
+            >
+              {children}
+            </main>
+          </div>
+        ) : (
+          <main
+            className={cn(
+              'mx-auto w-full min-w-0 max-w-6xl px-4 py-8',
+              MOBILE_BOTTOM_NAV_PAD_CLASS,
+              mainClassName,
+            )}
+          >
+            {children}
+          </main>
+        )}
       </div>
     </div>
     </BadgeUnlockProvider>

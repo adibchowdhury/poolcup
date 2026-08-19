@@ -43,7 +43,8 @@ export function FriendsFindPageView({
       displayName={displayName}
       avatar={avatar}
       customAvatarUrl={customAvatarUrl}
-      mainClassName="max-w-lg py-6 sm:py-8"
+      hubActiveNav="friends"
+      mainClassName="max-w-lg"
     >
       <div className="flex items-center gap-2">
         <Link

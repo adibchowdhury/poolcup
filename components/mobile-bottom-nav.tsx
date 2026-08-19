@@ -18,6 +18,7 @@ import {
   isAuthenticatedAppPath,
 } from '@/src/lib/authenticated-paths'
 import { useMobileInputFocused } from '@/hooks/use-mobile-input-focused'
+import { usePrefetchHubRoutes } from '@/src/lib/hub-nav-prefetch'
 import { useDashboardTab } from '@/src/lib/dashboard-tab-context'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import {
@@ -125,6 +126,7 @@ function MobileBottomNavContent() {
   const { mobileChatActive } = useMobileChatChrome()
   const inputFocused = useMobileInputFocused()
   const { activeNavId, switchDashboardTab } = useDashboardTab()
+  usePrefetchHubRoutes()
 
   const tabParam = searchParams.get('tab')
   const isOnDashboard = pathname === '/dashboard'
@@ -201,6 +203,7 @@ function MobileBottomNavContent() {
               <Link
                 key={item.id}
                 href={item.href}
+                prefetch
                 onClick={() => triggerHaptic()}
                 className={homeClassName}
                 aria-label={item.label}
@@ -236,6 +239,7 @@ function MobileBottomNavContent() {
             <Link
               key={item.id}
               href={item.href}
+              prefetch
               onClick={() => triggerHaptic()}
               className={sideClassName}
               aria-label={item.label}

@@ -841,7 +841,8 @@ export function DiscoverPageView({
       displayName={displayName}
       avatar={avatar}
       customAvatarUrl={customAvatarUrl}
-      mainClassName="min-w-0 max-w-5xl overflow-x-clip py-6 sm:py-8"
+      hubActiveNav="discover"
+      mainClassName="min-w-0 max-w-5xl overflow-x-clip"
     >
       <div className="min-w-0 space-y-5 sm:space-y-6">
       <div className="space-y-4">

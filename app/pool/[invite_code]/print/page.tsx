@@ -10,6 +10,7 @@ import {
 } from '@/src/lib/pool-export'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
+import { poolSettingsTabPath } from '@/src/lib/pool-settings-nav'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -93,7 +94,7 @@ export default async function PoolPrintPage({ params }: PageProps) {
       <ForbiddenOrMissing
         title="Export failed"
         message="Could not load export data. Try again from pool settings."
-        href={`/pool/${encodeURIComponent(inviteCode)}/settings/commissioner`}
+        href={poolSettingsTabPath(inviteCode, 'commissioner')}
       />
     )
   }

@@ -16,7 +16,6 @@ import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { ChatInboxSkeleton } from '@/components/chat/chat-inbox-skeleton'
 import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
-import { DashboardDesktopNav } from '@/components/dashboard/dashboard-desktop-nav'
 import { Input } from '@/components/ui/input'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { cn } from '@/lib/utils'
@@ -46,8 +45,6 @@ import {
 } from '@/src/lib/pool-unread-counts'
 import { getMyFriends, type FriendRow } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
-import { Tabs } from '@/components/ui/tabs'
-
 type ChatsPageViewProps = {
   userId: string
   email: string
@@ -485,11 +482,9 @@ export function ChatsPageView({
       displayName={displayName}
       avatar={avatar}
       customAvatarUrl={customAvatarUrl}
-      mainClassName="py-6 sm:py-8"
+      hubActiveNav="inbox"
+      linkDashboardTabs
     >
-      <Tabs value="inbox" className="gap-8">
-        <DashboardDesktopNav linkDashboardTabs />
-
         <div className="mx-auto w-full max-w-2xl">
           <h1 className="font-display text-2xl tracking-wide text-foreground uppercase sm:text-3xl">
             Chats
@@ -578,7 +573,6 @@ export function ChatsPageView({
             </div>
           )}
         </div>
-      </Tabs>
     </DashboardAppShell>
   )
 }

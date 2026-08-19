@@ -103,6 +103,17 @@ export function poolSettingsPath(
   return `${base}/${encodeURIComponent(normalized)}`
 }
 
+/** Pool page with the Settings tab active (mobile inline; desktop opens the modal). */
+export function poolSettingsTabPath(
+  inviteCode: string,
+  section?: string | null,
+): string {
+  const params = new URLSearchParams({ tab: 'settings' })
+  const normalized = normalizePoolSettingsSection(section)
+  if (normalized) params.set('section', normalized)
+  return `${poolPagePath(inviteCode)}?${params.toString()}`
+}
+
 export function isPoolSettingsPath(pathname: string): boolean {
   return /\/pool\/[^/]+\/settings(\/|$)/.test(pathname)
 }
@@ -119,6 +130,67 @@ export type PoolSettingsSearchItem = {
   name: string
   sectionId: PoolSettingsSectionId
   keywords: readonly string[]
+}
+
+/**
+ * Sidebar sub-items for controls that actually exist in section screens.
+ * Search ids match these when the result can jump to a control.
+ */
+export const POOL_SETTINGS_SUB_ITEMS = [
+  { id: 'details-pool-type', sectionId: 'details', name: 'Pool type' },
+  { id: 'details-competition', sectionId: 'details', name: 'Competition' },
+  { id: 'details-name', sectionId: 'details', name: 'Pool name' },
+  { id: 'details-description', sectionId: 'details', name: 'Description' },
+  { id: 'details-activity', sectionId: 'details', name: 'Activity summary' },
+  { id: 'details-logo', sectionId: 'details', name: 'Pool logo' },
+  { id: 'details-color', sectionId: 'details', name: 'Pool color' },
+  { id: 'scoring-rules', sectionId: 'scoring', name: 'Scoring rules' },
+  { id: 'scoring-history', sectionId: 'scoring', name: 'Scoring history' },
+  { id: 'members-invite-link', sectionId: 'members', name: 'Invite link' },
+  { id: 'members-list', sectionId: 'members', name: 'Member list' },
+  { id: 'members-transfer', sectionId: 'members', name: 'Transfer ownership' },
+  { id: 'communication-announcements', sectionId: 'communication', name: 'Announcements' },
+  { id: 'communication-polls', sectionId: 'communication', name: 'Polls' },
+  { id: 'commissioner-exports', sectionId: 'commissioner', name: 'Exports' },
+  { id: 'commissioner-join-approval', sectionId: 'commissioner', name: 'Open to new members' },
+  { id: 'commissioner-privacy', sectionId: 'commissioner', name: 'Make pool public' },
+  { id: 'commissioner-co-admins', sectionId: 'commissioner', name: 'Co-commissioners' },
+  { id: 'commissioner-missing-predictions', sectionId: 'commissioner', name: 'Missing predictions' },
+  { id: 'commissioner-moderation-log', sectionId: 'commissioner', name: 'Moderation log' },
+  { id: 'danger-leave', sectionId: 'danger', name: 'Leave pool' },
+  { id: 'danger-report', sectionId: 'danger', name: 'Report pool' },
+  { id: 'danger-delete', sectionId: 'danger', name: 'Delete pool' },
+] as const
+
+export type PoolSettingsControlId =
+  (typeof POOL_SETTINGS_SUB_ITEMS)[number]['id']
+
+const SEARCH_CONTROL_ALIASES: Record<string, PoolSettingsControlId> = {
+  'members-invite-code': 'members-invite-link',
+  'members-remove': 'members-list',
+  'scoring-deadlines': 'scoring-rules',
+  'scoring-locking': 'scoring-rules',
+}
+
+export function poolSettingsControlElementId(controlId: string): string {
+  return `pool-setting-${controlId}`
+}
+
+export function isPoolSettingsControlId(
+  value: string,
+): value is PoolSettingsControlId {
+  return POOL_SETTINGS_SUB_ITEMS.some((item) => item.id === value)
+}
+
+export function subItemsForSection(sectionId: PoolSettingsSectionId) {
+  return POOL_SETTINGS_SUB_ITEMS.filter((item) => item.sectionId === sectionId)
+}
+
+export function controlIdForSearchItem(
+  item: PoolSettingsSearchItem,
+): PoolSettingsControlId | null {
+  if (isPoolSettingsControlId(item.id)) return item.id
+  return SEARCH_CONTROL_ALIASES[item.id] ?? null
 }
 
 /**

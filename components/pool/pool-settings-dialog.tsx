@@ -1,9 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-  PoolSettingsHub,
-} from '@/components/pool/pool-settings-hub'
+import { PoolSettingsDesktopLayout } from '@/components/pool/pool-settings-desktop-layout'
 import type { PoolSettingsTabProps } from '@/components/pool/pool-settings-tab'
 import {
   Dialog,
@@ -26,17 +23,12 @@ export function PoolSettingsDialog({
   onOpenChange,
   tabProps,
 }: PoolSettingsDialogProps) {
-  const [section, setSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) setSection(null)
-  }, [open])
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        overlayClassName="z-[200]"
         className={cn(
-          'flex max-h-[min(90vh,52rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden border-border bg-app-background p-0 sm:max-w-2xl',
+          'z-[201] !flex h-[min(52rem,calc(100dvh-4rem),calc(100svh-4rem))] max-h-[min(calc(100dvh-4rem),calc(100svh-4rem))] w-full min-h-0 max-w-[min(64rem,calc(100%-2rem))] flex-col gap-0 overflow-hidden border-border bg-app-background p-0 sm:max-w-[min(64rem,calc(100%-2rem))]',
           FOCUS_VISIBLE_RING,
         )}
       >
@@ -46,12 +38,8 @@ export function PoolSettingsDialog({
             Search and manage this pool’s settings.
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-12">
-          <PoolSettingsHub
-            {...tabProps}
-            section={section}
-            onSelectSection={setSection}
-          />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <PoolSettingsDesktopLayout tabProps={tabProps} open={open} />
         </div>
       </DialogContent>
     </Dialog>

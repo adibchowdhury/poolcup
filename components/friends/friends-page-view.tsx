@@ -314,7 +314,8 @@ export function FriendsPageView({
       displayName={displayName}
       avatar={avatar}
       customAvatarUrl={customAvatarUrl}
-      mainClassName="max-w-lg py-6 sm:py-8"
+      hubActiveNav="friends"
+      mainClassName="max-w-lg"
     >
       <div className="flex items-center gap-2">
         <h1 className="min-w-0 flex-1 font-display text-3xl tracking-wide text-foreground">

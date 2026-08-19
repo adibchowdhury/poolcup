@@ -59,14 +59,14 @@ function SettingsBackControl({
   )
 }
 
-function SettingsSectionScreen({
+export function PoolSettingsSectionPane({
   sectionId,
-  onBackToHub,
   tabProps,
+  onBackToHub,
 }: {
   sectionId: PoolSettingsSectionId
-  onBackToHub?: () => void
   tabProps: PoolSettingsTabProps
+  onBackToHub?: () => void
 }) {
   const section = POOL_SETTINGS_SECTIONS.find((row) => row.id === sectionId)
   if (!section) return null
@@ -94,8 +94,8 @@ function SettingsSectionScreen({
 }
 
 /**
- * Settings hub + per-section screens. Desktop modal and mobile routes share
- * the same section content components.
+ * Mobile settings hub + per-section screens. Desktop uses
+ * PoolSettingsDesktopLayout inside the modal instead.
  */
 export function PoolSettingsHub({
   section = null,
@@ -113,7 +113,7 @@ export function PoolSettingsHub({
 
   if (isPoolSettingsSectionId(section)) {
     return (
-      <SettingsSectionScreen
+      <PoolSettingsSectionPane
         sectionId={section}
         onBackToHub={onBackToHub}
         tabProps={tabProps}
