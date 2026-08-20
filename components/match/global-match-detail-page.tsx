@@ -78,10 +78,13 @@ const EMPTY_HUB: HubBundle = {
   adjacent: { prev: null, next: null },
 }
 
-function GlobalMatchPageSkeleton() {
+function GlobalMatchPageSkeleton({ omitNavPad = false }: { omitNavPad?: boolean }) {
   return (
     <div
-      className={cn('min-h-screen bg-app-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}
+      className={cn(
+        'min-h-screen bg-app-background',
+        !omitNavPad && MOBILE_BOTTOM_NAV_PAD_CLASS,
+      )}
       aria-busy="true"
       aria-label="Loading match"
     >
@@ -356,7 +359,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
   }, [match, matchId, userId])
 
   if (loading) {
-    return <GlobalMatchPageSkeleton />
+    return <GlobalMatchPageSkeleton omitNavPad={Boolean(preferredPoolInvite)} />
   }
 
   if (loadError && !match) {
@@ -364,7 +367,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       <div
         className={cn(
           'flex min-h-screen items-center justify-center bg-app-background px-4',
-          MOBILE_BOTTOM_NAV_PAD_CLASS,
+          !preferredPoolInvite && MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
         <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
@@ -389,7 +392,7 @@ export function GlobalMatchDetailPage({ matchId }: { matchId: string }) {
       <div
         className={cn(
           'flex min-h-screen items-center justify-center bg-app-background px-4',
-          MOBILE_BOTTOM_NAV_PAD_CLASS,
+          !preferredPoolInvite && MOBILE_BOTTOM_NAV_PAD_CLASS,
         )}
       >
         <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center">

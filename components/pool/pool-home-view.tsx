@@ -45,7 +45,6 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
-  MOBILE_BOTTOM_NAV_PAD_CLASS,
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { trackEvent } from '@/src/lib/track'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -373,7 +372,6 @@ export function PoolHomeView({
       className={cn(
         'min-h-screen bg-app-background',
         isLeaderboardTab && 'flex flex-col',
-        !isMobileChatShell && MOBILE_BOTTOM_NAV_PAD_CLASS,
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
       )}
@@ -513,7 +511,9 @@ export function PoolHomeView({
         <main
           className={cn(
             'relative z-0 mx-auto w-full min-w-0 py-8',
-            'max-sm:pt-0 max-sm:pb-8',
+            // Own the top inset for all non-chat pool content (banners + tabs)
+            // so first child never hugs the sticky header. Matches mb-4 rhythm.
+            'max-sm:pt-4 max-sm:pb-8',
             // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
             isLeaderboardTab
               ? 'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0'
@@ -528,7 +528,6 @@ export function PoolHomeView({
                 'mb-4',
                 isLeaderboardTab && 'mx-auto max-w-4xl px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
-                !isMobileChatShell && 'max-sm:mt-3',
               )}
             >
               <PoolAnnouncementBanner
@@ -549,7 +548,6 @@ export function PoolHomeView({
               <SoloInviteNudge
                 inviteCode={pool.inviteCode}
                 poolId={poolId}
-                poolName={pool.name}
                 memberCount={pool.memberCount}
                 acceptingMembers={pool.acceptingMembers}
               />
@@ -579,10 +577,8 @@ export function PoolHomeView({
           >
             <div
               className={cn(
-                'max-sm:mt-3',
                 isLeaderboardTab && 'mx-auto w-full max-w-4xl shrink-0 px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
-                isChatView && 'max-sm:mt-0',
               )}
             >
               {!isChatView ? (

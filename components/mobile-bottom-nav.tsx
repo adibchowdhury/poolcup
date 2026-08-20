@@ -134,10 +134,13 @@ function MobileBottomNavContent() {
   const activeId =
     isOnDashboard && activeNavId != null ? activeNavId : routeActiveId
   const onPredictPage = hasAuthenticatedBottomBar(pathname)
+  const inPoolMatchContext =
+    pathname.startsWith('/match/') && Boolean(searchParams.get('pool'))
   const visible =
     isAuthenticatedAppPath(pathname) &&
     !mobileChatActive &&
     !onPredictPage &&
+    !inPoolMatchContext &&
     !inputFocused
 
   if (!visible) {

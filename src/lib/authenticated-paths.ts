@@ -1,8 +1,9 @@
-import { isPoolSettingsPath } from '@/src/lib/pool-settings-nav'
-
 /**
  * Routes that use the authenticated app shell / bottom nav chrome.
  * Includes public-but-chrome paths like /join and /match — NOT an auth gate.
+ *
+ * Full-screen surfaces (no bottom nav): /onboarding, /create, /pool/* —
+ * those stay protected via isProtectedAppPath but skip AuthenticatedChrome.
  */
 export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/dashboard') return true
@@ -15,14 +16,6 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/analytics') return true
   if (pathname === '/history-performance') return true
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
-  // Onboarding and /create are protected (isProtectedAppPath) but use
-  // full-screen chrome — exclude them so AuthenticatedChrome skips the nav.
-  if (pathname.startsWith('/pool/')) {
-    // Printable export is a chrome-free print surface.
-    if (/\/pool\/[^/]+\/print\/?$/.test(pathname)) return false
-    if (isPoolSettingsPath(pathname)) return false
-    return true
-  }
   if (pathname.startsWith('/join/')) return true
   if (pathname.startsWith('/match/')) return true
   return false

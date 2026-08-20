@@ -89,7 +89,7 @@ export function PoolMatchRoom({
   const hasKickedOff =
     mounted &&
     match != null &&
-    isMatchKickedOff(match.locked_at, match.kickoff_at, nowMs)
+    isMatchKickedOff(null, match.kickoff_at, nowMs)
 
   const canRevealPicks = hasKickedOff
 
@@ -174,7 +174,7 @@ export function PoolMatchRoom({
                 memberId={memberId}
                 matchId={match.id}
                 currentUserId={currentUserId}
-                lockedAt={match.locked_at}
+                lockedAt={null}
                 kickoffAt={match.kickoff_at}
                 isFinal={match.is_final || mode === 'final'}
                 resultTeam1={match.result_team1}

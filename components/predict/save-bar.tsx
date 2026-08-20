@@ -14,8 +14,8 @@ interface SaveBarProps {
   complete?: boolean
   error?: string | null
   /**
-   * On mobile, offset above the fixed bottom nav (pool predictions tab).
-   * Set false on /predict where the nav is hidden.
+   * On mobile, offset above the fixed bottom nav (legacy; unused on pool routes
+   * where the nav is hidden). Set false when the save bar is the only bottom chrome.
    */
   stackAboveMobileNav?: boolean
 }

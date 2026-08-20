@@ -1370,7 +1370,8 @@ export function PoolChatTab({
             onSubmit={(event) => void handleSend(event)}
             className={cn(
               'flex shrink-0 items-end gap-2 border-t border-border/60 p-3',
-              fullBleedMobile && 'max-sm:px-4 max-sm:py-3',
+              fullBleedMobile &&
+                'max-sm:px-4 max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]',
             )}
           >
             <Textarea

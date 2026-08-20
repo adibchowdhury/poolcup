@@ -260,7 +260,10 @@ export function GlobalMatchDetailView({
 
   return (
     <div
-      className={cn('min-h-screen bg-app-background', MOBILE_BOTTOM_NAV_PAD_CLASS)}
+      className={cn(
+        'min-h-screen bg-app-background',
+        !preferredPoolInvite && MOBILE_BOTTOM_NAV_PAD_CLASS,
+      )}
     >
       <div className="relative" id="main-content">
         <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-app-background/90 backdrop-blur-xl">

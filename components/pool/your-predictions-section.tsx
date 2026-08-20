@@ -6,9 +6,7 @@ import {
   type ClassicRoundTabId,
 } from '@/components/predict/group-knockout-tabs'
 import { SaveBar } from '@/components/predict/save-bar'
-import {
-  MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS,
-} from '@/src/lib/mobile-bottom-nav-routes'
+import { SAVE_BAR_SOLO_SCROLL_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
 import {
   classicRoundTabEmptyMessage,
   isTournamentStyleMatches,
@@ -117,6 +115,7 @@ function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
       error={saveError}
       disabled={unsavedCount === 0}
       onSave={() => void handleSave()}
+      stackAboveMobileNav={false}
     />
   )
 }
@@ -257,7 +256,7 @@ export function YourPredictionsSection({
         className={cn(
           'mt-8 w-full min-w-0 border-t border-border/80 pt-8',
           hasClassicContent && activeMatchIds.length > 0
-            ? MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS
+            ? SAVE_BAR_SOLO_SCROLL_PAD_CLASS
             : undefined,
         )}
       >

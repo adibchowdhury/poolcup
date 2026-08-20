@@ -55,7 +55,7 @@ export const MOBILE_SAVE_BAR_WITH_NAV_SCROLL_PAD_CLASS =
 
 /**
  * Extra scroll inset for the save bar when an ancestor already applies
- * MOBILE_BOTTOM_NAV_PAD_CLASS (e.g. pool home).
+ * MOBILE_BOTTOM_NAV_PAD_CLASS (legacy stacking; prefer SAVE_BAR_SOLO when nav is hidden).
  */
 export const MOBILE_SAVE_BAR_SCROLL_PAD_ABOVE_NAV_CLASS =
   'max-lg:pb-[4.25rem] lg:pb-20'
@@ -122,10 +122,6 @@ export function resolveMobileBottomNavActive(
     if (tabParam === 'upcoming') return 'upcoming'
     if (tabParam === 'how-it-works') return 'how-it-works'
     // Default home + legacy ?tab=pools
-    return 'dashboard'
-  }
-
-  if (pathname.startsWith('/pool/')) {
     return 'dashboard'
   }
 
