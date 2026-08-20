@@ -173,3 +173,50 @@ export function formatSportingEventDateRange(
   if (endDate) return `Ends ${format(endDate)}`
   return 'Dates TBA'
 }
+
+/**
+ * Compact range for create-flow competition rows.
+ * Long span / cross-year → "Aug 2026 – May 2027";
+ * short same-year → "Oct 12 – Nov 8".
+ */
+export function formatSportingEventDateRangeCompact(
+  startDate: string | null,
+  endDate: string | null,
+): string {
+  const parse = (iso: string): Date | null => {
+    const d = new Date(`${iso}T12:00:00Z`)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+
+  const start = startDate ? parse(startDate) : null
+  const end = endDate ? parse(endDate) : null
+
+  if (!start && !end) return 'Dates TBA'
+
+  const monthYear = (d: Date) =>
+    d.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+  const monthDay = (d: Date) =>
+    d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    })
+
+  if (start && !end) return monthYear(start)
+  if (!start && end) return monthYear(end)
+
+  const startMs = start!.getTime()
+  const endMs = end!.getTime()
+  const daySpan = Math.abs(endMs - startMs) / 86_400_000
+  const sameYear = start!.getUTCFullYear() === end!.getUTCFullYear()
+
+  if (!sameYear || daySpan > 90) {
+    return `${monthYear(start!)} – ${monthYear(end!)}`
+  }
+
+  return `${monthDay(start!)} – ${monthDay(end!)}`
+}

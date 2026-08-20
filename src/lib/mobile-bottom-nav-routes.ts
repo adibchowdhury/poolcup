@@ -129,7 +129,7 @@ export function resolveMobileBottomNavActive(
     return 'dashboard'
   }
 
-  if (pathname === '/create' || pathname.startsWith('/join/')) {
+  if (pathname.startsWith('/join/')) {
     return 'dashboard'
   }
 

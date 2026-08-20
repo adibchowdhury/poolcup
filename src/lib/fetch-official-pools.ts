@@ -71,6 +71,10 @@ export function formatOfficialSeasonLabel(
     return `${y}/${String(y + 1).slice(-2)}`
   }
   if (season && /^\d{4}\/\d{2}$/.test(season)) return season
+  if (season && /^\d{4}-\d{4}$/.test(season)) {
+    const [start, end] = season.split('-')
+    return `${start}/${end.slice(-2)}`
+  }
 
   if (startDate) {
     const startYear = new Date(startDate).getUTCFullYear()

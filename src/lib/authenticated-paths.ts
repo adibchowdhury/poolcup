@@ -9,14 +9,14 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/discover') return true
   if (pathname === '/chat' || pathname.startsWith('/chat/')) return true
   if (pathname === '/friends' || pathname.startsWith('/friends/')) return true
-  if (pathname === '/create') return true
   if (pathname === '/achievements') return true
   if (pathname === '/activity') return true
   if (pathname === '/history') return true
   if (pathname === '/analytics') return true
   if (pathname === '/history-performance') return true
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
-  // Onboarding is authenticated but has its own full-screen chrome (no bottom nav).
+  // Onboarding and /create are protected (isProtectedAppPath) but use
+  // full-screen chrome — exclude them so AuthenticatedChrome skips the nav.
   if (pathname.startsWith('/pool/')) {
     // Printable export is a chrome-free print surface.
     if (/\/pool\/[^/]+\/print\/?$/.test(pathname)) return false
