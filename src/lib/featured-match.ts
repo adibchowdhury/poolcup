@@ -5,6 +5,7 @@ import {
   FEATURED_LIVE_STATUS_SHORTS,
   formatMatchStatusLabel,
 } from '@/src/lib/match-status-display'
+import { mlsPlayoffRoundLabel } from '@/src/lib/mls-playoff-rounds'
 
 export { FEATURED_LIVE_STATUS_SHORTS } from '@/src/lib/match-status-display'
 
@@ -52,7 +53,7 @@ export function formatFeaturedMatchRoundLabel(
   if (round === 'group' && groupName) {
     return `Group Stage · Group ${groupName}`
   }
-  return ROUND_LABELS[round] ?? round
+  return mlsPlayoffRoundLabel(round) ?? ROUND_LABELS[round] ?? round
 }
 
 export function formatFeaturedMatchStatusLabel(

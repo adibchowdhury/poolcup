@@ -23,6 +23,7 @@ import { MatchPicksExpander } from '@/components/pool/match-picks-expander'
 import { useClientNow } from '@/hooks/use-client-now'
 import { cn } from '@/lib/utils'
 import { isKnockoutRound, type KnockoutRoundId } from '@/src/lib/classic-round-tab-logic'
+import { mlsPlayoffRoundLabel } from '@/src/lib/mls-playoff-rounds'
 import { isMatchLocked } from '@/src/lib/match-lock'
 import {
   formatKnockoutPointValuesFooter,
@@ -100,7 +101,7 @@ function formatRoundLabel(round: string, groupName: string | null): string {
   if (round === 'group' && groupName) {
     return `Group ${groupName}`
   }
-  return ROUND_LABELS[round] ?? round
+  return mlsPlayoffRoundLabel(round) ?? ROUND_LABELS[round] ?? round
 }
 
 function parseOptionalScore(value: string): number | null {

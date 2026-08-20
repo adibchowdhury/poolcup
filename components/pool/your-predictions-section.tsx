@@ -16,6 +16,16 @@ import {
   resolveDefaultClassicRoundTabForPredictions,
 } from '@/src/lib/classic-round-tab-logic'
 import {
+  hasMlsPlayoffRounds,
+  isMlsPlayoffRound,
+  isSeasonFlatRound,
+} from '@/src/lib/mls-playoff-rounds'
+import {
+  SeasonPlayoffTabs,
+  type SeasonPlayoffPhaseId,
+} from '@/components/predict/season-playoff-tabs'
+import { MlsPlayoffStageSections } from '@/components/predict/mls-playoff-stage-sections'
+import {
   type ClassicPredictionSortMode,
   sortClassicPredictions,
 } from '@/src/lib/sort-classic-predictions'
@@ -141,13 +151,29 @@ export function YourPredictionsSection({
 }: YourPredictionsSectionProps) {
   const matchScoringStyle = normalizeMatchScoringStyle('classic')
   const hasClassicContent = classicPredictions.length > 0
+  const tournamentMode = useMemo(
+    () =>
+      classicPredictions.length > 0 &&
+      isTournamentStyleMatches(classicPredictions),
+    [classicPredictions],
+  )
+  const mixedPlayoffMode = useMemo(
+    () =>
+      classicPredictions.length > 0 &&
+      !tournamentMode &&
+      hasMlsPlayoffRounds(classicPredictions),
+    [classicPredictions, tournamentMode],
+  )
   const seasonMode = useMemo(
     () =>
       classicPredictions.length > 0 &&
-      !isTournamentStyleMatches(classicPredictions),
-    [classicPredictions],
+      !tournamentMode &&
+      !mixedPlayoffMode,
+    [classicPredictions, mixedPlayoffMode, tournamentMode],
   )
   const [activeRoundTab, setActiveRoundTab] = useState<ClassicRoundTabId>('group')
+  const [seasonPlayoffPhase, setSeasonPlayoffPhase] =
+    useState<SeasonPlayoffPhaseId>('season')
   const defaultRoundTabSetRef = useRef(false)
   const [classicSortMode, setClassicSortMode] =
     useState<ClassicPredictionSortMode>('kickoff-oldest')
@@ -155,6 +181,17 @@ export function YourPredictionsSection({
   useEffect(() => {
     if (seasonMode) {
       setClassicSortMode((prev) => (prev === 'group' ? 'kickoff-oldest' : prev))
+      return
+    }
+    if (mixedPlayoffMode) {
+      setClassicSortMode((prev) => (prev === 'group' ? 'kickoff-oldest' : prev))
+      setSeasonPlayoffPhase(
+        classicPredictions.some((prediction) =>
+          isSeasonFlatRound(prediction.round),
+        )
+          ? 'season'
+          : 'playoffs',
+      )
       return
     }
     if (defaultRoundTabSetRef.current || classicPredictions.length === 0) {
@@ -165,14 +202,29 @@ export function YourPredictionsSection({
       resolveDefaultClassicRoundTabForPredictions(classicPredictions),
     )
     defaultRoundTabSetRef.current = true
-  }, [classicPredictions, seasonMode])
+  }, [classicPredictions, mixedPlayoffMode, seasonMode])
 
   const stageFilteredPredictions = useMemo(() => {
     if (seasonMode) return classicPredictions
+    if (mixedPlayoffMode) {
+      return seasonPlayoffPhase === 'playoffs'
+        ? classicPredictions.filter((prediction) =>
+            isMlsPlayoffRound(prediction.round),
+          )
+        : classicPredictions.filter((prediction) =>
+            isSeasonFlatRound(prediction.round),
+          )
+    }
     return classicPredictions.filter((prediction) =>
       matchInClassicRoundTab(prediction.round, activeRoundTab),
     )
-  }, [classicPredictions, activeRoundTab, seasonMode])
+  }, [
+    activeRoundTab,
+    classicPredictions,
+    mixedPlayoffMode,
+    seasonMode,
+    seasonPlayoffPhase,
+  ])
 
   const orderedClassicPredictions = useMemo(
     () => sortClassicPredictions(stageFilteredPredictions, classicSortMode),
@@ -196,7 +248,8 @@ export function YourPredictionsSection({
     [stageFilteredPredictions],
   )
 
-  const sortOptions = seasonMode ? SEASON_SORT_OPTIONS : CLASSIC_SORT_OPTIONS
+  const sortOptions =
+    seasonMode || mixedPlayoffMode ? SEASON_SORT_OPTIONS : CLASSIC_SORT_OPTIONS
 
   return (
     <PredictionSaveProvider>
@@ -245,7 +298,16 @@ export function YourPredictionsSection({
         ) : null}
       </div>
 
-      {hasClassicContent && !seasonMode ? (
+      {hasClassicContent && mixedPlayoffMode ? (
+        <div className="mb-4 min-w-0">
+          <SeasonPlayoffTabs
+            activeId={seasonPlayoffPhase}
+            onChange={setSeasonPlayoffPhase}
+          />
+        </div>
+      ) : null}
+
+      {hasClassicContent && !seasonMode && !mixedPlayoffMode ? (
         <div className="mb-4 min-w-0">
           <ClassicRoundTabs
             activeId={activeRoundTab}
@@ -259,6 +321,14 @@ export function YourPredictionsSection({
           <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
             No matches scheduled yet.
           </p>
+        ) : mixedPlayoffMode && seasonPlayoffPhase === 'season' ? (
+          <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+            No regular-season matches scheduled yet.
+          </p>
+        ) : mixedPlayoffMode && seasonPlayoffPhase === 'playoffs' ? (
+          <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+            No playoff matches scheduled yet.
+          </p>
         ) : activeRoundTab === 'r32' ? (
           <ClassicR32PreviewTab />
         ) : (
@@ -266,6 +336,25 @@ export function YourPredictionsSection({
             {classicRoundTabEmptyMessage(activeRoundTab)}
           </p>
         )
+      ) : mixedPlayoffMode && seasonPlayoffPhase === 'playoffs' ? (
+        <MlsPlayoffStageSections
+          items={orderedClassicPredictions}
+          getKickoffMs={(prediction) => new Date(prediction.kickoffAt).getTime()}
+          getKey={(prediction) => prediction.matchId}
+          renderMatch={(prediction) => (
+            <div className="grid min-w-0 grid-cols-1">
+              <PredictionMatchCard
+                prediction={prediction}
+                poolId={poolId}
+                memberId={memberId}
+                currentUserId={currentUserId}
+                scoringStyle={matchScoringStyle}
+                onPredictionSaved={onPredictionSaved}
+                onPredictionRemoved={onPredictionRemoved}
+              />
+            </div>
+          )}
+        />
       ) : (
         <MatchLifecycleSections
           buckets={lifecycleBuckets}

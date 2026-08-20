@@ -1,9 +1,14 @@
 import { mapLeagueRoundToGroup } from '@/src/lib/world-cup-groups'
+import {
+  API_FOOTBALL_MLS_LEAGUE_ID,
+  mapMlsApiRoundToCode,
+} from '@/src/lib/mls-playoff-rounds'
 
 /** API-Football World Cup league id. */
 export const API_FOOTBALL_WORLD_CUP_LEAGUE_ID = 1
 /** API-Football Champions League id. */
 export const API_FOOTBALL_CHAMPIONS_LEAGUE_ID = 2
+export { API_FOOTBALL_MLS_LEAGUE_ID }
 
 const CL_ROUND_CODES = [
   'cl_league',
@@ -57,6 +62,17 @@ export function mapProviderRound(
     const code = mapClApiRoundToCode(label)
     if (!code) return { round: '', group_name: null, skip: true }
     return { round: code, group_name: null, skip: false }
+  }
+
+  if (providerLeagueId === API_FOOTBALL_MLS_LEAGUE_ID) {
+    const mapped = mapMlsApiRoundToCode(label)
+    if (mapped.unmapped) {
+      console.warn(
+        '[mls-round-map] unmapped MLS league.round, falling back to league',
+        { apiRound: label },
+      )
+    }
+    return { round: mapped.round, group_name: null, skip: false }
   }
 
   return { round: 'league', group_name: null, skip: false }

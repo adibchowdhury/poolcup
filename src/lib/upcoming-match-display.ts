@@ -1,3 +1,5 @@
+import { mlsPlayoffRoundLabel } from '@/src/lib/mls-playoff-rounds'
+
 export type UpcomingMatch = {
   id: string
   kickoff_at: string
@@ -26,7 +28,7 @@ export function formatRoundLabel(round: string, groupName: string | null): strin
   if (round === 'group' && groupName) {
     return `Group ${groupName}`
   }
-  return ROUND_LABELS[round] ?? round
+  return mlsPlayoffRoundLabel(round) ?? ROUND_LABELS[round] ?? round
 }
 
 export function formatGroupAccentLabel(

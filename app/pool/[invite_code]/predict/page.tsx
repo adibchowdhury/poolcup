@@ -25,6 +25,16 @@ import {
   resolveDefaultClassicRoundTab,
   type KnockoutRoundId,
 } from '@/src/lib/classic-round-tab-logic'
+import {
+  hasMlsPlayoffRounds,
+  isMlsPlayoffRound,
+  isSeasonFlatRound,
+} from '@/src/lib/mls-playoff-rounds'
+import {
+  SeasonPlayoffTabs,
+  type SeasonPlayoffPhaseId,
+} from '@/components/predict/season-playoff-tabs'
+import { MlsPlayoffStageSections } from '@/components/predict/mls-playoff-stage-sections'
 import { ProgressHeader } from '@/components/predict/progress-header'
 import { SaveBar } from '@/components/predict/save-bar'
 import {
@@ -386,6 +396,8 @@ export default function PredictPage() {
   >({})
   const [savedMatchIds, setSavedMatchIds] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<ClassicRoundTabId>('group')
+  const [seasonPlayoffPhase, setSeasonPlayoffPhase] =
+    useState<SeasonPlayoffPhaseId>('season')
   const [pageLoading, setPageLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -500,6 +512,13 @@ export default function PredictPage() {
     setBaselineAdvancePicks({ ...initialAdvancePicks })
     setSavedMatchIds(initialSaved)
     setActiveTab(defaultTab)
+    setSeasonPlayoffPhase(
+      !isTournamentStyleMatches(loaded) &&
+        hasMlsPlayoffRounds(loaded) &&
+        !loaded.some((match) => isSeasonFlatRound(match.round))
+        ? 'playoffs'
+        : 'season',
+    )
     setPageLoading(false)
   }, [inviteCode, router, userId])
 
@@ -512,9 +531,20 @@ export default function PredictPage() {
     loadData()
   }, [authLoading, userId, router, loadData])
 
-  const seasonMode = useMemo(
-    () => matches.length > 0 && !isTournamentStyleMatches(matches),
+  const tournamentMode = useMemo(
+    () => matches.length > 0 && isTournamentStyleMatches(matches),
     [matches],
+  )
+  const mixedPlayoffMode = useMemo(
+    () =>
+      matches.length > 0 &&
+      !tournamentMode &&
+      hasMlsPlayoffRounds(matches),
+    [matches, tournamentMode],
+  )
+  const seasonMode = useMemo(
+    () => matches.length > 0 && !tournamentMode && !mixedPlayoffMode,
+    [matches, mixedPlayoffMode, tournamentMode],
   )
 
   const tabMatches = useMemo(() => {
@@ -524,13 +554,29 @@ export default function PredictPage() {
           new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
       )
     }
+    if (mixedPlayoffMode) {
+      const filtered =
+        seasonPlayoffPhase === 'playoffs'
+          ? matches.filter((match) => isMlsPlayoffRound(match.round))
+          : matches.filter((match) => isSeasonFlatRound(match.round))
+      return [...filtered].sort(
+        (a, b) =>
+          new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+      )
+    }
     return matches.filter((m) => matchInClassicRoundTab(m.round, activeTab))
-  }, [matches, activeTab, seasonMode])
+  }, [
+    activeTab,
+    matches,
+    mixedPlayoffMode,
+    seasonMode,
+    seasonPlayoffPhase,
+  ])
 
   const sections = useMemo(() => {
-    if (seasonMode || activeTab !== 'group') return []
+    if (seasonMode || mixedPlayoffMode || activeTab !== 'group') return []
     return buildGroupStageSections(tabMatches)
-  }, [tabMatches, activeTab, seasonMode])
+  }, [tabMatches, activeTab, mixedPlayoffMode, seasonMode])
 
   const defaultOpenSectionId = useMemo(() => {
     const open =
@@ -855,7 +901,12 @@ export default function PredictPage() {
 
           <ProgressHeader current={predictedCount} total={totalMatches} />
 
-          {seasonMode ? null : (
+          {seasonMode ? null : mixedPlayoffMode ? (
+            <SeasonPlayoffTabs
+              activeId={seasonPlayoffPhase}
+              onChange={setSeasonPlayoffPhase}
+            />
+          ) : (
             <ClassicRoundTabs activeId={activeTab} onChange={setActiveTab} />
           )}
         </div>
@@ -883,6 +934,14 @@ export default function PredictPage() {
             <p className="py-8 text-center text-sm text-muted-foreground">
               No matches scheduled yet.
             </p>
+          ) : mixedPlayoffMode && seasonPlayoffPhase === 'season' ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No regular-season matches scheduled yet.
+            </p>
+          ) : mixedPlayoffMode && seasonPlayoffPhase === 'playoffs' ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No playoff matches scheduled yet.
+            </p>
           ) : activeTab === 'r32' ? (
             <ClassicR32PreviewTab />
           ) : (
@@ -890,13 +949,49 @@ export default function PredictPage() {
               {classicRoundTabEmptyMessage(activeTab)}
             </p>
           )
+        ) : mixedPlayoffMode && seasonPlayoffPhase === 'playoffs' ? (
+          <MlsPlayoffStageSections
+            items={tabMatches}
+            getKickoffMs={(match) => new Date(match.kickoff_at).getTime()}
+            getKey={(match) => match.id}
+            renderMatch={(match) => {
+              const card = toSectionMatch(
+                match,
+                scores,
+                baselineScores,
+                savedMatchIds,
+                advancePicks,
+                baselineAdvancePicks,
+              )
+              return (
+                <ClassicKnockoutPredictCard
+                  match={match}
+                  card={card}
+                  advancePick={advancePicks[match.id] ?? null}
+                  onAdvancePick={(pick) => updateAdvancePick(match.id, pick)}
+                  onHomeScoreChange={(v) => updateScore(match.id, 'score1', v)}
+                  onAwayScoreChange={(v) => updateScore(match.id, 'score2', v)}
+                />
+              )
+            }}
+          />
         ) : (
-          <div key={seasonMode ? 'season' : activeTab} className="space-y-6">
+          <div
+            key={
+              seasonMode
+                ? 'season'
+                : mixedPlayoffMode
+                  ? seasonPlayoffPhase
+                  : activeTab
+            }
+            className="space-y-6"
+          >
             {MATCH_LIFECYCLE_SECTION_ORDER.filter(
               (sectionId) => lifecycleBuckets[sectionId].length > 0,
             ).map((sectionId) => {
               const sectionMatches = lifecycleBuckets[sectionId]
-              const useGroupSections = !seasonMode && activeTab === 'group'
+              const useGroupSections =
+                !seasonMode && !mixedPlayoffMode && activeTab === 'group'
               const groupSections = useGroupSections
                 ? buildGroupStageSections(sectionMatches)
                 : []
@@ -958,7 +1053,9 @@ export default function PredictPage() {
                     )
                   ) : (
                     <div className="flex flex-col gap-3">
-                      {(seasonMode || activeTab !== 'final'
+                      {(seasonMode ||
+                      mixedPlayoffMode ||
+                      activeTab !== 'final'
                         ? sectionMatches
                         : sectionMatches.filter(
                             (match) =>
@@ -974,7 +1071,7 @@ export default function PredictPage() {
                           advancePicks,
                           baselineAdvancePicks,
                         )
-                        if (!seasonMode && match.round === 'third') {
+                        if (!seasonMode && !mixedPlayoffMode && match.round === 'third') {
                           return (
                             <section key={match.id} className="space-y-2">
                               <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -1021,6 +1118,7 @@ export default function PredictPage() {
               )
             })}
             {!seasonMode &&
+            !mixedPlayoffMode &&
             activeTab === 'final' &&
             !tabMatches.some((match) => match.round === 'third') ? (
               <ClassicThirdPlaceTbdCard />

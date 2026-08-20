@@ -9,6 +9,7 @@ import type {
 } from '@/components/pool/leaderboard-row'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
+import { mlsPlayoffRoundLabel } from '@/src/lib/mls-playoff-rounds'
 
 const MEDAL_COLORS: Record<1 | 2 | 3, string> = {
   1: '#BA7517',
@@ -83,7 +84,7 @@ function formatBreakdownMatchLabel(item: LeaderboardPointBreakdownItem): string 
   if (item.round === 'group' && item.groupName) {
     return `Group ${item.groupName}: ${matchup}`
   }
-  const roundLabel = ROUND_LABELS[item.round]
+  const roundLabel = mlsPlayoffRoundLabel(item.round) ?? ROUND_LABELS[item.round]
   return roundLabel ? `${roundLabel}: ${matchup}` : matchup
 }
 
