@@ -12,12 +12,14 @@ export function MlsPlayoffStageSections<T extends { round: string }>({
   getKey,
   renderMatch,
   emptyFallback,
+  listClassName = 'flex flex-col gap-3',
 }: {
   items: T[]
   getKickoffMs: (item: T) => number
   getKey: (item: T) => string
   renderMatch: (item: T, stage: MlsPlayoffStageGroup<T>) => ReactNode
   emptyFallback?: ReactNode
+  listClassName?: string
 }) {
   const groups = groupMlsPlayoffMatchesByStage(items, getKickoffMs)
 
@@ -46,9 +48,11 @@ export function MlsPlayoffStageSections<T extends { round: string }>({
               aria-hidden
             />
           </div>
-          <div className="flex flex-col gap-3">
+          <div className={listClassName}>
             {stage.matches.map((item) => (
-              <div key={getKey(item)}>{renderMatch(item, stage)}</div>
+              <div key={getKey(item)} className="min-w-0">
+                {renderMatch(item, stage)}
+              </div>
             ))}
           </div>
         </section>

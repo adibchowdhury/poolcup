@@ -9,6 +9,7 @@ import {
 } from '@/src/lib/classic-prediction-progress'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { YourPredictionsSection } from '@/components/pool/your-predictions-section'
+import { PoolPredictionsDesktopSidebar } from '@/components/pool/pool-predictions-desktop-sidebar'
 
 export type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 
@@ -29,6 +30,11 @@ type PoolPredictionsTabProps = {
   currentUserId?: string
   winnerPool?: WinnerOnlyPool
   inviteCode?: string
+  poolName?: string
+  memberCount?: number
+  /** From existing leaderboard members (isYou / current user). */
+  userRank?: number | null
+  acceptingMembers?: boolean
   onPredictionSaved?: (
     matchId: string,
     predTeam1: number,
@@ -47,6 +53,10 @@ export function PoolPredictionsTab({
   currentUserId,
   winnerPool,
   inviteCode,
+  poolName = '',
+  memberCount = 0,
+  userRank = null,
+  acceptingMembers = false,
   onPredictionSaved,
   onPredictionRemoved,
 }: PoolPredictionsTabProps) {
@@ -63,10 +73,10 @@ export function PoolPredictionsTab({
   )
   const classicMatchTotal = classicMatchTotalCount(totalMatchCount)
 
-  return (
-    <div className="w-full min-w-0 space-y-4">
-      {isWinnerOnly ? (
-        memberId && winnerPool && inviteCode ? (
+  if (isWinnerOnly) {
+    return (
+      <div className="w-full min-w-0 space-y-4">
+        {memberId && winnerPool && inviteCode ? (
           <WinnerOnlyPredictView
             pool={winnerPool}
             memberId={memberId}
@@ -77,23 +87,43 @@ export function PoolPredictionsTab({
           <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
             Join this pool to make predictions.
           </p>
-        )
-      ) : (
-        <>
-          <ProgressHeader
-            current={predictedMatchCount}
-            total={classicMatchTotal}
-          />
-          <YourPredictionsSection
-            classicPredictions={predictions}
-            poolId={poolId}
-            memberId={memberId}
-            currentUserId={currentUserId}
-            onPredictionSaved={onPredictionSaved}
-            onPredictionRemoved={onPredictionRemoved}
-          />
-        </>
-      )}
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full min-w-0 lg:flex lg:items-start lg:gap-4">
+      {/* Large basis demands width; sidebar shrinks first (shrink-3). */}
+      <div className="min-w-0 flex-1 basis-[55rem] shrink space-y-4">
+        <ProgressHeader
+          current={predictedMatchCount}
+          total={classicMatchTotal}
+          className="lg:hidden"
+        />
+        <YourPredictionsSection
+          classicPredictions={predictions}
+          poolId={poolId}
+          memberId={memberId}
+          currentUserId={currentUserId}
+          onPredictionSaved={onPredictionSaved}
+          onPredictionRemoved={onPredictionRemoved}
+        />
+      </div>
+
+      {inviteCode && poolId ? (
+        <PoolPredictionsDesktopSidebar
+          predictedCount={predictedMatchCount}
+          totalMatchCount={classicMatchTotal}
+          memberCount={memberCount}
+          userRank={userRank}
+          inviteCode={inviteCode}
+          poolId={poolId}
+          poolName={poolName}
+          acceptingMembers={acceptingMembers}
+          className="min-w-[12rem] max-w-[20rem] basis-[17.5rem] shrink-[3] grow-0"
+        />
+      ) : null}
     </div>
   )
 }

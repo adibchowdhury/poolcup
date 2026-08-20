@@ -108,7 +108,7 @@ function PickRow({
           </span>
           {showAdvancePick ? (
             effectivePick != null && advanceName ? (
-              <span className="inline-flex max-w-[8.5rem] items-center gap-1 text-[10px] text-muted-foreground sm:max-w-[10rem]">
+              <span className="inline-flex min-w-0 max-w-[8.5rem] items-center gap-1 text-[10px] text-muted-foreground sm:max-w-[10rem]">
                 <TeamFlagImage
                   countryName={advanceName}
                   dbFlag={advanceFlag}
@@ -116,7 +116,7 @@ function PickRow({
                   imgClassName="h-3 w-auto shrink-0 object-contain"
                   emojiClassName="text-[10px] leading-none"
                 />
-                <span className="truncate">{advanceName}</span>
+                <span className="min-w-0 truncate">{advanceName}</span>
               </span>
             ) : (
               <span className="text-[10px] text-muted-foreground">No pick</span>

@@ -23,7 +23,6 @@ import { MatchPicksExpander } from '@/components/pool/match-picks-expander'
 import { useClientNow } from '@/hooks/use-client-now'
 import { cn } from '@/lib/utils'
 import { isKnockoutRound, type KnockoutRoundId } from '@/src/lib/classic-round-tab-logic'
-import { mlsPlayoffRoundLabel } from '@/src/lib/mls-playoff-rounds'
 import { isMatchLocked } from '@/src/lib/match-lock'
 import {
   formatKnockoutPointValuesFooter,
@@ -84,25 +83,8 @@ export type UserPoolPrediction = {
   statusShort: string | null
 }
 
-const ROUND_LABELS: Record<string, string> = {
-  group: 'Group stage',
-  r32: 'Round of 32',
-  r16: 'Round of 16',
-  qf: 'Quarter-finals',
-  sf: 'Semi-finals',
-  third: '3rd Place Playoff',
-  final: 'Final',
-}
-
 const AUTOSAVE_DEBOUNCE_MS = 500
 const SAVED_INDICATOR_MS = 2000
-
-function formatRoundLabel(round: string, groupName: string | null): string {
-  if (round === 'group' && groupName) {
-    return `Group ${groupName}`
-  }
-  return mlsPlayoffRoundLabel(round) ?? ROUND_LABELS[round] ?? round
-}
 
 function parseOptionalScore(value: string): number | null {
   if (value === '') return null
@@ -154,7 +136,7 @@ function AdvanceTeamChip({
         imgClassName="h-4 w-auto shrink-0 object-contain"
         emojiClassName="text-sm leading-none"
       />
-      <span className="truncate">{teamName}</span>
+      <span className="min-w-0 flex-1 truncate">{teamName}</span>
     </button>
   )
 }
@@ -930,26 +912,30 @@ export function PredictionMatchCard({
             isLocked: isReadOnly && !preview,
             isPredicted: preview ? false : savedCardComplete,
             filled: preview ? false : savedCardComplete,
+            variant: 'prominent',
           }),
-          'flex-col items-stretch gap-2.5',
+          'flex-col items-stretch gap-3.5 sm:gap-4',
+          // Slightly taller padding for lg stacked crest + name
+          'lg:py-5',
           preview && 'opacity-95',
         )}
       >
-        <div className="flex w-full flex-wrap items-center justify-between gap-2">
-          <span
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+          <CompactMatchRowKickoffTime
+            kickoffAt={prediction.kickoffAt}
+            isLocked={isReadOnly && !preview}
             className={cn(
-              'rounded-md bg-muted px-2.5 py-1 text-xs font-medium',
+              'text-xs font-semibold tabular-nums tracking-wide sm:text-sm',
+              'lg:col-start-2 lg:justify-self-center',
               isReadOnly && !preview
                 ? pastMetaTextClassName
-                : 'text-muted-foreground',
+                : 'text-foreground/90',
             )}
-          >
-            {formatRoundLabel(prediction.round, prediction.groupName)}
-          </span>
+          />
           {earnedPointsLine ? (
             <span
               className={cn(
-                'text-xs font-semibold',
+                'text-xs font-semibold lg:col-start-3 lg:justify-self-end',
                 earnedPointsLine.kind === 'exact'
                   ? 'text-primary'
                   : earnedPointsLine.kind === 'winner' ||
@@ -968,18 +954,13 @@ export function PredictionMatchCard({
                 : `${earnedPointsLine.label} · +${earnedPointsLine.points} pts`}
             </span>
           ) : voidMatchLabel ? (
-            <span className="text-xs font-semibold text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground lg:col-start-3 lg:justify-self-end">
               {voidMatchLabel}
             </span>
-          ) : (
-            <CompactMatchRowKickoffTime
-              kickoffAt={prediction.kickoffAt}
-              isLocked={isReadOnly && !preview}
-            />
-          )}
+          ) : null}
         </div>
 
-        <div className={getCompactMatchRowTeamsRowClassName()}>
+        <div className={cn(getCompactMatchRowTeamsRowClassName(), 'py-0.5')}>
           {preview ? (
             <PreviewTbdTeamSide />
           ) : (
@@ -987,6 +968,7 @@ export function PredictionMatchCard({
               name={prediction.team1Name}
               dbFlag={prediction.team1Flag}
               logoUrl={prediction.team1Logo}
+              desktopStacked
             />
           )}
 
@@ -1084,6 +1066,7 @@ export function PredictionMatchCard({
               name={prediction.team2Name}
               dbFlag={prediction.team2Flag}
               logoUrl={prediction.team2Logo}
+              desktopStacked
             />
           )}
         </div>

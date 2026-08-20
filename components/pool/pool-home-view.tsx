@@ -37,6 +37,10 @@ import {
   buildMockLeaderboardMembers,
 } from '@/components/pool/mock-leaderboard-preview'
 import {
+  PoolPredictionStatusFilterProvider,
+  PredictionStatusFilterTabs,
+} from '@/src/lib/pool-prediction-status-filter-context'
+import {
   PoolChatTab,
   type PoolChatMemberProfile,
 } from '@/components/pool/pool-chat-tab'
@@ -168,6 +172,15 @@ function PoolShareButton({
 
 const POOL_TAB_TRIGGER_CLASS =
   'h-auto flex-col gap-0.5 whitespace-nowrap px-1.5 py-1.5 text-[10px] leading-none lg:flex-row lg:gap-1.5 lg:px-2 lg:py-2 lg:text-sm lg:leading-normal'
+
+/** Desktop vertical section rail (lg+ only). Yields width before the workspace. */
+const POOL_DESKTOP_NAV_TRIGGER_CLASS = cn(
+  'inline-flex h-auto w-full min-w-0 items-center justify-start gap-2 rounded-lg px-2 py-2 text-xs font-medium sm:text-[0.8125rem]',
+  'text-muted-foreground transition-[transform,background-color,color] duration-150',
+  'hover:bg-muted/80 hover:text-foreground active:translate-y-px',
+  'data-[state=active]:bg-primary/15 data-[state=active]:text-primary',
+  FOCUS_VISIBLE_RING,
+)
 
 export function PoolHomeView({
   pool,
@@ -396,29 +409,30 @@ export function PoolHomeView({
         >
           <div
             className={cn(
-              'mx-auto max-w-4xl px-4',
+              'mx-auto w-full px-4',
+              // Match main content edges on desktop (classic predictions uses ~82rem).
+              isClassicPredictionsTab
+                ? 'max-w-4xl lg:max-w-[82rem]'
+                : 'max-w-4xl',
               isChatView ? 'py-2.5 sm:py-3' : 'py-4 max-sm:py-2.5',
             )}
           >
             <div
               className={cn(
-                'flex items-center gap-4',
-                isChatView
-                  ? 'gap-2'
-                  : 'max-lg:gap-2',
+                'flex items-center justify-between gap-4',
+                isChatView ? 'gap-2' : 'max-lg:gap-2',
               )}
             >
-              <button
-                type="button"
-                onClick={handleBackClick}
-                className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
-                aria-label={isChatView ? 'Back to chats' : 'Back to dashboard'}
-              >
-                <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-              </button>
-
               {isChatView ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={handleBackClick}
+                    className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
+                    aria-label="Back to chats"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
+                  </button>
                   <h1 className="min-w-0 flex-1 truncate font-display text-xl tracking-wide text-foreground sm:text-2xl">
                     {pool.name}
                   </h1>
@@ -463,36 +477,46 @@ export function PoolHomeView({
                 </>
               ) : (
                 <>
-                  <PoolAvatarImage
-                    avatar={pool.avatar}
-                    emblemUrl={pool.emblemUrl}
-                    size="sm"
-                    className="shrink-0 rounded-xl"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="hidden lg:block">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                  <div className="flex min-w-0 flex-1 items-center gap-4 max-lg:gap-2">
+                    <button
+                      type="button"
+                      onClick={handleBackClick}
+                      className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
+                      aria-label="Back to dashboard"
+                    >
+                      <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
+                    </button>
+                    <PoolAvatarImage
+                      avatar={pool.avatar}
+                      emblemUrl={pool.emblemUrl}
+                      size="sm"
+                      className="shrink-0 rounded-xl"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="hidden lg:block">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                            {pool.name}
+                          </h1>
+                          <ScoringModeBadge scoringStyle={pool.scoringStyle} />
+                        </div>
+                      </div>
+                      <div className="lg:hidden">
+                        <h1 className="w-full min-w-0 max-w-none truncate font-display text-lg tracking-wide text-foreground">
                           {pool.name}
                         </h1>
-                        <ScoringModeBadge scoringStyle={pool.scoringStyle} />
-                      </div>
-                    </div>
-                    <div className="lg:hidden">
-                      <h1 className="w-full min-w-0 max-w-none truncate font-display text-lg tracking-wide text-foreground">
-                        {pool.name}
-                      </h1>
-                      <div className="mt-1 flex min-w-0 items-center gap-2">
-                        <ScoringModeBadge
-                          scoringStyle={pool.scoringStyle}
-                          className="shrink-0"
-                        />
-                        <PoolShareButton
-                          acceptingMembers={pool.acceptingMembers}
-                          copied={copied}
-                          onClick={copyInviteLink}
-                          className="h-7 gap-1 px-2 text-[11px]"
-                        />
+                        <div className="mt-1 flex min-w-0 items-center gap-2">
+                          <ScoringModeBadge
+                            scoringStyle={pool.scoringStyle}
+                            className="shrink-0"
+                          />
+                          <PoolShareButton
+                            acceptingMembers={pool.acceptingMembers}
+                            copied={copied}
+                            onClick={copyInviteLink}
+                            className="h-7 gap-1 px-2 text-[11px]"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -500,7 +524,7 @@ export function PoolHomeView({
                     acceptingMembers={pool.acceptingMembers}
                     copied={copied}
                     onClick={copyInviteLink}
-                    className="hidden lg:inline-flex"
+                    className="hidden shrink-0 lg:inline-flex"
                   />
                 </>
               )}
@@ -517,7 +541,9 @@ export function PoolHomeView({
             // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
             isLeaderboardTab
               ? 'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0'
-              : 'max-w-4xl bg-app-background px-4',
+              : isClassicPredictionsTab
+                ? 'max-w-[82rem] bg-app-background px-4'
+                : 'max-w-4xl bg-app-background px-4',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
@@ -540,7 +566,7 @@ export function PoolHomeView({
           {!isChatView && poolId ? (
             <div
               className={cn(
-                'mb-4',
+                'mb-4 lg:hidden',
                 isLeaderboardTab && 'mx-auto max-w-4xl px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
               )}
@@ -554,6 +580,7 @@ export function PoolHomeView({
             </div>
           ) : null}
 
+          <PoolPredictionStatusFilterProvider>
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
@@ -569,14 +596,87 @@ export function PoolHomeView({
             }}
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
-              isLeaderboardTab && 'mb-0 flex min-h-0 flex-1 flex-col gap-4',
+              'lg:flex lg:flex-row lg:items-start lg:gap-4',
+              isLeaderboardTab && 'mb-0 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row',
               isMobileChatShell &&
                 'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
               isMobileChatShell && isChatView && 'max-sm:gap-0',
             )}
           >
+            {!isChatView ? (
+              <nav
+                className={cn(
+                  // Prefer 12rem; high shrink so the predictions workspace wins width first.
+                  'hidden min-w-[8.75rem] max-w-[12rem] basis-[12rem] shrink-[3] grow-0 lg:block',
+                  'lg:sticky lg:top-24 lg:self-start',
+                )}
+                aria-label="Pool sections"
+              >
+                <div className="rounded-xl border border-border/80 bg-card/40 p-2">
+                  <TabsList className="flex h-auto w-full flex-col gap-0.5 bg-transparent p-0">
+                    <TabsTrigger
+                      value="predictions"
+                      className={POOL_DESKTOP_NAV_TRIGGER_CLASS}
+                    >
+                      <Target className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="min-w-0 truncate">Predictions</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="leaderboard"
+                      className={POOL_DESKTOP_NAV_TRIGGER_CLASS}
+                    >
+                      <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="min-w-0 truncate">Leaderboard</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="settings"
+                      className={POOL_DESKTOP_NAV_TRIGGER_CLASS}
+                    >
+                      <Settings className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="min-w-0 truncate">Settings</span>
+                    </TabsTrigger>
+                  </TabsList>
+                  {isClassicPredictionsTab ? (
+                    <PredictionStatusFilterTabs className="mt-1" />
+                  ) : null}
+                  {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
+                    <span className="mt-2 block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                      Mock preview
+                    </span>
+                  ) : null}
+                  {isLeaderboardTab &&
+                  !USE_MOCK_LEADERBOARD &&
+                  leaderboardRefreshing ? (
+                    <span
+                      className="mt-2 block animate-pulse text-center text-[11px] font-medium tracking-wide text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      Updating…
+                    </span>
+                  ) : null}
+                  {isLeaderboardTab &&
+                  !USE_MOCK_LEADERBOARD &&
+                  !leaderboardRefreshing &&
+                  leaderboardLiveSync ? (
+                    <span
+                      className="mt-2 inline-flex w-full items-center justify-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
+                      aria-label="Live standings sync on"
+                    >
+                      <span
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
+                        aria-hidden
+                      />
+                      Live
+                    </span>
+                  ) : null}
+                </div>
+              </nav>
+            ) : null}
+
+            <div className="min-w-0 flex-1 basis-[70rem] shrink lg:min-h-0">
             <div
               className={cn(
+                'lg:hidden',
                 isLeaderboardTab && 'mx-auto w-full max-w-4xl shrink-0 px-4',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
               )}
@@ -586,8 +686,7 @@ export function PoolHomeView({
                   <TabsList
                     className={cn(
                       'grid h-auto w-full max-w-2xl grid-cols-3 p-1',
-                      'max-lg:mx-auto max-lg:w-[min(100%,19rem)] max-lg:p-0.5',
-                      'lg:mx-auto',
+                      'mx-auto w-[min(100%,19rem)] p-0.5',
                       isMobileChatShell && 'max-sm:shrink-0',
                     )}
                   >
@@ -595,23 +694,22 @@ export function PoolHomeView({
                       value="predictions"
                       className={POOL_TAB_TRIGGER_CLASS}
                     >
-                      <Target className="h-3.5 w-3.5 lg:hidden" aria-hidden />
+                      <Target className="h-3.5 w-3.5" aria-hidden />
                       Predictions
                     </TabsTrigger>
                     <TabsTrigger
                       value="leaderboard"
                       className={POOL_TAB_TRIGGER_CLASS}
                     >
-                      <Trophy className="h-3.5 w-3.5 lg:hidden" aria-hidden />
+                      <Trophy className="h-3.5 w-3.5" aria-hidden />
                       Leaderboard
                     </TabsTrigger>
                     <TabsTrigger
                       value="settings"
                       className={POOL_TAB_TRIGGER_CLASS}
                     >
-                      <Settings className="h-3.5 w-3.5 lg:hidden" aria-hidden />
-                      <span className="lg:hidden">Settings</span>
-                      <span className="hidden lg:inline">Pool Settings</span>
+                      <Settings className="h-3.5 w-3.5" aria-hidden />
+                      Settings
                     </TabsTrigger>
                   </TabsList>
                   {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
@@ -662,6 +760,15 @@ export function PoolHomeView({
                 memberId={memberId}
                 currentUserId={currentUserId}
                 inviteCode={pool.inviteCode}
+                poolName={pool.name}
+                memberCount={pool.memberCount}
+                userRank={
+                  members.find(
+                    (member) =>
+                      member.isYou || member.userId === currentUserId,
+                  )?.rank ?? null
+                }
+                acceptingMembers={pool.acceptingMembers}
                 winnerPool={
                   isWinnerPool && poolId
                     ? {
@@ -786,7 +893,9 @@ export function PoolHomeView({
                 ) : null}
               </TabsContent>
             ) : null}
+            </div>
           </Tabs>
+          </PoolPredictionStatusFilterProvider>
         </main>
       </div>
       <PoolSettingsDialog
