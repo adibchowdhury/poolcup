@@ -19,7 +19,7 @@ import {
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
 import { resolvePoolCardAccentColor } from '@/src/lib/pool-theme'
-import { sportIconPng } from '@/src/lib/sport-display'
+import { sportIconPng, isSportBallEmblemPath } from '@/src/lib/sport-display'
 import { DASHBOARD_POOL_CARD_CLASS } from '@/src/lib/dashboard-surfaces'
 import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -319,6 +319,26 @@ function DiscoverPoolLogo({
     </div>
   )
 
+  // Stored emblem is source of truth; sport-ball render remains a safety net.
+  if (emblem && isRemoteEmblemUrl(emblem)) {
+    return shell(
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={emblem} alt="" className={markClassName} />,
+    )
+  }
+
+  if (emblem && isSportBallEmblemPath(emblem)) {
+    return shell(
+      <Image
+        src={emblem}
+        alt=""
+        width={size}
+        height={size}
+        className={markClassName}
+      />,
+    )
+  }
+
   const sportPng = pool.sport ? sportIconPng(pool.sport) : null
   if (sportPng) {
     return shell(
@@ -329,13 +349,6 @@ function DiscoverPoolLogo({
         height={size}
         className={markClassName}
       />,
-    )
-  }
-
-  if (emblem && isRemoteEmblemUrl(emblem)) {
-    return shell(
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={emblem} alt="" className={markClassName} />,
     )
   }
 

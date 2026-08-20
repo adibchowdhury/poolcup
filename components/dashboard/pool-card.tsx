@@ -38,7 +38,7 @@ import {
 } from '@/src/lib/dashboard-surfaces'
 import { resolvePoolCardAccentColor } from '@/src/lib/pool-theme'
 import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
-import { sportIconPng } from '@/src/lib/sport-display'
+import { sportIconPng, isSportBallEmblemPath } from '@/src/lib/sport-display'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { bindTactilePress } from '@/src/lib/tactile-press'
@@ -130,6 +130,34 @@ function PoolCardLogoMark({ pool }: { pool: DashboardPoolCardData }) {
     setEmblemFailed(false)
   }, [emblem])
 
+  // Stored emblem is source of truth (official pools store /sports/*.png).
+  if (emblem && isRemoteEmblemUrl(emblem) && !emblemFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- Supabase public emblem URL
+      <img
+        src={emblem}
+        alt=""
+        className={markClassName}
+        onError={() => setEmblemFailed(true)}
+      />
+    )
+  }
+
+  if (emblem && isSportBallEmblemPath(emblem) && !emblemFailed) {
+    return (
+      <Image
+        src={emblem}
+        alt=""
+        width={120}
+        height={120}
+        className={markClassName}
+        sizes="(min-width: 1024px) 320px"
+        onError={() => setEmblemFailed(true)}
+      />
+    )
+  }
+
+  // Safety net: official pools without a stored emblem still get the sport ball.
   if (pool.isOfficial) {
     const png = pool.sport ? sportIconPng(pool.sport) : null
     if (png) {
@@ -145,18 +173,6 @@ function PoolCardLogoMark({ pool }: { pool: DashboardPoolCardData }) {
       )
     }
     return <Shield className="h-12 w-12 text-muted-foreground" aria-hidden />
-  }
-
-  if (emblem && isRemoteEmblemUrl(emblem) && !emblemFailed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- Supabase public emblem URL
-      <img
-        src={emblem}
-        alt=""
-        className={markClassName}
-        onError={() => setEmblemFailed(true)}
-      />
-    )
   }
 
   const presetSrc = getPoolAvatarSrc(pool.avatar)

@@ -5,11 +5,12 @@ import Image from 'next/image'
 import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPoolAvatarSrc } from '@/src/lib/pool-avatars'
+import { isSportBallEmblemPath } from '@/src/lib/sport-display'
 
 type PoolAvatarImageProps = {
   /** Preset filename under /pool_avatars (legacy squad photo). */
   avatar: string | null | undefined
-  /** Custom uploaded emblem URL — takes precedence when set. */
+  /** Custom uploaded emblem URL or site-relative /sports/*.png — takes precedence when set. */
   emblemUrl?: string | null
   size?: 'sm' | 'md' | 'lg'
   /** Override pixel size (defaults from `size`). */
@@ -64,6 +65,9 @@ export function PoolAvatarImage({
   const trimmedEmblem = emblemUrl?.trim() || null
   const presetSrc = getPoolAvatarSrc(avatar)
   const remoteEmblem = Boolean(trimmedEmblem && isRemoteUrl(trimmedEmblem))
+  const sportBallEmblem = Boolean(
+    trimmedEmblem && isSportBallEmblemPath(trimmedEmblem),
+  )
   const [emblemFailed, setEmblemFailed] = useState(false)
 
   useEffect(() => {
@@ -71,6 +75,7 @@ export function PoolAvatarImage({
   }, [trimmedEmblem])
 
   const showRemote = remoteEmblem && !emblemFailed
+  const showSportBall = sportBallEmblem && !emblemFailed
 
   return (
     <div
@@ -88,6 +93,15 @@ export function PoolAvatarImage({
           width={px}
           height={px}
           className={cn('size-full object-cover', imgClassName)}
+          onError={() => setEmblemFailed(true)}
+        />
+      ) : showSportBall ? (
+        <Image
+          src={trimmedEmblem!}
+          alt=""
+          width={px}
+          height={px}
+          className={cn('size-full object-contain', imgClassName)}
           onError={() => setEmblemFailed(true)}
         />
       ) : presetSrc ? (

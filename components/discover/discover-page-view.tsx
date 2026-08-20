@@ -320,7 +320,7 @@ function DiscoverPoolCardView({
             </p>
           </div>
         </div>
-        {useOfficial ? (
+        {useOfficial && !pool.emblemUrl?.trim() ? (
           <SportIconThumb sport={pool.sport} size={compact ? 28 : 32} />
         ) : (
           <PoolAvatarImage
@@ -393,7 +393,17 @@ function TrendingPoolRow({
         >
           {rank}
         </span>
-        <SportIconThumb sport={pool.sport} size={28} />
+        {pool.isOfficial && !pool.emblemUrl?.trim() ? (
+          <SportIconThumb sport={pool.sport} size={28} />
+        ) : (
+          <PoolAvatarImage
+            avatar={pool.avatar}
+            emblemUrl={pool.emblemUrl}
+            size="sm"
+            pixelSize={28}
+            className="rounded-lg"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <h3
             className="line-clamp-2 break-words font-display text-sm tracking-wide text-foreground sm:text-base"

@@ -1,6 +1,8 @@
 import { unstable_cache } from 'next/cache'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { normalizePoolThemeColor } from '@/src/lib/pool-theme'
+import { isSportBallEmblemPath } from '@/src/lib/sport-display'
+import { siteUrl } from '@/src/lib/site'
 
 export type PoolOgData = {
   id: string
@@ -13,6 +15,14 @@ export type PoolOgData = {
   themeColor: string | null
   /** Public emblem URL when set. */
   emblemUrl: string | null
+}
+
+function resolveOgEmblemUrl(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (isSportBallEmblemPath(trimmed)) return `${siteUrl}${trimmed}`
+  return null
 }
 
 async function fetchPoolOgDataUncached(
@@ -54,8 +64,7 @@ async function fetchPoolOgDataUncached(
 
     const emblemRaw =
       typeof pool.emblem_url === 'string' ? pool.emblem_url.trim() : ''
-    const emblemUrl =
-      emblemRaw && /^https?:\/\//i.test(emblemRaw) ? emblemRaw : null
+    const emblemUrl = resolveOgEmblemUrl(emblemRaw)
 
     return {
       id: pool.id as string,

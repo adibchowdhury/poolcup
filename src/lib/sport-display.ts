@@ -17,6 +17,19 @@ export function sportIconPng(sport: string): string | null {
   return null
 }
 
+/** Site-relative sport-ball path stored on pools.emblem_url for official pools. */
+export function sportBallPublicPath(sport: string): string | null {
+  const png = sportIconPng(sport)
+  return png ? `/sports/${png}` : null
+}
+
+/** True for `/sports/{name}.png` paths written by ensure_official_pools. */
+export function isSportBallEmblemPath(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+  return /^\/sports\/[a-z0-9_-]+\.png$/i.test(trimmed)
+}
+
 /** Human label for a sport key from sporting_events.sport. */
 export function sportDisplayLabel(sport: string): string {
   const normalized = sport.trim().toLowerCase()
