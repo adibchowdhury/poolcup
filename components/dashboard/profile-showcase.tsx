@@ -1,6 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AchievementBadgeArt } from '@/components/achievements/achievement-badge-art'
@@ -720,11 +726,36 @@ export function ProfileShowcase({
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,15,0.15)_0%,rgba(8,11,15,0.55)_45%,rgba(8,11,15,0.98)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,color-mix(in_srgb,var(--primary)_12%,transparent),transparent_55%)]" />
 
-          {seasonText ? (
-            <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,16rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[20rem]">
-              <span className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground backdrop-blur-sm">
-                {seasonText}
-              </span>
+          {seasonText ||
+          (!isPublic && onEditProfile) ||
+          (isPublic && isOwnPublicProfile) ? (
+            <div className="absolute right-2.5 top-2.5 z-20 flex max-w-[min(100%-1rem,16rem)] flex-col items-end gap-1.5 sm:right-3.5 sm:top-3.5 sm:max-w-[20rem] lg:right-6 lg:top-5 lg:max-w-none lg:flex-row lg:items-center lg:gap-2.5">
+              {seasonText ? (
+                <span className="rounded-full border border-border bg-background/70 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-muted-foreground backdrop-blur-sm lg:px-2.5 lg:text-[10px]">
+                  {seasonText}
+                </span>
+              ) : null}
+              {!isPublic && onEditProfile ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={onEditProfile}
+                  className={cn('hidden lg:inline-flex', FOCUS_VISIBLE_RING)}
+                >
+                  Edit Profile
+                </Button>
+              ) : null}
+              {isPublic && isOwnPublicProfile ? (
+                <Button
+                  asChild
+                  variant="default"
+                  size="sm"
+                  className={cn('hidden lg:inline-flex', FOCUS_VISIBLE_RING)}
+                >
+                  <Link href={DASHBOARD_TAB_HREFS.profile}>Edit Profile</Link>
+                </Button>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -749,7 +780,7 @@ export function ProfileShowcase({
                 <button
                   type="button"
                   onClick={onEditProfile}
-                  className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-primary/40 bg-[#0b1711] text-primary shadow-lg transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 lg:hidden"
                   aria-label="Edit profile and avatar"
                 >
                   <Pencil className="h-3 w-3" aria-hidden />
@@ -774,7 +805,10 @@ export function ProfileShowcase({
                     asChild
                     size="sm"
                     variant="outline"
-                    className={cn('h-7 shrink-0 gap-1 px-2 text-[10px]', FOCUS_VISIBLE_RING)}
+                    className={cn(
+                      'h-7 shrink-0 gap-1 px-2 text-[10px] lg:hidden',
+                      FOCUS_VISIBLE_RING,
+                    )}
                   >
                     <Link href={DASHBOARD_TAB_HREFS.profile}>
                       <Pencil className="h-3 w-3" aria-hidden />

@@ -13,6 +13,7 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import { Check, ChevronLeft, Loader2, Plus } from 'lucide-react'
+import { bindTactilePress } from '@/src/lib/tactile-press'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -137,8 +138,9 @@ const MOBILE_GROUP_GAP_CLASS = 'h-8 shrink-0 lg:hidden'
 const MOBILE_DOTS_TO_TITLE_GAP_CLASS = 'h-12 shrink-0 lg:hidden'
 
 /**
- * 3D motion durations — applied as CSS vars; motion itself lives in
- * `button.onboarding-3d-btn` in globals.css (plain CSS, not Tailwind variants).
+ * 3D motion durations — applied as CSS vars on the shell; motion lives in
+ * `.ui-tactile-btn` in globals.css (plain CSS, not Tailwind variants).
+ * Onboarding sets `--onboarding-btn-*-ms`; unified tactile reads them as fallbacks.
  */
 const ONBOARDING_BTN_HOVER_IN_MS = 290
 const ONBOARDING_BTN_HOVER_OUT_MS = 270
@@ -150,26 +152,8 @@ const ONBOARDING_BTN_MOTION_VARS = {
   '--onboarding-btn-press-ms': `${ONBOARDING_BTN_PRESS_MS}ms`,
 } as CSSProperties
 
-/** iOS often skips :active unless a pointer listener is on the node/ancestor. */
-function bindOnboarding3dPress(target: EventTarget | null) {
-  const btn =
-    target instanceof Element
-      ? target.closest('button.onboarding-3d-btn')
-      : null
-  if (!btn || (btn instanceof HTMLButtonElement && btn.disabled)) return
-  if (btn.hasAttribute('data-pressed')) return
-  btn.setAttribute('data-pressed', '')
-  const clear = () => {
-    btn.removeAttribute('data-pressed')
-    window.removeEventListener('pointerup', clear)
-    window.removeEventListener('pointercancel', clear)
-  }
-  window.addEventListener('pointerup', clear)
-  window.addEventListener('pointercancel', clear)
-}
-
 const ONBOARDING_BTN_3D_PRIMARY = cn(
-  'onboarding-3d-btn onboarding-3d-btn--primary',
+  'ui-tactile-btn ui-tactile-btn--primary',
   'font-semibold text-primary-foreground',
   '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
   'bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_68%,white),var(--primary))]',
@@ -179,7 +163,7 @@ const ONBOARDING_BTN_3D_PRIMARY = cn(
 )
 
 const ONBOARDING_BTN_3D_BACK = cn(
-  'onboarding-3d-btn',
+  'ui-tactile-btn',
   'text-foreground',
   '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
   'bg-[linear-gradient(180deg,#243044,#111a27)]',
@@ -1776,7 +1760,7 @@ export function OnboardingFlow({
     <div
       className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden"
       style={ONBOARDING_BTN_MOTION_VARS}
-      onPointerDownCapture={(event) => bindOnboarding3dPress(event.target)}
+      onPointerDownCapture={(event) => bindTactilePress(event.target)}
     >
       <div
         className="h-[3px] w-full shrink-0 bg-muted"
