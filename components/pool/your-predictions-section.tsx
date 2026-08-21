@@ -229,15 +229,18 @@ export function YourPredictionsSection({
   const [seasonPlayoffPhase, setSeasonPlayoffPhase] =
     useState<SeasonPlayoffPhaseId>('season')
   const defaultRoundTabSetRef = useRef(false)
-  const [classicSortMode, setClassicSortMode] =
-    useState<ClassicPredictionSortMode>('kickoff-oldest')
   const filterCtx = usePoolPredictionStatusFilterOptional()
+  const [localSortMode, setLocalSortMode] =
+    useState<ClassicPredictionSortMode>('kickoff-oldest')
+  const classicSortMode = filterCtx?.sortMode ?? localSortMode
+  const setClassicSortMode = filterCtx?.setSortMode ?? setLocalSortMode
   const [localStatusFilter, setLocalStatusFilter] =
     useState<PredictionStatusFilter>('all')
   const statusFilter = filterCtx?.statusFilter ?? localStatusFilter
   const setStatusFilter = filterCtx?.setStatusFilter ?? setLocalStatusFilter
   const setFilterCounts = filterCtx?.setCounts
   const setShowFilters = filterCtx?.setShowFilters
+  const setSortOptions = filterCtx?.setSortOptions
   const isLgUp = useSyncExternalStore(
     subscribeLgUp,
     getLgUpSnapshot,
@@ -246,11 +249,11 @@ export function YourPredictionsSection({
 
   useEffect(() => {
     if (seasonMode) {
-      setClassicSortMode((prev) => (prev === 'group' ? 'kickoff-oldest' : prev))
+      if (classicSortMode === 'group') setClassicSortMode('kickoff-oldest')
       return
     }
     if (mixedPlayoffMode) {
-      setClassicSortMode((prev) => (prev === 'group' ? 'kickoff-oldest' : prev))
+      if (classicSortMode === 'group') setClassicSortMode('kickoff-oldest')
       setSeasonPlayoffPhase(
         classicPredictions.some((prediction) =>
           isSeasonFlatRound(prediction.round),
@@ -268,7 +271,13 @@ export function YourPredictionsSection({
       resolveDefaultClassicRoundTabForPredictions(classicPredictions),
     )
     defaultRoundTabSetRef.current = true
-  }, [classicPredictions, mixedPlayoffMode, seasonMode])
+  }, [
+    classicPredictions,
+    classicSortMode,
+    mixedPlayoffMode,
+    seasonMode,
+    setClassicSortMode,
+  ])
 
   const stageFilteredPredictions = useMemo(() => {
     if (seasonMode) return classicPredictions
@@ -389,6 +398,11 @@ export function YourPredictionsSection({
   const sortOptions =
     seasonMode || mixedPlayoffMode ? SEASON_SORT_OPTIONS : CLASSIC_SORT_OPTIONS
 
+  useEffect(() => {
+    if (!setSortOptions) return
+    setSortOptions(sortOptions)
+  }, [setSortOptions, sortOptions])
+
   const matchListClassName =
     'grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2'
 
@@ -463,7 +477,7 @@ export function YourPredictionsSection({
           Your predictions
         </h3>
         {hasClassicContent ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:hidden">
             <label
               htmlFor="classic-predictions-sort"
               className="text-sm text-muted-foreground"

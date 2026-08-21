@@ -39,6 +39,7 @@ import {
 import {
   PoolPredictionStatusFilterProvider,
   PredictionStatusFilterTabs,
+  PredictionSortControl,
 } from '@/src/lib/pool-prediction-status-filter-context'
 import {
   PoolChatTab,
@@ -520,12 +521,27 @@ export function PoolHomeView({
                       </div>
                     </div>
                   </div>
-                  <PoolShareButton
-                    acceptingMembers={pool.acceptingMembers}
-                    copied={copied}
-                    onClick={copyInviteLink}
-                    className="hidden shrink-0 lg:inline-flex"
-                  />
+                  <div className="hidden shrink-0 items-center gap-2 lg:flex">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openSettingsFromNav()}
+                      aria-label="Pool settings"
+                      className={cn(
+                        'gap-1.5 font-display tracking-wide',
+                        FOCUS_VISIBLE_RING,
+                      )}
+                    >
+                      <Settings className="h-4 w-4" aria-hidden />
+                      Settings
+                    </Button>
+                    <PoolShareButton
+                      acceptingMembers={pool.acceptingMembers}
+                      copied={copied}
+                      onClick={copyInviteLink}
+                    />
+                  </div>
                 </>
               )}
             </div>
@@ -628,16 +644,12 @@ export function PoolHomeView({
                       <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       <span className="min-w-0 truncate">Leaderboard</span>
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="settings"
-                      className={POOL_DESKTOP_NAV_TRIGGER_CLASS}
-                    >
-                      <Settings className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      <span className="min-w-0 truncate">Settings</span>
-                    </TabsTrigger>
                   </TabsList>
                   {isClassicPredictionsTab ? (
-                    <PredictionStatusFilterTabs className="mt-1" />
+                    <>
+                      <PredictionStatusFilterTabs className="mt-1" />
+                      <PredictionSortControl />
+                    </>
                   ) : null}
                   {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
                     <span className="mt-2 block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-amber-400">

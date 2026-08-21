@@ -10,6 +10,14 @@ import {
 } from 'react'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { cn } from '@/lib/utils'
+import type { ClassicPredictionSortMode } from '@/src/lib/sort-classic-predictions'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export type PredictionStatusFilter =
   | 'all'
@@ -24,6 +32,11 @@ export type PredictionStatusFilterCounts = {
   completed: number
 }
 
+export type PredictionSortOption = {
+  value: ClassicPredictionSortMode
+  label: string
+}
+
 type PoolPredictionStatusFilterContextValue = {
   statusFilter: PredictionStatusFilter
   setStatusFilter: (next: PredictionStatusFilter) => void
@@ -31,6 +44,10 @@ type PoolPredictionStatusFilterContextValue = {
   setCounts: (next: PredictionStatusFilterCounts) => void
   showFilters: boolean
   setShowFilters: (next: boolean) => void
+  sortMode: ClassicPredictionSortMode
+  setSortMode: (next: ClassicPredictionSortMode) => void
+  sortOptions: PredictionSortOption[]
+  setSortOptions: (next: PredictionSortOption[]) => void
 }
 
 const PoolPredictionStatusFilterContext =
@@ -53,6 +70,9 @@ export function PoolPredictionStatusFilterProvider({
   const [counts, setCounts] =
     useState<PredictionStatusFilterCounts>(EMPTY_COUNTS)
   const [showFilters, setShowFilters] = useState(false)
+  const [sortMode, setSortMode] =
+    useState<ClassicPredictionSortMode>('kickoff-oldest')
+  const [sortOptions, setSortOptions] = useState<PredictionSortOption[]>([])
 
   const setCountsSafe = useCallback((next: PredictionStatusFilterCounts) => {
     setCounts((prev) =>
@@ -65,6 +85,22 @@ export function PoolPredictionStatusFilterProvider({
     )
   }, [])
 
+  const setSortOptionsSafe = useCallback((next: PredictionSortOption[]) => {
+    setSortOptions((prev) => {
+      if (
+        prev.length === next.length &&
+        prev.every(
+          (option, index) =>
+            option.value === next[index]?.value &&
+            option.label === next[index]?.label,
+        )
+      ) {
+        return prev
+      }
+      return next
+    })
+  }, [])
+
   const value = useMemo(
     () => ({
       statusFilter,
@@ -73,8 +109,20 @@ export function PoolPredictionStatusFilterProvider({
       setCounts: setCountsSafe,
       showFilters,
       setShowFilters,
+      sortMode,
+      setSortMode,
+      sortOptions,
+      setSortOptions: setSortOptionsSafe,
     }),
-    [statusFilter, counts, showFilters, setCountsSafe],
+    [
+      statusFilter,
+      counts,
+      showFilters,
+      setCountsSafe,
+      sortMode,
+      sortOptions,
+      setSortOptionsSafe,
+    ],
   )
 
   return (
@@ -163,6 +211,50 @@ export function PredictionStatusFilterTabs({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+/** Desktop left-rail sort control (lg+ only mount site). */
+export function PredictionSortControl({
+  className,
+}: {
+  className?: string
+}) {
+  const { showFilters, sortMode, setSortMode, sortOptions } =
+    usePoolPredictionStatusFilter()
+
+  if (!showFilters || sortOptions.length === 0) return null
+
+  return (
+    <div className={cn('space-y-1.5 border-t border-border/70 pt-2.5', className)}>
+      <label
+        htmlFor="classic-predictions-sort-rail"
+        className="block truncate px-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+      >
+        Sort by
+      </label>
+      <Select
+        value={sortMode}
+        onValueChange={(value) =>
+          setSortMode(value as ClassicPredictionSortMode)
+        }
+      >
+        <SelectTrigger
+          id="classic-predictions-sort-rail"
+          size="sm"
+          className="h-8 w-full min-w-0 border-border bg-card text-left text-[0.7rem] text-foreground"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {sortOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   )
 }
