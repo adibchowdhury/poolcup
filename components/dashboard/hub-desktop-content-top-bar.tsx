@@ -46,9 +46,9 @@ export function HubDesktopContentTopBar({
           />
           <span className="truncate">{resolvedTitle}</span>
         </h1>
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-3">
           <HeaderNotificationBell />
-          <ReportIssueButton className="hidden lg:inline-flex" />
+          <ReportIssueButton />
           <HubHelpMenu />
         </div>
       </div>

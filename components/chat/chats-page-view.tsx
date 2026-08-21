@@ -676,7 +676,7 @@ export function ChatDesktopTwoPane({
           'min-[1280px]:w-[23.75rem]',
         )}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 pr-3">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-3">
           <ChatInboxPanel
             userId={userId}
             selectedConversationId={selectedConversationId}

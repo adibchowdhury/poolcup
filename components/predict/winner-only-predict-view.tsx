@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { useClientNow } from '@/hooks/use-client-now'
 import { PoolBracketTab } from '@/components/pool/pool-bracket-tab'
 import { ThirdPlaceRankingPanel } from '@/components/pool/third-place-ranking-panel'
@@ -1259,13 +1260,16 @@ export function WinnerOnlyPredictView({
         >
           {!embedded ? (
             <>
-              <Link
-                href={`/pool/${inviteCode}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="truncate">{pool.name}</span>
-              </Link>
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  href={`/pool/${inviteCode}`}
+                  className="inline-flex min-w-0 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ArrowLeft className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{pool.name}</span>
+                </Link>
+                <ReportIssueButton />
+              </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">

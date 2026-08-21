@@ -12,6 +12,7 @@ import {
   Share2,
   Trophy,
 } from 'lucide-react'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import {
   FeaturedMatchCountdownDisplay,
@@ -290,24 +291,27 @@ export function GlobalMatchDetailView({
                   {match.team1Name} vs {match.team2Name}
                 </h1>
               </div>
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                className={cn(
-                  'inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card/80 px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted',
-                  FOCUS_VISIBLE_RING,
-                )}
-                aria-label="Share match"
-              >
-                {shareFlash ? (
-                  <Check className="h-4 w-4 text-primary" aria-hidden />
-                ) : (
-                  <Share2 className="h-4 w-4" aria-hidden />
-                )}
-                <span className="hidden sm:inline">
-                  {shareFlash ? 'Copied' : 'Share'}
-                </span>
-              </button>
+              <div className="flex shrink-0 items-center gap-3">
+                {user ? <ReportIssueButton /> : null}
+                <button
+                  type="button"
+                  onClick={() => void handleShare()}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card/80 px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted',
+                    FOCUS_VISIBLE_RING,
+                  )}
+                  aria-label="Share match"
+                >
+                  {shareFlash ? (
+                    <Check className="h-4 w-4 text-primary" aria-hidden />
+                  ) : (
+                    <Share2 className="h-4 w-4" aria-hidden />
+                  )}
+                  <span className="hidden sm:inline">
+                    {shareFlash ? 'Copied' : 'Share'}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </header>

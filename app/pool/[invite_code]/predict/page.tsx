@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { useAuth } from '@/src/lib/auth-context'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { supabase } from '@/src/lib/supabase'
@@ -882,13 +883,16 @@ export default function PredictPage() {
     <div className={cn('min-h-screen bg-background', SAVE_BAR_SOLO_SCROLL_PAD_CLASS)}>
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
         <div className="mx-auto max-w-3xl space-y-3 px-4 py-3 sm:py-4">
-          <Link
-            href={`/pool/${inviteCode}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="truncate">{pool.name}</span>
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              href={`/pool/${inviteCode}`}
+              className="inline-flex min-w-0 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="truncate">{pool.name}</span>
+            </Link>
+            <ReportIssueButton />
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <h1 className="font-display text-3xl tracking-wide text-foreground uppercase sm:text-4xl">

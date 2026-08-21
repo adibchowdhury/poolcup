@@ -22,6 +22,7 @@ import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
 import { ReportPoolControl } from '@/components/pool/report-pool-control'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
 import { SoloInviteNudge } from '@/components/pool/solo-invite-nudge'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
@@ -437,16 +438,18 @@ export function PoolHomeView({
                   <h1 className="min-w-0 flex-1 truncate font-display text-xl tracking-wide text-foreground sm:text-2xl">
                     {pool.name}
                   </h1>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        aria-label="Chat options"
-                      >
-                        <MoreVertical className="h-4 w-4" aria-hidden />
-                      </button>
-                    </DropdownMenuTrigger>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <ReportIssueButton />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          aria-label="Chat options"
+                        >
+                          <MoreVertical className="h-4 w-4" aria-hidden />
+                        </button>
+                      </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem
                         onSelect={() => {
@@ -475,6 +478,7 @@ export function PoolHomeView({
                       showTrigger={false}
                     />
                   ) : null}
+                  </div>
                 </>
               ) : (
                 <>
@@ -521,7 +525,8 @@ export function PoolHomeView({
                       </div>
                     </div>
                   </div>
-                  <div className="hidden shrink-0 items-center gap-2 lg:flex">
+                  <div className="hidden shrink-0 items-center gap-3 lg:flex">
+                    <ReportIssueButton />
                     <Button
                       type="button"
                       size="sm"

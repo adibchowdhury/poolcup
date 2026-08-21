@@ -8,6 +8,7 @@ import {
   useState,
   type FormEvent,
 } from 'react'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/src/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -36,22 +37,78 @@ export function useReportIssue(): ReportIssueContextValue {
   return context
 }
 
+/** Surfaces that already mount ReportIssueButton in their own desktop top bar. */
+function pathnameHasInlineDesktopReportIssue(pathname: string): boolean {
+  if (
+    pathname === '/dashboard' ||
+    pathname.startsWith('/dashboard/') ||
+    pathname.startsWith('/friends') ||
+    pathname.startsWith('/discover') ||
+    pathname.startsWith('/chat')
+  ) {
+    return true
+  }
+  // Pool home + settings + predict headers (not print / other orphans).
+  if (/^\/pool\/[^/]+$/.test(pathname)) return true
+  if (/^\/pool\/[^/]+\/settings(\/|$)/.test(pathname)) return true
+  if (/^\/pool\/[^/]+\/predict\/?$/.test(pathname)) return true
+  if (pathname.startsWith('/match/')) return true
+  return false
+}
+
+/** Marketing / auth pages — never show the logged-in report control. */
+function isSkippedPublicPath(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname.startsWith('/login') ||
+    pathname === '/create-account' ||
+    pathname === '/coming-soon' ||
+    pathname.startsWith('/auth/')
+  )
+}
+
+/**
+ * Desktop-only Report issue control.
+ * Red destructive + white text; hidden below lg so mobile is untouched.
+ */
 export function ReportIssueButton({ className }: { className?: string }) {
   const { openReportIssue } = useReportIssue()
 
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="destructive"
       size="sm"
       onClick={openReportIssue}
       className={cn(
-        'h-8 shrink-0 whitespace-nowrap px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:h-9 sm:px-3 sm:text-sm',
+        'hidden h-8 shrink-0 whitespace-nowrap px-2.5 text-xs font-medium lg:inline-flex',
         className,
       )}
     >
       Report issue
     </Button>
+  )
+}
+
+/**
+ * Fixed top-right fallback for logged-in desktop pages that lack an inline
+ * top-bar placement (create wizard, analytics, settings, onboarding, etc.).
+ */
+function LoggedInDesktopReportIssueFixed() {
+  const { user } = useAuth()
+  const pathname = usePathname() ?? ''
+
+  if (!user) return null
+  if (isSkippedPublicPath(pathname)) return null
+  if (pathnameHasInlineDesktopReportIssue(pathname)) return null
+
+  return (
+    <div className="pointer-events-none fixed right-4 top-3.5 z-[200] hidden lg:block">
+      <div className="pointer-events-auto">
+        <ReportIssueButton />
+      </div>
+    </div>
   )
 }
 
@@ -145,6 +202,7 @@ export function ReportIssueProvider({
   return (
     <ReportIssueContext.Provider value={value}>
       {children}
+      <LoggedInDesktopReportIssueFixed />
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="overflow-hidden sm:max-w-lg">
           <DialogHeader>

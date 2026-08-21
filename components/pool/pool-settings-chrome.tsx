@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
+import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
@@ -39,7 +40,7 @@ export function PoolSettingsChrome({
   return (
     <div className="min-h-screen bg-app-background">
       <header className="sticky top-0 z-[100] isolate border-b border-border bg-app-background/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-4xl px-4 py-3">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <Link
             href={backHref}
             prefetch
@@ -51,6 +52,7 @@ export function PoolSettingsChrome({
           >
             <ArrowLeft className="h-5 w-5" aria-hidden />
           </Link>
+          <ReportIssueButton />
         </div>
       </header>
       <main className="mx-auto w-full max-w-4xl px-4 py-6">{children}</main>
