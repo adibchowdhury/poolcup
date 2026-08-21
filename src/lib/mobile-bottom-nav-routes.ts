@@ -98,7 +98,7 @@ export function resolveHubDesktopNavValue(
     return 'friends'
   }
   if (pathname === '/discover') return 'discover'
-  if (pathname === '/chat') return 'inbox'
+  if (pathname === '/chat' || pathname.startsWith('/chat/')) return 'inbox'
   if (pathname === '/dashboard') {
     if (tabParam === 'profile') return 'profile'
     if (tabParam === 'upcoming') return 'games'

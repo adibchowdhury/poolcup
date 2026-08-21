@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
 import { MessageCircle, Search } from 'lucide-react'
@@ -15,7 +16,6 @@ import { toast } from 'sonner'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { ChatInboxSkeleton } from '@/components/chat/chat-inbox-skeleton'
 import { ChatUnreadCountBadge } from '@/components/chat/chat-unread-count-badge'
-import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { Input } from '@/components/ui/input'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { cn } from '@/lib/utils'
@@ -39,6 +39,7 @@ import {
 import { formatChatTimestamp } from '@/src/lib/pool-chat-helpers'
 import {
   emitPoolMarkedRead,
+  getPoolChatDesktopHref,
   getPoolChatHref,
   markPoolRead,
   POOL_MARKED_READ_EVENT,
@@ -47,10 +48,6 @@ import { getMyFriends, type FriendRow } from '@/src/lib/friendships'
 import { supabase } from '@/src/lib/supabase'
 type ChatsPageViewProps = {
   userId: string
-  email: string
-  displayName?: string | null
-  avatar?: string | null
-  customAvatarUrl?: string | null
 }
 
 type UnifiedInboxItem =
@@ -83,6 +80,7 @@ function ChatListRowShell({
   timestampIso,
   unreadCount,
   muted,
+  selected = false,
 }: {
   href: string
   onNavigate?: () => void
@@ -94,6 +92,7 @@ function ChatListRowShell({
   timestampIso?: string | null
   unreadCount: number
   muted?: boolean
+  selected?: boolean
 }) {
   const hasUnread = unreadCount > 0
 
@@ -102,9 +101,11 @@ function ChatListRowShell({
       <Link
         href={href}
         onClick={onNavigate}
+        aria-current={selected ? 'page' : undefined}
         className={cn(
           'flex items-center gap-4 px-1 py-3 transition-colors sm:px-1.5',
           'hover:bg-muted/30 active:bg-muted/45',
+          selected && 'bg-primary/12 hover:bg-primary/15',
           muted && 'opacity-70',
         )}
       >
@@ -156,20 +157,30 @@ function ChatListRowShell({
 function PoolChatInboxRow({
   item,
   userId,
+  selected = false,
+  desktopHref = false,
 }: {
   item: PoolChatInboxItem
   userId: string
+  selected?: boolean
+  /** Desktop inbox: open in /chat/pool/... two-pane route. */
+  desktopHref?: boolean
 }) {
   const hasMessage = poolChatHasMessage(item)
   const previewText = formatPoolChatLastMessagePreview(item, userId, item.members)
 
   return (
     <ChatListRowShell
-      href={getPoolChatHref(item.inviteCode)}
+      href={
+        desktopHref
+          ? getPoolChatDesktopHref(item.inviteCode)
+          : getPoolChatHref(item.inviteCode)
+      }
       onNavigate={() => {
         void markPoolRead(supabase, item.pool_id, userId)
         emitPoolMarkedRead(item.pool_id)
       }}
+      selected={selected}
       avatar={
         <div className="relative shrink-0">
           <PoolAvatarImage
@@ -199,9 +210,11 @@ function PoolChatInboxRow({
 function DmInboxRow({
   item,
   userId,
+  selected = false,
 }: {
   item: DmConversationRow
   userId: string
+  selected?: boolean
 }) {
   const stillFriends = item.still_friends
   const name = item.other_display_name?.trim() || 'Friend'
@@ -216,6 +229,7 @@ function DmInboxRow({
         emitDmMarkedRead(item.conversation_id)
       }}
       muted={!stillFriends}
+      selected={selected}
       avatar={
         <div className="relative shrink-0">
           <UserAvatarImage
@@ -301,13 +315,45 @@ function matchesDmSearch(item: DmConversationRow, query: string): boolean {
   return (item.other_display_name ?? '').toLowerCase().includes(q)
 }
 
-export function ChatsPageView({
+/** Matches Tailwind `lg:` — mount only one chat chrome tree per breakpoint. */
+const LG_UP_MQ = '(min-width: 1024px)'
+
+function subscribeLgUp(onChange: () => void) {
+  const mql = window.matchMedia(LG_UP_MQ)
+  mql.addEventListener('change', onChange)
+  return () => mql.removeEventListener('change', onChange)
+}
+
+function getLgUpSnapshot() {
+  return window.matchMedia(LG_UP_MQ).matches
+}
+
+function getLgUpServerSnapshot() {
+  return false
+}
+
+export function useIsChatDesktopLayout() {
+  return useSyncExternalStore(
+    subscribeLgUp,
+    getLgUpSnapshot,
+    getLgUpServerSnapshot,
+  )
+}
+
+export function ChatInboxPanel({
   userId,
-  email,
-  displayName,
-  avatar,
-  customAvatarUrl,
-}: ChatsPageViewProps) {
+  selectedConversationId = null,
+  selectedPoolInviteCode = null,
+  desktopPoolLinks = false,
+  className,
+}: {
+  userId: string
+  selectedConversationId?: string | null
+  selectedPoolInviteCode?: string | null
+  /** When true (desktop shell inbox), pool rows link to /chat/pool/... */
+  desktopPoolLinks?: boolean
+  className?: string
+}) {
   const router = useRouter()
   const [poolItems, setPoolItems] = useState<PoolChatInboxItem[]>([])
   const [dmItems, setDmItems] = useState<DmConversationRow[]>([])
@@ -475,104 +521,193 @@ export function ChatsPageView({
     router.push(getDmChatHref(result.conversationId))
   }
 
+  if (loading) {
+    return (
+      <div className={className}>
+        <ChatInboxSkeleton />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <p className={cn('mt-8 text-center text-sm text-destructive', className)}>
+        {error}
+      </p>
+    )
+  }
+
   return (
-    <DashboardAppShell
-      userId={userId}
-      email={email}
-      displayName={displayName}
-      avatar={avatar}
-      customAvatarUrl={customAvatarUrl}
-      hubActiveNav="inbox"
-      linkDashboardTabs
-    >
-        <div className="mx-auto w-full max-w-2xl">
-          <h1 className="font-display text-2xl tracking-wide text-foreground uppercase sm:text-3xl">
-            Chats
-          </h1>
-
-          {loading ? (
-            <ChatInboxSkeleton />
-          ) : error ? (
-            <p className="mt-8 text-center text-sm text-destructive">{error}</p>
-          ) : (
-            <div className="mt-5 flex flex-col gap-4">
-              {hasAnyConversations || friends.length > 0 ? (
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <Input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search chats…"
-                    autoComplete="off"
-                    spellCheck={false}
-                    aria-label="Search chats"
-                    className="h-11 rounded-full border-border/60 bg-card/90 pl-10 pr-4 shadow-none"
-                  />
-                </div>
-              ) : null}
-
-              <RecentFriendsRow
-                friends={friends}
-                openingFriendId={openingFriendId}
-                onOpenFriend={(friend) => void handleOpenFriend(friend)}
-              />
-
-              {!hasAnyConversations ? (
-                <div className="pt-1 text-center">
-                  <MessageCircle className="mx-auto h-10 w-10 text-muted-foreground/60" />
-                  <p className="mt-4 text-base font-medium text-foreground">
-                    No chats yet
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {friends.length > 0
-                      ? 'Tap a friend above to start a message, or join a pool for group chat.'
-                      : 'Add friends to message them, or join a pool for group chat.'}
-                  </p>
-                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                    <Link
-                      href="/friends"
-                      className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
-                    >
-                      Find friends
-                    </Link>
-                    <Link
-                      href="/dashboard?tab=dashboard"
-                      className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      View pools
-                    </Link>
-                  </div>
-                </div>
-              ) : unifiedItems.length === 0 ? (
-                <p className="py-2 text-center text-sm text-muted-foreground">
-                  No chats match “{searchQuery.trim()}”.
-                </p>
-              ) : (
-                <ul className="flex flex-col">
-                  {unifiedItems.map((item) =>
-                    item.kind === 'pool' ? (
-                      <PoolChatInboxRow
-                        key={`pool-${item.pool.pool_id}`}
-                        item={item.pool}
-                        userId={userId}
-                      />
-                    ) : (
-                      <DmInboxRow
-                        key={`dm-${item.dm.conversation_id}`}
-                        item={item.dm}
-                        userId={userId}
-                      />
-                    ),
-                  )}
-                </ul>
-              )}
-            </div>
-          )}
+    <div className={cn('flex flex-col gap-4', className)}>
+      {hasAnyConversations || friends.length > 0 ? (
+        <div className="relative shrink-0">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search chats…"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Search chats"
+            className="h-11 rounded-full border-border/60 bg-card/90 pl-10 pr-4 shadow-none"
+          />
         </div>
-    </DashboardAppShell>
+      ) : null}
+
+      <RecentFriendsRow
+        friends={friends}
+        openingFriendId={openingFriendId}
+        onOpenFriend={(friend) => void handleOpenFriend(friend)}
+      />
+
+      {!hasAnyConversations ? (
+        <div className="pt-1 text-center">
+          <MessageCircle className="mx-auto h-10 w-10 text-muted-foreground/60" />
+          <p className="mt-4 text-base font-medium text-foreground">
+            No chats yet
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {friends.length > 0
+              ? 'Tap a friend above to start a message, or join a pool for group chat.'
+              : 'Add friends to message them, or join a pool for group chat.'}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/friends"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
+            >
+              Find friends
+            </Link>
+            <Link
+              href="/dashboard?tab=dashboard"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              View pools
+            </Link>
+          </div>
+        </div>
+      ) : unifiedItems.length === 0 ? (
+        <p className="py-2 text-center text-sm text-muted-foreground">
+          No chats match “{searchQuery.trim()}”.
+        </p>
+      ) : (
+        <ul className="flex flex-col">
+          {unifiedItems.map((item) =>
+            item.kind === 'pool' ? (
+              <PoolChatInboxRow
+                key={`pool-${item.pool.pool_id}`}
+                item={item.pool}
+                userId={userId}
+                desktopHref={desktopPoolLinks}
+                selected={
+                  selectedPoolInviteCode != null &&
+                  item.pool.inviteCode === selectedPoolInviteCode
+                }
+              />
+            ) : (
+              <DmInboxRow
+                key={`dm-${item.dm.conversation_id}`}
+                item={item.dm}
+                userId={userId}
+                selected={
+                  selectedConversationId != null &&
+                  item.dm.conversation_id === selectedConversationId
+                }
+              />
+            ),
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+export function ChatEmptyConversationPane({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center',
+        className,
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/mascot/onboarding_mascot/pucky_2.webp"
+        alt=""
+        className="h-20 w-20 object-contain opacity-80"
+      />
+      <p className="text-base font-medium text-foreground">
+        Select a conversation
+      </p>
+      <p className="max-w-xs text-sm text-muted-foreground">
+        Choose a chat from the list to start messaging.
+      </p>
+    </div>
+  )
+}
+
+/** Desktop (lg+) two-pane frame: inbox left, conversation right. */
+export function ChatDesktopTwoPane({
+  userId,
+  selectedConversationId = null,
+  selectedPoolInviteCode = null,
+  children,
+}: {
+  userId: string
+  selectedConversationId?: string | null
+  selectedPoolInviteCode?: string | null
+  children: ReactNode
+}) {
+  // Match hub top bar chrome base (#0A0E0E) — top bar uses bg-[#0A0E0E]/95 + blur.
+  // Height = viewport minus sticky top bar (h-14); main gutters cleared by page shell.
+  return (
+    <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 overflow-hidden bg-[#0A0E0E]">
+      <aside
+        className={cn(
+          'flex w-[22.5rem] shrink-0 flex-col border-r border-border/80 bg-[#0A0E0E]',
+          'min-[1280px]:w-[23.75rem]',
+        )}
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 pr-3">
+          <ChatInboxPanel
+            userId={userId}
+            selectedConversationId={selectedConversationId}
+            selectedPoolInviteCode={selectedPoolInviteCode}
+            desktopPoolLinks
+          />
+        </div>
+      </aside>
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#0A0E0E]">
+        {children}
+      </section>
+    </div>
+  )
+}
+
+export function ChatsPageView({ userId }: ChatsPageViewProps) {
+  const isDesktop = useIsChatDesktopLayout()
+
+  // Desktop: inbox lives in ChatAppShell left pane; this route only fills the right pane.
+  if (isDesktop) {
+    return <ChatEmptyConversationPane />
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-2xl">
+      <h1 className="font-display text-2xl tracking-wide text-foreground uppercase sm:text-3xl">
+        Chats
+      </h1>
+      <div className="mt-5">
+        <ChatInboxPanel userId={userId} />
+      </div>
+    </div>
   )
 }

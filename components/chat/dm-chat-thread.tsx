@@ -366,11 +366,11 @@ export function DmChatThread({
   const canSend = stillFriends && trimmedDraft.length > 0 && !sending
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col bg-app-background max-sm:min-h-[calc(100dvh-5.5rem)] sm:gap-4">
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/[0.08] bg-app-background px-1 pb-3 sm:border-0 sm:px-0 sm:pb-0">
+    <div className="mx-auto flex w-full max-w-2xl flex-col bg-app-background max-sm:min-h-[calc(100dvh-5.5rem)] sm:gap-4 lg:mx-0 lg:h-full lg:max-w-none lg:gap-0 lg:bg-[#0A0E0E]">
+      <header className="flex shrink-0 items-center gap-3 border-b border-white/[0.08] bg-app-background px-1 pb-3 sm:border-0 sm:px-0 sm:pb-0 lg:bg-[#0A0E0E]">
         <Link
           href={CHAT_INBOX_HREF}
-          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground lg:hidden"
           aria-label="Back to chats"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -416,11 +416,13 @@ export function DmChatThread({
           'flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-app-background',
           'max-sm:rounded-none max-sm:border-0',
           'sm:h-[min(36rem,calc(100dvh-14rem))] sm:rounded-2xl sm:border',
+          // Desktop two-pane: no card chrome — fill the conversation pane.
+          'lg:h-auto lg:min-h-0 lg:flex-1 lg:rounded-none lg:border-0 lg:bg-[#0A0E0E]',
         )}
       >
-        <div className="hidden h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary sm:block" />
+        <div className="hidden h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary sm:block lg:hidden" />
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-app-background">
+        <div className="relative flex min-h-0 flex-1 flex-col bg-app-background lg:bg-[#0A0E0E]">
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}

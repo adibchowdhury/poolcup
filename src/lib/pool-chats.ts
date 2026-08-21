@@ -263,3 +263,113 @@ export async function fetchPoolChatInbox(
     })
     .filter((row) => row.inviteCode !== '')
 }
+
+export type PoolChatPaneMemberProfile = {
+  userId: string
+  displayName: string
+  avatar: string | null
+  customAvatarUrl: string | null
+}
+
+export type PoolChatPaneContext = {
+  poolId: string
+  poolName: string
+  inviteCode: string
+  poolCreatorUserId: string
+  memberProfiles: PoolChatPaneMemberProfile[]
+}
+
+/** Load pool + member profiles for rendering PoolChatTab outside the pool page. */
+export async function fetchPoolChatPaneContext(
+  supabase: SupabaseClient,
+  inviteCode: string,
+  userId: string,
+): Promise<PoolChatPaneContext | null> {
+  const trimmed = inviteCode.trim()
+  if (!trimmed) return null
+
+  const { data: pool, error: poolError } = await supabase
+    .from('pools')
+    .select('id, name, invite_code, creator_id')
+    .eq('invite_code', trimmed)
+    .maybeSingle()
+
+  if (poolError || !pool) {
+    if (poolError) {
+      console.error('Failed to load pool for chat pane:', poolError.message)
+    }
+    return null
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('pool_members')
+    .select('id')
+    .eq('pool_id', pool.id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (membershipError) {
+    console.error(
+      'Failed to verify pool membership for chat pane:',
+      membershipError.message,
+    )
+    return null
+  }
+  if (!membership) return null
+
+  const { data: membersData, error: membersError } = await supabase
+    .from('pool_members')
+    .select('id, user_id, display_name')
+    .eq('pool_id', pool.id)
+    .order('joined_at', { ascending: true })
+
+  if (membersError) {
+    console.error(
+      'Failed to load pool members for chat pane:',
+      membersError.message,
+    )
+  }
+
+  const avatarByMemberId = new Map<
+    string,
+    { avatar: string | null; customAvatarUrl: string | null }
+  >()
+  const { data: avatarRows, error: avatarError } = await supabase.rpc(
+    'get_pool_member_avatars',
+    { p_pool_id: pool.id },
+  )
+
+  if (avatarError) {
+    console.error(
+      'Failed to load member avatars for chat pane:',
+      avatarError.message,
+    )
+  } else {
+    for (const row of avatarRows ?? []) {
+      avatarByMemberId.set(String(row.member_id), {
+        avatar: row.avatar ?? null,
+        customAvatarUrl: row.custom_avatar_url ?? null,
+      })
+    }
+  }
+
+  const memberProfiles: PoolChatPaneMemberProfile[] = (
+    membersData ?? []
+  ).map((member) => {
+    const avatarFields = avatarByMemberId.get(member.id)
+    return {
+      userId: member.user_id,
+      displayName: member.display_name?.trim() || 'Member',
+      avatar: avatarFields?.avatar ?? null,
+      customAvatarUrl: avatarFields?.customAvatarUrl ?? null,
+    }
+  })
+
+  return {
+    poolId: pool.id,
+    poolName: pool.name,
+    inviteCode: pool.invite_code,
+    poolCreatorUserId: pool.creator_id,
+    memberProfiles,
+  }
+}

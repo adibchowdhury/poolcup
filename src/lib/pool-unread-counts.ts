@@ -27,6 +27,11 @@ export function getPoolChatHref(inviteCode: string): string {
   return `/pool/${inviteCode}?tab=chat`
 }
 
+/** Desktop chat inbox → two-pane route (same shell as DMs). */
+export function getPoolChatDesktopHref(inviteCode: string): string {
+  return `/chat/pool/${inviteCode}`
+}
+
 export function getPoolLeaderboardHref(inviteCode: string): string {
   return `/pool/${inviteCode}?tab=leaderboard`
 }

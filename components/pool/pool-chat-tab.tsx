@@ -57,6 +57,11 @@ type PoolChatTabProps = {
   hideHeading?: boolean
   embedded?: boolean
   fullBleedMobile?: boolean
+  /**
+   * Chat inbox right pane only: strip card chrome (border/radius/fixed height)
+   * and fill the parent. Pool page Chat tab must not set this.
+   */
+  fullBleedDesktop?: boolean
 }
 
 const LONG_PRESS_MS = 450
@@ -506,6 +511,7 @@ export function PoolChatTab({
   hideHeading = false,
   embedded = false,
   fullBleedMobile = false,
+  fullBleedDesktop = false,
 }: PoolChatTabProps) {
   const [messages, setMessages] = useState<PoolChatMessage[]>([])
   const [hiddenAuthorIds, setHiddenAuthorIds] = useState(() => new Set<string>())
@@ -1236,6 +1242,7 @@ export function PoolChatTab({
         'w-full min-w-0',
         fullBleedMobile &&
           'max-sm:flex max-sm:min-h-0 max-sm:w-full max-sm:flex-1 max-sm:flex-col',
+        fullBleedDesktop && 'flex h-full min-h-0 flex-1 flex-col',
       )}
     >
       {showHeading ? (
@@ -1253,15 +1260,30 @@ export function PoolChatTab({
 
       <div
         className={cn(
-          'flex flex-col overflow-hidden rounded-2xl border border-border bg-app-background',
-          fullBleedMobile
-            ? 'max-sm:min-h-0 max-sm:flex-1 max-sm:rounded-none max-sm:border-x-0 sm:h-[min(32rem,calc(100dvh-16rem))]'
-            : 'h-[min(32rem,calc(100dvh-16rem))]',
+          'flex flex-col overflow-hidden bg-app-background',
+          fullBleedDesktop
+            ? 'h-auto min-h-0 flex-1 rounded-none border-0 bg-[#0A0E0E]'
+            : cn(
+                'rounded-2xl border border-border',
+                fullBleedMobile
+                  ? 'max-sm:min-h-0 max-sm:flex-1 max-sm:rounded-none max-sm:border-x-0 sm:h-[min(32rem,calc(100dvh-16rem))]'
+                  : 'h-[min(32rem,calc(100dvh-16rem))]',
+              ),
         )}
       >
-        <div className="h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary" />
+        <div
+          className={cn(
+            'h-1 bg-gradient-to-r from-primary via-[#ffb300] to-primary',
+            fullBleedDesktop && 'hidden',
+          )}
+        />
 
-        <div className="relative flex min-h-0 flex-1 flex-col bg-app-background">
+        <div
+          className={cn(
+            'relative flex min-h-0 flex-1 flex-col bg-app-background',
+            fullBleedDesktop && 'bg-[#0A0E0E]',
+          )}
+        >
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
