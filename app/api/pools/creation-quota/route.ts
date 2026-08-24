@@ -9,7 +9,8 @@ export const runtime = 'nodejs'
 
 /**
  * Owned-pool creation quota for the authed user.
- * Counts pools where creator_id = user (join is never limited).
+ * Phase 1: always `canCreateMore: true` / `limit: null` (unlimited).
+ * Still returns `tier` + owned count for informational / branding gates.
  */
 export async function GET() {
   const supabase = await createServerSupabaseClient()
@@ -55,6 +56,6 @@ export async function GET() {
   return NextResponse.json({
     ...quota,
     owned_pool_count: quota.ownedPoolCount,
-    can_create_more: quota.canCreateMore,
+    can_create_more: true,
   })
 }

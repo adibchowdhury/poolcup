@@ -37,7 +37,6 @@ import { supabase } from '@/src/lib/supabase'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { trackEvent } from '@/src/lib/track'
 import {
-  FREE_TIER_OWNED_POOL_LIMIT,
   isPoolCreationLimitError,
   POOL_CREATION_LIMIT_MESSAGE,
   type PoolCreationQuota,
@@ -501,11 +500,9 @@ export default function CreatePoolPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [limitReached, setLimitReached] = useState(false)
   const [creationQuota, setCreationQuota] = useState<PoolCreationQuota | null>(
     null,
   )
-  const [quotaLoading, setQuotaLoading] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
@@ -678,9 +675,9 @@ export default function CreatePoolPage() {
     }
   }, [authLoading, user, router])
 
+  /** Phase 1: quota is informational (tier for Commissioner branding only). */
   const loadCreationQuota = useCallback(async () => {
     if (!user) return
-    setQuotaLoading(true)
     try {
       const res = await fetch('/api/pools/creation-quota')
       if (res.status === 401) {
@@ -692,9 +689,6 @@ export default function CreatePoolPage() {
         tier?: PoolCreationQuota['tier']
         ownedPoolCount?: number
         owned_pool_count?: number
-        limit?: number | null
-        canCreateMore?: boolean
-        can_create_more?: boolean
       }
       const owned =
         typeof data.ownedPoolCount === 'number'
@@ -704,33 +698,14 @@ export default function CreatePoolPage() {
             : 0
       const tier =
         data.tier === 'pro' || data.tier === 'commissioner' ? data.tier : 'free'
-      const limit =
-        typeof data.limit === 'number' || data.limit === null
-          ? data.limit
-          : tier === 'commissioner'
-            ? null
-            : FREE_TIER_OWNED_POOL_LIMIT
-      const canCreateMore =
-        typeof data.canCreateMore === 'boolean'
-          ? data.canCreateMore
-          : typeof data.can_create_more === 'boolean'
-            ? data.can_create_more
-            : limit == null
-              ? true
-              : owned < limit
       setCreationQuota({
         tier,
         ownedPoolCount: owned,
-        limit,
-        canCreateMore,
+        limit: null,
+        canCreateMore: true,
       })
-      if (!canCreateMore) {
-        setLimitReached(true)
-      }
     } catch (err) {
       console.error('create: failed to load creation quota', err)
-    } finally {
-      setQuotaLoading(false)
     }
   }, [user, router])
 
@@ -739,31 +714,15 @@ export default function CreatePoolPage() {
     void loadCreationQuota()
   }, [authLoading, user, loadCreationQuota])
 
-  function showLimitReachedPrompt(source: 'precheck' | 'server') {
-    setLimitReached(true)
-    setError(POOL_CREATION_LIMIT_MESSAGE)
-    capturePostHog('pool_creation_limit_hit', {
-      source,
-      owned_pool_count: creationQuota?.ownedPoolCount ?? null,
-      tier: creationQuota?.tier ?? null,
-    })
-  }
-
   function handleSportSelect(sport: SportId) {
     setSelectedSport(sport)
     setSelectedEventId(null)
     setError(null)
-    if (creationQuota?.canCreateMore !== false) {
-      setLimitReached(false)
-    }
   }
 
   function handleEventSelect(eventId: string) {
     setSelectedEventId(eventId)
     setError(null)
-    if (creationQuota?.canCreateMore !== false) {
-      setLimitReached(false)
-    }
   }
 
   function handleContinueFromStep() {
@@ -792,10 +751,7 @@ export default function CreatePoolPage() {
       )
     }
     if (step === 2) return scoringStyle !== null
-    if (step === 3) {
-      if (creationQuota != null && !creationQuota.canCreateMore) return false
-      return validatePoolName(poolName) === null
-    }
+    if (step === 3) return validatePoolName(poolName) === null
     return false
   }, [
     step,
@@ -803,7 +759,6 @@ export default function CreatePoolPage() {
     selectedEventId,
     eventsForSelectedSport,
     scoringStyle,
-    creationQuota,
     poolName,
   ])
 
@@ -848,11 +803,6 @@ export default function CreatePoolPage() {
   async function createPool() {
     if (!user || submitting) return
 
-    if (creationQuota && !creationQuota.canCreateMore) {
-      showLimitReachedPrompt('precheck')
-      return
-    }
-
     const nameValidation = validatePoolName(poolName)
     const descriptionValidation = validatePoolDescription(poolDescription)
     setNameError(nameValidation)
@@ -868,9 +818,6 @@ export default function CreatePoolPage() {
     }
 
     setError(null)
-    if (creationQuota?.canCreateMore !== false) {
-      setLimitReached(false)
-    }
     setSubmitting(true)
     setLoadingMessage('Creating pool…')
 
@@ -895,9 +842,9 @@ export default function CreatePoolPage() {
     if (insertError || !pool) {
       setSubmitting(false)
       setLoadingMessage(null)
+      // Deploy window: DB trigger may still exist — soft fail, no crash / no upgrade CTA.
       if (isPoolCreationLimitError(insertError)) {
-        showLimitReachedPrompt('server')
-        void loadCreationQuota()
+        setError(POOL_CREATION_LIMIT_MESSAGE)
         return
       }
       setError(insertError?.message ?? 'Failed to create pool')
@@ -1731,46 +1678,22 @@ export default function CreatePoolPage() {
               >
                 {error ? (
                   <div
-                    className={cn(
-                      'rounded-lg border px-3 py-2 text-sm',
-                      limitReached
-                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
-                        : 'border-red-400/30 bg-red-400/10 text-red-400',
-                    )}
+                    className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-400"
                     role="alert"
                   >
                     <p>{error}</p>
-                    {limitReached ? (
-                      <Link
-                        href="/settings/billing"
-                        className={cn(
-                          'mt-2 inline-flex rounded-md text-sm font-semibold text-primary underline-offset-4 hover:underline',
-                          FOCUS_RING_CLASS,
-                        )}
-                        onClick={() => {
-                          capturePostHog('upgrade_from_pool_limit_clicked', {
-                            owned_pool_count:
-                              creationQuota?.ownedPoolCount ?? null,
-                            tier: creationQuota?.tier ?? null,
-                          })
-                        }}
-                      >
-                        Upgrade to Commissioner
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={submitting}
-                        onClick={() => void createPool()}
-                        className={cn(
-                          'mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline',
-                          FOCUS_RING_CLASS,
-                          'rounded-md',
-                        )}
-                      >
-                        Try again
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => void createPool()}
+                      className={cn(
+                        'mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline',
+                        FOCUS_RING_CLASS,
+                        'rounded-md',
+                      )}
+                    >
+                      Try again
+                    </button>
                   </div>
                 ) : null}
               </form>
@@ -1952,50 +1875,6 @@ export default function CreatePoolPage() {
                 </div>
               </div>
             ) : null}
-
-            {creationQuota && creationQuota.limit != null && step <= STEPPER_STEP_COUNT ? (
-              <div
-                className={cn(
-                  'rounded-lg border px-3 py-2.5 text-sm',
-                  creationQuota.canCreateMore
-                    ? 'border-[#1e2d3d] bg-[#080b0f]/60 text-[#5a7080]'
-                    : 'border-amber-500/30 bg-amber-500/10 text-amber-100',
-                )}
-                role="status"
-                aria-live="polite"
-              >
-                {creationQuota.canCreateMore ? (
-                  <p>
-                    You&apos;ve created {creationQuota.ownedPoolCount} of{' '}
-                    {creationQuota.limit} free pools.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    <p>{POOL_CREATION_LIMIT_MESSAGE}</p>
-                    <Link
-                      href="/settings/billing"
-                      className={cn(
-                        'inline-flex rounded-md text-sm font-semibold text-primary underline-offset-4 hover:underline',
-                        FOCUS_RING_CLASS,
-                      )}
-                      onClick={() => {
-                        capturePostHog('upgrade_from_pool_limit_clicked', {
-                          owned_pool_count: creationQuota.ownedPoolCount,
-                          tier: creationQuota.tier,
-                        })
-                      }}
-                    >
-                      Upgrade to Commissioner
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ) : null}
-            {quotaLoading && !creationQuota && step <= STEPPER_STEP_COUNT ? (
-              <p className="text-xs text-[#5a7080]" aria-live="polite">
-                Checking pool limit…
-              </p>
-            ) : null}
           </header>
 
           <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -2076,14 +1955,11 @@ export default function CreatePoolPage() {
                 continueLabel={
                   submitting
                     ? (loadingMessage ?? 'Creating pool…')
-                    : creationQuota != null && !creationQuota.canCreateMore
-                      ? 'Limit reached'
-                      : 'Create Pool'
+                    : 'Create Pool'
                 }
                 continueDisabled={
                   navLocked ||
                   submitting ||
-                  (creationQuota != null && !creationQuota.canCreateMore) ||
                   validatePoolName(poolName) !== null ||
                   !selectedEventId
                 }
