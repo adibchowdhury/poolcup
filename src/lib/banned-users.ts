@@ -6,6 +6,8 @@ import type {
 
 /**
  * Service-role lookup of banned user ids among a candidate set.
+ * Server-only (API routes / exports). Prefer
+ * {@link fetchBannedUserIdsAmongViaRpc} on client paths.
  * Data rows stay in the DB; this is display/participation gating only.
  */
 export async function fetchBannedUserIdsAmong(
@@ -31,6 +33,38 @@ export async function fetchBannedUserIdsAmong(
     }
     for (const row of data ?? []) {
       if (row?.id) banned.add(String(row.id))
+    }
+  }
+  return banned
+}
+
+/**
+ * Client-safe banned lookup via SECURITY DEFINER RPC
+ * `get_banned_user_ids_among` (user session; no service role).
+ */
+export async function fetchBannedUserIdsAmongViaRpc(
+  supabase: SupabaseClient,
+  userIds: string[],
+): Promise<Set<string>> {
+  const unique = [...new Set(userIds.filter(Boolean))]
+  if (unique.length === 0) return new Set()
+
+  const banned = new Set<string>()
+  const chunkSize = 200
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize)
+    const { data, error } = await supabase.rpc('get_banned_user_ids_among', {
+      p_user_ids: chunk,
+    })
+
+    if (error) {
+      console.error('fetchBannedUserIdsAmongViaRpc failed:', error.message)
+      continue
+    }
+
+    const ids = Array.isArray(data) ? data : []
+    for (const id of ids) {
+      if (id != null) banned.add(String(id))
     }
   }
   return banned

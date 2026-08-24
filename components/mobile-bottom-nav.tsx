@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
@@ -120,7 +120,7 @@ function HomeAnchorButton({
   )
 }
 
-function MobileBottomNavContent() {
+function MobileBottomNavContent({ authReady }: { authReady: boolean }) {
   const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
   const { mobileChatActive } = useMobileChatChrome()
@@ -134,9 +134,11 @@ function MobileBottomNavContent() {
   const activeId =
     isOnDashboard && activeNavId != null ? activeNavId : routeActiveId
   const onPredictPage = hasAuthenticatedBottomBar(pathname)
+  // useSearchParams (not window.location) so SSR + hydration see the same ?pool=
   const inPoolMatchContext =
     pathname.startsWith('/match/') && Boolean(searchParams.get('pool'))
   const visible =
+    authReady &&
     isAuthenticatedAppPath(pathname) &&
     !mobileChatActive &&
     !onPredictPage &&
@@ -257,10 +259,11 @@ function MobileBottomNavContent() {
   )
 }
 
-export function MobileBottomNav() {
-  return (
-    <Suspense fallback={null}>
-      <MobileBottomNavContent />
-    </Suspense>
-  )
+/**
+ * useSearchParams is covered by the root layout Suspense — do not wrap another
+ * Suspense here. A nested boundary only mounts after auth and mismatches the
+ * server tree (auth still loading → chrome null → no Suspense).
+ */
+export function MobileBottomNav({ authReady }: { authReady: boolean }) {
+  return <MobileBottomNavContent authReady={authReady} />
 }

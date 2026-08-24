@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import {
   excludeBannedFromPoolLeaderboardInputs,
-  fetchBannedUserIdsAmong,
+  fetchBannedUserIdsAmongViaRpc,
 } from '@/src/lib/banned-users'
 import { resolveCurrentEventId } from '@/src/lib/current-event'
 import {
@@ -17,7 +17,6 @@ import {
   type LeaderboardCacheRow,
   type PoolLeaderboardMember,
 } from '@/src/lib/pool-leaderboard'
-import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { getUpcomingHorizonEndIso } from '@/src/lib/upcoming-match-horizon'
 import {
   computeWinnerOnlyDashboardProgress,
@@ -362,8 +361,10 @@ export async function fetchDashboardPools(
     )
     let bannedUserIds = new Set<string>()
     try {
-      const admin = createAdminSupabaseClient()
-      bannedUserIds = await fetchBannedUserIdsAmong(admin, allMemberUserIds)
+      bannedUserIds = await fetchBannedUserIdsAmongViaRpc(
+        supabase,
+        allMemberUserIds,
+      )
     } catch (err) {
       console.error(
         'fetchDashboardPools: banned lookup failed',
