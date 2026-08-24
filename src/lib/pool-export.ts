@@ -123,7 +123,7 @@ export async function loadPoolExportMeta(
   const { data: pool, error } = await admin
     .from('pools')
     .select(
-      'id, name, invite_code, event_id, event_name, scoring_style, score_exact_points, score_winner_points, score_draw_points',
+      'id, name, invite_code, event_id, scoring_style, score_exact_points, score_winner_points, score_draw_points',
     )
     .eq('id', poolId)
     .maybeSingle()
@@ -135,12 +135,8 @@ export async function loadPoolExportMeta(
     .select('id', { count: 'exact', head: true })
     .eq('pool_id', poolId)
 
-  let eventName =
-    typeof pool.event_name === 'string' && pool.event_name.trim()
-      ? pool.event_name.trim()
-      : null
-
-  if (!eventName && pool.event_id) {
+  let eventName: string | null = null
+  if (pool.event_id) {
     const { data: event } = await admin
       .from('sporting_events')
       .select('name')

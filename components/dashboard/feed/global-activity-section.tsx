@@ -2,27 +2,24 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, GitBranch, TrendingUp, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  CalendarDays,
+  PlusCircle,
+  Target,
+  UserPlus,
+} from 'lucide-react'
 import { DashboardFeedSection } from '@/components/dashboard/feed/dashboard-feed'
 import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_FEED_SURFACE_CLASS } from '@/components/dashboard/feed/dashboard-home-layout'
-import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import {
-  formatFeaturedKickoffLocal,
-  formatFeaturedMatchRoundLabel,
-} from '@/src/lib/featured-match'
-import { matchStartLabel, matchStartLabelLower } from '@/src/lib/match-status-display'
-import {
   fetchGlobalActivityFeed,
-  type BiggestCommunityClimb,
-  type ClosestCallActivity,
   type GlobalActivityFeedData,
-  type GlobalActivityMatch,
+  type GlobalActivityItem,
 } from '@/src/lib/fetch-global-activity-feed'
-import { supabase } from '@/src/lib/supabase'
 
 type GlobalActivitySectionProps = {
   userId: string
@@ -31,140 +28,64 @@ type GlobalActivitySectionProps = {
   className?: string
 }
 
-function CompactMatchHeader({
-  match,
-  eyebrow,
-}: {
-  match: GlobalActivityMatch
-  eyebrow: string
-}) {
-  const roundLabel = formatFeaturedMatchRoundLabel(
-    match.round,
-    match.groupName,
-  )
+function activityEyebrow(type: GlobalActivityItem['type']): string {
+  switch (type) {
+    case 'picks_summary':
+      return 'Picks'
+    case 'pools_created_summary':
+      return 'New pools'
+    case 'pool_joins_summary':
+      return 'Pool joins'
+    case 'upcoming_matches':
+      return 'Coming up'
+    default:
+      return 'Activity'
+  }
+}
+
+function activityIcon(type: GlobalActivityItem['type']) {
+  switch (type) {
+    case 'picks_summary':
+      return Target
+    case 'pools_created_summary':
+      return PlusCircle
+    case 'pool_joins_summary':
+      return UserPlus
+    case 'upcoming_matches':
+      return CalendarDays
+    default:
+      return Target
+  }
+}
+
+export function GlobalActivityItemCard({ item }: { item: GlobalActivityItem }) {
+  const Icon = activityIcon(item.type)
+  const href = item.poolInviteCode
+    ? `/pool/${item.poolInviteCode}`
+    : '/discover'
 
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {eyebrow}
-        </p>
-        <div className="mt-1.5 flex items-center gap-2">
-          <TeamFlagImage
-            countryName={match.team1Name}
-            dbFlag={match.team1Flag}
-            logoUrl={match.team1Logo}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
-            emojiClassName="text-sm"
-          />
-          <p className="truncate text-sm font-semibold text-foreground">
-            {match.team1Name}
-            <span className="mx-1.5 text-muted-foreground">vs</span>
-            {match.team2Name}
+    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+            {activityEyebrow(item.type)}
           </p>
-          <TeamFlagImage
-            countryName={match.team2Name}
-            dbFlag={match.team2Flag}
-            logoUrl={match.team2Logo}
-            imgClassName="h-5 w-7 shrink-0 rounded-sm object-contain"
-            emojiClassName="text-sm"
-          />
+          <p className="mt-1.5 text-sm font-semibold leading-snug text-foreground">
+            {item.headline}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{item.subline}</p>
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">{roundLabel}</p>
-      </div>
-      <Link
-        href={`/match/${match.id}`}
-        className="shrink-0 rounded-sm text-[11px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-      >
-        View
-      </Link>
-    </div>
-  )
-}
-
-export function MostPredictedCard({ match }: { match: GlobalActivityMatch }) {
-  return (
-    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
-      <CompactMatchHeader match={match} eyebrow="Most predicted" />
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1 font-medium text-foreground">
-          <Users className="h-3.5 w-3.5 text-primary" aria-hidden />
-          {match.totalPredictions.toLocaleString()} predictions
-        </span>
-        {match.topScoreline ? (
-          <>
-            <span aria-hidden>·</span>
-            <span className="font-mono tabular-nums">
-              Top {match.topScoreline.team1}–{match.topScoreline.team2}
-            </span>
-          </>
+        {item.poolInviteCode ? (
+          <Link
+            href={href}
+            className="shrink-0 rounded-sm text-[11px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            View
+          </Link>
         ) : null}
       </div>
-      {!match.isLocked ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
-          {matchStartLabel(null)} {formatFeaturedKickoffLocal(match.kickoffAt)}.
-          Crowd % after {matchStartLabelLower(null)}.
-        </p>
-      ) : match.confidenceLabel ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
-          {match.confidenceLabel}
-          {match.dominant ? ` · lean ${match.dominant.label}` : ''}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
-export function ClosestCallCard({ item }: { item: ClosestCallActivity }) {
-  const { match } = item
-  const splitPct = Math.round(item.maxShare * 100)
-
-  return (
-    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        <GitBranch className="h-3.5 w-3.5" aria-hidden />
-        Closest call
-      </div>
-      <div className="mt-1.5">
-        <CompactMatchHeader
-          match={match}
-          eyebrow={`${splitPct}% lean · ${match.confidenceLabel ?? 'Split'}`}
-        />
-      </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">
-        Most evenly split crowd among recent locked matches.
-      </p>
-    </div>
-  )
-}
-
-export function BiggestCommunityClimbCard({
-  item,
-}: {
-  item: BiggestCommunityClimb
-}) {
-  return (
-    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        <TrendingUp className="h-3.5 w-3.5 text-primary" aria-hidden />
-        Biggest climb
-      </div>
-      <p className="mt-1.5 truncate text-sm font-semibold text-foreground">
-        {item.poolName}
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Climbed{' '}
-        <span className="font-medium tabular-nums text-primary">
-          +{item.rankDelta}
-        </span>{' '}
-        to rank #{item.rank}
-        {item.prevRank > 0 ? (
-          <span className="text-muted-foreground">
-            {' '}
-            (was #{item.prevRank})
-          </span>
-        ) : null}
-      </p>
     </div>
   )
 }
@@ -179,9 +100,17 @@ export function GlobalActivitySkeleton({ rows = 2 }: { rows?: number }) {
   )
 }
 
+function GlobalActivitySparseHint() {
+  return (
+    <p className="px-1 text-center text-xs text-muted-foreground">
+      Quiet right now — be the first to make your picks.
+    </p>
+  )
+}
+
 /**
- * Compact community strip — max 2 cards.
- * Full highlights (incl. biggest climb): /activity
+ * Aggregate pool activity — counts and summaries, no personal attribution.
+ * Full list: /activity
  */
 export function GlobalActivitySection({
   userId,
@@ -193,7 +122,7 @@ export function GlobalActivitySection({
 
   const load = useCallback(async () => {
     setLoading(true)
-    const next = await fetchGlobalActivityFeed(supabase, userId)
+    const next = await fetchGlobalActivityFeed(userId, { scope: 'dashboard' })
     setData(next)
     setLoading(false)
   }, [userId])
@@ -201,14 +130,6 @@ export function GlobalActivitySection({
   useEffect(() => {
     void load()
   }, [load])
-
-  const hasCards = Boolean(
-    data?.mostPredicted || data?.closestCall,
-  )
-
-  if (!loading && data && !data.error && (data.isEmpty || !hasCards)) {
-    return null
-  }
 
   const body =
     loading && !data ? (
@@ -227,12 +148,17 @@ export function GlobalActivitySection({
       </div>
     ) : data ? (
       <div className="space-y-2">
-        {data.mostPredicted ? (
-          <MostPredictedCard match={data.mostPredicted} />
-        ) : null}
-        {data.closestCall &&
-        data.closestCall.match.id !== data.mostPredicted?.id ? (
-          <ClosestCallCard item={data.closestCall} />
+        {data.items.map((item) => (
+          <GlobalActivityItemCard key={item.id} item={item} />
+        ))}
+        {data.isSparse ? <GlobalActivitySparseHint /> : null}
+        {data.isEmpty && !data.error ? (
+          <div className="space-y-2 py-2">
+            <p className="text-center text-sm text-muted-foreground">
+              No recent pool activity yet.
+            </p>
+            <GlobalActivitySparseHint />
+          </div>
         ) : null}
       </div>
     ) : null
@@ -246,7 +172,7 @@ export function GlobalActivitySection({
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="min-w-0 truncate font-display text-lg leading-none tracking-wide text-foreground">
-            Global PoolCup Activity
+            Pool Activity
           </h2>
           <Button
             asChild
@@ -268,7 +194,7 @@ export function GlobalActivitySection({
   return (
     <DashboardFeedSection
       id="global-activity"
-      title="Global PoolCup Activity"
+      title="Pool Activity"
       className={className}
       action={
         <Button asChild variant="outline" size="sm" className="gap-1.5">

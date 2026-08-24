@@ -5,35 +5,31 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import {
-  BiggestCommunityClimbCard,
-  ClosestCallCard,
+  GlobalActivityItemCard,
   GlobalActivitySkeleton,
-  MostPredictedCard,
 } from '@/components/dashboard/feed/global-activity-section'
 import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/src/lib/auth-context'
-import {
-  fetchGlobalActivityFeed,
-  type GlobalActivityFeedData,
-} from '@/src/lib/fetch-global-activity-feed'
+import { fetchGlobalActivityFeed } from '@/src/lib/fetch-global-activity-feed'
 import { MOBILE_BOTTOM_NAV_PAD_CLASS } from '@/src/lib/mobile-bottom-nav-routes'
-import { supabase } from '@/src/lib/supabase'
 import { cn } from '@/lib/utils'
 
 /**
- * Full community activity highlights (linked from dashboard "View All").
+ * Full community activity list (linked from dashboard "View All").
  */
 export function ActivityPageView() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const [data, setData] = useState<GlobalActivityFeedData | null>(null)
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof fetchGlobalActivityFeed>
+  > | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const next = await fetchGlobalActivityFeed(supabase, user.id)
+    const next = await fetchGlobalActivityFeed(user.id, { scope: 'page' })
     setData(next)
     setLoading(false)
   }, [user])
@@ -60,12 +56,6 @@ export function ActivityPageView() {
     )
   }
 
-  const hasCards = Boolean(
-    data?.mostPredicted ||
-      data?.closestCall ||
-      data?.biggestCommunityClimb,
-  )
-
   return (
     <main
       className={cn(
@@ -83,11 +73,11 @@ export function ActivityPageView() {
             Dashboard
           </Link>
           <h1 className="mt-3 font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-            Activity
+            Pool Activity
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Community highlights across PoolCup — predictions, close calls, and
-            climbs.
+            Aggregate activity across PoolCup — picks, joins, new pools, and
+            upcoming matches.
           </p>
         </div>
 
@@ -97,7 +87,7 @@ export function ActivityPageView() {
           ) : data?.error && data.isEmpty ? (
             <div className="space-y-3 py-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Couldn’t load activity.
+                Couldn&apos;t load activity.
               </p>
               <p className="text-xs text-destructive/90">{data.error}</p>
               <Button
@@ -109,21 +99,24 @@ export function ActivityPageView() {
                 Try again
               </Button>
             </div>
-          ) : data?.isEmpty || !data || !hasCards ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No community highlights yet. Predictions and leaderboard
-              movements will show up here.
-            </p>
+          ) : data?.isEmpty ? (
+            <div className="space-y-2 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No recent pool activity yet.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Quiet right now — be the first to make your picks.
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {data.mostPredicted ? (
-                <MostPredictedCard match={data.mostPredicted} />
-              ) : null}
-              {data.closestCall ? (
-                <ClosestCallCard item={data.closestCall} />
-              ) : null}
-              {data.biggestCommunityClimb ? (
-                <BiggestCommunityClimbCard item={data.biggestCommunityClimb} />
+              {data?.items.map((item) => (
+                <GlobalActivityItemCard key={item.id} item={item} />
+              ))}
+              {data?.isSparse ? (
+                <p className="pt-2 text-center text-xs text-muted-foreground">
+                  Quiet right now — be the first to make your picks.
+                </p>
               ) : null}
             </div>
           )}

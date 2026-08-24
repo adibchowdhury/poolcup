@@ -5,6 +5,10 @@ import {
   fetchBannedUserIdsAmong,
 } from '@/src/lib/banned-users'
 import { resolveCurrentEventId } from '@/src/lib/current-event'
+import {
+  POOL_EVENT_NAME_FALLBACK,
+  resolvePoolEventName,
+} from '@/src/lib/pool-event-label'
 import { fetchMemberPredictionCounts } from '@/src/lib/member-prediction-counts'
 import {
   buildPoolLeaderboardMembers,
@@ -30,7 +34,6 @@ type MembershipRow = {
     name: string
     invite_code: string
     creator_id: string
-    event_name: string
     event_id: string | null
     scoring_style: string
     is_official: boolean | null
@@ -79,7 +82,6 @@ export async function fetchDashboardPools(
         name,
         invite_code,
         creator_id,
-        event_name,
         event_id,
         scoring_style,
         is_official,
@@ -154,16 +156,19 @@ export async function fetchDashboardPools(
     ),
   ]
   const sportByEventId = new Map<string, string>()
+  const eventNameById = new Map<string, string>()
   if (eventIds.length > 0) {
     const { data: eventRows } = await supabase
       .from('sporting_events')
-      .select('id, sport')
+      .select('id, sport, name')
       .in('id', eventIds)
 
     for (const row of eventRows ?? []) {
       if (row.sport) {
         sportByEventId.set(row.id, row.sport)
       }
+      const name = typeof row.name === 'string' ? row.name.trim() : ''
+      if (name) eventNameById.set(row.id, name)
     }
   }
 
@@ -444,7 +449,11 @@ export async function fetchDashboardPools(
     return {
       id: pool.id,
       name: pool.name,
-      eventName: pool.event_name || 'FIFA World Cup 2026',
+      eventName: resolvePoolEventName(
+        pool.event_id,
+        eventNameById,
+        POOL_EVENT_NAME_FALLBACK,
+      ),
       scoringStyle: pool.scoring_style,
       inviteCode: pool.invite_code,
       members: memberCountByPool.get(pool.id) ?? 1,

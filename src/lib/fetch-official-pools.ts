@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { POOL_EVENT_NAME_FALLBACK } from '@/src/lib/pool-event-label'
 import type { User } from '@supabase/supabase-js'
 
 export type OfficialPoolListItem = {
@@ -215,7 +216,7 @@ export async function fetchOfficialPublicPools(
 
   const items: OfficialPoolListItem[] = pools.map((pool) => {
     const event = pool.event_id ? eventsById.get(pool.event_id) : undefined
-    const eventName = event?.name ?? pool.event_name
+    const eventName = event?.name?.trim() || POOL_EVENT_NAME_FALLBACK
     return {
       id: pool.id,
       name: pool.name,

@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeSportKey } from '@/src/lib/sport-display'
+import {
+  POOL_EVENT_NAME_FALLBACK,
+  resolvePoolEventName,
+} from '@/src/lib/pool-event-label'
 
 export type ProfilePoolSummary = {
   id: string
@@ -30,14 +34,12 @@ type MembershipRow = {
     id: string
     name: string
     invite_code: string
-    event_name: string | null
     event_id: string | null
     scoring_style: string
     is_public: boolean | null
   } | null
 }
 
-const DEFAULT_EVENT_NAME = 'FIFA World Cup 2026'
 const DEFAULT_SPORT = 'soccer'
 
 /**
@@ -70,7 +72,6 @@ export async function fetchProfilePools(
         id,
         name,
         invite_code,
-        event_name,
         event_id,
         scoring_style,
         is_public
@@ -102,6 +103,7 @@ export async function fetchProfilePools(
 
   const memberCountByPool = new Map<string, number>()
   const sportByEventId = new Map<string, string>()
+  const eventNameById = new Map<string, string>()
   const rankByMemberId = new Map<string, number>()
 
   const [countsResult, eventsResult, ranksResult] = await Promise.all([
@@ -112,7 +114,7 @@ export async function fetchProfilePools(
     eventIds.length > 0
       ? supabase
           .from('sporting_events')
-          .select('id, sport')
+          .select('id, sport, name')
           .in('id', eventIds)
       : Promise.resolve({ data: [] as { id: string; sport: string | null }[], error: null }),
     supabase
@@ -134,11 +136,13 @@ export async function fetchProfilePools(
     console.error('fetchProfilePools events:', eventsResult.error.message)
   } else {
     for (const row of eventsResult.data ?? []) {
-      const event = row as { id: string; sport: string | null }
+      const event = row as { id: string; sport: string | null; name: string | null }
       sportByEventId.set(
         event.id,
         (event.sport ?? '').trim() || DEFAULT_SPORT,
       )
+      const name = event.name?.trim()
+      if (name) eventNameById.set(event.id, name)
     }
   }
 
@@ -166,7 +170,11 @@ export async function fetchProfilePools(
       id: pool.id,
       name: pool.name?.trim() || 'Pool',
       inviteCode: canExposeInvite ? pool.invite_code : null,
-      eventName: pool.event_name?.trim() || DEFAULT_EVENT_NAME,
+      eventName: resolvePoolEventName(
+        eventId,
+        eventNameById,
+        POOL_EVENT_NAME_FALLBACK,
+      ),
       eventId,
       sport,
       scoringStyle: pool.scoring_style,

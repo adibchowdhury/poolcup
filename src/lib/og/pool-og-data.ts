@@ -36,7 +36,7 @@ async function fetchPoolOgDataUncached(
     const { data: pool } = await admin
       .from('pools')
       .select(
-        'id, name, invite_code, event_id, scoring_style, event_name, theme_color, emblem_url',
+        'id, name, invite_code, event_id, scoring_style, theme_color, emblem_url',
       )
       .eq('invite_code', code)
       .maybeSingle()
@@ -48,12 +48,8 @@ async function fetchPoolOgDataUncached(
       .select('id', { count: 'exact', head: true })
       .eq('pool_id', pool.id)
 
-    let eventName =
-      typeof pool.event_name === 'string' && pool.event_name.trim()
-        ? pool.event_name.trim()
-        : null
-
-    if (!eventName && pool.event_id) {
+    let eventName: string | null = null
+    if (pool.event_id) {
       const { data: event } = await admin
         .from('sporting_events')
         .select('name')

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MyMatchPredictions } from '@/src/lib/my-match-predictions'
+import { POOL_EVENT_NAME_FALLBACK } from '@/src/lib/pool-event-label'
 import { formatScoringStyleLabel } from '@/src/lib/scoring-style-display'
 
 /** Set true only for local match-hub design preview (fake consensus/pools). */
@@ -506,6 +507,14 @@ export async function fetchMatchCompetitionPools(
 ): Promise<MatchRelatedPool[]> {
   if (!eventId) return []
 
+  const { data: eventRow } = await supabase
+    .from('sporting_events')
+    .select('name')
+    .eq('id', eventId)
+    .maybeSingle()
+  const competitionName =
+    eventRow?.name?.trim() || POOL_EVENT_NAME_FALLBACK
+
   const poolById = new Map<string, MatchRelatedPool>()
 
   if (userId) {
@@ -520,7 +529,6 @@ export async function fetchMatchCompetitionPools(
           name,
           invite_code,
           event_id,
-          event_name,
           scoring_style,
           is_public,
           is_official
@@ -539,7 +547,7 @@ export async function fetchMatchCompetitionPools(
           id: pool.id,
           name: pool.name,
           inviteCode: pool.invite_code,
-          eventName: pool.event_name?.trim() || 'Competition',
+          eventName: competitionName,
           scoringStyle: pool.scoring_style,
           members: 0,
           memberId: row.id,
@@ -554,7 +562,7 @@ export async function fetchMatchCompetitionPools(
   const { data: publicPools, error: publicError } = await supabase
     .from('pools')
     .select(
-      'id, name, invite_code, event_id, event_name, scoring_style, is_public, is_official',
+      'id, name, invite_code, event_id, scoring_style, is_public, is_official',
     )
     .eq('event_id', eventId)
     .or('is_public.eq.true,is_official.eq.true')
@@ -570,7 +578,7 @@ export async function fetchMatchCompetitionPools(
         id,
         name: pool.name as string,
         inviteCode: pool.invite_code as string,
-        eventName: ((pool.event_name as string | null) ?? '').trim() || 'Competition',
+        eventName: competitionName,
         scoringStyle: pool.scoring_style as string,
         members: 0,
         memberId: '',
