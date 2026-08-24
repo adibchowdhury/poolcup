@@ -6,7 +6,7 @@ import {
   RevealItem,
   ScrollRevealGroup,
 } from '@/components/landing/scroll-reveal'
-import { WaitlistForm } from '@/components/landing/waitlist-form'
+import { LandingLaunchCtas } from '@/components/landing/landing-launch-ctas'
 
 /**
  * Final celebratory CTA before the footer.
@@ -95,7 +95,7 @@ export function LandingFinalCtaSection() {
             </RevealItem>
 
             <RevealItem index={3} className="mx-auto mt-8 w-full max-w-xl md:mx-0">
-              <WaitlistForm id="waitlist-final" variant="cta" />
+              <LandingLaunchCtas size="section" align="start" />
             </RevealItem>
           </div>
 

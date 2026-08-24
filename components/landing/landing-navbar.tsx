@@ -3,6 +3,10 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { PoolCupLogo } from '@/components/poolcup-logo'
+import {
+  LANDING_GET_STARTED_HREF,
+  LANDING_SIGN_IN_HREF,
+} from '@/components/landing/landing-launch-ctas'
 import { cn } from '@/lib/utils'
 
 type LandingNavbarProps = {
@@ -50,12 +54,18 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
             >
               Pricing
             </Link>
-            <a
-              href="#waitlist"
+            <Link
+              href={LANDING_SIGN_IN_HREF}
+              className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+            >
+              Sign in
+            </Link>
+            <Link
+              href={LANDING_GET_STARTED_HREF}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95"
             >
-              Join Waitlist
-            </a>
+              Get Started
+            </Link>
           </div>
 
           <button
@@ -120,13 +130,20 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
           )}
         >
           <nav className="flex w-full min-w-0 flex-col gap-4">
-            <a
-              href="#waitlist"
+            <Link
+              href={LANDING_GET_STARTED_HREF}
               onClick={closeMenu}
               className="box-border w-full max-w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
             >
-              Join Waitlist
-            </a>
+              Get Started
+            </Link>
+            <Link
+              href={LANDING_SIGN_IN_HREF}
+              onClick={closeMenu}
+              className="py-1 text-center text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+            >
+              Sign in
+            </Link>
             <Link
               href="/pricing"
               onClick={closeMenu}

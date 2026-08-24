@@ -10,7 +10,7 @@ import { CoreFeaturesSection } from "@/components/landing/core-features-section"
 import { LandingFinalCtaSection } from "@/components/landing/landing-final-cta-section"
 import { LandingSportsSection } from "@/components/landing/landing-sports-section"
 import { PlatformTrustBar } from "@/components/landing/platform-trust-bar"
-import { WaitlistForm } from "@/components/landing/waitlist-form"
+import { LandingLaunchCtas } from "@/components/landing/landing-launch-ctas"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 
@@ -182,7 +182,7 @@ export default function LandingPage() {
               )}
               style={{ transitionDelay: "400ms" }}
             >
-              <WaitlistForm id="waitlist" variant="hero" />
+              <LandingLaunchCtas size="hero" align="center" />
             </div>
           </div>
         </main>
