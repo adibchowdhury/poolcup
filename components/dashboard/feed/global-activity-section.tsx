@@ -10,7 +10,6 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { DashboardFeedSection } from '@/components/dashboard/feed/dashboard-feed'
-import { DashboardPlainCard } from '@/components/dashboard/dashboard-plain-card'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_FEED_SURFACE_CLASS } from '@/components/dashboard/feed/dashboard-home-layout'
 import { Button } from '@/components/ui/button'
@@ -58,14 +57,27 @@ function activityIcon(type: GlobalActivityItem['type']) {
   }
 }
 
-export function GlobalActivityItemCard({ item }: { item: GlobalActivityItem }) {
+export function GlobalActivityItemCard({
+  item,
+  plain = false,
+}: {
+  item: GlobalActivityItem
+  /** Mobile dashboard feed — no card surface; desktop rail uses default cards. */
+  plain?: boolean
+}) {
   const Icon = activityIcon(item.type)
   const href = item.poolInviteCode
     ? `/pool/${item.poolInviteCode}`
     : '/discover'
 
   return (
-    <div className={cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5')}>
+    <div
+      className={cn(
+        plain
+          ? 'py-2'
+          : cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5'),
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -147,9 +159,13 @@ export function GlobalActivitySection({
         </Button>
       </div>
     ) : data ? (
-      <div className="space-y-2">
+      <div className={cn(layout === 'feed' ? 'space-y-2.5' : 'space-y-2')}>
         {data.items.map((item) => (
-          <GlobalActivityItemCard key={item.id} item={item} />
+          <GlobalActivityItemCard
+            key={item.id}
+            item={item}
+            plain={layout === 'feed'}
+          />
         ))}
         {data.isSparse ? <GlobalActivitySparseHint /> : null}
         {data.isEmpty && !data.error ? (
@@ -205,7 +221,7 @@ export function GlobalActivitySection({
         </Button>
       }
     >
-      <DashboardPlainCard className="p-3 sm:p-4">{body}</DashboardPlainCard>
+      {body}
     </DashboardFeedSection>
   )
 }

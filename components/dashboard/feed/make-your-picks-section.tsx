@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { JoinOrCreatePoolCard } from '@/components/dashboard/join-or-create-pool-card'
 import {
@@ -185,7 +184,7 @@ function MakeYourPicksSectionView({
         <div
           className={cn(
             'rounded-2xl border border-primary/25 bg-primary/5 text-center',
-            surface === 'rail' ? 'px-4 py-5' : 'px-5 py-8',
+            surface === 'rail' ? 'px-4 py-5' : 'px-4 py-4',
           )}
         >
           {surface === 'rail' ? (
@@ -203,30 +202,20 @@ function MakeYourPicksSectionView({
             </>
           ) : (
             <>
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                <Image
-                  src="/mascot/onboarding_mascot/pucky_3.webp"
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 object-contain"
-                />
-              </div>
-              <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden />
-                <p className="font-display text-xl tracking-wide text-foreground">
+              <div className="mx-auto flex max-w-sm flex-col items-center gap-1.5">
+                <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden />
+                <p className="font-display text-lg tracking-wide text-foreground">
                   You&apos;re all caught up
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Every open match in your pools has a prediction. Browse upcoming
-                  fixtures when you want to explore more.
+                  New matches will appear here as they&apos;re scheduled.
                 </p>
               </div>
               <Button
                 asChild
                 variant="outline"
                 size="sm"
-                className="mt-5 gap-1.5 rounded-full"
+                className="mt-3 gap-1.5 rounded-full"
               >
                 <Link href={browseMatchesHref}>
                   Browse matches
