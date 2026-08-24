@@ -1,6 +1,5 @@
 'use client'
 
-import { toast } from 'sonner'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import type { XpAwardResult, XpReplayResult } from '@/src/lib/xp'
 
@@ -84,27 +83,22 @@ export async function requestXpEvaluate(): Promise<EvaluateXpResponse | null> {
   }
 }
 
+/**
+ * Analytics-only feedback after an XP award.
+ * UI toasts and level-up celebration modals were intentionally removed —
+ * XP still accrues and shows on the profile Level / XP bar.
+ * `silent` is retained for call-site compatibility and is unused.
+ */
 export function applyXpAwardFeedback(
   result: XpAwardResult | null,
   options?: {
-    onLevelUp?: (level: number) => void
     silent?: boolean
   },
 ): void {
   if (!result) return
+  void options
 
   if (result.awarded > 0) {
-    if (!options?.silent) {
-      const message =
-        result.sourceType === 'welcome_back'
-          ? result.sourceId === 'predictions'
-            ? `+${result.awarded} XP from your predictions`
-            : `+${result.awarded} XP earned while you were away`
-          : `+${result.awarded} XP`
-      toast.success(message, {
-        duration: result.sourceType === 'welcome_back' ? 4500 : 2800,
-      })
-    }
     capturePostHog('xp_earned', {
       source_type: result.sourceType,
       amount: result.awarded,
@@ -112,12 +106,6 @@ export function applyXpAwardFeedback(
   }
 
   if (result.levelAfter > result.levelBefore) {
-    options?.onLevelUp?.(result.levelAfter)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('poolcup:level-up', { detail: result.levelAfter }),
-      )
-    }
     capturePostHog('level_up', { new_level: result.levelAfter })
   }
 }

@@ -228,7 +228,7 @@ export async function awardXpAdmin(
  * Best-effort prediction XP after a newly-final match is scored.
  * Must never throw into scoring callers. award_prediction_xp is idempotent.
  * No server PostHog here (posthog-js is browser-only). Missed awards surface
- * via /api/xp/replay + client xp_earned / level_up.
+ * via /api/xp/replay + client PostHog xp_earned / level_up (no UI popups).
  */
 export async function tryAwardPredictionXp(
   supabase: SupabaseClient,

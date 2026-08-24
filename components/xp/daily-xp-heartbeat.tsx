@@ -7,8 +7,8 @@ import { useXpFeedbackOptional } from '@/components/xp/xp-feedback-provider'
 
 /**
  * Once per signed-in session: daily_active, then welcome-back replay of XP
- * earned while away (cron prediction awards). Heartbeat runs first so +5
- * daily is toasted and watermarked before the away summary.
+ * earned while away (cron prediction awards). Heartbeat runs first so daily
+ * XP is awarded and watermarked before the away summary. No UI popups.
  */
 export function DailyXpHeartbeat() {
   const { user, loading } = useAuth()
