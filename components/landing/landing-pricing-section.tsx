@@ -11,6 +11,12 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
+import {
+  landingTactileCommissionerClass,
+  landingTactileOutlineGreenClass,
+  landingTactilePointerDown,
+  landingTactilePrimaryClass,
+} from '@/components/landing/landing-tactile-classes'
 import { useAuth } from '@/src/lib/auth-context'
 import {
   startBillingCheckout,
@@ -208,6 +214,7 @@ function PaidPlanCheckoutButton({
         disabled={busy || authLoading}
         aria-busy={busy}
         onClick={() => void handleClick()}
+        onPointerDown={landingTactilePointerDown}
         className={cn(className, 'disabled:cursor-not-allowed disabled:opacity-70')}
       >
         {busy ? (
@@ -248,13 +255,13 @@ function PricingCard({
   const periodLabel = period === 'monthly' ? '/month' : '/year'
 
   const ctaClassName = cn(
-    'mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors',
+    'mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1620]',
     tier.popular
-      ? 'bg-[#00e676] text-[#080b0f] hover:bg-[#00e676]/90'
+      ? landingTactilePrimaryClass
       : tier.premium
-        ? 'border border-[rgba(255,193,7,0.45)] bg-[rgba(255,193,7,0.1)] text-[#ffc107] hover:bg-[rgba(255,193,7,0.16)]'
-        : 'border border-[#00e676]/40 text-[#00e676] hover:bg-[#00e676]/10',
+        ? landingTactileCommissionerClass
+        : landingTactileOutlineGreenClass,
   )
 
   return (
@@ -327,14 +334,22 @@ function PricingCard({
           disabled
           aria-disabled="true"
           className={cn(
-            ctaClassName,
-            'mt-0 cursor-not-allowed opacity-60',
+            'mt-8 inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-lg border px-4 text-sm font-semibold opacity-60',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1620]',
+            tier.premium
+              ? 'border-[rgba(255,193,7,0.45)] bg-[rgba(255,193,7,0.1)] text-[#ffc107]'
+              : 'border-[#00e676]/40 text-[#00e676]',
+            'mt-0',
           )}
         >
           Coming soon
         </button>
       ) : (
-        <Link href={SIGNUP_HREF} className={ctaClassName}>
+        <Link
+          href={SIGNUP_HREF}
+          onPointerDown={landingTactilePointerDown}
+          className={ctaClassName}
+        >
           {tier.ctaLabel}
         </Link>
       )}

@@ -7,6 +7,11 @@ import {
   LANDING_GET_STARTED_HREF,
   LANDING_SIGN_IN_HREF,
 } from '@/components/landing/landing-launch-ctas'
+import {
+  landingSignInOutlineClass,
+  landingTactilePointerDown,
+  landingTactilePrimaryClass,
+} from '@/components/landing/landing-tactile-classes'
 import { cn } from '@/lib/utils'
 
 type LandingNavbarProps = {
@@ -56,13 +61,22 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
             </Link>
             <Link
               href={LANDING_SIGN_IN_HREF}
-              className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+              className={cn(
+                landingSignInOutlineClass,
+                'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080b0f]',
+              )}
             >
               Sign in
             </Link>
             <Link
               href={LANDING_GET_STARTED_HREF}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#080b0f] transition-all hover:scale-[1.03] hover:bg-[#00e676]/90 hover:shadow-[0_0_32px_rgba(0,230,118,0.4)] active:scale-95"
+              onPointerDown={landingTactilePointerDown}
+              className={cn(
+                landingTactilePrimaryClass,
+                'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080b0f]',
+              )}
             >
               Get Started
             </Link>
@@ -133,14 +147,23 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
             <Link
               href={LANDING_GET_STARTED_HREF}
               onClick={closeMenu}
-              className="box-border w-full max-w-full rounded-lg bg-[#00e676] px-4 py-3.5 text-center text-sm font-semibold text-[#080b0f] transition-all hover:bg-[#00e676]/90 active:scale-95"
+              onPointerDown={landingTactilePointerDown}
+              className={cn(
+                landingTactilePrimaryClass,
+                'box-border w-full max-w-full rounded-lg px-4 py-3.5 text-center text-sm font-semibold',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1520]',
+              )}
             >
               Get Started
             </Link>
             <Link
               href={LANDING_SIGN_IN_HREF}
               onClick={closeMenu}
-              className="py-1 text-center text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
+              className={cn(
+                landingSignInOutlineClass,
+                'box-border w-full max-w-full rounded-lg px-4 py-3.5 text-center text-sm font-semibold',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1520]',
+              )}
             >
               Sign in
             </Link>
