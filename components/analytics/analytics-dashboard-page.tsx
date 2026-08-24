@@ -29,7 +29,6 @@ import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
 import { HistoricalPerformancePage } from '@/components/history/historical-performance-page'
-import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -56,11 +55,6 @@ type AnalyticsApiOk = {
   rank: AnalyticsBestRank
 }
 
-type AnalyticsApiLocked = {
-  isPro: false
-  locked: true
-  error?: string
-}
 
 const accuracyChartConfig = {
   accuracy: { label: 'Accuracy', color: 'var(--chart-1)' },
@@ -90,7 +84,6 @@ export function AnalyticsDashboardPage() {
   const activeTab =
     searchParams.get('tab') === 'history' ? 'history' : 'performance'
 
-  const [locked, setLocked] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null)
@@ -142,21 +135,8 @@ export function AnalyticsDashboardPage() {
         router.replace('/login?next=/analytics')
         return
       }
-      const json = (await res.json()) as AnalyticsApiOk | AnalyticsApiLocked & {
+      const json = (await res.json()) as AnalyticsApiOk & {
         error?: string
-      }
-
-      if (res.status === 403 || (json as AnalyticsApiLocked).locked) {
-        setLocked(true)
-        setAnalytics(null)
-        setComparisons(null)
-        setTimeseries(null)
-        setRank(null)
-        if (!viewedOnce.current) {
-          viewedOnce.current = true
-          capturePostHog('analytics_dashboard_viewed', { is_pro: false })
-        }
-        return
       }
 
       if (!res.ok) {
@@ -166,7 +146,6 @@ export function AnalyticsDashboardPage() {
       }
 
       const ok = json as AnalyticsApiOk
-      setLocked(false)
       setAnalytics(ok.analytics)
       setComparisons(ok.comparisons)
       setTimeseries(ok.timeseries)
@@ -200,7 +179,6 @@ export function AnalyticsDashboardPage() {
 
   const empty =
     !loading &&
-    !locked &&
     !error &&
     analytics != null &&
     analytics.finalized_predictions === 0
@@ -210,7 +188,7 @@ export function AnalyticsDashboardPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Pro
+            Stats
           </p>
           <h1 className="mt-1 flex items-center gap-2 font-display text-3xl tracking-wide text-foreground sm:text-4xl">
             <BarChart3
@@ -258,26 +236,6 @@ export function AnalyticsDashboardPage() {
         </TabsList>
 
         <TabsContent value="performance" className="mt-0 outline-none">
-          {locked && !loading ? (
-            <div className="space-y-4">
-              <LockedProFeature
-                title="AI Insights is a Pro feature"
-                description="Get four personalized coaching tips from your own prediction stats — weekly summary, strengths, weak spots, and recent form."
-                source="analytics_ai_insights"
-                modalHeadline="Unlock AI Insights"
-                onCtaClick={() => {
-                  capturePostHog('insights_upgrade_prompt_clicked', {
-                    source: 'analytics_ai_insights',
-                  })
-                }}
-              />
-              <LockedProFeature
-                title="Advanced Analytics is a Pro feature"
-                description="Unlock accuracy trends, sport and competition breakdowns, recent form, and comparisons vs PoolCup and friends."
-                source="locked_analytics_dashboard"
-              />
-            </div>
-          ) : (
             <>
               <div
                 className="mb-5 flex flex-wrap items-center gap-2"
@@ -294,7 +252,7 @@ export function AnalyticsDashboardPage() {
                       variant={selected ? 'default' : 'outline'}
                       aria-pressed={selected}
                       title={opt.hint}
-                      disabled={loading || locked}
+                      disabled={loading}
                       className={cn('h-8', FOCUS_VISIBLE_RING)}
                       onClick={() => setRange(opt.value)}
                     >
@@ -351,7 +309,6 @@ export function AnalyticsDashboardPage() {
                 />
               ) : null}
             </>
-          )}
         </TabsContent>
 
         <TabsContent value="history" className="mt-0 outline-none">

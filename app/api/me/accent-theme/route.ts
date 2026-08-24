@@ -4,16 +4,14 @@ import {
   parseAccentTheme,
   type AccentThemeKey,
 } from '@/src/lib/accent-theme'
-import { requireProUser, userHasPro } from '@/src/lib/require-pro'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Current user's accent theme + Pro entitlement.
- * Free users still receive stored accent_theme (for UI), but isPro=false
- * so the client must not apply it.
+ * Current user's accent theme.
+ * Phase 2: accent themes are free — isPro kept true for caller compat.
  */
 export async function GET() {
   const supabase = await createServerSupabaseClient()
@@ -23,8 +21,6 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
-
-  const isPro = await userHasPro(supabase, user.id)
 
   const { data: row, error } = await supabase
     .from('users')
@@ -38,7 +34,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    isPro,
+    isPro: true,
     accentTheme: parseAccentTheme(row?.accent_theme),
   })
 }
@@ -48,16 +44,19 @@ type PatchBody = {
 }
 
 /**
- * Persist accent_theme. Pro-gated: free users get 403; value must be a
- * known preset key or null (reset to default green).
+ * Persist accent_theme. Phase 2: available to all authenticated users.
+ * Value must be a known preset key or null (reset to default green).
  * Payload preserves prior shape (no `locked` field).
  */
 export async function PATCH(request: Request) {
-  const gate = await requireProUser({
-    forbiddenBody: { error: 'pro_required', isPro: false },
-  })
-  if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  const userId = user.id
 
   let body: PatchBody
   try {

@@ -87,7 +87,7 @@ export function resolveAccentHex(key: AccentThemeKey | null): string {
 
 /**
  * Same accent var bundle as poolThemeCssVariables, plus on-accent foregrounds.
- * Apply on documentElement for Pro app-wide theming.
+ * Apply on documentElement for app-wide theming.
  */
 export function accentThemeCssVariables(
   key: AccentThemeKey | null,
@@ -115,14 +115,18 @@ const ACCENT_CSS_VAR_KEYS = [
   '--accent-foreground',
 ] as const
 
-/** Apply Pro accent to <html>, or clear overrides (default green from CSS). */
+/**
+ * Apply accent to <html>, or clear overrides (default green from CSS).
+ * Phase 2: `entitled` kept for call-site compat; always apply when true
+ * (callers pass true for signed-in users).
+ */
 export function applyAccentThemeToDocument(
   key: AccentThemeKey | null,
-  isPro: boolean,
+  entitled: boolean = true,
 ): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  const vars = isPro ? accentThemeCssVariables(key) : null
+  const vars = entitled ? accentThemeCssVariables(key) : null
   if (!vars) {
     for (const name of ACCENT_CSS_VAR_KEYS) {
       root.style.removeProperty(name)

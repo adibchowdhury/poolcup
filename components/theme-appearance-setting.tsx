@@ -2,11 +2,10 @@
 
 import { useTheme } from 'next-themes'
 import { useEffect, useId, useState } from 'react'
-import { Check, Lock, Moon, Sun } from 'lucide-react'
+import { Check, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { useUserAccent } from '@/components/user-accent-provider'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -18,14 +17,13 @@ import {
 import { capturePostHog } from '@/src/lib/posthog-client'
 
 /**
- * Settings: light/dark appearance + Pro accent theme picker.
+ * Settings: light/dark appearance + accent theme picker.
  */
 export function ThemeAppearanceSetting() {
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const {
     loading: accentLoading,
-    isPro,
     accentTheme,
     error,
     saving,
@@ -41,7 +39,7 @@ export function ThemeAppearanceSetting() {
   const isLight = mounted && resolvedTheme === 'light'
 
   async function handleSelect(next: AccentThemeKey | null) {
-    if (!isPro || saving) return
+    if (saving) return
     if (next === accentTheme) return
     const result = await setAccentTheme(next)
     if (result.ok) {
@@ -76,38 +74,18 @@ export function ThemeAppearanceSetting() {
       </div>
 
       <div
-        className={cn(
-          'rounded-lg border border-border bg-muted/30 px-4 py-3',
-          !isPro && !accentLoading && 'opacity-90',
-        )}
+        className="rounded-lg border border-border bg-muted/30 px-4 py-3"
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-foreground">App accent</p>
             <p className="text-xs text-muted-foreground">
-              Choose a Pro accent color used across the app. Pool branding still
+              Choose an accent color used across the app. Pool branding still
               wins inside each pool.
             </p>
           </div>
-          {!isPro && !accentLoading ? (
-            <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[11px] font-medium text-muted-foreground">
-              <Lock className="h-3 w-3" aria-hidden />
-              Pro
-            </span>
-          ) : null}
         </div>
 
-        {!isPro && !accentLoading ? (
-          <LockedProFeature
-            variant="banner"
-            className="mt-3 bg-background/40"
-            title="App accent"
-            description="Upgrade to Pro to change your app accent"
-            source="appearance_settings"
-            ctaText="Upgrade"
-            modalHeadline="Unlock premium accent themes"
-          />
-        ) : null}
 
         {accentLoading ? (
           <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
@@ -117,7 +95,7 @@ export function ThemeAppearanceSetting() {
           <div
             role="radiogroup"
             aria-label="App accent color"
-            aria-disabled={!isPro || saving}
+            aria-disabled={saving}
             className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"
           >
             <AccentSwatch
@@ -125,7 +103,7 @@ export function ThemeAppearanceSetting() {
               name="Default"
               hex={DEFAULT_ACCENT_HEX}
               selected={accentTheme === null}
-              disabled={!isPro || saving}
+              disabled={saving}
               onSelect={() => void handleSelect(null)}
             />
             {ACCENT_THEME_PRESETS.map((preset) => (
@@ -135,7 +113,7 @@ export function ThemeAppearanceSetting() {
                 name={preset.label}
                 hex={preset.hex}
                 selected={accentTheme === preset.key}
-                disabled={!isPro || saving}
+                disabled={saving}
                 onSelect={() => void handleSelect(preset.key)}
               />
             ))}

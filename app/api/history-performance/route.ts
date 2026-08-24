@@ -5,21 +5,26 @@ import {
   coerceHistoricalByYear,
   coerceHistoricalRankBySeason,
 } from '@/src/lib/historical-performance'
-import { requireProUser } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Pro Historical Performance payload.
- * Whole page is Pro-gated (user_has_pro); non-Pro get 403 + no data.
+ * Historical Performance payload for the authenticated user.
+ * Phase 2: no Pro gate — available to all signed-in users.
  */
 export async function GET() {
-  const gate = await requireProUser()
-  if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  const userId = user.id
 
   const args = { p_user_id: userId }
 

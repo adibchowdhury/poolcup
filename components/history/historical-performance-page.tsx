@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { CalendarRange } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
-import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog } from '@/src/lib/posthog-client'
@@ -29,11 +28,6 @@ type ApiOk = {
   byYear: HistoricalYearRow[]
 }
 
-type ApiLocked = {
-  isPro: false
-  locked: true
-  error?: string
-}
 
 type ViewMode = 'season' | 'year'
 
@@ -56,7 +50,6 @@ export function HistoricalPerformancePage({
   embedded = false,
 }: HistoricalPerformancePageProps) {
   const router = useRouter()
-  const [locked, setLocked] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [allTime, setAllTime] = useState<HistoricalAllTime | null>(null)
@@ -81,19 +74,8 @@ export function HistoricalPerformancePage({
         router.replace('/login?next=/analytics%3Ftab%3Dhistory')
         return
       }
-      const json = (await res.json()) as ApiOk | ApiLocked
+      const json = (await res.json()) as ApiOk
 
-      if (res.status === 403 || (json as ApiLocked).locked) {
-        setLocked(true)
-        setAllTime(null)
-        setBySeason([])
-        setByYear([])
-        if (!viewedOnce.current) {
-          viewedOnce.current = true
-          capturePostHog('historical_performance_viewed', { is_pro: false })
-        }
-        return
-      }
 
       if (!res.ok) {
         throw new Error(
@@ -103,7 +85,6 @@ export function HistoricalPerformancePage({
       }
 
       const ok = json as ApiOk
-      setLocked(false)
       setAllTime(ok.allTime)
       setBySeason(ok.bySeason)
       setByYear(ok.byYear)
@@ -170,7 +151,6 @@ export function HistoricalPerformancePage({
 
   const empty =
     !loading &&
-    !locked &&
     !error &&
     allTime != null &&
     allTime.finalized === 0 &&
@@ -178,13 +158,7 @@ export function HistoricalPerformancePage({
 
   const body = (
     <>
-      {locked && !loading ? (
-        <LockedProFeature
-          title="Historical Performance is a Pro feature"
-          description="Unlock all-time summaries, season and year tables, and season-over-season comparisons."
-          source="locked_historical_performance"
-        />
-      ) : error ? (
+      {error ? (
         <div
           className="rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-6 text-center"
           role="alert"

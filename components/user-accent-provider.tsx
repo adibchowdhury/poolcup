@@ -30,9 +30,9 @@ type UserAccentContextValue = {
 const UserAccentContext = createContext<UserAccentContextValue | null>(null)
 
 /**
- * Applies Pro accent CSS vars on <html> when entitled.
- * Free / downgraded users keep stored accent_theme in DB but do not apply it
- * (default green). PoolThemeScope still wins inside pool subtrees.
+ * Applies accent CSS vars on <html> for the signed-in user.
+ * Phase 2: accent themes are free — always apply the stored theme.
+ * PoolThemeScope still wins inside pool subtrees.
  */
 export function UserAccentProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth()
@@ -75,14 +75,13 @@ export function UserAccentProvider({ children }: { children: ReactNode }) {
       if (!res.ok) {
         throw new Error(json.error || 'Failed to load accent theme')
       }
-      const nextPro = json.isPro === true
       const nextAccent = json.accentTheme ?? null
-      setIsPro(nextPro)
+      setIsPro(true)
       setAccentThemeState(nextAccent)
-      applyAccentThemeToDocument(nextAccent, nextPro)
+      applyAccentThemeToDocument(nextAccent, true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
-      // Fail closed: no custom accent if we can't confirm Pro.
+      // Fail soft: clear custom accent if load fails.
       applyAccentThemeToDocument(null, false)
     } finally {
       setLoading(false)
@@ -102,9 +101,6 @@ export function UserAccentProvider({ children }: { children: ReactNode }) {
 
   const setAccentTheme = useCallback(
     async (next: AccentThemeKey | null) => {
-      if (!isPro) {
-        return { ok: false, error: 'pro_required' }
-      }
       setSaving(true)
       setError(null)
       try {
@@ -117,11 +113,6 @@ export function UserAccentProvider({ children }: { children: ReactNode }) {
         const json = (await res.json()) as {
           accentTheme?: AccentThemeKey | null
           error?: string
-        }
-        if (res.status === 403) {
-          setIsPro(false)
-          applyAccentThemeToDocument(null, false)
-          return { ok: false, error: 'pro_required' }
         }
         if (!res.ok) {
           throw new Error(json.error || 'Failed to save accent theme')
@@ -139,7 +130,7 @@ export function UserAccentProvider({ children }: { children: ReactNode }) {
         setSaving(false)
       }
     },
-    [isPro],
+    [],
   )
 
   const value = useMemo(

@@ -7,7 +7,6 @@ import {
   type HistoryFilterOptions,
   type PredictionHistoryRow,
 } from '@/src/lib/prediction-history'
-import { userHasPro } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -17,7 +16,7 @@ export const runtime = 'nodejs'
 
 /**
  * Current-user prediction history.
- * List is free; filter query params are honored only when user_has_pro.
+ * Phase 2: list + filters available to all authenticated users.
  */
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient()
@@ -31,9 +30,6 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const parsed = parseHistoryFilters(url.searchParams)
 
-  // Soft gate: list always returned; Pro only enables filter params.
-  const isPro = await userHasPro(supabase, user.id)
-
   const limit = HISTORY_PAGE_SIZE
   const offset = (parsed.page - 1) * limit
 
@@ -41,27 +37,17 @@ export async function GET(request: Request) {
     p_user_id: user.id,
     p_limit: limit,
     p_offset: offset,
-    p_sport: null,
-    p_event_id: null,
-    p_pool_id: null,
-    p_result_filter: null,
-    p_date_from: null,
-    p_date_to: null,
-    p_search: null,
-  }
-
-  if (isPro) {
-    rpcArgs.p_sport = parsed.sport
-    rpcArgs.p_event_id = parsed.eventId
-    rpcArgs.p_pool_id = parsed.poolId
-    rpcArgs.p_result_filter = parsed.result
-    rpcArgs.p_date_from = parsed.dateFrom
+    p_sport: parsed.sport,
+    p_event_id: parsed.eventId,
+    p_pool_id: parsed.poolId,
+    p_result_filter: parsed.result,
+    p_date_from: parsed.dateFrom
       ? new Date(`${parsed.dateFrom}T00:00:00.000Z`).toISOString()
-      : null
-    rpcArgs.p_date_to = parsed.dateTo
+      : null,
+    p_date_to: parsed.dateTo
       ? new Date(`${parsed.dateTo}T23:59:59.999Z`).toISOString()
-      : null
-    rpcArgs.p_search = parsed.q
+      : null,
+    p_search: parsed.q,
   }
 
   let data: unknown = null
@@ -91,17 +77,14 @@ export async function GET(request: Request) {
 
   const totalCount = rows[0]?.total_count ?? 0
 
-  let filterOptions: HistoryFilterOptions | null = null
-  if (isPro) {
-    filterOptions = await loadFilterOptions(supabase, user.id)
-  }
+  const filterOptions = await loadFilterOptions(supabase, user.id)
 
   return NextResponse.json({
     rows,
     totalCount,
     pageSize: HISTORY_PAGE_SIZE,
-    isPro,
-    filtersApplied: isPro,
+    isPro: true,
+    filtersApplied: true,
     filterOptions,
   })
 }

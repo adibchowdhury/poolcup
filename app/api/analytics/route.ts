@@ -7,21 +7,26 @@ import {
   coerceUserAnalytics,
   parseAnalyticsRange,
 } from '@/src/lib/analytics'
-import { requireProUser } from '@/src/lib/require-pro'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Pro Advanced Analytics payload.
- * Whole dashboard is Pro-gated (user_has_pro); non-Pro get 403 + no data.
+ * Advanced Analytics payload for the authenticated user.
+ * Phase 2: no Pro gate — available to all signed-in users.
  */
 export async function GET(request: Request) {
-  const gate = await requireProUser()
-  if (!gate.ok) return gate.response
-  const { supabase, userId } = gate
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  const userId = user.id
 
   const url = new URL(request.url)
   const range = parseAnalyticsRange(url.searchParams.get('range'))

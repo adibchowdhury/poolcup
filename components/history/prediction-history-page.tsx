@@ -19,7 +19,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
-import { LockedProFeature } from '@/components/pro/locked-pro-feature'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { formatKickoffCompact } from '@/src/lib/match-kickoff-display'
@@ -116,7 +115,6 @@ export function PredictionHistoryPage() {
   const filters = parseHistoryFilters(searchParams)
   const [rows, setRows] = useState<PredictionHistoryRow[]>([])
   const [totalCount, setTotalCount] = useState(0)
-  const [isPro, setIsPro] = useState(false)
   const [filterOptions, setFilterOptions] =
     useState<HistoryFilterOptions | null>(null)
   const [loading, setLoading] = useState(true)
@@ -152,18 +150,17 @@ export function PredictionHistoryPage() {
       }
       setRows(json.rows ?? [])
       setTotalCount(json.totalCount ?? 0)
-      setIsPro(json.isPro === true)
       setFilterOptions(json.filterOptions ?? null)
 
       if (!viewedOnce.current) {
         viewedOnce.current = true
         capturePostHog('prediction_history_viewed', {
-          is_pro: json.isPro === true,
+          is_pro: true,
           total_count: json.totalCount ?? 0,
         })
       }
 
-      if (json.isPro && historyHasActiveFilters(parseHistoryFilters(searchParams))) {
+      if (historyHasActiveFilters(parseHistoryFilters(searchParams))) {
         const key = searchParams.toString()
         if (key && key !== lastFilterKey.current) {
           lastFilterKey.current = key
@@ -210,23 +207,20 @@ export function PredictionHistoryPage() {
   function patchFilters(patch: Partial<HistoryFilters>, resetPage = true) {
     const pageOnly =
       Object.keys(patch).length === 1 && Object.prototype.hasOwnProperty.call(patch, 'page')
-    if (!isPro && !pageOnly) return
     replaceFilters({
-      ...(isPro ? filters : emptyFilters(filters.page)),
+      ...filters,
       ...patch,
       page: resetPage && !pageOnly ? 1 : (patch.page ?? filters.page),
     })
   }
 
   function clearFilters() {
-    if (!isPro) return
     setDraftQ('')
     replaceFilters(emptyFilters(1))
   }
 
   function onSearchSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!isPro) return
     const next = draftQ.trim() || null
     patchFilters({ q: next })
   }
@@ -243,8 +237,7 @@ export function PredictionHistoryPage() {
             History
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-            Your full prediction record across pools. Browse for free; filter
-            and search with Pro.
+            Your full prediction record across pools — browse, filter, and search.
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className={FOCUS_VISIBLE_RING}>
@@ -256,23 +249,12 @@ export function PredictionHistoryPage() {
         className="mb-5 rounded-xl border border-border/80 bg-card/40 p-3 sm:p-4"
         aria-label="History filters"
       >
-        {!isPro && !loading ? (
-          <LockedProFeature
-            variant="banner"
-            className="mb-3"
-            title="History filters"
-            description="Upgrade to Pro to filter and search your history"
-            source="prediction_history_filter_bar"
-            ctaText="Upgrade"
-            modalHeadline="Unlock history filters"
-          />
-        ) : null}
 
         <fieldset
-          disabled={!isPro || loading}
+          disabled={loading}
           className={cn(
             'grid gap-3 sm:grid-cols-2 lg:grid-cols-3',
-            !isPro && 'opacity-60',
+            
           )}
         >
           <legend className="sr-only">Filter prediction history</legend>
@@ -280,7 +262,7 @@ export function PredictionHistoryPage() {
           <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
             Sport
             <select
-              className={selectClassName(!isPro)}
+              className={selectClassName(false)}
               value={filters.sport ?? ''}
               onChange={(e) =>
                 patchFilters({ sport: e.target.value || null })
@@ -299,7 +281,7 @@ export function PredictionHistoryPage() {
           <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
             Competition
             <select
-              className={selectClassName(!isPro)}
+              className={selectClassName(false)}
               value={filters.eventId ?? ''}
               onChange={(e) =>
                 patchFilters({ eventId: e.target.value || null })
@@ -318,7 +300,7 @@ export function PredictionHistoryPage() {
           <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
             Pool
             <select
-              className={selectClassName(!isPro)}
+              className={selectClassName(false)}
               value={filters.poolId ?? ''}
               onChange={(e) =>
                 patchFilters({ poolId: e.target.value || null })
@@ -337,7 +319,7 @@ export function PredictionHistoryPage() {
           <label className="block space-y-1.5 text-xs font-medium text-muted-foreground">
             Result
             <select
-              className={selectClassName(!isPro)}
+              className={selectClassName(false)}
               value={filters.result ?? ''}
               onChange={(e) => {
                 const v = e.target.value
@@ -369,7 +351,7 @@ export function PredictionHistoryPage() {
               onChange={(e) =>
                 patchFilters({ dateFrom: e.target.value || null })
               }
-              disabled={!isPro}
+              disabled={false}
               aria-label="Filter from date"
             />
           </label>
@@ -382,7 +364,7 @@ export function PredictionHistoryPage() {
               onChange={(e) =>
                 patchFilters({ dateTo: e.target.value || null })
               }
-              disabled={!isPro}
+              disabled={false}
               aria-label="Filter to date"
             />
           </label>
@@ -408,19 +390,19 @@ export function PredictionHistoryPage() {
                   value={draftQ}
                   onChange={(e) => setDraftQ(e.target.value)}
                   placeholder="Team or event name"
-                  disabled={!isPro}
+                  disabled={false}
                   className="pl-8"
                 />
               </div>
               <Button
                 type="submit"
                 variant="secondary"
-                disabled={!isPro}
+                disabled={false}
                 className={FOCUS_VISIBLE_RING}
               >
                 Search
               </Button>
-              {isPro && hasFilters ? (
+              {hasFilters ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -457,11 +439,11 @@ export function PredictionHistoryPage() {
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card/40 px-4 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            {hasFilters && isPro
+            {hasFilters
               ? 'No predictions match your filters'
               : 'No predictions yet'}
           </p>
-          {hasFilters && isPro ? (
+          {hasFilters ? (
             <Button
               type="button"
               variant="outline"
