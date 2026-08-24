@@ -22,21 +22,17 @@ export const POOL_SCORING_STYLE_OPTIONS = [
   {
     id: 'winner' as const,
     label: 'Winner Only',
-    /**
-     * Truthful to WinnerOnlyPredictView: group finishing order + best
-     * third-place ranking, then knockout advance picks (not per-match scores).
-     */
-    tagline: 'Rank group standings and pick who advances.',
+    tagline: 'Just pick who wins each match.',
     highlights: [
-      'Rank all four teams in each group (1st through 4th)',
-      'Pick the eight best third-place teams',
-      'Knockouts: pick who advances — no scorelines',
+      'One tap per match — home, away, or draw where allowed',
+      'Earn points for each correct winner pick',
+      'No scorelines — quick picks for casual groups',
     ],
     rules: [
-      'Rank all four teams in each group (1st through 4th)',
-      'Rank the eight best third-place teams',
-      'Points awarded after each group finishes playing',
-      'Knockouts: pick who advances (no scorelines)',
+      'Pick the winner of each match (or a draw in soccer/hockey leagues)',
+      'Correct winner: uses your pool’s winner points setting',
+      'Wrong outcome: 0 points',
+      'Knockout rounds: pick who advances (no draw option)',
     ],
   },
 ] as const

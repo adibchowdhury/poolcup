@@ -42,6 +42,10 @@ import {
   fetchPoolAnnouncementsApi,
   type PoolAnnouncement,
 } from '@/src/lib/pool-announcements'
+import {
+  isLegacyWinnerOnlyPool,
+  poolHasLegacyWinnerData,
+} from '@/src/lib/winner-only-mode'
 
 /** Soft-refresh interval while an event match is live or recently final. */
 const LEADERBOARD_LIVE_POLL_MS = 35_000
@@ -50,6 +54,7 @@ type LeaderboardRefreshContext = {
   poolId: string
   eventId: string | null
   scoringStyle: string
+  legacyWinnerOnly: boolean
   creatorUserId: string
   poolMembers: PoolMember[]
   bannedUserIds: string[]
@@ -508,11 +513,26 @@ export function PoolPageClient() {
     const isWinnerPool = pool.scoring_style === 'winner'
     const poolEventId = pool.event_id
 
+    const [legacyWinnerOnly, eventSport] = await Promise.all([
+      isWinnerPool
+        ? poolHasLegacyWinnerData(supabase, pool.id)
+        : Promise.resolve(false),
+      poolEventId
+        ? supabase
+            .from('sporting_events')
+            .select('sport')
+            .eq('id', poolEventId)
+            .maybeSingle()
+            .then(({ data }) => data?.sport ?? null)
+        : Promise.resolve(null),
+    ])
+
     const { predictionsByMember } = await fetchMemberPredictionCounts(
       supabase,
       poolMembers.map((member) => ({
         memberId: member.id,
         scoringStyle: pool.scoring_style,
+        winnerUsesPerMatch: isWinnerPool && !legacyWinnerOnly,
       })),
     )
 
@@ -596,7 +616,7 @@ export function PoolPageClient() {
     setMemberId(currentMember?.id ?? null)
     let loadedUserPredictions: UserPoolPrediction[] = []
 
-    if (currentMember && pool.scoring_style !== 'winner') {
+    if (currentMember && !isLegacyWinnerOnlyPool(pool.scoring_style, legacyWinnerOnly)) {
       let classicMatchesQuery = supabase
         .from('matches')
         .select(
@@ -658,6 +678,8 @@ export function PoolPageClient() {
       scoreDrawPoints: pool.score_draw_points ?? null,
       scoringLockedAt,
       scoringLocked,
+      legacyWinnerOnly,
+      eventSport,
     })
     setActiveAnnouncement(await activeAnnouncementPromise)
     setUserPredictions(loadedUserPredictions)
@@ -690,7 +712,12 @@ export function PoolPageClient() {
 
     let breakdownByMember: Map<string, LeaderboardPointBreakdownItem[]> | undefined
 
-    if (isWinnerPool) {
+    const useLegacyWinnerLeaderboard = isLegacyWinnerOnlyPool(
+      pool.scoring_style,
+      legacyWinnerOnly,
+    )
+
+    if (useLegacyWinnerLeaderboard) {
       const { breakdownByMember: loadedBreakdown, error: breakdownError } =
         await fetchWinnerPoolLeaderboardPointBreakdown(pool.id)
 
@@ -720,7 +747,7 @@ export function PoolPageClient() {
       matchesPlayedCount,
       currentUserId: userId,
       predictionsByMember,
-      isWinnerPool,
+      isWinnerPool: useLegacyWinnerLeaderboard,
       avatarsByMemberId: avatarByMemberId,
       breakdownByMember,
     })
@@ -733,7 +760,7 @@ export function PoolPageClient() {
       )
     }
 
-    if (!isWinnerPool) {
+    if (!useLegacyWinnerLeaderboard) {
       const derivation = verifyLeaderboardBreakdownPointDerivation(
         leaderboardMembers,
         'classic',
@@ -750,6 +777,7 @@ export function PoolPageClient() {
       poolId: pool.id,
       eventId: pool.event_id,
       scoringStyle: pool.scoring_style,
+      legacyWinnerOnly,
       creatorUserId: pool.creator_id,
       poolMembers,
       bannedUserIds: [...bannedUserIds],
@@ -767,6 +795,10 @@ export function PoolPageClient() {
 
     try {
       const isWinnerPool = ctx.scoringStyle === 'winner'
+      const useLegacyWinnerLeaderboard = isLegacyWinnerOnlyPool(
+        ctx.scoringStyle,
+        ctx.legacyWinnerOnly,
+      )
       const poolEventId = ctx.eventId
 
       const { predictionsByMember } = await fetchMemberPredictionCounts(
@@ -774,6 +806,7 @@ export function PoolPageClient() {
         ctx.poolMembers.map((member) => ({
           memberId: member.id,
           scoringStyle: ctx.scoringStyle,
+          winnerUsesPerMatch: isWinnerPool && !ctx.legacyWinnerOnly,
         })),
       )
 
@@ -810,7 +843,7 @@ export function PoolPageClient() {
         | Map<string, LeaderboardPointBreakdownItem[]>
         | undefined
 
-      if (isWinnerPool) {
+      if (useLegacyWinnerLeaderboard) {
         const { breakdownByMember: loadedBreakdown, error: breakdownError } =
           await fetchWinnerPoolLeaderboardPointBreakdown(ctx.poolId)
         if (breakdownError) {
@@ -853,7 +886,7 @@ export function PoolPageClient() {
         matchesPlayedCount,
         currentUserId: userId,
         predictionsByMember,
-        isWinnerPool,
+        isWinnerPool: useLegacyWinnerLeaderboard,
         avatarsByMemberId: avatarByMemberIdRef.current,
         breakdownByMember,
       })

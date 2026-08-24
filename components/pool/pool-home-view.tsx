@@ -89,6 +89,10 @@ export type PoolHomeMeta = {
   scoringLockedAt: string | null
   /** True when scoring_locked_at set or scoring has started for this pool. */
   scoringLocked: boolean
+  /** World Cup group-standings Winner Only (legacy); per-match when false. */
+  legacyWinnerOnly?: boolean
+  /** sporting_events.sport for draw eligibility in Winner Only picks. */
+  eventSport?: string | null
 }
 
 interface PoolHomeViewProps {
@@ -326,9 +330,11 @@ export function PoolHomeView({
     : leaderboardLoading
 
   const isWinnerPool = pool.scoringStyle === 'winner'
+  const isLegacyWinnerPool =
+    isWinnerPool && (pool.legacyWinnerOnly ?? false)
   const hasResults =
     pool.matchesPlayed > 0 ||
-    (isWinnerPool && members.some((member) => member.points > 0))
+    (isLegacyWinnerPool && members.some((member) => member.points > 0))
   const showPreMatchLeaderboardNote =
     !USE_MOCK_LEADERBOARD && !hasResults && members.length > 0
   const showChatTab = Boolean(memberId && poolId && poolCreatorUserId && memberProfilesByUserId)
@@ -372,8 +378,9 @@ export function PoolHomeView({
     }
   }, [isMobileChatShell, setMobileChatActive])
 
-  const isWinnerPredictionsTab = isWinnerPool && activeTab === 'predictions'
-  const isClassicPredictionsTab = !isWinnerPool && activeTab === 'predictions'
+  const isWinnerPredictionsTab = isLegacyWinnerPool && activeTab === 'predictions'
+  const isClassicPredictionsTab =
+    (!isWinnerPool || !isLegacyWinnerPool) && activeTab === 'predictions'
   const isLeaderboardTab = activeTab === 'leaderboard'
 
   const handleBackClick = () => {
@@ -779,6 +786,8 @@ export function PoolHomeView({
                 inviteCode={pool.inviteCode}
                 poolName={pool.name}
                 memberCount={pool.memberCount}
+                legacyWinnerOnly={pool.legacyWinnerOnly ?? false}
+                eventSport={pool.eventSport ?? null}
                 userRank={
                   members.find(
                     (member) =>
@@ -787,7 +796,7 @@ export function PoolHomeView({
                 }
                 acceptingMembers={pool.acceptingMembers}
                 winnerPool={
-                  isWinnerPool && poolId
+                  isLegacyWinnerPool && poolId
                     ? {
                         id: poolId,
                         name: pool.name,

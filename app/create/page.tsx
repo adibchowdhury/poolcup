@@ -495,7 +495,7 @@ export default function CreatePoolPage() {
   const [eventsError, setEventsError] = useState<string | null>(null)
   const [poolName, setPoolName] = useState('')
   const [poolDescription, setPoolDescription] = useState('')
-  const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('winner')
+  const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('classic')
   const [isPublic, setIsPublic] = useState(false)
   const [publicConfirmOpen, setPublicConfirmOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)

@@ -4,10 +4,12 @@ import { resolveCurrentEventId } from '@/src/lib/current-event'
 export type MemberScoringContext = {
   memberId: string
   scoringStyle: string
+  /** Per-match Winner Only pools count predictions rows, not group_predictions. */
+  winnerUsesPerMatch?: boolean
 }
 
 export type MemberPredictionCounts = {
-  /** Classic/exact: distinct match_id; winner: group_predictions row count. */
+  /** Classic/exact: distinct match_id; legacy winner: group_predictions row count. */
   predictionsByMember: Map<string, number>
   /** Classic/exact only: distinct match_id from predictions (win-rate denominator). */
   classicMatchPredictionsByMember: Map<string, number>
@@ -25,10 +27,13 @@ export async function fetchMemberPredictionCounts(
   }
 
   const classicMemberIds = memberships
-    .filter((row) => row.scoringStyle !== 'winner')
+    .filter(
+      (row) =>
+        row.scoringStyle !== 'winner' || row.winnerUsesPerMatch === true,
+    )
     .map((row) => row.memberId)
-  const winnerMemberIds = memberships
-    .filter((row) => row.scoringStyle === 'winner')
+  const legacyWinnerMemberIds = memberships
+    .filter((row) => row.scoringStyle === 'winner' && !row.winnerUsesPerMatch)
     .map((row) => row.memberId)
 
   if (classicMemberIds.length > 0) {
@@ -68,11 +73,11 @@ export async function fetchMemberPredictionCounts(
     }
   }
 
-  if (winnerMemberIds.length > 0) {
+  if (legacyWinnerMemberIds.length > 0) {
     const { data: groupPredictions } = await supabase
       .from('group_predictions')
       .select('member_id')
-      .in('member_id', winnerMemberIds)
+      .in('member_id', legacyWinnerMemberIds)
 
     for (const row of groupPredictions ?? []) {
       predictionsByMember.set(

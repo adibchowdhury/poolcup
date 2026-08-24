@@ -10,6 +10,7 @@ import {
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { YourPredictionsSection } from '@/components/pool/your-predictions-section'
 import { PoolPredictionsDesktopSidebar } from '@/components/pool/pool-predictions-desktop-sidebar'
+import { isLegacyWinnerOnlyPool } from '@/src/lib/winner-only-mode'
 
 export type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 
@@ -29,6 +30,8 @@ type PoolPredictionsTabProps = {
   memberId?: string
   currentUserId?: string
   winnerPool?: WinnerOnlyPool
+  legacyWinnerOnly?: boolean
+  eventSport?: string | null
   inviteCode?: string
   poolName?: string
   memberCount?: number
@@ -52,6 +55,8 @@ export function PoolPredictionsTab({
   memberId,
   currentUserId,
   winnerPool,
+  legacyWinnerOnly = false,
+  eventSport = null,
   inviteCode,
   poolName = '',
   memberCount = 0,
@@ -60,7 +65,8 @@ export function PoolPredictionsTab({
   onPredictionSaved,
   onPredictionRemoved,
 }: PoolPredictionsTabProps) {
-  const isWinnerOnly = scoringStyle === 'winner'
+  const isLegacyWinner = isLegacyWinnerOnlyPool(scoringStyle, legacyWinnerOnly)
+  const isPerMatchWinner = scoringStyle === 'winner' && !isLegacyWinner
   const predictedMatchCount = useMemo(
     () =>
       countClassicPredictedScores(
@@ -73,7 +79,7 @@ export function PoolPredictionsTab({
   )
   const classicMatchTotal = classicMatchTotalCount(totalMatchCount)
 
-  if (isWinnerOnly) {
+  if (isLegacyWinner) {
     return (
       <div className="w-full min-w-0 space-y-4">
         {memberId && winnerPool && inviteCode ? (
@@ -106,6 +112,9 @@ export function PoolPredictionsTab({
           poolId={poolId}
           memberId={memberId}
           currentUserId={currentUserId}
+          scoringStyle={isPerMatchWinner ? 'winner' : scoringStyle}
+          winnerPickMode={isPerMatchWinner}
+          eventSport={eventSport}
           onPredictionSaved={onPredictionSaved}
           onPredictionRemoved={onPredictionRemoved}
         />

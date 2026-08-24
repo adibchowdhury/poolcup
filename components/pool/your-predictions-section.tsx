@@ -28,6 +28,7 @@ import {
   sortClassicPredictions,
 } from '@/src/lib/sort-classic-predictions'
 import { normalizeMatchScoringStyle } from '@/src/lib/prediction-scoring'
+import { sportAllowsDraw } from '@/src/lib/winner-pick-storage'
 import {
   hasClassicPredictionScores,
 } from '@/src/lib/classic-prediction-progress'
@@ -186,6 +187,9 @@ type YourPredictionsSectionProps = {
   poolId?: string
   currentUserId?: string
   memberId?: string
+  scoringStyle?: string
+  winnerPickMode?: boolean
+  eventSport?: string | null
   onPredictionSaved?: (
     matchId: string,
     predTeam1: number,
@@ -200,10 +204,13 @@ export function YourPredictionsSection({
   poolId,
   memberId,
   currentUserId,
+  scoringStyle = 'classic',
+  winnerPickMode = false,
+  eventSport = null,
   onPredictionSaved,
   onPredictionRemoved,
 }: YourPredictionsSectionProps) {
-  const matchScoringStyle = normalizeMatchScoringStyle('classic')
+  const matchScoringStyle = normalizeMatchScoringStyle(scoringStyle)
   const hasClassicContent = classicPredictions.length > 0
   const tournamentMode = useMemo(
     () =>
@@ -417,6 +424,9 @@ export function YourPredictionsSection({
       memberId={memberId}
       currentUserId={currentUserId}
       scoringStyle={matchScoringStyle}
+      winnerPickMode={winnerPickMode}
+      allowDraw={sportAllowsDraw(eventSport)}
+      autosave={winnerPickMode}
       onPredictionSaved={onPredictionSaved}
       onPredictionRemoved={onPredictionRemoved}
     />
