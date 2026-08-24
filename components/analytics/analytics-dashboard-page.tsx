@@ -27,7 +27,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AiInsightsCard } from '@/components/analytics/ai-insights-card'
 import { HistoricalPerformancePage } from '@/components/history/historical-performance-page'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -198,8 +197,7 @@ export function AnalyticsDashboardPage() {
             Analytics
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-            Current form, AI insights, and historical season performance — all
-            in one place.
+            Current form and historical season performance — all in one place.
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className={FOCUS_VISIBLE_RING}>
@@ -369,8 +367,6 @@ function AnalyticsBody({
 
   return (
     <div className="space-y-6">
-      <AiInsightsCard />
-
       <p className="text-xs text-muted-foreground">
         Based on{' '}
         <span className="font-medium tabular-nums text-foreground">

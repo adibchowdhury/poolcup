@@ -121,3 +121,21 @@ export function parsePoolMatchConsensusPayload(
     topScores: topScores.slice(0, 5),
   }
 }
+
+/** Relative "updated Xs ago" for consensus refresh stamp. */
+export function formatConsensusUpdatedAt(
+  iso: string | null,
+  nowMs = Date.now(),
+): string {
+  if (!iso) return 'Updated just now'
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return 'Updated just now'
+  const sec = Math.max(0, Math.floor((nowMs - then) / 1000))
+  if (sec < 5) return 'Updated just now'
+  if (sec < 60) return `Updated ${sec}s ago`
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `Updated ${min}m ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 48) return `Updated ${hr}h ago`
+  return `Updated ${Math.floor(hr / 24)}d ago`
+}

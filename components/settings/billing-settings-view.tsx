@@ -338,7 +338,7 @@ export function BillingSettingsView({
           <UpgradeCard
             title="PoolCup Pro"
             price="$4.99/mo"
-            description="Insights, analytics, themes, and Crowd Win Chance."
+            description="Analytics, themes, and personalization."
             plan="pro"
             busy={checkoutBusy}
             onUpgrade={handleUpgrade}
@@ -366,12 +366,12 @@ export function BillingSettingsView({
           </p>
           {billing.tier === 'pro' ? (
             <p className="text-sm text-muted-foreground">
-              Want Commissioner? Open Manage billing to upgrade. Pro insights
+              Want Commissioner? Open Manage billing to upgrade. Pro analytics
               stay included with Commissioner.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              You&apos;re on Commissioner — Pro insights and personalization are
+              You&apos;re on Commissioner — Pro analytics and personalization are
               included. Use Manage billing to change or cancel your plan.
             </p>
           )}

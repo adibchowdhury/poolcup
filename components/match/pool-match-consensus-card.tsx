@@ -6,7 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShimmerBlock } from '@/components/ui/shimmer-block'
 import { cn } from '@/lib/utils'
-import { formatConsensusUpdatedAt } from '@/src/lib/match-consensus'
+import { formatConsensusUpdatedAt } from '@/src/lib/pool-match-consensus'
 import {
   parsePoolMatchConsensusPayload,
   type PoolMatchConsensusPayload,

@@ -12,7 +12,6 @@
     "sync:knockout-round-rows": "ts-node --project tsconfig.json scripts/sync-knockout-round-rows.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.117.1",
     "@fontsource/vt323": "^5.3.0",
     "@hookform/resolvers": "^3.9.1",
     "@oliverlooney/react-brackets": "^0.4.11",

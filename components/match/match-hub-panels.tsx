@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Check, Target, Users } from 'lucide-react'
 import { PredictScoreInput } from '@/components/predict/predict-match-row-shared'
-import { MatchConsensusCard } from '@/components/match/match-consensus-card'
 import { PoolMatchConsensusCard } from '@/components/match/pool-match-consensus-card'
 import { MatchTeamRosters } from '@/components/match/match-team-rosters'
 import { UserAvatarImage } from '@/components/user-avatar-image'
@@ -739,39 +738,33 @@ export function MatchHubPanels({
         team2Form={team2Form}
       />
 
-      {!postLock ? (
-        <MatchConsensusCard
-          matchId={matchId}
-          team1Name={team1Name}
-          team2Name={team2Name}
-          variant="full"
-          source="match_hub"
-        />
-      ) : contextPool ? (
-        <PoolMatchConsensusCard
-          poolId={contextPool.id}
-          matchId={matchId}
-          team1Name={team1Name}
-          team2Name={team2Name}
-          poolName={contextPool.name}
-          inviteCode={contextPool.inviteCode}
-          source="match_hub_post_lock"
-        />
-      ) : preferredInvite ? (
-        <section className="rounded-xl border border-border/90 bg-card/50 p-4 sm:p-5">
-          <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
-            PoolCup consensus
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Join this pool to see its post-lock consensus, or open the match
-            from a pool you belong to.
-          </p>
-          <Button asChild className={cn('mt-3', FOCUS_VISIBLE_RING)}>
-            <Link href={`/pool/${encodeURIComponent(preferredInviteRaw)}`}>
-              Open pool
-            </Link>
-          </Button>
-        </section>
+      {postLock ? (
+        contextPool ? (
+          <PoolMatchConsensusCard
+            poolId={contextPool.id}
+            matchId={matchId}
+            team1Name={team1Name}
+            team2Name={team2Name}
+            poolName={contextPool.name}
+            inviteCode={contextPool.inviteCode}
+            source="match_hub_post_lock"
+          />
+        ) : preferredInvite ? (
+          <section className="rounded-xl border border-border/90 bg-card/50 p-4 sm:p-5">
+            <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
+              PoolCup consensus
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Join this pool to see its post-lock consensus, or open the match
+              from a pool you belong to.
+            </p>
+            <Button asChild className={cn('mt-3', FOCUS_VISIBLE_RING)}>
+              <Link href={`/pool/${encodeURIComponent(preferredInviteRaw)}`}>
+                Open pool
+              </Link>
+            </Button>
+          </section>
+        ) : null
       ) : null}
 
       <FriendsPredictionsSection

@@ -75,7 +75,7 @@ const TIERS: PricingTier[] = [
     features: [
       'Everything in Free',
       'Match insights & prediction trends',
-      'Advanced analytics & AI insights',
+      'Advanced analytics',
       'Custom profile & themes',
       'Exclusive badges',
       'Prediction history & win probability',
@@ -110,7 +110,7 @@ const COMPARISON_ROWS: {
   { feature: 'Predictions & leaderboards', free: true, pro: true, commissioner: true },
   { feature: 'Friends & pool chat', free: true, pro: true, commissioner: true },
   { feature: 'Badges & multi-sport', free: true, pro: true, commissioner: true },
-  { feature: 'Advanced analytics & AI insights', free: false, pro: true, commissioner: true },
+  { feature: 'Advanced analytics', free: false, pro: true, commissioner: true },
   { feature: 'Custom profile & premium badges', free: false, pro: true, commissioner: true },
   { feature: 'Unlimited custom pools', free: '3 owned', pro: '3 owned', commissioner: true },
   { feature: 'Admin tools & custom scoring', free: false, pro: false, commissioner: true },
@@ -125,7 +125,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What's the difference between Pro and Commissioner?",
-    a: 'PoolCup Pro unlocks player insights and personalization: advanced analytics, historical performance, prediction history filters, premium accent themes, and Crowd Win Chance. Commissioner includes Pro benefits plus unlimited owned pools and pool-admin tools (custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features).',
+    a: 'PoolCup Pro unlocks player personalization: advanced analytics, historical performance, prediction history filters, and premium accent themes. Commissioner includes Pro benefits plus unlimited owned pools and pool-admin tools (custom scoring, branding, announcements, polls, exports, co-commissioners, and related commissioner features).',
   },
   {
     q: 'Can I cancel anytime?',
@@ -448,7 +448,7 @@ export function LandingPricingSection() {
             Free vs Pro vs Commissioner at a glance
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-[#728d9c] md:text-base">
-            Free to start. Upgrade to Pro for insights, or Commissioner to run
+            Free to start. Upgrade to Pro for analytics, or Commissioner to run
             unlimited pools.
           </p>
 

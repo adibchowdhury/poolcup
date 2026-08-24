@@ -11,7 +11,6 @@ import { supabase } from '@/src/lib/supabase'
 import { resolveTeamFlag } from '@/src/lib/team-flags'
 import { CompactMatchRow } from '@/components/predict/compact-match-row'
 import { MatchSection, type SectionMatch } from '@/components/predict/match-section'
-import { MatchConsensusCard } from '@/components/match/match-consensus-card'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import { KnockoutAdvancePicker } from '@/components/pool/prediction-match-card'
 import {
@@ -332,13 +331,6 @@ function ClassicKnockoutPredictCard({
         onAwayScoreChange={onAwayScoreChange}
       />
       <div className="space-y-2 px-3 pb-3">
-        <MatchConsensusCard
-          matchId={match.id}
-          team1Name={match.team1_name}
-          team2Name={match.team2_name}
-          variant="compact"
-          source="predict_knockout"
-        />
         <KnockoutAdvancePicker
           team1Name={match.team1_name}
           team2Name={match.team2_name}

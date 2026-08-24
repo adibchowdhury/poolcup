@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MatchConsensusCard } from '@/components/match/match-consensus-card'
 import { CompactMatchRow, type CompactTeam } from './compact-match-row'
 import {
   WinnerOnlyMatchRow,
@@ -104,13 +103,6 @@ export function MatchSection({
                     isPredicted={match.isPredicted}
                     onSelect={(pick) => onWinnerPickChange(match.id, pick)}
                   />
-                  <MatchConsensusCard
-                    matchId={match.id}
-                    team1Name={match.homeTeam.name}
-                    team2Name={match.awayTeam.name}
-                    variant="compact"
-                    source="predict_row"
-                  />
                 </div>
               ) : (
                 <div key={match.id} className="space-y-2">
@@ -125,13 +117,6 @@ export function MatchSection({
                     isPredicted={match.isPredicted}
                     onHomeScoreChange={(v) => onHomeScoreChange(match.id, v)}
                     onAwayScoreChange={(v) => onAwayScoreChange(match.id, v)}
-                  />
-                  <MatchConsensusCard
-                    matchId={match.id}
-                    team1Name={match.homeTeam.name}
-                    team2Name={match.awayTeam.name}
-                    variant="compact"
-                    source="predict_row"
                   />
                 </div>
               ),
