@@ -617,7 +617,7 @@ export function PoolCard({
         <PoolCardDesktopLogoZone pool={pool} accentColor={accentColor} />
       ) : null}
 
-      <div className="shrink-0 px-[15px] pb-[14px]">
+      <div className="shrink-0 px-[15px] pb-[14px] max-lg:mt-3">
         <div className="flex flex-nowrap gap-2">
           {showPredictButton ? (
             <Link

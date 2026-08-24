@@ -727,13 +727,13 @@ function DashboardViewContent({
                         desktopPanel
                       />
                       <FriendsActivitySection desktopPanel />
-                      <NewsSection desktopPanel />
                     </div>
 
                     <DashboardHomePanel id="dashboard-home-rail">
                       <div className={DASHBOARD_HOME_RAIL_STACK_CLASS}>
                         <MakeYourPicksSection surface="rail" />
                         <GlobalActivitySection userId={userId} layout="rail" />
+                        <NewsSection layout="rail" />
                       </div>
                     </DashboardHomePanel>
                   </div>

@@ -51,9 +51,7 @@ export function ActivePoolsSkeleton() {
       className={cn(
         '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory',
         '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
-        '[scrollbar-width:thin]',
-        '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',
-        '[&::-webkit-scrollbar-track]:bg-transparent',
+        'scrollbar-hidden',
       )}
       aria-busy="true"
       aria-label="Loading your pools"

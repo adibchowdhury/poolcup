@@ -20,10 +20,7 @@ const POOL_CAROUSEL_ITEM_CLASS =
 const POOL_CAROUSEL_SCROLL_CLASS = cn(
   '@container min-w-0 max-w-full -mx-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory lg:hidden',
   '[scroll-padding-inline:1rem] [-webkit-overflow-scrolling:touch]',
-  '[scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]',
-  '[&::-webkit-scrollbar]:h-1',
-  '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25',
-  '[&::-webkit-scrollbar-track]:bg-transparent',
+  'scrollbar-hidden',
 )
 
 const POOL_CAROUSEL_TRACK_CLASS = 'flex w-max min-w-full gap-4 px-4 pb-1'
