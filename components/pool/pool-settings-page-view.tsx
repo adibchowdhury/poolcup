@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { toast } from 'sonner'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { PoolSettingsHub } from '@/components/pool/pool-settings-hub'
 import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { PoolSettingsPageData } from '@/src/lib/pool-settings-page-data'
@@ -14,6 +16,18 @@ export function PoolSettingsPageView({
   initial,
   section,
 }: PoolSettingsPageViewProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('upgraded') !== '1') return
+    toast.success('Custom Pool unlocked — logo, colors, and commissioner tools are ready.')
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete('upgraded')
+    const qs = next.toString()
+    router.replace(qs ? `?${qs}` : window.location.pathname)
+  }, [searchParams, router])
+
   const [poolName, setPoolName] = useState(initial.poolName)
   const [poolDescription, setPoolDescription] = useState(
     initial.poolDescription,

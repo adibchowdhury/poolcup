@@ -13,7 +13,7 @@ import { flushSync } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, Download, Flag, ImagePlus, Loader2, Target, Trash2, Trophy, Zap } from 'lucide-react'
+import { Check, Download, Flag, Loader2, Target, Trophy, Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import {
@@ -39,7 +39,6 @@ import { trackEvent } from '@/src/lib/track'
 import {
   isPoolCreationLimitError,
   POOL_CREATION_LIMIT_MESSAGE,
-  type PoolCreationQuota,
 } from '@/src/lib/pool-creation-limit'
 import {
   formatSportingEventDateRange,
@@ -57,20 +56,12 @@ import {
 } from '@/src/lib/pool-name'
 import { normalizeSportKey } from '@/src/lib/sport-display'
 import { LockedCommissionerFeature } from '@/components/pool/locked-commissioner-feature'
-import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
+import { startCustomPoolCheckout } from '@/src/lib/custom-pool-checkout-client'
 import { cn } from '@/lib/utils'
-import { patchPoolSettings } from '@/src/lib/pool-settings-client'
-import {
-  DEFAULT_POOL_THEME_COLOR,
-  normalizePoolThemeColor,
-  POOL_THEME_COLOR_PRESETS,
-  resolvePoolThemeColor,
-} from '@/src/lib/pool-theme'
 import {
   formatOfficialLeagueName,
   formatOfficialSeasonLabel,
 } from '@/src/lib/fetch-official-pools'
-import { uploadPoolEmblem } from '@/src/lib/upload-pool-emblem'
 
 const CREATE_POOL_STEPS = [
   { id: 'competition' as const, label: 'Sport' },
@@ -472,8 +463,6 @@ function formatCreateFlowCompetitionDisplay(event: SportingEvent): {
 export default function CreatePoolPage() {
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const goToPoolRef = useRef<HTMLAnchorElement>(null)
-  const emblemInputRef = useRef<HTMLInputElement>(null)
-  const draftLogoPreviewRef = useRef<string | null>(null)
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
 
@@ -500,23 +489,11 @@ export default function CreatePoolPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [creationQuota, setCreationQuota] = useState<PoolCreationQuota | null>(
-    null,
-  )
   const [nameError, setNameError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
-  const [draftThemeColor, setDraftThemeColor] = useState<string | null>(null)
-  const [draftLogoFile, setDraftLogoFile] = useState<File | null>(null)
-  const [draftLogoPreviewUrl, setDraftLogoPreviewUrl] = useState<string | null>(
-    null,
-  )
-  const [emblemBusy, setEmblemBusy] = useState(false)
-  const emblemFileInputId = 'create-pool-emblem-file'
-
-  const hasCommissionerTools = creationQuota?.tier === 'commissioner'
-  const effectiveDraftTheme = resolvePoolThemeColor(draftThemeColor)
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'custom'>('basic')
 
   const selectedEvent = useMemo((): SportingEvent | null => {
     if (!selectedEventId) return null
@@ -627,14 +604,6 @@ export default function CreatePoolPage() {
     void loadCreatableEvents()
   }, [step, loadCreatableEvents])
 
-  useEffect(() => {
-    return () => {
-      if (draftLogoPreviewRef.current) {
-        URL.revokeObjectURL(draftLogoPreviewRef.current)
-        draftLogoPreviewRef.current = null
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (step !== SUCCESS_STEP || !createdPool) return
@@ -676,43 +645,6 @@ export default function CreatePoolPage() {
   }, [authLoading, user, router])
 
   /** Phase 1: quota is informational (tier for Commissioner branding only). */
-  const loadCreationQuota = useCallback(async () => {
-    if (!user) return
-    try {
-      const res = await fetch('/api/pools/creation-quota')
-      if (res.status === 401) {
-        router.replace('/login?next=/create')
-        return
-      }
-      if (!res.ok) return
-      const data = (await res.json()) as {
-        tier?: PoolCreationQuota['tier']
-        ownedPoolCount?: number
-        owned_pool_count?: number
-      }
-      const owned =
-        typeof data.ownedPoolCount === 'number'
-          ? data.ownedPoolCount
-          : typeof data.owned_pool_count === 'number'
-            ? data.owned_pool_count
-            : 0
-      const tier =
-        data.tier === 'pro' || data.tier === 'commissioner' ? data.tier : 'free'
-      setCreationQuota({
-        tier,
-        ownedPoolCount: owned,
-        limit: null,
-        canCreateMore: true,
-      })
-    } catch (err) {
-      console.error('create: failed to load creation quota', err)
-    }
-  }, [user, router])
-
-  useEffect(() => {
-    if (authLoading || !user) return
-    void loadCreationQuota()
-  }, [authLoading, user, loadCreationQuota])
 
   function handleSportSelect(sport: SportId) {
     setSelectedSport(sport)
@@ -761,44 +693,6 @@ export default function CreatePoolPage() {
     scoringStyle,
     poolName,
   ])
-
-  async function applyDraftBrandingAfterCreate(poolId: string) {
-    if (!hasCommissionerTools) return
-
-    if (draftThemeColor !== null) {
-      await patchPoolSettings(poolId, {
-        themeColor: normalizePoolThemeColor(draftThemeColor),
-      })
-    }
-
-    if (draftLogoFile) {
-      const upload = await uploadPoolEmblem(supabase, poolId, draftLogoFile)
-      if (upload.publicUrl) {
-        await patchPoolSettings(poolId, { emblemUrl: upload.publicUrl })
-      }
-    }
-  }
-
-  function handleDraftEmblemFileChange(file: File | undefined) {
-    if (!file || !hasCommissionerTools) return
-    if (draftLogoPreviewRef.current) {
-      URL.revokeObjectURL(draftLogoPreviewRef.current)
-    }
-    const previewUrl = URL.createObjectURL(file)
-    draftLogoPreviewRef.current = previewUrl
-    setDraftLogoFile(file)
-    setDraftLogoPreviewUrl(previewUrl)
-  }
-
-  function handleRemoveDraftEmblem() {
-    if (draftLogoPreviewRef.current) {
-      URL.revokeObjectURL(draftLogoPreviewRef.current)
-      draftLogoPreviewRef.current = null
-    }
-    setDraftLogoFile(null)
-    setDraftLogoPreviewUrl(null)
-    if (emblemInputRef.current) emblemInputRef.current.value = ''
-  }
 
   async function createPool() {
     if (!user || submitting) return
@@ -889,8 +783,6 @@ export default function CreatePoolPage() {
     const { awardClientXp } = await import('@/src/lib/xp-client')
     void awardClientXp({ sourceType: 'pool_create', sourceId: pool.id })
 
-    setSubmitting(false)
-    setLoadingMessage(null)
     setCreatedPool({
       id: pool.id,
       name: trimmedName,
@@ -901,8 +793,25 @@ export default function CreatePoolPage() {
       sport: normalizeSportKey(selectedEvent.sport),
       is_public: Boolean(pool.is_public),
     })
-    void loadCreationQuota()
-    void applyDraftBrandingAfterCreate(pool.id)
+    if (selectedPlan === 'custom') {
+      setLoadingMessage('Starting Custom Pool checkout…')
+      const checkout = await startCustomPoolCheckout(pool.id)
+      if (checkout.ok) {
+        window.location.href = checkout.url
+        return
+      }
+      setSubmitting(false)
+      setLoadingMessage(null)
+      setError(
+        checkout.error ||
+          'Pool created, but checkout could not start. Upgrade anytime from pool settings.',
+      )
+      goToStep(SUCCESS_STEP, 1)
+      return
+    }
+
+    setSubmitting(false)
+    setLoadingMessage(null)
     goToStep(SUCCESS_STEP, 1)
   }
 
@@ -1092,15 +1001,11 @@ export default function CreatePoolPage() {
             </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Branding</dt>
+            <dt className="text-[#5a7080]">Plan</dt>
             <dd className="text-right font-medium text-[#f0f4f8]">
-              {hasCommissionerTools
-                ? draftLogoPreviewUrl
-                  ? 'Custom logo'
-                  : draftThemeColor
-                    ? effectiveDraftTheme
-                    : 'Default'
-                : 'Default (Commissioner to customize)'}
+              {selectedPlan === 'custom'
+                ? 'Custom Pool ($9.99 one-time)'
+                : 'Basic Pool (Free)'}
             </dd>
           </div>
         </dl>
@@ -1440,8 +1345,12 @@ export default function CreatePoolPage() {
                   />
                 </div>
 
-                {!hasCommissionerTools ? (
+                {true ? (
                   <div className="space-y-4">
+                    <p className="text-xs leading-relaxed text-[#5a7080]">
+                      Logo and theme color come with Custom Pool. Add them in
+                      settings after upgrading — $9.99 one-time. No subscription.
+                    </p>
                     <LockedCommissionerFeature
                       title="Pool logo"
                       description="Upload a custom emblem for your pool"
@@ -1453,184 +1362,7 @@ export default function CreatePoolPage() {
                       isOwner
                     />
                   </div>
-                ) : (
-                  <div className="space-y-8">
-                    <div className="space-y-3">
-                      <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
-                        Pool logo
-                      </span>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        {draftLogoPreviewUrl ? (
-                          <div className="relative mx-auto h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-xl border border-[#1e2d3d] sm:mx-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={draftLogoPreviewUrl}
-                              alt="Pool logo preview"
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <PoolAvatarImage
-                            avatar={null}
-                            emblemUrl={null}
-                            size="md"
-                            className="mx-auto sm:mx-0"
-                          />
-                        )}
-                        <div className="min-w-0 flex-1 space-y-2">
-                          <p className="text-xs text-[#5a7080]">
-                            {draftLogoPreviewUrl
-                              ? 'Shown in the pool header and on share cards.'
-                              : 'Add a pool logo to personalize this squad.'}
-                          </p>
-                          <input
-                            ref={emblemInputRef}
-                            id={emblemFileInputId}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            className="sr-only"
-                            disabled={emblemBusy}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0]
-                              handleDraftEmblemFileChange(file)
-                            }}
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className={cn('h-9', FOCUS_RING_CLASS)}
-                              disabled={emblemBusy}
-                              aria-controls={emblemFileInputId}
-                              onClick={() => emblemInputRef.current?.click()}
-                            >
-                              {emblemBusy ? (
-                                <>
-                                  <Loader2
-                                    className="mr-2 h-4 w-4 animate-spin"
-                                    aria-hidden
-                                  />
-                                  Uploading…
-                                </>
-                              ) : (
-                                <>
-                                  <ImagePlus
-                                    className="mr-2 h-4 w-4"
-                                    aria-hidden
-                                  />
-                                  {draftLogoPreviewUrl
-                                    ? 'Replace logo'
-                                    : 'Add a pool logo'}
-                                </>
-                              )}
-                            </Button>
-                            {draftLogoPreviewUrl ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className={cn(
-                                  'h-9 text-red-400 hover:text-red-400',
-                                  FOCUS_RING_CLASS,
-                                )}
-                                disabled={emblemBusy}
-                                onClick={handleRemoveDraftEmblem}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" aria-hidden />
-                                Remove
-                              </Button>
-                            ) : null}
-                          </div>
-                          <p className="text-[11px] text-[#5a7080]">
-                            JPEG, PNG, or WebP. Applied when your pool is
-                            created.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
-                        Pool color
-                      </span>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div
-                          className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border-2 border-white/25"
-                          style={{
-                            background: `linear-gradient(160deg, ${effectiveDraftTheme} 0%, color-mix(in srgb, ${effectiveDraftTheme} 50%, #0a0a0a) 100%)`,
-                          }}
-                          aria-label={`Current pool color ${effectiveDraftTheme}`}
-                        />
-                        <p className="min-w-0 flex-1 font-mono text-sm text-[#5a7080]">
-                          {effectiveDraftTheme}
-                          {draftThemeColor == null ? ' · default' : ''}
-                        </p>
-                      </div>
-                      <div
-                        className="flex flex-wrap gap-2.5"
-                        role="group"
-                        aria-label="Theme color presets"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setDraftThemeColor(null)}
-                          className={cn(
-                            'relative h-11 min-w-[4.5rem] overflow-hidden rounded-xl border px-3 text-xs font-semibold transition-all',
-                            FOCUS_RING_CLASS,
-                            draftThemeColor == null
-                              ? 'scale-[1.03] border-2 border-primary shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_40%,transparent)]'
-                              : 'border border-white/15 hover:scale-[1.03]',
-                          )}
-                          style={{
-                            background: `linear-gradient(160deg, ${DEFAULT_POOL_THEME_COLOR} 0%, color-mix(in srgb, ${DEFAULT_POOL_THEME_COLOR} 55%, #111) 100%)`,
-                          }}
-                        >
-                          <span className="relative z-10 text-[#080b0f] drop-shadow-sm">
-                            Default
-                          </span>
-                          {draftThemeColor == null ? (
-                            <Check
-                              className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-[#080b0f]"
-                              aria-hidden
-                            />
-                          ) : null}
-                        </button>
-                        {POOL_THEME_COLOR_PRESETS.map((preset) => {
-                          const selected =
-                            normalizePoolThemeColor(draftThemeColor) ===
-                            preset.hex
-                          return (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              onClick={() => setDraftThemeColor(preset.hex)}
-                              className={cn(
-                                'relative h-11 w-11 overflow-hidden rounded-xl border transition-all',
-                                FOCUS_RING_CLASS,
-                                selected
-                                  ? 'scale-[1.03] border-2 border-primary shadow-[0_0_18px_color-mix(in_srgb,var(--primary)_40%,transparent)]'
-                                  : 'border border-white/15 hover:scale-[1.03]',
-                              )}
-                              style={{
-                                background: `linear-gradient(160deg, ${preset.hex} 0%, color-mix(in srgb, ${preset.hex} 55%, #111) 100%)`,
-                              }}
-                              title={preset.label}
-                              aria-label={preset.label}
-                            >
-                              {selected ? (
-                                <Check
-                                  className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow"
-                                  aria-hidden
-                                />
-                              ) : null}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
             </>
           )}
@@ -1644,6 +1376,54 @@ export default function CreatePoolPage() {
                 Review your choices and confirm scoring rules before creating
                 your pool.
               </p>
+              <div className="mt-6 space-y-3">
+                <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
+                  Choose your plan
+                </span>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlan('basic')}
+                    className={cn(
+                      'rounded-xl border px-4 py-3 text-left transition-colors',
+                      FOCUS_RING_CLASS,
+                      selectedPlan === 'basic'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                    )}
+                    aria-pressed={selectedPlan === 'basic'}
+                  >
+                    <p className="font-semibold text-[#f0f4f8]">Basic Pool</p>
+                    <p className="mt-1 text-xs font-medium text-primary">Free</p>
+                    <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
+                      Everything you need to run a normal pool — invites,
+                      predictions, leaderboard, and chat.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlan('custom')}
+                    className={cn(
+                      'rounded-xl border px-4 py-3 text-left transition-colors',
+                      FOCUS_RING_CLASS,
+                      selectedPlan === 'custom'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                    )}
+                    aria-pressed={selectedPlan === 'custom'}
+                  >
+                    <p className="font-semibold text-[#f0f4f8]">Custom Pool</p>
+                    <p className="mt-1 text-xs font-medium text-primary">
+                      $9.99 one-time. No subscription.
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
+                      Logo, colors, custom scoring, announcements, polls,
+                      co-commissioners, advanced moderation, and exports.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
 
               {renderCreatePoolReviewSummary(true)}
 

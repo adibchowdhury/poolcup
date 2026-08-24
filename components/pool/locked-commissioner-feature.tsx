@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import { Lock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Lock, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { startCustomPoolCheckout } from '@/src/lib/custom-pool-checkout-client'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { capturePostHog, paywallFeatureKey } from '@/src/lib/posthog-client'
 
@@ -18,7 +19,7 @@ type LockedCommissionerFeatureProps = {
 }
 
 /**
- * Locked Commissioner-only feature card for free-tier pools.
+ * Locked Custom Pool feature card for basic pools.
  * Shown only inside admin settings (owner or co-commissioner).
  */
 export function LockedCommissionerFeature({
@@ -28,11 +29,30 @@ export function LockedCommissionerFeature({
   poolId,
   className,
 }: LockedCommissionerFeatureProps) {
+  const [busy, setBusy] = useState(false)
+
   useEffect(() => {
     capturePostHog('paywall_viewed', {
       feature: paywallFeatureKey('commissioner'),
+      pool_id: poolId ?? null,
     })
   }, [title, poolId, isOwner])
+
+  async function handleUpgrade() {
+    if (!poolId || busy) return
+    setBusy(true)
+    capturePostHog('upgrade_from_pool_prompt_clicked', {
+      feature: paywallFeatureKey('commissioner'),
+      pool_id: poolId,
+    })
+    const result = await startCustomPoolCheckout(poolId)
+    if (!result.ok) {
+      toast.error(result.error)
+      setBusy(false)
+      return
+    }
+    window.location.href = result.url
+  }
 
   return (
     <div
@@ -41,7 +61,7 @@ export function LockedCommissionerFeature({
         className,
       )}
       role="group"
-      aria-label={`${title} — Commissioner feature, locked`}
+      aria-label={`${title} — Custom Pool feature, locked`}
     >
       <div className="flex items-start gap-3">
         <span
@@ -53,35 +73,43 @@ export function LockedCommissionerFeature({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-foreground">{title}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Commissioner feature
+            Custom Pool feature
             {description ? ` — ${description}` : null}
           </p>
           {isOwner ? (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-muted-foreground">
-                Upgrade to Commissioner to unlock these tools.
+                Upgrade this pool — $9.99 one-time. No subscription.
               </p>
-              <Button
-                asChild
-                size="sm"
-                className={cn('h-9', FOCUS_VISIBLE_RING)}
-              >
-                <Link
-                  href="/settings/billing"
-                  onClick={() => {
-                    capturePostHog('upgrade_from_pool_prompt_clicked', {
-                      feature: paywallFeatureKey('commissioner'),
-                      pool_id: poolId ?? null,
-                    })
-                  }}
+              {poolId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className={cn('h-9', FOCUS_VISIBLE_RING)}
+                  disabled={busy}
+                  onClick={() => void handleUpgrade()}
                 >
-                  Upgrade to Commissioner
-                </Link>
-              </Button>
+                  {busy ? (
+                    <>
+                      <Loader2
+                        className="mr-2 h-4 w-4 animate-spin"
+                        aria-hidden
+                      />
+                      Starting checkout…
+                    </>
+                  ) : (
+                    'Upgrade this pool — $9.99 one-time'
+                  )}
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Included with Custom Pool after you create this pool.
+                </p>
+              )}
             </div>
           ) : (
             <p className="mt-3 text-xs text-muted-foreground">
-              These tools require the pool owner to have Commissioner.
+              These tools require the pool owner to upgrade to Custom Pool.
             </p>
           )}
         </div>

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-/** True when the pool owner's tier unlocks Commissioner tools. */
+/** True when the pool has Custom Pool tools (pools.plan = 'custom'). */
 export async function fetchPoolHasCommissionerTools(
   admin: SupabaseClient,
   poolId: string,
@@ -15,7 +15,7 @@ export async function fetchPoolHasCommissionerTools(
   return Boolean(data)
 }
 
-/** True when the user is a pool admin AND the pool has Commissioner tools. */
+/** True when the user is a pool admin AND the pool has Custom Pool tools. */
 export async function fetchCanUseCommissionerTools(
   admin: SupabaseClient,
   poolId: string,
@@ -48,7 +48,7 @@ export function isCommissionerTierRequiredError(
 }
 
 export const COMMISSIONER_TIER_REQUIRED_TOAST =
-  'This is a Commissioner feature'
+  'This is a Custom Pool feature'
 
 /** Normalize API/RPC errors for UI toasts. */
 export function messageForCommissionerGate(

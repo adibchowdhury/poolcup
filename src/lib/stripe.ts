@@ -38,3 +38,12 @@ export function resolveBillingPriceId(plan: BillingPlan): string {
 export function isBillingPlan(value: unknown): value is BillingPlan {
   return value === 'pro' || value === 'commissioner'
 }
+
+/** One-time Custom Pool upgrade price ($9.99). */
+export function resolveCustomPoolPriceId(): string {
+  const priceId = process.env.STRIPE_PRICE_CUSTOM_POOL?.trim()
+  if (!priceId) {
+    throw new Error('STRIPE_PRICE_CUSTOM_POOL is not configured')
+  }
+  return priceId
+}

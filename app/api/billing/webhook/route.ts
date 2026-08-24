@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { getStripe } from '@/src/lib/stripe'
+import { getStripe, resolveCustomPoolPriceId } from '@/src/lib/stripe'
 import {
   claimStripeEvent,
   customerIdFrom,
@@ -18,6 +18,14 @@ import {
   UnresolvableBillingUserError,
 } from '@/src/lib/stripe-billing-webhook'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
+
+function paymentIntentIdFrom(
+  paymentIntent: string | Stripe.PaymentIntent | null | undefined,
+): string | null {
+  if (!paymentIntent) return null
+  if (typeof paymentIntent === 'string') return paymentIntent
+  return paymentIntent.id ?? null
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -148,6 +156,12 @@ async function handleCheckoutSessionCompleted(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   session: Stripe.Checkout.Session,
 ): Promise<void> {
+  const poolId = session.metadata?.pool_id?.trim()
+  if (session.mode === 'payment' && poolId) {
+    await handleCustomPoolCheckoutCompleted(admin, session, poolId)
+    return
+  }
+
   if (session.mode !== 'subscription') {
     // Ignore one-time / donate sessions on this endpoint if misrouted.
     console.log('billing/webhook: ignoring non-subscription checkout session', {
@@ -187,6 +201,127 @@ async function handleCheckoutSessionCompleted(
     stripeSubscriptionId: subscription.id,
     currentPeriodEnd: subscriptionPeriodEndIso(subscription),
   })
+}
+
+
+/**
+ * One-time Custom Pool purchase: ledger insert + pools.plan = 'custom'.
+ * If the pool was deleted before delivery: log and ack (no throw / no retry).
+ */
+async function handleCustomPoolCheckoutCompleted(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  session: Stripe.Checkout.Session,
+  poolId: string,
+): Promise<void> {
+  if (session.payment_status !== 'paid') {
+    console.warn('billing/webhook: custom pool session not paid — skipping', {
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+      poolId,
+    })
+    return
+  }
+
+  const buyerUserId = session.metadata?.buyer_user_id?.trim()
+  if (!buyerUserId) {
+    throw new Error(
+      `custom pool checkout missing buyer_user_id (session ${session.id})`,
+    )
+  }
+
+  let expectedAmount: number
+  let expectedCurrency: string
+  try {
+    const priceId = resolveCustomPoolPriceId()
+    const price = await getStripe().prices.retrieve(priceId)
+    if (typeof price.unit_amount !== 'number') {
+      throw new Error('STRIPE_PRICE_CUSTOM_POOL has no unit_amount')
+    }
+    expectedAmount = price.unit_amount
+    expectedCurrency = (price.currency || 'usd').toLowerCase()
+  } catch (err) {
+    throw new Error(
+      `custom pool price lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
+
+  const amountTotal = session.amount_total
+  const currency = (session.currency || '').toLowerCase()
+  if (
+    amountTotal == null ||
+    amountTotal !== expectedAmount ||
+    currency !== expectedCurrency
+  ) {
+    throw new Error(
+      `custom pool amount mismatch (session ${session.id}): got ${amountTotal} ${currency}, expected ${expectedAmount} ${expectedCurrency}`,
+    )
+  }
+
+  const { data: pool, error: poolError } = await admin
+    .from('pools')
+    .select('id, plan')
+    .eq('id', poolId)
+    .maybeSingle()
+
+  if (poolError) {
+    throw new Error(`custom pool load failed: ${poolError.message}`)
+  }
+
+  if (!pool) {
+    console.warn(
+      'billing/webhook: custom pool purchase for deleted pool — acknowledging',
+      { sessionId: session.id, poolId, buyerUserId },
+    )
+    return
+  }
+
+  const { error: insertError } = await admin.from('pool_plan_purchases').insert({
+    pool_id: poolId,
+    buyer_user_id: buyerUserId,
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id: paymentIntentIdFrom(session.payment_intent),
+    amount_cents: amountTotal,
+    currency,
+  })
+
+  if (insertError) {
+    if (insertError.code === '23505') {
+      console.log('billing/webhook: custom pool purchase already recorded', {
+        sessionId: session.id,
+        poolId,
+        message: insertError.message,
+      })
+    } else if (
+      insertError.code === '23503' ||
+      /foreign key|violates foreign key/i.test(insertError.message)
+    ) {
+      console.warn(
+        'billing/webhook: custom pool FK miss (pool deleted mid-flight) — acknowledging',
+        { sessionId: session.id, poolId, message: insertError.message },
+      )
+      return
+    } else {
+      throw new Error(`pool_plan_purchases insert: ${insertError.message}`)
+    }
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from('pools')
+    .update({ plan: 'custom' })
+    .eq('id', poolId)
+    .select('id')
+    .maybeSingle()
+
+  if (updateError) {
+    throw new Error(`pools.plan update failed: ${updateError.message}`)
+  }
+
+  if (!updated) {
+    console.warn(
+      'billing/webhook: custom pool plan update matched 0 rows (deleted?) — acknowledging',
+      { sessionId: session.id, poolId },
+    )
+  }
 }
 
 async function handleSubscriptionUpdated(
