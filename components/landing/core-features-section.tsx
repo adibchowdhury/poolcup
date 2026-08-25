@@ -60,12 +60,12 @@ const CORE_FEATURES: CoreFeature[] = [
     category: 'Pool Customization & Control',
     title: 'Your pool, your rules.',
     description:
-      'Name your pool, choose your colors, and set your own scoring rules. As the host, you decide how your pool looks and plays — and keep everyone in the loop with announcements.',
+      'Create unlimited Basic pools free. Upgrade any pool to Custom Pool ($9.99 one-time) for logo & colors, custom scoring, announcements, polls, and commissioner tools — members always play free.',
     bullets: [
-      'Custom pool name & colors',
-      'Set your own scoring rules',
-      'Host controls & member management',
-      'Announcements to keep your pool in the loop',
+      'Unlimited Basic pools — free',
+      'Custom Pool: logo, colors & scoring',
+      'Announcements, polls & co-commissioners',
+      'Moderation, missing picks & exports',
     ],
     cardGlow: '#8B5CF6',
     cardGlowRgb: '139,92,246',

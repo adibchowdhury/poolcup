@@ -72,7 +72,7 @@ export async function patchPoolSettings(
     return {
       success: false,
       error: raw.includes('commissioner_tier_required')
-        ? 'This is a Commissioner feature'
+        ? 'This is a Custom Pool feature'
         : raw,
       commissionerTierRequired: raw.includes('commissioner_tier_required'),
     }

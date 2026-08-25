@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Historical Performance | PoolCup',
-  description: 'Pro season and year performance history across PoolCup.',
+  description: 'Season and year performance history across PoolCup.',
   robots: { index: false, follow: false },
 }
 

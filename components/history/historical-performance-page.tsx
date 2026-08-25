@@ -283,10 +283,7 @@ export function HistoricalPerformancePage({
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Pro
-          </p>
-          <h1 className="mt-1 flex items-center gap-2 font-display text-3xl tracking-wide text-foreground sm:text-4xl">
+          <h1 className="flex items-center gap-2 font-display text-3xl tracking-wide text-foreground sm:text-4xl">
             <CalendarRange
               className="h-7 w-7 shrink-0 text-muted-foreground"
               aria-hidden

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Analytics | PoolCup',
   description:
-    'Pro analytics for current form, AI insights, and historical season performance.',
+    'Analytics for current form and historical season performance.',
   robots: { index: false, follow: false },
 }
 

@@ -67,17 +67,15 @@ export default function TermsPage() {
               4. Pools
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              Creating an account and joining pools on Free does not require a
-              fee. Optional paid subscriptions (PoolCup Pro and Pool
-              Commissioner) may unlock additional features. Paid plans are billed
-              through Stripe; manage or cancel from{' '}
-              <span>pool settings</span>{' '}
-              in your account. See{' '}
+              Creating an account, joining pools, and creating Basic pools does
+              not require a fee. Pool owners may optionally purchase a one-time
+              Custom Pool upgrade ($9.99 per pool) for additional commissioner
+              tools on that pool. Purchases are processed through Stripe. See{' '}
               <a
-                href="#subscriptions-refunds"
+                href="#payments-refunds"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                Subscriptions &amp; Refunds
+                Payments &amp; Refunds
               </a>{' '}
               below.
             </p>
@@ -89,21 +87,23 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section id="subscriptions-refunds" className="scroll-mt-24">
+          <section id="payments-refunds" className="scroll-mt-24">
+            {/* Legacy bookmark: /terms#subscriptions-refunds */}
+            <span id="subscriptions-refunds" className="sr-only" aria-hidden />
             <h2 className="font-display text-2xl tracking-wide">
-              5. Subscriptions &amp; Refunds
+              5. Payments &amp; Refunds
             </h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              PoolCup Pro is $4.99 per month and Pool Commissioner is $9.99 per
-              month. Subscriptions are billed through Stripe. If an annual option
-              is offered at checkout, that plan is billed in advance for the
-              selected term.
+              Playing PoolCup is free. The optional Custom Pool upgrade is a
+              one-time purchase of $9.99 per pool, billed through Stripe. It is
+              not a subscription and does not renew. Members of a pool never need
+              to pay to play.
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              You can cancel anytime via Manage Billing in your account (the
-              Stripe billing portal). After you cancel, you keep access until the
-              end of the current billing period. We do not issue prorated refunds
-              for unused time in a billing period after cancellation.
+              Because Custom Pool is a one-time digital purchase that unlocks
+              tools on a specific pool, purchases are generally non-refundable
+              once completed, except where required by law or when we confirm a
+              billing error.
             </p>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               If you were billed in error, or you suspect an unauthorized charge,

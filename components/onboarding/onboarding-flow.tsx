@@ -374,7 +374,7 @@ const INFO_SLIDES: InfoSlide[] = [
   {
     id: 'your_pool',
     title: 'Your Pool. Your Rules.',
-    body: 'Commissioners run the show — scoring style, announcements, polls, and tools to keep your league humming the way your group wants.',
+    body: 'Run the pool your way. Basic pools are free; Custom Pool ($9.99 one-time) unlocks logo & colors, custom scoring, announcements, polls, and commissioner tools — members always play free.',
   },
   {
     id: 'sports_identity',

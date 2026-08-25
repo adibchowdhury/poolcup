@@ -112,7 +112,7 @@ export type PoolSettingsTabProps = {
   isAdmin?: boolean
   /** Pool owner (creator_id). */
   isOwner?: boolean
-  /** Owner has Commissioner tier — unlocks gated tools for this pool. */
+  /** Pool has Custom Pool tools unlocked (pools.plan = custom). */
   poolHasCommissionerTools?: boolean
   /** userIds currently in pool_admins (co-commissioners). */
   coAdminUserIds?: string[]
@@ -243,7 +243,7 @@ export function PoolSettingsSectionContent({
       : Boolean(poolCreatorUserId && currentUserId === poolCreatorUserId)
   const isAdmin =
     typeof isAdminProp === 'boolean' ? isAdminProp : isOwner
-  /** Gated Commissioner tools unlocked when the pool owner has Commissioner. */
+  /** Gated Custom Pool tools unlocked when the pool is upgraded. */
   const toolsUnlocked = Boolean(poolHasCommissionerTools)
   /** @deprecated alias — prefer isOwner */
   const isCreator = isOwner

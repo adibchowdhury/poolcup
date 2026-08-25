@@ -35,10 +35,10 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong className="text-foreground">Billing-related data</strong>{' '}
-                — if you subscribe to a paid plan (for example, Pool
-                Commissioner), we process payment and subscription details
-                through our payment provider (Stripe). We store subscription
-                status and related identifiers needed to provide paid features.
+                — if you purchase an optional one-time Custom Pool upgrade, we
+                process payment details through our payment provider (Stripe).
+                We store purchase-related identifiers needed to unlock tools on
+                that pool.
               </li>
               <li>
                 <strong className="text-foreground">Communications</strong> — if you
@@ -81,7 +81,8 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong className="text-foreground">Stripe</strong> — payment
-                processing for optional paid subscriptions.
+                processing for optional one-time Custom Pool purchases and
+                donations.
               </li>
             </ul>
             <p className="mt-3 leading-relaxed text-muted-foreground">

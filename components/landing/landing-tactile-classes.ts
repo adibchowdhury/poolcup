@@ -19,7 +19,7 @@ export const landingTactilePrimaryClass = cn(
   'text-[#080b0f]',
 )
 
-/** Free tier / green outline pricing CTA. */
+/** Free / green outline pricing CTA. */
 export const landingTactileOutlineGreenClass = cn(
   'ui-tactile-btn ui-tactile-btn--outline',
   'border border-[#00e676]/40 bg-transparent text-[#00e676]',
@@ -27,7 +27,7 @@ export const landingTactileOutlineGreenClass = cn(
   'active:bg-[#00e676]/10',
 )
 
-/** Commissioner tier gold pricing CTA. */
+/** Custom Pool gold pricing CTA. */
 export const landingTactileCommissionerClass = cn(
   'ui-tactile-btn',
   '[--tactile-btn-edge:color-mix(in_srgb,#ffc107_45%,#000000)]',
