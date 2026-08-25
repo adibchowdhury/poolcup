@@ -99,6 +99,24 @@ const CREATE_POOL_STEPS = [
 ] as const
 
 const SUCCESS_CHROME_TITLE = 'Pool Created 🎉'
+const REDDIT_COMMUNITY_URL = 'https://www.reddit.com/r/PoolCupCommunity/'
+
+/** Compact Reddit glyph for the congrats secondary link. */
+function RedditMarkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={14}
+      height={14}
+      fill="currentColor"
+      aria-hidden
+      className={className}
+    >
+      <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.028l2.907.617a1.214 1.214 0 0 1 1.108-.701zM9.607 12c-.534 0-.969.434-.969.969 0 .535.435.969.969.969.535 0 .969-.434.969-.969 0-.535-.434-.969-.969-.969zm4.786 0c-.535 0-.969.434-.969.969 0 .535.434.969.969.969.534 0 .969-.434.969-.969 0-.535-.435-.969-.969-.969zm-4.786 2.378a.715.715 0 0 0 0 1.428c.957 0 1.843.34 2.536.907a.715.715 0 0 0 .995 0c.693-.567 1.579-.907 2.536-.907a.715.715 0 0 0 0-1.428c-1.254 0-2.397.465-3.286 1.21-.889-.745-2.032-1.21-3.286-1.21z" />
+    </svg>
+  )
+}
 
 /** Progress indicator: five wizard steps only (success is a terminal page). */
 const STEPPER_STEP_COUNT = CREATE_POOL_STEPS.length
@@ -1921,101 +1939,262 @@ function CreatePoolPageInner() {
 
           {panelStep === SUCCESS_STEP && createdPool && (
             <>
-              <p className="text-sm text-[#5a7080]">
-                Pools are no fun solo. Invite people to play against you.
-              </p>
+              {/* —— Mobile (< lg): current stacked congrats — do not change —— */}
+              <div className="lg:hidden">
+                <p className="text-sm text-[#5a7080]">
+                  Pools are no fun solo. Invite people to play against you.
+                </p>
 
-              <div className="mt-6 flex items-center justify-center gap-2 text-primary">
-                <Zap className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="text-sm font-semibold">+5 points earned!</span>
-              </div>
-
-              <div className="mt-8 flex flex-col items-center">
-                <p className="text-xs text-[#5a7080]">Scan to join</p>
-                <div className="mt-2 rounded-xl bg-white p-3">
-                  <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
+                <div className="mt-4 flex items-center justify-center gap-2 text-primary">
+                  <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="text-sm font-semibold">+5 points earned!</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={downloadInviteQr}
-                  className={cn(
-                    'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
-                    FOCUS_RING_CLASS,
-                  )}
-                >
-                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  Download QR
-                </button>
-                <div className="sr-only" aria-hidden>
-                  <QRCodeCanvas
-                    ref={inviteQrCanvasRef}
+
+                <div className="mt-5 flex flex-col items-center">
+                  <p className="text-xs text-[#5a7080]">Scan to join</p>
+                  <div className="mt-2 rounded-xl bg-white p-3">
+                    <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadInviteQr}
+                    className={cn(
+                      'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
+                      FOCUS_RING_CLASS,
+                    )}
+                  >
+                    <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Download QR
+                  </button>
+                  <div className="sr-only" aria-hidden>
+                    <QRCodeCanvas
+                      ref={inviteQrCanvasRef}
+                      value={inviteLink}
+                      {...INVITE_QR_PROPS}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <label
+                    htmlFor="invite-link"
+                    className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
+                  >
+                    Invite link
+                  </label>
+                  <input
+                    id="invite-link"
+                    type="text"
+                    readOnly
                     value={inviteLink}
-                    {...INVITE_QR_PROPS}
+                    onFocus={(e) => e.target.select()}
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => void shareInvite()}
+                  className={cn('mt-6', PRIMARY_CTA_CLASS)}
+                >
+                  Share invite
+                </button>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  <button
+                    type="button"
+                    onClick={shareTelegram}
+                    className={SHARE_BUTTON_CLASS}
+                  >
+                    Telegram
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareFacebook}
+                    className={SHARE_BUTTON_CLASS}
+                  >
+                    Facebook
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareSms}
+                    className={SHARE_BUTTON_CLASS}
+                  >
+                    SMS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareEmail}
+                    className={SHARE_BUTTON_CLASS}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyInviteLink}
+                    className={SHARE_BUTTON_CLASS}
+                  >
+                    {linkCopied ? 'Copied!' : 'Copy link'}
+                  </button>
+                </div>
+
+                <a
+                  href={REDDIT_COMMUNITY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    capturePostHog('reddit_cta_clicked', {
+                      source: 'pool_created',
+                    })
+                  }}
+                  className={cn(
+                    'mt-4 inline-flex max-w-full items-center gap-1.5 text-left text-xs leading-snug text-[#5a7080] transition-colors hover:text-[#f0f4f8]',
+                    FOCUS_RING_CLASS,
+                    'rounded-md',
+                  )}
+                >
+                  <RedditMarkIcon className="h-3.5 w-3.5 shrink-0 text-[#FF4500]" />
+                  <span>
+                    You&apos;re a commissioner now —{' '}
+                    <span className="font-semibold text-[#FF4500]">
+                      join r/PoolCupCommunity →
+                    </span>
+                  </span>
+                </a>
               </div>
 
-              <div className="mt-8">
-                <label
-                  htmlFor="invite-link"
-                  className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
-                >
-                  Invite link
-                </label>
-                <input
-                  id="invite-link"
-                  type="text"
-                  readOnly
-                  value={inviteLink}
-                  onFocus={(e) => e.target.select()}
-                  className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                />
-              </div>
+              {/* —— Desktop (lg+): composed two-column congrats —— */}
+              <div className="hidden lg:block">
+                <div className="text-center">
+                  <h2 className="font-display text-4xl tracking-wide text-[#f0f4f8]">
+                    Pool Created 🎉
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-[#5a7080]">
+                    Pools are no fun solo. Invite people to play against you.
+                  </p>
+                  <div className="mt-3 flex items-center justify-center gap-2 text-primary">
+                    <Zap className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="text-sm font-semibold">
+                      +5 points earned!
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => void shareInvite()}
-                className={cn('mt-6', PRIMARY_CTA_CLASS)}
-              >
-                Share invite
-              </button>
+                <div className="mt-6 grid grid-cols-2 items-start gap-6">
+                  {/* Left — QR + invite link */}
+                  <div className="flex flex-col items-center">
+                    <p className="text-xs text-[#5a7080]">Scan to join</p>
+                    <div className="mt-2 rounded-xl bg-white p-3">
+                      <QRCodeSVG value={inviteLink} {...INVITE_QR_PROPS} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={downloadInviteQr}
+                      className={cn(
+                        'mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
+                        FOCUS_RING_CLASS,
+                      )}
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Download QR
+                    </button>
 
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                <button
-                  type="button"
-                  onClick={shareTelegram}
-                  className={SHARE_BUTTON_CLASS}
+                    <div className="mt-4 w-full">
+                      <label
+                        htmlFor="invite-link-desktop"
+                        className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
+                      >
+                        Invite link
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="invite-link-desktop"
+                          type="text"
+                          readOnly
+                          value={inviteLink}
+                          onFocus={(e) => e.target.select()}
+                          className="min-w-0 flex-1 rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-3 py-2.5 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={copyInviteLink}
+                          className={cn(
+                            'shrink-0 rounded-lg border border-[#1e2d3d] px-3 py-2.5 text-xs font-semibold text-[#e8eef4] transition-colors hover:border-primary/50 hover:text-primary',
+                            FOCUS_RING_CLASS,
+                          )}
+                        >
+                          {linkCopied ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right — Share primary + Reddit secondary card */}
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => void shareInvite()}
+                      className={PRIMARY_CTA_CLASS}
+                    >
+                      Share invite
+                    </button>
+                    <p className="mt-1.5 text-center text-[11px] text-[#5a7080]">
+                      Uses your device share sheet, or copies the link
+                    </p>
+
+                    <div className="mt-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/80 p-3.5">
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FF4500]/15 text-[#FF4500]">
+                          <RedditMarkIcon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#f0f4f8]">
+                            You&apos;re a commissioner now
+                          </p>
+                          <p className="mt-1 text-xs leading-snug text-[#5a7080]">
+                            Swap scoring ideas, show off your pool, and vote on
+                            what we build next.
+                          </p>
+                          <a
+                            href={REDDIT_COMMUNITY_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
+                              capturePostHog('reddit_cta_clicked', {
+                                source: 'pool_created',
+                              })
+                            }}
+                            className={cn(
+                              'mt-2 inline-flex text-sm font-semibold text-[#FF4500] transition-colors hover:text-[#E03E00]',
+                              FOCUS_RING_CLASS,
+                              'rounded-md',
+                            )}
+                          >
+                            Join the community →
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Strong final CTA under the two columns */}
+                <Button
+                  asChild
+                  size="lg"
+                  className={cn(CREATE_POOL_BTN_PRIMARY_CLASS, 'mt-6')}
                 >
-                  Telegram
-                </button>
-                <button
-                  type="button"
-                  onClick={shareFacebook}
-                  className={SHARE_BUTTON_CLASS}
-                >
-                  Facebook
-                </button>
-                <button
-                  type="button"
-                  onClick={shareSms}
-                  className={SHARE_BUTTON_CLASS}
-                >
-                  SMS
-                </button>
-                <button
-                  type="button"
-                  onClick={shareEmail}
-                  className={SHARE_BUTTON_CLASS}
-                >
-                  Email
-                </button>
-                <button
-                  type="button"
-                  onClick={copyInviteLink}
-                  className={SHARE_BUTTON_CLASS}
-                >
-                  {linkCopied ? 'Copied!' : 'Copy link'}
-                </button>
+                  <Link
+                    ref={(el) => {
+                      if (el && el.getClientRects().length > 0) {
+                        goToPoolRef.current = el
+                      }
+                    }}
+                    href={`/pool/${createdPool.inviteCode}`}
+                  >
+                    Open Pool
+                  </Link>
+                </Button>
               </div>
             </>
           )}
@@ -2083,7 +2262,12 @@ function CreatePoolPageInner() {
                     Exit
                   </button>
                 )}
-                <p className="pointer-events-none absolute inset-x-0 text-center font-display text-base tracking-wide text-[#f0f4f8] sm:text-lg">
+                <p
+                  className={cn(
+                    'pointer-events-none absolute inset-x-0 text-center font-display text-base tracking-wide text-[#f0f4f8] sm:text-lg',
+                    isSuccessPage && 'lg:hidden',
+                  )}
+                >
                   {chromeTitle}
                 </p>
                 <span className="relative z-10 ml-auto w-[4.25rem] shrink-0" aria-hidden />
@@ -2260,10 +2444,14 @@ function CreatePoolPageInner() {
               <Button
                 asChild
                 size="lg"
-                className={CREATE_POOL_BTN_PRIMARY_CLASS}
+                className={cn(CREATE_POOL_BTN_PRIMARY_CLASS, 'lg:hidden')}
               >
                 <Link
-                  ref={goToPoolRef}
+                  ref={(el) => {
+                    if (el && el.getClientRects().length > 0) {
+                      goToPoolRef.current = el
+                    }
+                  }}
                   href={`/pool/${createdPool.inviteCode}`}
                 >
                   Open Pool
