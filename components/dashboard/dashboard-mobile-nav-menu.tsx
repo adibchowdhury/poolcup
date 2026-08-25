@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CircleHelp, CreditCard, History, BarChart3, Mail, Menu, Settings } from 'lucide-react'
+import { CircleHelp, History, BarChart3, Mail, Menu, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardSignOut } from '@/components/dashboard-sign-out'
 import { SupportUsButton } from '@/components/support-us-button'
@@ -154,17 +154,6 @@ export function DashboardMobileNavMenu({
           >
             <Settings className="h-4 w-4 shrink-0" aria-hidden />
             Settings
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            role="menuitem"
-            className="w-full justify-start gap-2 text-foreground hover:bg-muted"
-          >
-            <Link href="/settings/billing" onClick={closeMenu}>
-              <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
-              Billing
-            </Link>
           </Button>
           <Button
             asChild

@@ -1,32 +1,21 @@
-import type { BillingTier } from '@/src/lib/billing-types'
-
-/** @deprecated Phase 1: pool creation is unlimited for all tiers. Kept for callers. */
+/** @deprecated Phase 1: pool creation is unlimited. Kept for callers / soft-fail messaging. */
 export const FREE_TIER_OWNED_POOL_LIMIT = 3
 
 export type PoolCreationQuota = {
-  tier: BillingTier
   ownedPoolCount: number
-  /** null = unlimited (Phase 1: always null) */
+  /** null = unlimited */
   limit: number | null
   canCreateMore: boolean
 }
 
-/** @deprecated Phase 1: always unlimited. */
-export function poolCreationLimitForTier(_tier: BillingTier): number | null {
-  return null
-}
-
 /**
- * Phase 1: creation is unlimited for every tier.
- * `ownedPoolCount` + `tier` remain informational (create flow still uses tier
- * for Commissioner branding gates).
+ * Phase 1+: creation is unlimited.
+ * Owned count remains informational.
  */
 export function buildPoolCreationQuota(
-  tier: BillingTier,
   ownedPoolCount: number,
 ): PoolCreationQuota {
   return {
-    tier,
     ownedPoolCount: Math.max(0, ownedPoolCount),
     limit: null,
     canCreateMore: true,

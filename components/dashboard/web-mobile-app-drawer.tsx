@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  CreditCard,
   Flag,
   Heart,
   HelpCircle,
@@ -116,14 +115,6 @@ export function WebMobileAppDrawer({
       label: 'Settings',
       icon: Settings,
       action: onOpenSettings,
-    },
-    {
-      id: 'billing',
-      label: 'Billing',
-      icon: CreditCard,
-      action: () => {
-        router.push('/settings/billing')
-      },
     },
     {
       id: 'help',

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import type { BillingTier } from '@/src/lib/billing-types'
 import { buildPoolCreationQuota } from '@/src/lib/pool-creation-limit'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
@@ -9,8 +8,7 @@ export const runtime = 'nodejs'
 
 /**
  * Owned-pool creation quota for the authed user.
- * Phase 1: always `canCreateMore: true` / `limit: null` (unlimited).
- * Still returns `tier` + owned count for informational / branding gates.
+ * Creation is unlimited; returns owned count only (no users.tier).
  */
 export async function GET() {
   const supabase = await createServerSupabaseClient()
@@ -23,22 +21,11 @@ export async function GET() {
 
   const admin = createAdminSupabaseClient()
 
-  const [{ data: userRow, error: userError }, { count, error: countError }] =
-    await Promise.all([
-      admin.from('users').select('tier').eq('id', user.id).maybeSingle(),
-      admin
-        .from('pools')
-        .select('id', { count: 'exact', head: true })
-        .eq('creator_id', user.id),
-    ])
+  const { count, error: countError } = await admin
+    .from('pools')
+    .select('id', { count: 'exact', head: true })
+    .eq('creator_id', user.id)
 
-  if (userError) {
-    console.error('creation-quota: load tier failed', {
-      userId: user.id,
-      error: userError.message,
-    })
-    return NextResponse.json({ error: 'load_failed' }, { status: 500 })
-  }
   if (countError) {
     console.error('creation-quota: count pools failed', {
       userId: user.id,
@@ -47,11 +34,7 @@ export async function GET() {
     return NextResponse.json({ error: 'load_failed' }, { status: 500 })
   }
 
-  const rawTier = typeof userRow?.tier === 'string' ? userRow.tier.trim() : 'free'
-  const tier: BillingTier =
-    rawTier === 'pro' || rawTier === 'commissioner' ? rawTier : 'free'
-
-  const quota = buildPoolCreationQuota(tier, count ?? 0)
+  const quota = buildPoolCreationQuota(count ?? 0)
 
   return NextResponse.json({
     ...quota,

@@ -71,12 +71,7 @@ export default function TermsPage() {
               fee. Optional paid subscriptions (PoolCup Pro and Pool
               Commissioner) may unlock additional features. Paid plans are billed
               through Stripe; manage or cancel from{' '}
-              <Link
-                href="/settings/billing"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                Billing
-              </Link>{' '}
+              <span>pool settings</span>{' '}
               in your account. See{' '}
               <a
                 href="#subscriptions-refunds"

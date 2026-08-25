@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CircleHelp,
   Compass,
-  CreditCard,
   FileText,
   Heart,
   Home,
@@ -355,14 +354,13 @@ export function HubDesktopSidebar({
   const activeNav = resolveHubDesktopNavValue(pathname, searchParams.get('tab'))
   usePrefetchHubRoutes()
 
-  const isBillingActive = pathname === '/settings/billing'
-  const isMoreChildActive =
+    const isMoreChildActive =
     pathname === '/contact' ||
     pathname === '/terms' ||
     pathname === '/privacy' ||
     (pathname === '/dashboard' && searchParams.get('tab') === 'how-it-works')
 
-  const [accountOpen, setAccountOpen] = useState(isBillingActive)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(isMoreChildActive)
 
   function onDashboardTabClick(
@@ -444,14 +442,6 @@ export function HubDesktopSidebar({
                 label="Settings"
                 icon={Settings}
                 onClick={onOpenSettings}
-                nested
-              />
-              <SidebarNavLink
-                href="/settings/billing"
-                label="Billing"
-                icon={CreditCard}
-                isActive={isBillingActive}
-                prefetch
                 nested
               />
             </SidebarNavGroup>

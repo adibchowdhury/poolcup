@@ -4,7 +4,6 @@ import {
   Calendar,
   CircleHelp,
   Compass,
-  CreditCard,
   FileText,
   Home,
   Mail,
@@ -53,10 +52,6 @@ export function resolveHubContentHeader(
   const nav = resolveHubDesktopNavValue(pathname, tabParam)
   if (nav && HUB_NAV_CONTENT_HEADERS[nav]) {
     return HUB_NAV_CONTENT_HEADERS[nav]
-  }
-
-  if (pathname === '/settings/billing') {
-    return { title: 'Billing', icon: CreditCard }
   }
   if (pathname === '/settings/notifications') {
     return { title: 'Notifications', icon: Bell }

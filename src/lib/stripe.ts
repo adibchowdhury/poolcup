@@ -2,7 +2,7 @@ import 'server-only'
 import Stripe from 'stripe'
 
 /**
- * Shared server-side Stripe client for subscription billing.
+ * Shared server-side Stripe client for Custom Pool Checkout (and related billing).
  * Do not use for the donate Payment Link flow (`stripe-donate-url`).
  */
 let stripeSingleton: Stripe | null = null
@@ -21,22 +21,6 @@ export function getStripe(): Stripe {
     typescript: true,
   })
   return stripeSingleton
-}
-
-export type BillingPlan = 'pro' | 'commissioner'
-
-export function resolveBillingPriceId(plan: BillingPlan): string {
-  const envKey =
-    plan === 'pro' ? 'STRIPE_PRICE_PRO' : 'STRIPE_PRICE_COMMISSIONER'
-  const priceId = process.env[envKey]?.trim()
-  if (!priceId) {
-    throw new Error(`${envKey} is not configured`)
-  }
-  return priceId
-}
-
-export function isBillingPlan(value: unknown): value is BillingPlan {
-  return value === 'pro' || value === 'commissioner'
 }
 
 /** One-time Custom Pool upgrade price ($9.99). */

@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Check, Loader2, Minus } from 'lucide-react'
 import {
   Accordion,
@@ -17,11 +16,6 @@ import {
   landingTactilePointerDown,
   landingTactilePrimaryClass,
 } from '@/components/landing/landing-tactile-classes'
-import { useAuth } from '@/src/lib/auth-context'
-import {
-  startBillingCheckout,
-  type BillingPlan,
-} from '@/src/lib/billing-checkout-client'
 import { capturePostHog } from '@/src/lib/posthog-client'
 
 const SIGNUP_HREF = '/login?next=/create'
@@ -170,78 +164,28 @@ function ComparisonCell({ value }: { value: boolean | string }) {
 }
 
 function PaidPlanCheckoutButton({
-  plan,
+  plan: _plan,
   label,
   className,
 }: {
-  plan: BillingPlan
+  plan: 'pro' | 'commissioner'
   label: string
   className: string
 }) {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function handleClick() {
-    if (busy || authLoading) return
-    setError(null)
-
-    if (!user) {
-      router.push(LOGIN_FOR_PRICING_HREF)
-      return
-    }
-
-    setBusy(true)
-    const result = await startBillingCheckout(plan)
-    if (!result.ok) {
-      setBusy(false)
-      if (result.status === 401) {
-        router.push(LOGIN_FOR_PRICING_HREF)
-        return
-      }
-      setError(result.error)
-      return
-    }
-
-    window.location.assign(result.url)
-  }
-
+  // Phase 5: subscription checkout removed. CTAs route to create until Phase 6 pricing rewrite.
   return (
     <div className="mt-8 space-y-2">
-      <button
-        type="button"
-        disabled={busy || authLoading}
-        aria-busy={busy}
-        onClick={() => void handleClick()}
+      <Link
+        href="/create"
         onPointerDown={landingTactilePointerDown}
-        className={cn(className, 'disabled:cursor-not-allowed disabled:opacity-70')}
+        className={cn(className)}
       >
-        {busy ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-            Redirecting…
-          </>
-        ) : (
-          label
-        )}
-      </button>
-      {error ? (
-        <div className="space-y-1" role="alert">
-          <p className="text-center text-xs text-red-400">{error}</p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleClick()}
-            className="mx-auto block text-xs font-semibold text-[#00e676] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676]"
-          >
-            Retry
-          </button>
-        </div>
-      ) : null}
+        {label}
+      </Link>
     </div>
   )
 }
+
 
 function PricingCard({
   tier,
