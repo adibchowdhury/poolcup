@@ -60,10 +60,13 @@ function activityIcon(type: GlobalActivityItem['type']) {
 export function GlobalActivityItemCard({
   item,
   plain = false,
+  compact = false,
 }: {
   item: GlobalActivityItem
-  /** Mobile dashboard feed — no card surface; desktop rail uses default cards. */
+  /** No per-item card surface (mobile feed + desktop rail). Activity page keeps cards. */
   plain?: boolean
+  /** Desktop rail — tighter rows; spacing comes from the list gap. */
+  compact?: boolean
 }) {
   const Icon = activityIcon(item.type)
   const href = item.poolInviteCode
@@ -74,7 +77,9 @@ export function GlobalActivityItemCard({
     <div
       className={cn(
         plain
-          ? 'py-2'
+          ? compact
+            ? 'py-0'
+            : 'py-2'
           : cn(DASHBOARD_FEED_SURFACE_CLASS, 'px-3 py-2.5 sm:px-3.5'),
       )}
     >
@@ -159,12 +164,13 @@ export function GlobalActivitySection({
         </Button>
       </div>
     ) : data ? (
-      <div className={cn(layout === 'feed' ? 'space-y-2.5' : 'space-y-2')}>
+      <div className={cn(layout === 'rail' ? 'space-y-3' : 'space-y-2.5')}>
         {data.items.map((item) => (
           <GlobalActivityItemCard
             key={item.id}
             item={item}
-            plain={layout === 'feed'}
+            plain={layout === 'feed' || layout === 'rail'}
+            compact={layout === 'rail'}
           />
         ))}
         {data.isSparse ? <GlobalActivitySparseHint /> : null}
