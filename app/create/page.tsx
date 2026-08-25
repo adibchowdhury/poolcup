@@ -2,18 +2,19 @@
 
 import {
   FormEvent,
+  Suspense,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
 } from 'react'
 import { flushSync } from 'react-dom'
-import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Check, Download, Flag, Loader2, Target, Trophy, Zap } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Check, Download, Loader2, Target, Trophy, Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import {
@@ -42,7 +43,6 @@ import {
 } from '@/src/lib/pool-creation-limit'
 import {
   formatSportingEventDateRange,
-  formatSportingEventDateRangeCompact,
   listCreatableSportingEvents,
   type SportingEvent,
 } from '@/src/lib/current-event'
@@ -55,8 +55,35 @@ import {
   validatePoolName,
 } from '@/src/lib/pool-name'
 import { normalizeSportKey } from '@/src/lib/sport-display'
-import { LockedCommissionerFeature } from '@/components/pool/locked-commissioner-feature'
-import { startCustomPoolCheckout } from '@/src/lib/custom-pool-checkout-client'
+import { startDraftCustomPoolCheckout } from '@/src/lib/draft-custom-pool-checkout-client'
+import {
+  clearCreateWizardState,
+  clearStagedEmblem,
+  dataUrlToFile,
+  loadCreateWizardState,
+  loadPendingEmblemDataUrl,
+  loadStagedEmblemDataUrl,
+  persistPendingEmblem,
+  persistStagedEmblem,
+  saveCreateWizardState,
+  type CreateWizardPersistedState,
+  type PoolCreationDraftPayload,
+} from '@/src/lib/create-wizard-persistence'
+import { uploadPoolEmblem } from '@/src/lib/upload-pool-emblem'
+import { patchPoolSettings } from '@/src/lib/pool-settings-client'
+import {
+  DEFAULT_POOL_THEME_COLOR,
+  normalizePoolThemeColor,
+  POOL_THEME_COLOR_PRESETS,
+} from '@/src/lib/pool-theme'
+import {
+  beginCreatePoolExit,
+  clearCreateModeDashboardExitClass,
+  consumeCreatePoolTransition,
+  CREATE_POOL_TRANSITION_KEY,
+  readPrefersReducedMotion,
+} from '@/src/lib/create-pool-transition'
+import { CreateCompetitionStep } from '@/components/create/create-competition-step'
 import { cn } from '@/lib/utils'
 import {
   formatOfficialLeagueName,
@@ -64,16 +91,28 @@ import {
 } from '@/src/lib/fetch-official-pools'
 
 const CREATE_POOL_STEPS = [
-  { id: 'competition' as const, label: 'Sport' },
-  { id: 'type' as const, label: 'Pool Type' },
-  { id: 'customize' as const, label: 'Customize' },
-  { id: 'rules' as const, label: 'Rules' },
+  { id: 'competition' as const, chromeTitle: 'Competition' },
+  { id: 'type' as const, chromeTitle: 'Pool Type' },
+  { id: 'details' as const, chromeTitle: 'Pool Details' },
+  { id: 'plan' as const, chromeTitle: 'Choose Your Pool' },
+  { id: 'review' as const, chromeTitle: 'Review & Create' },
 ] as const
 
-/** Stepper shows steps 1–4; success is post-create (outside the stepper). */
+const SUCCESS_CHROME_TITLE = 'Pool Created 🎉'
+
+/** Progress indicator: five wizard steps only (success is a terminal page). */
 const STEPPER_STEP_COUNT = CREATE_POOL_STEPS.length
-const SUCCESS_STEP = STEPPER_STEP_COUNT + 1
+const PLAN_STEP = 4
+const REVIEW_STEP = 5
+/** Terminal success page index — not part of the progress indicator. */
+const SUCCESS_STEP = 6
 const TOTAL_FLOW_STEPS = SUCCESS_STEP
+
+function chromeTitleForStep(step: number): string {
+  if (step >= SUCCESS_STEP) return SUCCESS_CHROME_TITLE
+  const index = Math.min(Math.max(step, 1), STEPPER_STEP_COUNT) - 1
+  return CREATE_POOL_STEPS[index]?.chromeTitle ?? 'Create a Pool'
+}
 
 /** Step carousel slide+fade duration (ms). Single source for CSS and the JS timer. */
 const STEP_TRANSITION_MS = 650
@@ -95,7 +134,6 @@ function createPoolNextStep(current: number): number | null {
 }
 
 const STEPPER_GREEN = '#00e676'
-const STEPPER_WHITE = '#ffffff'
 
 const STEPPER_MOTION_CLASS =
   'transition-all duration-[225ms] ease-out motion-reduce:transition-none motion-reduce:duration-0'
@@ -117,14 +155,11 @@ const FOCUS_RING_CLASS =
 /** Step section titles — same 2xl on mobile; former 3xl headings stay 3xl from lg up. */
 const CREATE_POOL_STEP_HEADING_CLASS =
   'font-display text-2xl tracking-wide text-[#f0f4f8]'
-const CREATE_POOL_STEP_HEADING_DESKTOP_CLASS = cn(
-  CREATE_POOL_STEP_HEADING_CLASS,
-  'lg:text-3xl',
-)
 
-/** Pinned CTA row. Desktop keeps a tall slot; mobile hugs the button (no dead space). */
+/** Pinned CTA row. Desktop keeps a tall slot when chrome owns the CTA; mobile hugs content. */
 const CREATE_POOL_FOOTER_CLASS =
-  'flex shrink-0 flex-col justify-end pt-4 max-lg:min-h-0 lg:min-h-[8.75rem]'
+  'flex shrink-0 flex-col justify-end pt-4 max-lg:min-h-0'
+const CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS = 'lg:min-h-[8.75rem]'
 
 const CREATE_POOL_BTN_BACK_CLASS = cn(
   'ui-tactile-btn w-[38%] min-w-0 shrink-0 font-semibold text-foreground',
@@ -169,7 +204,12 @@ function CreatePoolNavFooter({
   backDisabled?: boolean
 }) {
   return (
-    <div className="flex w-full items-stretch gap-3 pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]">
+    <div
+      className={cn(
+        'flex w-full items-stretch gap-3 pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]',
+        !showBack && 'justify-center',
+      )}
+    >
       {showBack ? (
         <Button
           type="button"
@@ -183,15 +223,19 @@ function CreatePoolNavFooter({
       ) : null}
       <div
         className={cn(
-          'max-lg:w-full',
-          showBack ? 'min-w-0 flex-1' : 'w-full',
+          showBack
+            ? 'min-w-0 flex-1 max-lg:w-full'
+            : 'w-full max-lg:w-full lg:w-auto',
         )}
       >
         <Button
           type={continueType}
           size="lg"
           form={continueForm}
-          className={CREATE_POOL_BTN_PRIMARY_CLASS}
+          className={cn(
+            CREATE_POOL_BTN_PRIMARY_CLASS,
+            !showBack && 'lg:w-auto lg:min-w-[16rem]',
+          )}
           disabled={continueDisabled}
           onClick={continueType === 'button' ? onContinue : undefined}
         >
@@ -359,7 +403,7 @@ function CreatePoolStepCircle({
   )
 }
 
-/** Numbered circles only — labels would wrap on narrow mobile at four steps. */
+/** Numbered circles only — five wizard steps; success has no progress bar. */
 function CreatePoolStepper({ currentStep }: { currentStep: number }) {
   const reducedMotion = usePrefersReducedMotion()
   const totalSteps = STEPPER_STEP_COUNT
@@ -426,26 +470,6 @@ function selectionTileClass(selected: boolean) {
   )
 }
 
-function sportPillClass(selected: boolean) {
-  return cn(
-    CREATE_POOL_SELECTION_TILE_CLASS,
-    'inline-flex items-center gap-2 rounded-full border bg-[#080b0f]/60 px-2.5 py-1.5 sm:px-3',
-    selected
-      ? 'border-2 border-primary ring-2 ring-primary/40'
-      : 'border-[#1e2d3d] hover:border-primary/40',
-  )
-}
-
-function formatCompetitionStatus(status: string): {
-  label: string
-  live: boolean
-} {
-  if (status === 'live') {
-    return { label: 'Live', live: true }
-  }
-  return { label: 'Upcoming', live: false }
-}
-
 function formatCreateFlowCompetitionDisplay(event: SportingEvent): {
   leagueName: string
   seasonLabel: string | null
@@ -460,11 +484,14 @@ function formatCreateFlowCompetitionDisplay(event: SportingEvent): {
   }
 }
 
-export default function CreatePoolPage() {
+function CreatePoolPageInner() {
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const goToPoolRef = useRef<HTMLAnchorElement>(null)
+  const emblemInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
+  const emblemInputId = useId()
 
   const [step, setStep] = useState(1)
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -481,6 +508,7 @@ export default function CreatePoolPage() {
   const [creatableEvents, setCreatableEvents] = useState<SportingEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [eventsError, setEventsError] = useState<string | null>(null)
+  const defaultSportAppliedRef = useRef(false)
   const [poolName, setPoolName] = useState('')
   const [poolDescription, setPoolDescription] = useState('')
   const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('classic')
@@ -494,6 +522,43 @@ export default function CreatePoolPage() {
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'custom'>('basic')
+  const [themeColor, setThemeColor] = useState<string | null>(null)
+  const [emblemFile, setEmblemFile] = useState<File | null>(null)
+  const [emblemPreviewUrl, setEmblemPreviewUrl] = useState<string | null>(null)
+  const [checkoutPhase, setCheckoutPhase] = useState<
+    'idle' | 'finalizing' | 'slow'
+  >('idle')
+  const [finalizingDraftId, setFinalizingDraftId] = useState<string | null>(
+    null,
+  )
+  const [finalizingMessage, setFinalizingMessage] = useState(
+    'Payment received — setting up your pool',
+  )
+  const checkoutHandledRef = useRef(false)
+  const goToStepRef = useRef<(next: number, dir: 1 | -1) => void>(() => {})
+  const [screenMotionClass, setScreenMotionClass] = useState<string | null>(
+    () => {
+      if (typeof window === 'undefined') return null
+      if (readPrefersReducedMotion()) return null
+      try {
+        if (sessionStorage.getItem(CREATE_POOL_TRANSITION_KEY) === 'enter') {
+          return 'create-mode-screen-enter'
+        }
+      } catch {
+        return null
+      }
+      return null
+    },
+  )
+  const [headingStagger, setHeadingStagger] = useState(() => {
+    if (typeof window === 'undefined') return false
+    if (readPrefersReducedMotion()) return false
+    try {
+      return sessionStorage.getItem(CREATE_POOL_TRANSITION_KEY) === 'enter'
+    } catch {
+      return false
+    }
+  })
 
   const selectedEvent = useMemo((): SportingEvent | null => {
     if (!selectedEventId) return null
@@ -507,6 +572,39 @@ export default function CreatePoolPage() {
       (event) => normalizeSportKey(event.sport) === sportKey,
     )
   }, [creatableEvents, selectedSport])
+
+  /** Prefer sport with the most live events so the right column is populated. */
+  useEffect(() => {
+    if (defaultSportAppliedRef.current) return
+    if (selectedSport != null) {
+      defaultSportAppliedRef.current = true
+      return
+    }
+    if (eventsLoading) return
+
+    defaultSportAppliedRef.current = true
+
+    let bestSport: SportId = SPORTS[0]!.id
+    let bestLive = -1
+    let bestTotal = -1
+    for (const sport of SPORTS) {
+      const sportKey = CREATE_SPORT_KEY[sport.id]
+      const events = creatableEvents.filter(
+        (event) => normalizeSportKey(event.sport) === sportKey,
+      )
+      const liveCount = events.filter((event) => event.status === 'live').length
+      if (
+        liveCount > bestLive ||
+        (liveCount === bestLive && events.length > bestTotal)
+      ) {
+        bestLive = liveCount
+        bestTotal = events.length
+        bestSport = sport.id
+      }
+    }
+    setSelectedSport(bestSport)
+  }, [creatableEvents, eventsLoading, selectedSport])
+
 
   const selectedScoring = useMemo(
     () => POOL_SCORING_STYLE_OPTIONS.find((s) => s.id === scoringStyle) ?? null,
@@ -599,6 +697,249 @@ export default function CreatePoolPage() {
     [isSliding, prefersReducedMotion, step],
   )
 
+  goToStepRef.current = goToStep
+
+  const applyWizardState = useCallback((saved: CreateWizardPersistedState) => {
+    const nextStep =
+      saved.step >= 1 && saved.step <= REVIEW_STEP ? saved.step : REVIEW_STEP
+    setStep(nextStep)
+    setLeftPanelStep(nextStep)
+    setRightPanelStep(createPoolNextStep(nextStep))
+    const sport = saved.selectedSport
+    setSelectedSport(
+      sport === 'soccer' ||
+        sport === 'basketball' ||
+        sport === 'baseball' ||
+        sport === 'football' ||
+        sport === 'hockey'
+        ? sport
+        : null,
+    )
+    setSelectedEventId(saved.selectedEventId)
+    setPoolName(saved.poolName)
+    setPoolDescription(saved.poolDescription)
+    setScoringStyle(saved.scoringStyle === 'winner' ? 'winner' : 'classic')
+    setIsPublic(Boolean(saved.isPublic))
+    setSelectedPlan(saved.selectedPlan === 'custom' ? 'custom' : 'basic')
+    setThemeColor(
+      saved.themeColor ? normalizePoolThemeColor(saved.themeColor) : null,
+    )
+    if (saved.hasPendingEmblem) {
+      const dataUrl = loadPendingEmblemDataUrl()
+      if (dataUrl) {
+        const file = dataUrlToFile(dataUrl, 'pool-emblem.jpg')
+        if (file) {
+          setEmblemFile(file)
+          setEmblemPreviewUrl(dataUrl)
+        }
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (checkoutHandledRef.current) return
+    const checkout = searchParams.get('checkout')
+    if (!checkout) return
+    checkoutHandledRef.current = true
+
+    if (checkout === 'cancel') {
+      const saved = loadCreateWizardState()
+      if (saved) applyWizardState({ ...saved, step: REVIEW_STEP })
+      else {
+        setStep(REVIEW_STEP)
+        setLeftPanelStep(REVIEW_STEP)
+        setRightPanelStep(createPoolNextStep(REVIEW_STEP))
+      }
+      router.replace('/create', { scroll: false })
+      return
+    }
+
+    if (checkout === 'success') {
+      const draftId = searchParams.get('draft_id')?.trim()
+      if (!draftId) {
+        setError('Missing checkout draft. Check your pools shortly.')
+        router.replace('/create', { scroll: false })
+        return
+      }
+      setFinalizingDraftId(draftId)
+      setCheckoutPhase('finalizing')
+      setFinalizingMessage('Payment received — setting up your pool')
+      setStep(SUCCESS_STEP)
+      setLeftPanelStep(SUCCESS_STEP)
+      setRightPanelStep(null)
+    }
+  }, [applyWizardState, router, searchParams])
+
+  useEffect(() => {
+    if (checkoutPhase === 'idle' || !finalizingDraftId || !user) return
+
+    let cancelled = false
+    const startedAt = Date.now()
+    const hardTimeoutMs = 15_000
+    let attempt = 0
+    let timer: number | null = null
+
+    async function finishReady(payload: {
+      createdPoolId: string
+      inviteCode: string | null
+      name: string | null
+    }) {
+      const poolId = payload.createdPoolId
+      const inviteCode = payload.inviteCode?.trim() || ''
+      const name = payload.name?.trim() || 'Your pool'
+
+      setFinalizingMessage('Finishing branding…')
+
+      const staged = loadStagedEmblemDataUrl(finalizingDraftId!)
+      if (staged) {
+        const file = dataUrlToFile(staged, 'pool-emblem.jpg')
+        if (file) {
+          const upload = await uploadPoolEmblem(supabase, poolId, file)
+          if (upload.publicUrl) {
+            await patchPoolSettings(poolId, { emblemUrl: upload.publicUrl })
+          } else {
+            console.warn('create: staged emblem upload failed', upload.error)
+          }
+        }
+      }
+
+      clearStagedEmblem(finalizingDraftId!)
+      clearCreateWizardState()
+
+      if (!inviteCode) {
+        setCheckoutPhase('slow')
+        setFinalizingMessage(
+          "Taking longer than expected — we'll finish it. Check your pools shortly.",
+        )
+        return
+      }
+
+      setCreatedPool({ id: poolId, name, inviteCode })
+      capturePostHog('pool_created', {
+        pool_id: poolId,
+        plan: 'custom',
+        source: 'draft_checkout',
+      })
+      setCheckoutPhase('idle')
+      setFinalizingDraftId(null)
+      setSubmitting(false)
+      setLoadingMessage(null)
+      goToStepRef.current(SUCCESS_STEP, 1)
+    }
+
+    async function pollOnce() {
+      if (cancelled) return
+      attempt += 1
+      try {
+        const res = await fetch(
+          `/api/pool-drafts/${encodeURIComponent(finalizingDraftId!)}/status`,
+        )
+        const data = (await res.json().catch(() => null)) as {
+          status?: string
+          createdPoolId?: string | null
+          inviteCode?: string | null
+          name?: string | null
+        } | null
+        if (res.ok && data?.status === 'ready' && data.createdPoolId) {
+          await finishReady({
+            createdPoolId: data.createdPoolId,
+            inviteCode: data.inviteCode ?? null,
+            name: data.name ?? null,
+          })
+          return
+        }
+      } catch (err) {
+        console.warn('create: draft status poll failed', err)
+      }
+
+      const elapsed = Date.now() - startedAt
+      if (elapsed >= hardTimeoutMs) {
+        setCheckoutPhase('slow')
+        setFinalizingMessage(
+          "Taking longer than expected — we'll finish it. Check your pools shortly.",
+        )
+      }
+
+      const delay =
+        elapsed >= hardTimeoutMs
+          ? 4000
+          : Math.min(500 + attempt * 500, 2500)
+      timer = window.setTimeout(() => {
+        void pollOnce()
+      }, delay)
+    }
+
+    void pollOnce()
+    return () => {
+      cancelled = true
+      if (timer != null) window.clearTimeout(timer)
+    }
+  }, [checkoutPhase, finalizingDraftId, user])
+
+  useEffect(() => {
+    if (checkoutPhase !== 'idle') return
+    if (step >= SUCCESS_STEP) return
+    saveCreateWizardState({
+      step,
+      selectedSport,
+      selectedEventId,
+      poolName,
+      poolDescription,
+      scoringStyle,
+      isPublic,
+      selectedPlan,
+      themeColor,
+      hasPendingEmblem: Boolean(emblemFile),
+    })
+  }, [
+    checkoutPhase,
+    step,
+    selectedSport,
+    selectedEventId,
+    poolName,
+    poolDescription,
+    scoringStyle,
+    isPublic,
+    selectedPlan,
+    themeColor,
+    emblemFile,
+  ])
+
+  useEffect(() => {
+    clearCreateModeDashboardExitClass()
+    const kind = consumeCreatePoolTransition()
+    if (prefersReducedMotion || readPrefersReducedMotion()) {
+      setScreenMotionClass(null)
+      setHeadingStagger(false)
+      return
+    }
+    if (kind !== 'enter' && screenMotionClass !== 'create-mode-screen-enter') {
+      return
+    }
+    // Keep enter/stagger classes from the sync initializer; clear after they finish.
+    setScreenMotionClass('create-mode-screen-enter')
+    setHeadingStagger(true)
+    const clearScreen = window.setTimeout(() => {
+      setScreenMotionClass(null)
+    }, 220)
+    const clearHeading = window.setTimeout(() => {
+      setHeadingStagger(false)
+    }, 360)
+    return () => {
+      window.clearTimeout(clearScreen)
+      window.clearTimeout(clearHeading)
+    }
+    // Intentionally once on mount for the handoff flag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefersReducedMotion])
+
+  function handleExitToDashboard() {
+    if (submitting) return
+    beginCreatePoolExit(router, () => {
+      setScreenMotionClass('create-mode-screen-exit')
+    })
+  }
+
   useEffect(() => {
     if (step !== 1) return
     void loadCreatableEvents()
@@ -668,7 +1009,11 @@ export default function CreatePoolPage() {
       return
     }
     if (step === 3 && validatePoolName(poolName) === null) {
-      goToStep(4, 1)
+      goToStep(PLAN_STEP, 1)
+      return
+    }
+    if (step === PLAN_STEP) {
+      goToStep(REVIEW_STEP, 1)
     }
   }
 
@@ -684,6 +1029,7 @@ export default function CreatePoolPage() {
     }
     if (step === 2) return scoringStyle !== null
     if (step === 3) return validatePoolName(poolName) === null
+    if (step === PLAN_STEP) return selectedPlan === 'basic' || selectedPlan === 'custom'
     return false
   }, [
     step,
@@ -692,10 +1038,12 @@ export default function CreatePoolPage() {
     eventsForSelectedSport,
     scoringStyle,
     poolName,
+    selectedPlan,
   ])
 
   async function createPool() {
     if (!user || submitting) return
+    if (checkoutPhase !== 'idle') return
 
     const nameValidation = validatePoolName(poolName)
     const descriptionValidation = validatePoolDescription(poolDescription)
@@ -713,10 +1061,63 @@ export default function CreatePoolPage() {
 
     setError(null)
     setSubmitting(true)
-    setLoadingMessage('Creating pool…')
 
     const trimmedName = normalizePoolName(poolName)
     const trimmedDescription = normalizePoolDescription(poolDescription)
+    const normalizedTheme =
+      selectedPlan === 'custom'
+        ? normalizePoolThemeColor(themeColor) ?? themeColor
+        : null
+
+    saveCreateWizardState({
+      step: REVIEW_STEP,
+      selectedSport,
+      selectedEventId,
+      poolName,
+      poolDescription,
+      scoringStyle,
+      isPublic,
+      selectedPlan,
+      themeColor: normalizedTheme,
+      hasPendingEmblem: Boolean(emblemFile),
+    })
+
+    // Custom: draft → Stripe → webhook creates pool. No pool until congrats.
+    if (selectedPlan === 'custom') {
+      setLoadingMessage('Preparing checkout…')
+      if (emblemFile) {
+        await persistPendingEmblem(emblemFile)
+      }
+
+      const payload: PoolCreationDraftPayload = {
+        name: trimmedName,
+        description: trimmedDescription || null,
+        scoringStyle,
+        eventId: selectedEvent.id,
+        eventName: selectedEvent.name,
+        isPublic,
+        themeColor: normalizedTheme,
+        hasPendingEmblem: Boolean(emblemFile),
+      }
+
+      const checkout = await startDraftCustomPoolCheckout(payload)
+      if (!checkout.ok) {
+        setSubmitting(false)
+        setLoadingMessage(null)
+        setError(checkout.error || 'Could not start checkout. Please try again.')
+        return
+      }
+
+      if (emblemFile) {
+        await persistStagedEmblem(checkout.draftId, emblemFile)
+      }
+
+      setLoadingMessage('Redirecting to payment…')
+      window.location.href = checkout.url
+      return
+    }
+
+    setLoadingMessage('Creating pool…')
 
     // Bind pool to the selected row's real sporting_events.id (no slug re-lookup).
     const { data: pool, error: insertError } = await supabase
@@ -783,6 +1184,9 @@ export default function CreatePoolPage() {
     const { awardClientXp } = await import('@/src/lib/xp-client')
     void awardClientXp({ sourceType: 'pool_create', sourceId: pool.id })
 
+    clearCreateWizardState()
+    clearStagedEmblem()
+
     setCreatedPool({
       id: pool.id,
       name: trimmedName,
@@ -792,23 +1196,8 @@ export default function CreatePoolPage() {
       pool_id: pool.id,
       sport: normalizeSportKey(selectedEvent.sport),
       is_public: Boolean(pool.is_public),
+      plan: 'basic',
     })
-    if (selectedPlan === 'custom') {
-      setLoadingMessage('Starting Custom Pool checkout…')
-      const checkout = await startCustomPoolCheckout(pool.id)
-      if (checkout.ok) {
-        window.location.href = checkout.url
-        return
-      }
-      setSubmitting(false)
-      setLoadingMessage(null)
-      setError(
-        checkout.error ||
-          'Pool created, but checkout could not start. Upgrade anytime from pool settings.',
-      )
-      goToStep(SUCCESS_STEP, 1)
-      return
-    }
 
     setSubmitting(false)
     setLoadingMessage(null)
@@ -1004,10 +1393,36 @@ export default function CreatePoolPage() {
             <dt className="text-[#5a7080]">Plan</dt>
             <dd className="text-right font-medium text-[#f0f4f8]">
               {selectedPlan === 'custom'
-                ? 'Custom Pool ($9.99 one-time)'
-                : 'Basic Pool (Free)'}
+                ? 'Upgraded ($9.99 one-time)'
+                : 'Basic (Free)'}
             </dd>
           </div>
+          {selectedPlan === 'custom' ? (
+            <>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#5a7080]">Theme</dt>
+                <dd className="flex items-center justify-end gap-2 font-medium text-[#f0f4f8]">
+                  <span
+                    className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-[#1e2d3d]"
+                    style={{
+                      backgroundColor:
+                        themeColor ?? DEFAULT_POOL_THEME_COLOR,
+                    }}
+                    aria-hidden
+                  />
+                  {(themeColor ?? DEFAULT_POOL_THEME_COLOR).toUpperCase()}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#5a7080]">Logo</dt>
+                <dd className="text-right font-medium text-[#f0f4f8]">
+                  {emblemFile || emblemPreviewUrl
+                    ? 'Staged — uploads after payment'
+                    : 'None — add later in settings'}
+                </dd>
+              </div>
+            </>
+          ) : null}
         </dl>
       </div>
     )
@@ -1017,141 +1432,22 @@ export default function CreatePoolPage() {
     return (
       <>
           {panelStep === 1 && (
-            <>
-              <h2 className={CREATE_POOL_STEP_HEADING_CLASS}>
-                Choose Sport
-              </h2>
-              <p className="mt-1.5 text-sm text-[#5a7080]">
-                Pick the sport your pool will follow.
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {SPORTS.map((sport) => (
-                  <button
-                    key={sport.id}
-                    type="button"
-                    onClick={() => handleSportSelect(sport.id)}
-                    className={cn(
-                      sportPillClass(selectedSport === sport.id),
-                      'cursor-pointer text-[#f0f4f8]',
-                    )}
-                  >
-                    <Image
-                      src={sport.imageSrc}
-                      alt=""
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 object-contain"
-                    />
-                    <span className="text-xs font-medium sm:text-sm">
-                      {sport.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <h1 className={cn('mt-6', CREATE_POOL_STEP_HEADING_DESKTOP_CLASS)}>
-                Choose a competition
-              </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">
-                Select the league or event your pool will follow.
-              </p>
-
-              <div className="mt-6 space-y-2">
-                {!selectedSport ? (
-                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/40 px-4 py-10 text-center">
-                    <p className="text-sm text-[#5a7080]">
-                      Pick a sport above to browse available competitions.
-                    </p>
-                  </div>
-                ) : eventsLoading ? (
-                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-10 text-center">
-                    <p className="text-sm text-[#5a7080]">Loading competitions…</p>
-                  </div>
-                ) : eventsError ? (
-                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-8 text-center">
-                    <p className="text-sm text-red-400">{eventsError}</p>
-                    <button
-                      type="button"
-                      onClick={() => void loadCreatableEvents()}
-                      className={cn(
-                        'mt-4 rounded-lg border border-[#1e2d3d] px-4 py-2 text-sm text-[#f0f4f8] hover:border-primary/50',
-                        FOCUS_RING_CLASS,
-                      )}
-                    >
-                      Try again
-                    </button>
-                  </div>
-                ) : eventsForSelectedSport.length === 0 ? (
-                  <div className="rounded-xl border border-[#1e2d3d]/60 bg-[#080b0f]/60 px-4 py-10 text-center opacity-60">
-                    <p className="text-sm text-[#5a7080]">
-                      No active {formatSportLabel(selectedSport)} competitions
-                      right now — check back soon.
-                    </p>
-                  </div>
-                ) : (
-                  eventsForSelectedSport.map((event) => {
-                    const selected = selectedEventId === event.id
-                    const status = formatCompetitionStatus(event.status)
-                    const { leagueName, seasonLabel } =
-                      formatCreateFlowCompetitionDisplay(event)
-                    const dateRange = formatSportingEventDateRangeCompact(
-                      event.start_date,
-                      event.end_date,
-                    )
-                    return (
-                      <button
-                        key={event.id}
-                        type="button"
-                        onClick={() => handleEventSelect(event.id)}
-                        className={cn(
-                          'flex w-full min-h-12 items-center gap-2 rounded-xl border px-3 py-1.5 text-left transition-all sm:gap-3 sm:px-4 lg:min-h-0 lg:py-3',
-                          selectionTileClass(selected),
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[#f0f4f8] sm:text-base">
-                            {leagueName}
-                            {seasonLabel ? (
-                              <>
-                                <span className="text-[#5a7080]"> · </span>
-                                <span className="font-normal text-[#5a7080]">
-                                  {seasonLabel}
-                                </span>
-                              </>
-                            ) : null}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-                          <span className="whitespace-nowrap text-[11px] tabular-nums text-[#5a7080] sm:text-xs">
-                            {dateRange}
-                          </span>
-                          <span
-                            className={cn(
-                              'whitespace-nowrap text-[11px] font-medium sm:text-xs',
-                              status.live
-                                ? 'text-red-500'
-                                : 'text-[#5a7080]',
-                            )}
-                          >
-                            <span aria-hidden>● </span>
-                            {status.label}
-                          </span>
-                        </div>
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </>
+            <CreateCompetitionStep
+              selectedSport={selectedSport}
+              selectedEventId={selectedEventId}
+              creatableEvents={creatableEvents}
+              eventsLoading={eventsLoading}
+              eventsError={eventsError}
+              headingStagger={headingStagger}
+              onSelectSport={handleSportSelect}
+              onSelectEvent={handleEventSelect}
+              onRetryLoad={() => void loadCreatableEvents()}
+            />
           )}
 
           {panelStep === 2 && (
             <>
-              <h1 className={CREATE_POOL_STEP_HEADING_DESKTOP_CLASS}>
-                Choose Pool Type
-              </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">
+              <p className="text-sm text-[#5a7080]">
                 How should members earn points in this pool?
               </p>
 
@@ -1216,11 +1512,8 @@ export default function CreatePoolPage() {
 
           {panelStep === 3 && (
             <>
-              <h1 className={CREATE_POOL_STEP_HEADING_DESKTOP_CLASS}>
-                Customize Your Pool
-              </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">
-                Name, privacy, and branding — logo and theme are optional.
+              <p className="text-sm text-[#5a7080]">
+                Name your pool and choose who can find it.
               </p>
 
               <div className="mt-8 space-y-6">
@@ -1344,86 +1637,219 @@ export default function CreatePoolPage() {
                     aria-describedby="create-pool-public-help"
                   />
                 </div>
-
-                {true ? (
-                  <div className="space-y-4">
-                    <p className="text-xs leading-relaxed text-[#5a7080]">
-                      Logo and theme color come with Custom Pool. Add them in
-                      settings after upgrading — $9.99 one-time. No subscription.
-                    </p>
-                    <LockedCommissionerFeature
-                      title="Pool logo"
-                      description="Upload a custom emblem for your pool"
-                      isOwner
-                    />
-                    <LockedCommissionerFeature
-                      title="Pool color"
-                      description="Theme color for headers and accents"
-                      isOwner
-                    />
-                  </div>
-                ) : null}
               </div>
             </>
           )}
 
-          {panelStep === 4 && (
+          {panelStep === PLAN_STEP && (
             <>
-              <h1 className={CREATE_POOL_STEP_HEADING_DESKTOP_CLASS}>
-                Rules &amp; Create
-              </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">
-                Review your choices and confirm scoring rules before creating
-                your pool.
+              <p className="text-sm text-[#5a7080]">
+                Basic is free forever. Upgrade once for branding and commissioner
+                tools — no subscription.
               </p>
-              <div className="mt-6 space-y-3">
-                <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
-                  Choose your plan
-                </span>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan('basic')}
-                    className={cn(
-                      'rounded-xl border px-4 py-3 text-left transition-colors',
-                      FOCUS_RING_CLASS,
-                      selectedPlan === 'basic'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
-                    )}
-                    aria-pressed={selectedPlan === 'basic'}
-                  >
-                    <p className="font-semibold text-[#f0f4f8]">Basic Pool</p>
-                    <p className="mt-1 text-xs font-medium text-primary">Free</p>
-                    <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
-                      Everything you need to run a normal pool — invites,
-                      predictions, leaderboard, and chat.
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan('custom')}
-                    className={cn(
-                      'rounded-xl border px-4 py-3 text-left transition-colors',
-                      FOCUS_RING_CLASS,
-                      selectedPlan === 'custom'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
-                    )}
-                    aria-pressed={selectedPlan === 'custom'}
-                  >
-                    <p className="font-semibold text-[#f0f4f8]">Custom Pool</p>
-                    <p className="mt-1 text-xs font-medium text-primary">
-                      $9.99 one-time. No subscription.
-                    </p>
-                    <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
-                      Logo, colors, custom scoring, announcements, polls,
-                      co-commissioners, advanced moderation, and exports.
-                    </p>
-                  </button>
-                </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('basic')}
+                  className={cn(
+                    'rounded-xl border px-4 py-4 text-left transition-colors',
+                    FOCUS_RING_CLASS,
+                    selectedPlan === 'basic'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                  )}
+                  aria-pressed={selectedPlan === 'basic'}
+                >
+                  <p className="font-semibold text-[#f0f4f8]">Basic</p>
+                  <p className="mt-1 text-sm font-semibold text-primary">Free</p>
+                  <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-[#5a7080]">
+                    {[
+                      'Predictions',
+                      'Leaderboard',
+                      'Invites',
+                      'Chat',
+                      'Standard management',
+                    ].map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span
+                          className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary"
+                          aria-hidden
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('custom')}
+                  className={cn(
+                    'rounded-xl border px-4 py-4 text-left transition-colors',
+                    FOCUS_RING_CLASS,
+                    selectedPlan === 'custom'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                  )}
+                  aria-pressed={selectedPlan === 'custom'}
+                >
+                  <p className="font-semibold text-[#f0f4f8]">Upgraded</p>
+                  <p className="mt-1 text-sm font-semibold text-primary">
+                    $9.99 one-time · No subscription.
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
+                    Everything in Basic, plus:
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-[#5a7080]">
+                    {[
+                      'Custom logo',
+                      'Theme color',
+                      'Custom scoring',
+                      'Announcements & polls',
+                      'Co-commissioners',
+                      'Moderation & exports',
+                    ].map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span
+                          className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary"
+                          aria-hidden
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
               </div>
 
+              {selectedPlan === 'custom' ? (
+                <div className="mt-6 space-y-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/50 px-4 py-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#f0f4f8]">
+                      Stage branding (optional)
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-[#5a7080]">
+                      Theme applies when your pool is created after payment. Logo
+                      uploads once the pool exists — if you close this tab after
+                      paying, add it later in pool settings.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor={emblemInputId}
+                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
+                    >
+                      Pool logo
+                    </label>
+                    <input
+                      ref={emblemInputRef}
+                      id={emblemInputId}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null
+                        if (!file) return
+                        setEmblemFile(file)
+                        const url = URL.createObjectURL(file)
+                        setEmblemPreviewUrl((prev) => {
+                          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev)
+                          return url
+                        })
+                        void persistPendingEmblem(file)
+                      }}
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      {emblemPreviewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={emblemPreviewUrl}
+                          alt=""
+                          className="h-14 w-14 rounded-lg object-cover ring-1 ring-[#1e2d3d]"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-[#2a3d52] text-[10px] text-[#5a7080]">
+                          None
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className={cn(
+                          'rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] hover:border-primary/50',
+                          FOCUS_RING_CLASS,
+                        )}
+                        onClick={() => emblemInputRef.current?.click()}
+                      >
+                        {emblemFile ? 'Change logo' : 'Choose logo'}
+                      </button>
+                      {emblemFile ? (
+                        <button
+                          type="button"
+                          className={cn(
+                            'text-xs font-medium text-[#5a7080] hover:text-[#e8eef4]',
+                            FOCUS_RING_CLASS,
+                            'rounded-md',
+                          )}
+                          onClick={() => {
+                            setEmblemFile(null)
+                            setEmblemPreviewUrl((prev) => {
+                              if (prev?.startsWith('blob:')) {
+                                URL.revokeObjectURL(prev)
+                              }
+                              return null
+                            })
+                            clearStagedEmblem()
+                            if (emblemInputRef.current) {
+                              emblemInputRef.current.value = ''
+                            }
+                          }}
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
+                      Theme color
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {POOL_THEME_COLOR_PRESETS.map((preset) => {
+                        const selected =
+                          (themeColor ?? DEFAULT_POOL_THEME_COLOR).toLowerCase() ===
+                          preset.hex.toLowerCase()
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            title={preset.label}
+                            aria-label={preset.label}
+                            aria-pressed={selected}
+                            onClick={() => setThemeColor(preset.hex)}
+                            className={cn(
+                              'h-8 w-8 rounded-full border-2 transition-transform',
+                              FOCUS_RING_CLASS,
+                              selected
+                                ? 'scale-110 border-white'
+                                : 'border-transparent opacity-80 hover:opacity-100',
+                            )}
+                            style={{ backgroundColor: preset.hex }}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          {panelStep === REVIEW_STEP && (
+            <>
+              <p className="text-sm text-[#5a7080]">
+                Confirm everything looks right, then create your pool.
+              </p>
 
               {renderCreatePoolReviewSummary(true)}
 
@@ -1446,9 +1872,9 @@ export default function CreatePoolPage() {
               ) : null}
 
               <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[#080b0f]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
-                Predictions lock when each match kicks off. After creation you
-                can adjust advanced scoring and commissioner tools in pool
-                settings.
+                Predictions lock when each match kicks off. Advanced scoring and
+                commissioner tools live in pool settings after creation
+                {selectedPlan === 'custom' ? ' (included with Upgraded)' : ''}.
               </p>
 
               <form
@@ -1482,10 +1908,7 @@ export default function CreatePoolPage() {
 
           {panelStep === SUCCESS_STEP && createdPool && (
             <>
-              <h1 className="font-display text-3xl tracking-wide text-[#f0f4f8]">
-                Pool Created! 🎉
-              </h1>
-              <p className="mt-2 text-sm text-[#5a7080]">
+              <p className="text-sm text-[#5a7080]">
                 Pools are no fun solo. Invite people to play against you.
               </p>
 
@@ -1595,69 +2018,96 @@ export default function CreatePoolPage() {
     )
   }
 
+  const isSuccessPage =
+    checkoutPhase !== 'idle' || step >= SUCCESS_STEP
+  const chromeTitle = isSuccessPage
+    ? SUCCESS_CHROME_TITLE
+    : chromeTitleForStep(step)
+  const poolHref = createdPool
+    ? `/pool/${createdPool.inviteCode}`
+    : '/dashboard'
+
   return (
-    <main className="min-h-dvh bg-background lg:flex lg:min-h-screen lg:items-center lg:justify-center lg:px-4 lg:py-10">
+    <main
+      className={cn(
+        'min-h-dvh bg-background lg:flex lg:min-h-screen lg:items-center lg:justify-center lg:px-4 lg:py-10',
+        screenMotionClass,
+      )}
+    >
       <div className={cn('flex min-h-0 w-full flex-col', CREATE_POOL_SHELL_WIDTH_CLASS)}>
         <div className={CREATE_POOL_CARD_CLASS}>
           <header className="shrink-0 space-y-3 lg:space-y-4">
-            {step < SUCCESS_STEP ? (
-              <div className="space-y-2 lg:space-y-0">
-                <div className="relative flex min-h-11 items-center lg:hidden">
-                  {step === 1 ? (
-                    <Link
-                      href="/dashboard"
-                      className={cn(
-                        'relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xl leading-none text-muted-foreground transition-colors hover:text-foreground',
-                        FOCUS_RING_CLASS,
-                      )}
-                      aria-label="Back to dashboard"
-                    >
-                      ←
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => goToStep(step - 1, -1)}
-                      disabled={navLocked}
-                      className={cn(
-                        'relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xl leading-none text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
-                        FOCUS_RING_CLASS,
-                      )}
-                      aria-label="Back to previous step"
-                    >
-                      ←
-                    </button>
-                  )}
-                  <p className="pointer-events-none absolute inset-x-0 text-center text-sm font-semibold text-[#f0f4f8]">
-                    {CREATE_POOL_STEPS[step - 1]?.label}
-                  </p>
-                  <span
-                    className="relative z-10 ml-auto flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground"
-                    aria-hidden
+            <div className="space-y-3">
+              <div className="relative flex min-h-11 items-center">
+                {isSuccessPage ? (
+                  <Link
+                    href={poolHref}
+                    className={cn(
+                      'relative z-10 flex h-9 max-w-[7.5rem] shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                      FOCUS_RING_CLASS,
+                    )}
                   >
-                    <Flag className="h-4 w-4" />
-                  </span>
-                </div>
-                <div className="relative flex min-h-11 items-center justify-center">
-                  {step === 1 ? (
-                    <Link
-                      href="/dashboard"
-                      className={cn(
-                        'absolute left-0 top-1/2 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-xl leading-none text-muted-foreground transition-colors hover:text-foreground lg:flex',
-                        FOCUS_RING_CLASS,
-                      )}
-                      aria-label="Back to dashboard"
-                    >
+                    <span aria-hidden className="text-lg leading-none">
                       ←
-                    </Link>
-                  ) : null}
-                  <CreatePoolStepper currentStep={step} />
-                </div>
+                    </span>
+                    <span className="truncate">
+                      {createdPool ? 'Go to pool' : 'Dashboard'}
+                    </span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleExitToDashboard}
+                    disabled={submitting}
+                    className={cn(
+                      'relative z-10 flex h-9 shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
+                      FOCUS_RING_CLASS,
+                    )}
+                  >
+                    <span aria-hidden className="text-lg leading-none">
+                      ←
+                    </span>
+                    Exit
+                  </button>
+                )}
+                <p className="pointer-events-none absolute inset-x-0 text-center font-display text-base tracking-wide text-[#f0f4f8] sm:text-lg">
+                  {chromeTitle}
+                </p>
+                <span className="relative z-10 ml-auto w-[4.25rem] shrink-0" aria-hidden />
               </div>
-            ) : null}
+              {!isSuccessPage ? (
+                <CreatePoolStepper currentStep={step} />
+              ) : null}
+            </div>
           </header>
 
           <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+            {checkoutPhase === 'finalizing' || checkoutPhase === 'slow' ? (
+              <div className="flex h-full min-h-0 flex-col items-center justify-center px-2 text-center">
+                <Loader2
+                  className="h-8 w-8 animate-spin text-primary"
+                  aria-hidden
+                />
+                <p className="mt-4 text-sm font-medium text-[#f0f4f8]">
+                  Finalizing your pool
+                </p>
+                <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#5a7080]">
+                  {finalizingMessage}
+                </p>
+                {checkoutPhase === 'slow' ? (
+                  <Link
+                    href="/dashboard"
+                    className={cn(
+                      'mt-6 inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline',
+                      FOCUS_RING_CLASS,
+                      'rounded-md',
+                    )}
+                  >
+                    Go to your pools
+                  </Link>
+                ) : null}
+              </div>
+            ) : (
             <div
               className="flex h-full min-h-0 w-[200%] flex-1 will-change-transform"
               style={{
@@ -1693,10 +2143,16 @@ export default function CreatePoolPage() {
                 {rightPanelStep ? renderStepScrollContent(rightPanelStep) : null}
               </div>
             </div>
+            )}
           </div>
 
-          <footer className={CREATE_POOL_FOOTER_CLASS}>
-            {step === 1 ? (
+          <footer
+            className={cn(
+              CREATE_POOL_FOOTER_CLASS,
+              CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS,
+            )}
+          >
+            {checkoutPhase === 'idle' && step === 1 ? (
               <CreatePoolNavFooter
                 showBack={false}
                 continueLabel="Continue"
@@ -1705,7 +2161,7 @@ export default function CreatePoolPage() {
               />
             ) : null}
 
-            {step === 2 ? (
+            {checkoutPhase === 'idle' && step === 2 ? (
               <CreatePoolNavFooter
                 showBack
                 backDisabled={navLocked}
@@ -1716,7 +2172,7 @@ export default function CreatePoolPage() {
               />
             ) : null}
 
-            {step === 3 ? (
+            {checkoutPhase === 'idle' && step === 3 ? (
               <CreatePoolNavFooter
                 showBack
                 backDisabled={navLocked}
@@ -1727,11 +2183,22 @@ export default function CreatePoolPage() {
               />
             ) : null}
 
-            {step === 4 ? (
+            {checkoutPhase === 'idle' && step === PLAN_STEP ? (
               <CreatePoolNavFooter
                 showBack
                 backDisabled={navLocked}
                 onBack={() => goToStep(3, -1)}
+                continueLabel="Continue"
+                continueDisabled={!canContinueStep || navLocked}
+                onContinue={handleContinueFromStep}
+              />
+            ) : null}
+
+            {checkoutPhase === 'idle' && step === REVIEW_STEP ? (
+              <CreatePoolNavFooter
+                showBack
+                backDisabled={navLocked}
+                onBack={() => goToStep(PLAN_STEP, -1)}
                 continueLabel={
                   submitting
                     ? (loadingMessage ?? 'Creating pool…')
@@ -1748,7 +2215,9 @@ export default function CreatePoolPage() {
               />
             ) : null}
 
-            {step === SUCCESS_STEP && createdPool ? (
+            {checkoutPhase === 'idle' &&
+            step === SUCCESS_STEP &&
+            createdPool ? (
               <Button
                 asChild
                 size="lg"
@@ -1801,5 +2270,19 @@ export default function CreatePoolPage() {
         </AlertDialogContent>
       </AlertDialog>
     </main>
+  )
+}
+
+export default function CreatePoolPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-dvh items-center justify-center bg-background">
+          <p className="text-[#5a7080]">Loading…</p>
+        </main>
+      }
+    >
+      <CreatePoolPageInner />
+    </Suspense>
   )
 }

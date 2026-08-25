@@ -18,6 +18,7 @@ import {
   DashboardGlassBackdrops,
   dashboardGlassSurfaceClass,
 } from '@/components/dashboard/dashboard-glass-surface'
+import { beginCreatePoolEntry } from '@/src/lib/create-pool-transition'
 
 function normalizeInviteCode(input: string): string {
   const trimmed = input.trim()
@@ -55,7 +56,7 @@ export function JoinOrCreatePoolCard() {
   function handleCreate() {
     setOpen(false)
     resetDialog()
-    router.push('/create')
+    beginCreatePoolEntry(router)
   }
 
   function handleJoinSubmit(e: React.FormEvent) {

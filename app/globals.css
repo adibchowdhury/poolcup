@@ -1321,6 +1321,141 @@ button.onboarding-3d-btn:disabled {
   }
 }
 
+/* ===== Create-pool mode entrance / exit (dashboard ↔ /create) ===== */
+/* Easing: cubic-bezier(0.22, 1, 0.36, 1) — gentle ease-out */
+:root {
+  --create-mode-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Transient press on Create Pool CTAs — never a resting scale */
+.create-pool-entry-btn {
+  transition: transform 100ms var(--create-mode-ease);
+  transform: none;
+}
+
+.create-pool-entry-btn.create-pool-entry-pressed {
+  transform: scale(0.97);
+}
+
+@keyframes create-mode-dashboard-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes create-mode-dashboard-restore {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+html.create-mode-dashboard-exit [data-hub-shell] {
+  animation: create-mode-dashboard-exit 200ms var(--create-mode-ease) both;
+  transform-origin: center center;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+html.create-mode-dashboard-restore [data-hub-shell] {
+  animation: create-mode-dashboard-restore 220ms var(--create-mode-ease) both;
+  transform-origin: center center;
+  will-change: opacity, transform;
+}
+
+@keyframes create-mode-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes create-mode-screen-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes create-mode-heading-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.create-mode-screen-enter {
+  animation: create-mode-screen-enter 180ms var(--create-mode-ease) both;
+  will-change: opacity, transform;
+}
+
+.create-mode-screen-exit {
+  animation: create-mode-screen-exit 220ms var(--create-mode-ease) both;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+.create-mode-heading-stagger {
+  animation: create-mode-heading-stagger 200ms var(--create-mode-ease) 100ms both;
+  will-change: opacity, transform;
+}
+
+@keyframes create-mode-competition-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.create-mode-competition-swap {
+  animation: create-mode-competition-swap 180ms var(--create-mode-ease) both;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-pool-entry-btn,
+  .create-pool-entry-btn.create-pool-entry-pressed {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  html.create-mode-dashboard-exit [data-hub-shell],
+  html.create-mode-dashboard-restore [data-hub-shell],
+  .create-mode-screen-enter,
+  .create-mode-screen-exit,
+  .create-mode-heading-stagger,
+  .create-mode-competition-swap {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* Commissioner printable export — clean paper output */
 @media print {
   body {

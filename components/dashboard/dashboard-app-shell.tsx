@@ -39,6 +39,10 @@ import {
   resolveHubDesktopNavValue,
 } from '@/src/lib/mobile-bottom-nav-routes'
 import { supabase } from '@/src/lib/supabase'
+import {
+  clearCreateModeDashboardExitClass,
+  consumeCreatePoolTransition,
+} from '@/src/lib/create-pool-transition'
 
 export type DashboardAppShellProps = {
   userId: string
@@ -104,6 +108,29 @@ export function DashboardAppShell({
     setAccountMessage(null)
     setPasswordMessage(null)
   }, [settingsOpen])
+
+  useEffect(() => {
+    if (nestedInHubLayout) return
+    clearCreateModeDashboardExitClass()
+    const kind = consumeCreatePoolTransition()
+    if (kind !== 'exit') return
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return
+    }
+    const root = document.documentElement
+    root.classList.add('create-mode-dashboard-restore')
+    const clear = () => {
+      root.classList.remove('create-mode-dashboard-restore')
+    }
+    const timer = window.setTimeout(clear, 280)
+    return () => {
+      window.clearTimeout(timer)
+      clear()
+    }
+  }, [nestedInHubLayout])
 
   if (nestedInHubLayout) {
     if (!mainClassName) return children
@@ -180,7 +207,10 @@ export function DashboardAppShell({
 
   return (
     <BadgeUnlockProvider>
-      <div className={cn('min-h-screen max-w-full min-w-0 overflow-x-clip lg:flex', canvasClass)}>
+      <div
+        data-hub-shell
+        className={cn('min-h-screen max-w-full min-w-0 overflow-x-clip lg:flex', canvasClass)}
+      >
         {showHubNav ? (
           <HubDesktopSidebar
             userId={userId}

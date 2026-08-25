@@ -1,12 +1,14 @@
 'use client'
 
-import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, type MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardFeedSection } from '@/components/dashboard/feed/dashboard-feed'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
+import { startCreatePoolEntryFromClick } from '@/src/lib/create-pool-transition'
+import { cn } from '@/lib/utils'
 
 const DESKTOP_POOL_PREVIEW = 6
 
@@ -30,11 +32,19 @@ export function YourPoolsSection({
   onPoolDeleted,
   desktopPanel = false,
 }: YourPoolsSectionProps) {
+  const router = useRouter()
   const [showAllDesktopPools, setShowAllDesktopPools] = useState(false)
+  const [enteringCreate, setEnteringCreate] = useState(false)
 
   const hasMoreDesktopPools = pools.length > DESKTOP_POOL_PREVIEW
   const desktopPreviewLimit =
     showAllDesktopPools || !hasMoreDesktopPools ? undefined : DESKTOP_POOL_PREVIEW
+
+  function handleCreatePoolClick(event: MouseEvent<HTMLButtonElement>) {
+    if (enteringCreate) return
+    setEnteringCreate(true)
+    startCreatePoolEntryFromClick(router, event.currentTarget)
+  }
 
   return (
     <DashboardFeedSection
@@ -56,26 +66,30 @@ export function YourPoolsSection({
               </Button>
             ) : null}
             <Button
-              asChild
+              type="button"
               size="sm"
-              className="gap-1.5 bg-primary px-2.5 text-primary-foreground hover:bg-primary/90"
+              disabled={enteringCreate}
+              onClick={handleCreatePoolClick}
+              className={cn(
+                'create-pool-entry-btn gap-1.5 bg-primary px-2.5 text-primary-foreground hover:bg-primary/90',
+              )}
             >
-              <Link href="/create">
-                <Plus className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="whitespace-nowrap">Create Pool</span>
-              </Link>
+              <Plus className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="whitespace-nowrap">Create Pool</span>
             </Button>
           </div>
           <div className="lg:hidden">
             <Button
-              asChild
+              type="button"
               size="sm"
-              className="gap-1.5 bg-primary px-2.5 text-primary-foreground hover:bg-primary/90 group sm:gap-2 sm:px-3"
+              disabled={enteringCreate}
+              onClick={handleCreatePoolClick}
+              className={cn(
+                'create-pool-entry-btn gap-1.5 bg-primary px-2.5 text-primary-foreground hover:bg-primary/90 group sm:gap-2 sm:px-3',
+              )}
             >
-              <Link href="/create">
-                <Plus className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-                <span className="whitespace-nowrap">Create a Pool</span>
-              </Link>
+              <Plus className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+              <span className="whitespace-nowrap">Create a Pool</span>
             </Button>
           </div>
         </>
