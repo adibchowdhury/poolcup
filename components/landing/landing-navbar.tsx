@@ -54,12 +54,6 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-4 md:flex">
             <Link
-              href="/pricing"
-              className="text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
-            >
-              Pricing
-            </Link>
-            <Link
               href={LANDING_SIGN_IN_HREF}
               className={cn(
                 landingSignInOutlineClass,
@@ -166,13 +160,6 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
               )}
             >
               Sign in
-            </Link>
-            <Link
-              href="/pricing"
-              onClick={closeMenu}
-              className="py-1 text-center text-sm font-medium text-[#f0f4f8]/80 transition-colors hover:text-[#00e676]"
-            >
-              Pricing
             </Link>
           </nav>
         </div>

@@ -349,7 +349,7 @@ function CreatePoolStepCircle({
   const motion = animate ? STEPPER_MOTION_CLASS : ''
 
   if (isCurrent) {
-    return (
+  return (
       <div
         className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 bg-transparent"
         style={{ borderColor: STEPPER_GREEN }}
@@ -1442,7 +1442,7 @@ function CreatePoolPageInner() {
   }
 
   function renderStepScrollContent(panelStep: number) {
-    return (
+  return (
       <>
           {panelStep === 1 && (
             <CreateCompetitionStep
@@ -1571,7 +1571,7 @@ function CreatePoolPageInner() {
                       {nameError}
                     </p>
                   ) : null}
-                </div>
+              </div>
 
                 <div>
                   <label
@@ -1662,8 +1662,8 @@ function CreatePoolPageInner() {
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
+                    <button
+                      type="button"
                   onClick={() => setSelectedPlan('basic')}
                   className={cn(
                     'rounded-xl border px-4 py-4 text-left transition-colors',
@@ -1693,7 +1693,7 @@ function CreatePoolPageInner() {
                       </li>
                     ))}
                   </ul>
-                </button>
+                    </button>
                 <button
                   type="button"
                   onClick={() => setSelectedPlan('custom')}
@@ -1745,16 +1745,16 @@ function CreatePoolPageInner() {
                       uploads once the pool exists — if you close this tab after
                       paying, add it later in pool settings.
                     </p>
-                  </div>
+              </div>
 
-                  <div>
-                    <label
+                <div>
+                  <label
                       htmlFor={emblemInputId}
                       className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
-                    >
+                  >
                       Pool logo
-                    </label>
-                    <input
+                  </label>
+                  <input
                       ref={emblemInputRef}
                       id={emblemInputId}
                       type="file"
@@ -1783,7 +1783,7 @@ function CreatePoolPageInner() {
                       ) : (
                         <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-[#2a3d52] text-[10px] text-[#5a7080]">
                           None
-                        </div>
+                </div>
                       )}
                       <button
                         type="button"
@@ -1820,7 +1820,7 @@ function CreatePoolPageInner() {
                           Remove
                         </button>
                       ) : null}
-                    </div>
+                  </div>
                   </div>
 
                   <div>
@@ -1832,7 +1832,7 @@ function CreatePoolPageInner() {
                         const selected =
                           (themeColor ?? DEFAULT_POOL_THEME_COLOR).toLowerCase() ===
                           preset.hex.toLowerCase()
-                        return (
+                    return (
                           <button
                             key={preset.id}
                             type="button"
@@ -1872,15 +1872,15 @@ function CreatePoolPageInner() {
                     Scoring rules
                   </span>
                   <div className="rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-3">
-                    <ul className="space-y-1.5 text-sm text-[#5a7080]">
+                        <ul className="space-y-1.5 text-sm text-[#5a7080]">
                       {selectedScoring.rules.map((rule) => (
-                        <li key={rule}>{rule}</li>
-                      ))}
-                    </ul>
+                            <li key={rule}>{rule}</li>
+                          ))}
+                        </ul>
                     <p className="mt-2 text-xs font-medium text-primary">
                       {selectedScoring.tagline}
-                    </p>
-                  </div>
+                        </p>
+                      </div>
                 </div>
               ) : null}
 
@@ -1901,9 +1901,9 @@ function CreatePoolPageInner() {
                     role="alert"
                   >
                     <p>{error}</p>
-                    <button
+                <button
                       type="button"
-                      disabled={submitting}
+                  disabled={submitting}
                       onClick={() => void createPool()}
                       className={cn(
                         'mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline',
@@ -1912,7 +1912,7 @@ function CreatePoolPageInner() {
                       )}
                     >
                       Try again
-                    </button>
+                </button>
                   </div>
                 ) : null}
               </form>
@@ -2053,7 +2053,7 @@ function CreatePoolPageInner() {
             <div className="space-y-3">
               <div className="relative flex min-h-11 items-center">
                 {isSuccessPage ? (
-                  <Link
+              <Link
                     href={poolHref}
                     className={cn(
                       'relative z-10 flex h-9 max-w-[7.5rem] shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
@@ -2066,7 +2066,7 @@ function CreatePoolPageInner() {
                     <span className="truncate">
                       {createdPool ? 'Go to pool' : 'Dashboard'}
                     </span>
-                  </Link>
+              </Link>
                 ) : (
                   <button
                     type="button"
@@ -2087,11 +2087,11 @@ function CreatePoolPageInner() {
                   {chromeTitle}
                 </p>
                 <span className="relative z-10 ml-auto w-[4.25rem] shrink-0" aria-hidden />
-              </div>
+        </div>
               {!isSuccessPage ? (
                 <CreatePoolStepper currentStep={step} />
               ) : null}
-            </div>
+      </div>
           </header>
 
           <div
