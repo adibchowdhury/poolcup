@@ -16,6 +16,7 @@ export type SyncJobType =
   | 'refresh_rosters'
   | 'capture_standings_snapshots'
   | 'push_match_reminders'
+  | 'discord_match_reminders'
 
 export type SyncJobStatus = 'success' | 'error' | 'partial'
 

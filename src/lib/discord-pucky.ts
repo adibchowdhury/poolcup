@@ -387,6 +387,7 @@ export async function retryPendingDiscordEvents(
       .from('discord_event_log')
       .select('*')
       .in('status', ['pending', 'failed'])
+      .lt('attempts', 3)
       .order('created_at', { ascending: true })
       .limit(limit)
 

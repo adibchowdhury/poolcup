@@ -23,6 +23,12 @@ import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
+import {
+  loadSoccerEventNameMap,
+  resolveEventName,
+  tryEmitDiscordFinal,
+  tryEmitDiscordVoid,
+} from '@/src/lib/discord-soccer-events'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -107,6 +113,7 @@ type ReconcileError = {
 type CandidateRow = {
   id: string
   fixture_id: string | null
+  event_id: string | null
   round: string
   team1_name: string
   team2_name: string
@@ -122,6 +129,7 @@ type CandidateRow = {
 type FinalReverifyRow = {
   id: string
   fixture_id: string | null
+  event_id: string | null
   round: string
   team1_name: string
   team2_name: string
@@ -188,6 +196,7 @@ async function finalizeForceClosedMatch(
   resultTeam1: number,
   resultTeam2: number,
   ntfyMessage: string,
+  eventName?: string | null,
 ): Promise<'finalized' | 'update_error' | 'rpc_error'> {
   const nowIso = new Date().toISOString()
   const { error: updateError } = await supabase
@@ -236,6 +245,19 @@ async function finalizeForceClosedMatch(
   } catch (notifyError) {
     console.error('reconcile-stale-matches: ops ntfy failed', notifyError)
   }
+
+  await tryEmitDiscordFinal(
+    supabase,
+    {
+      matchId: match.id,
+      team1Name: match.team1_name,
+      team2Name: match.team2_name,
+      eventName,
+    },
+    resultTeam1,
+    resultTeam2,
+    'FT',
+  )
 
   return 'finalized'
 }
@@ -294,7 +316,7 @@ async function reverifyRecentFinalMatches(
   const { data: rows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute, advancing_team',
+      'id, fixture_id, event_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute, advancing_team',
     )
     .eq('is_final', true)
     .gte('kickoff_at', kickoffSinceIso)
@@ -332,6 +354,11 @@ async function reverifyRecentFinalMatches(
   if (pollable.length === 0) {
     return summary
   }
+
+  const eventNameById = await loadSoccerEventNameMap(
+    supabase,
+    finals.map((m) => m.event_id).filter(Boolean) as string[],
+  )
 
   const fixtureIds = pollable.map((m) => m.fixture_id as string)
   let fixtures: ApiFootballFixture[]
@@ -392,6 +419,17 @@ async function reverifyRecentFinalMatches(
         }
 
         summary.voided += 1
+
+        await tryEmitDiscordVoid(
+          supabase,
+          {
+            matchId: match.id,
+            team1Name: match.team1_name,
+            team2Name: match.team2_name,
+            eventName: resolveEventName(eventNameById, match.event_id),
+          },
+          apiStatus,
+        )
 
         // Always call — idempotent when points are already 0.
         try {
@@ -632,6 +670,7 @@ async function attemptForceCloseWithResolvedScore(
   update: { status_short: string; elapsed_minute: number | null },
   minutesSinceKickoff: number,
   kind: ForceCloseKind,
+  eventName?: string | null,
 ): Promise<'finalized' | 'no_score' | 'update_error' | 'rpc_error'> {
   const scores = resolveFixtureScoresForForceClose(
     fixture,
@@ -665,6 +704,7 @@ async function attemptForceCloseWithResolvedScore(
     scores.resultTeam1,
     scores.resultTeam2,
     ntfyMessage,
+    eventName,
   )
 }
 
@@ -690,7 +730,7 @@ async function runReconcile(): Promise<{
   const { data: candidateRows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute',
+      'id, fixture_id, event_id, round, team1_name, team2_name, result_team1, result_team2, is_final, kickoff_at, status_short, elapsed_minute',
     )
     .eq('is_final', false)
     .lt('kickoff_at', kickoffCutoff)
@@ -703,6 +743,11 @@ async function runReconcile(): Promise<{
 
   const candidates = (candidateRows ?? []) as CandidateRow[]
 
+  const eventNameById = await loadSoccerEventNameMap(
+    supabase,
+    candidates.map((m) => m.event_id).filter(Boolean) as string[],
+  )
+
   let finalized = 0
   let stillLive = 0
   let alerted = 0
@@ -711,6 +756,7 @@ async function runReconcile(): Promise<{
 
   for (const match of candidates) {
     const label = `${match.team1_name} v ${match.team2_name}`
+    const eventName = resolveEventName(eventNameById, match.event_id)
 
     if (!isValidApiFootballFixtureId(match.fixture_id)) {
       logUpdaterGuardWarning(
@@ -857,6 +903,18 @@ async function runReconcile(): Promise<{
 
       finalized += 1
       scoredMatchIds.push(match.id)
+      await tryEmitDiscordFinal(
+        supabase,
+        {
+          matchId: match.id,
+          team1Name: match.team1_name,
+          team2Name: match.team2_name,
+          eventName,
+        },
+        update.result_team1,
+        update.result_team2,
+        update.status_short,
+      )
       const score = `${update.result_team1}-${update.result_team2}`
       try {
         await sendOpsNtfy(
@@ -888,6 +946,7 @@ async function runReconcile(): Promise<{
         update,
         minutesSinceKickoff,
         'gentle',
+        eventName,
       )
 
       if (closeResult === 'no_score') {
@@ -928,6 +987,7 @@ async function runReconcile(): Promise<{
         update,
         minutesSinceKickoff,
         'hard',
+        eventName,
       )
 
       if (closeResult === 'no_score') {

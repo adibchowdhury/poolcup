@@ -19,6 +19,13 @@ import { tryPostMatchMoments } from '@/src/lib/post-match-moments'
 import { tryAwardPredictionXp } from '@/src/lib/xp'
 import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
+import {
+  loadSoccerEventNameMap,
+  resolveEventName,
+  tryEmitDiscordFinal,
+  tryEmitDiscordKickoff,
+  tryEmitDiscordScoreChange,
+} from '@/src/lib/discord-soccer-events'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { withSyncJob } from '@/src/lib/sync-jobs'
@@ -34,7 +41,10 @@ type SyncError = {
 type MatchRow = {
   id: string
   fixture_id: string | null
+  event_id: string | null
   round: string
+  team1_name: string
+  team2_name: string
   kickoff_at: string
   result_team1: number | null
   result_team2: number | null
@@ -119,7 +129,7 @@ async function runSync(): Promise<{
   const { data: liveMatchRows, error: loadError } = await supabase
     .from('matches')
     .select(
-      'id, fixture_id, round, kickoff_at, result_team1, result_team2, is_final, status_short, elapsed_minute',
+      'id, fixture_id, event_id, round, team1_name, team2_name, kickoff_at, result_team1, result_team2, is_final, status_short, elapsed_minute',
     )
     .eq('is_final', false)
     .lte('kickoff_at', nowIso)
@@ -130,6 +140,11 @@ async function runSync(): Promise<{
   }
 
   const matches = (liveMatchRows ?? []) as MatchRow[]
+
+  const eventNameById = await loadSoccerEventNameMap(
+    supabase,
+    matches.map((m) => m.event_id).filter(Boolean) as string[],
+  )
 
   if (matches.length === 0) {
     return {
@@ -305,6 +320,36 @@ async function runSync(): Promise<{
 
     matchesUpdated += 1
 
+    const discordCtx = {
+      matchId: match.id,
+      team1Name: match.team1_name,
+      team2Name: match.team2_name,
+      eventName: resolveEventName(eventNameById, match.event_id),
+    }
+
+    if (statusChanged) {
+      await tryEmitDiscordKickoff(
+        supabase,
+        discordCtx,
+        match.status_short,
+        apiStatusShort,
+      )
+    }
+
+    if (
+      !effectiveIsFinal &&
+      (match.result_team1 !== goals.resultTeam1 ||
+        match.result_team2 !== goals.resultTeam2)
+    ) {
+      await tryEmitDiscordScoreChange(
+        supabase,
+        discordCtx,
+        { t1: match.result_team1, t2: match.result_team2 },
+        { t1: goals.resultTeam1, t2: goals.resultTeam2 },
+        apiElapsed ?? match.elapsed_minute,
+      )
+    }
+
     if (scoreOrFinalChanged && effectiveIsFinal) {
       const { error: rpcError } = await supabase.rpc('calculate_match_points', {
         p_match_id: match.id,
@@ -318,6 +363,15 @@ async function runSync(): Promise<{
       } else {
         pointsRecalculated += 1
         scoredMatchIds.push(match.id)
+        if (!match.is_final) {
+          await tryEmitDiscordFinal(
+            supabase,
+            discordCtx,
+            goals.resultTeam1,
+            goals.resultTeam2,
+            apiStatusShort,
+          )
+        }
         await tryPostMatchMoments(supabase, match.id, 'sync-scores')
         await tryAwardPredictionXp(supabase, match.id, 'sync-scores')
       }
