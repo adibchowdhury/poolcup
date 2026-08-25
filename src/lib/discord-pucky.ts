@@ -38,18 +38,46 @@ function getAdminClient(supabase?: SupabaseClient): SupabaseClient {
   return supabase ?? createAdminSupabaseClient()
 }
 
-/** True when bot token and at least one mapped channel env are present. */
+/** True when bot token and the soccer channel env are present (soccer hooks only). */
 export function isDiscordEnvConfigured(): boolean {
-  return !!process.env.DISCORD_BOT_TOKEN?.trim() && !!resolveChannelId('soccer')
+  return isDiscordChannelConfigured('soccer')
+}
+
+export const DISCORD_CHANNEL_KEYS = [
+  'soccer',
+  'football',
+  'basketball',
+  'baseball',
+  'hockey',
+] as const
+
+export type DiscordChannelKey = (typeof DISCORD_CHANNEL_KEYS)[number]
+
+const CHANNEL_ENV_VARS: Record<DiscordChannelKey, string> = {
+  soccer: 'DISCORD_CHANNEL_SOCCER',
+  football: 'DISCORD_CHANNEL_FOOTBALL',
+  basketball: 'DISCORD_CHANNEL_BASKETBALL',
+  baseball: 'DISCORD_CHANNEL_BASEBALL',
+  hockey: 'DISCORD_CHANNEL_HOCKEY',
+}
+
+export function isDiscordChannelKey(value: string): value is DiscordChannelKey {
+  return (DISCORD_CHANNEL_KEYS as readonly string[]).includes(value)
+}
+
+/** Per-channel configured check (bot token + that sport's channel id). */
+export function isDiscordChannelConfigured(channelKey: string): boolean {
+  return (
+    !!process.env.DISCORD_BOT_TOKEN?.trim() && !!resolveChannelId(channelKey)
+  )
 }
 
 function resolveChannelId(channelKey: string): string | null {
   const key = channelKey.trim().toLowerCase()
-  if (key === 'soccer') {
-    const id = process.env.DISCORD_CHANNEL_SOCCER?.trim()
-    return id || null
-  }
-  return null
+  if (!isDiscordChannelKey(key)) return null
+  const envVar = CHANNEL_ENV_VARS[key]
+  const id = process.env[envVar]?.trim()
+  return id || null
 }
 
 function channelConfigError(channelKey: string): string {
@@ -322,8 +350,8 @@ export async function sendPendingEvent(
     return row
   }
 
-  if (!isDiscordEnvConfigured()) {
-    return markEventFailed(client, row, 'Discord env is not configured')
+  if (!process.env.DISCORD_BOT_TOKEN?.trim()) {
+    return markEventFailed(client, row, 'DISCORD_BOT_TOKEN is not configured')
   }
 
   const channelId = resolveChannelId(row.channel_key)

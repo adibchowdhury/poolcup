@@ -13,6 +13,12 @@ export type SoccerMatchDiscordContext = {
   eventName?: string | null
 }
 
+/** Message-only fields shared by production hooks and preview. */
+export type SoccerMatchDiscordMessageContext = Pick<
+  SoccerMatchDiscordContext,
+  'team1Name' | 'team2Name' | 'eventName'
+>
+
 /** One batch query per sync/reconcile run — not per match. */
 export async function loadSoccerEventNameMap(
   supabase: SupabaseClient,
@@ -63,6 +69,65 @@ function withCompetitionPrefix(
   return `[${label}] ${content}`
 }
 
+export function formatDiscordKickoffMessage(
+  ctx: SoccerMatchDiscordMessageContext,
+): string {
+  return withCompetitionPrefix(
+    `🔴 LIVE — ${ctx.team1Name} vs ${ctx.team2Name} has kicked off! Picks are locked — good luck everyone 🍀`,
+    ctx.eventName,
+  )
+}
+
+export function formatDiscordScoreChangeMessage(
+  ctx: SoccerMatchDiscordMessageContext,
+  afterScores: { t1: number; t2: number },
+  elapsedMinute: number | null | undefined,
+): string {
+  const minuteSuffix =
+    elapsedMinute != null ? ` (${elapsedMinute}')` : ''
+  return withCompetitionPrefix(
+    `⚽ GOAL! ${ctx.team1Name} ${afterScores.t1}-${afterScores.t2} ${ctx.team2Name}${minuteSuffix}`,
+    ctx.eventName,
+  )
+}
+
+export function formatDiscordFinalMessage(
+  ctx: SoccerMatchDiscordMessageContext,
+  resultTeam1: number,
+  resultTeam2: number,
+  statusShort: string,
+): string {
+  return withCompetitionPrefix(
+    `🏁 FULL TIME — ${ctx.team1Name} ${resultTeam1}-${resultTeam2} ${ctx.team2Name}${finalStatusSuffix(statusShort)}`,
+    ctx.eventName,
+  )
+}
+
+export function formatDiscordVoidMessage(
+  ctx: SoccerMatchDiscordMessageContext,
+  voidStatusShort: string,
+): string {
+  const phrase = voidStatusPhrase(voidStatusShort)
+  return withCompetitionPrefix(
+    `⚠️ ${ctx.team1Name} vs ${ctx.team2Name} has been ${phrase}`,
+    ctx.eventName,
+  )
+}
+
+export function formatDiscordMatchReminderMessage(
+  ctx: SoccerMatchDiscordMessageContext,
+  kickoffAtIso: string,
+): string {
+  const unix = Math.floor(new Date(kickoffAtIso).getTime() / 1000)
+  if (!Number.isFinite(unix)) {
+    throw new Error('Invalid kickoff timestamp for reminder message')
+  }
+  return withCompetitionPrefix(
+    `⏰ ${ctx.team1Name} vs ${ctx.team2Name} kicks off <t:${unix}:R> — get your picks in before kickoff!`,
+    ctx.eventName,
+  )
+}
+
 function voidStatusPhrase(statusShort: string): string {
   switch (normalizeMatchStatusShort(statusShort)) {
     case 'PST':
@@ -106,10 +171,7 @@ export async function tryEmitDiscordKickoff(
   if (!isDiscordEnvConfigured()) return
   if (!isKickoffTransition(beforeStatus, afterStatus)) return
 
-  const content = withCompetitionPrefix(
-    `🔴 LIVE — ${ctx.team1Name} vs ${ctx.team2Name} has kicked off! Picks are locked — good luck everyone 🍀`,
-    ctx.eventName,
-  )
+  const content = formatDiscordKickoffMessage(ctx)
 
   try {
     await processDiscordEvent({
@@ -140,11 +202,10 @@ export async function tryEmitDiscordScoreChange(
     return
   }
 
-  const minuteSuffix =
-    elapsedMinute != null ? ` (${elapsedMinute}')` : ''
-  const content = withCompetitionPrefix(
-    `⚽ GOAL! ${ctx.team1Name} ${afterScores.t1}-${afterScores.t2} ${ctx.team2Name}${minuteSuffix}`,
-    ctx.eventName,
+  const content = formatDiscordScoreChangeMessage(
+    ctx,
+    afterScores,
+    elapsedMinute,
   )
 
   try {
@@ -173,9 +234,11 @@ export async function tryEmitDiscordFinal(
 ): Promise<void> {
   if (!isDiscordEnvConfigured()) return
 
-  const content = withCompetitionPrefix(
-    `🏁 FULL TIME — ${ctx.team1Name} ${resultTeam1}-${resultTeam2} ${ctx.team2Name}${finalStatusSuffix(statusShort)}`,
-    ctx.eventName,
+  const content = formatDiscordFinalMessage(
+    ctx,
+    resultTeam1,
+    resultTeam2,
+    statusShort,
   )
 
   try {
@@ -199,11 +262,7 @@ export async function tryEmitDiscordVoid(
 ): Promise<void> {
   if (!isDiscordEnvConfigured()) return
 
-  const phrase = voidStatusPhrase(voidStatusShort)
-  const content = withCompetitionPrefix(
-    `⚠️ ${ctx.team1Name} vs ${ctx.team2Name} has been ${phrase}`,
-    ctx.eventName,
-  )
+  const content = formatDiscordVoidMessage(ctx, voidStatusShort)
 
   try {
     await processDiscordEvent({
@@ -226,13 +285,12 @@ export async function tryEmitDiscordMatchReminder(
 ): Promise<void> {
   if (!isDiscordEnvConfigured()) return
 
-  const unix = Math.floor(new Date(kickoffAtIso).getTime() / 1000)
-  if (!Number.isFinite(unix)) return
-
-  const content = withCompetitionPrefix(
-    `⏰ ${ctx.team1Name} vs ${ctx.team2Name} kicks off <t:${unix}:R> — get your picks in before kickoff!`,
-    ctx.eventName,
-  )
+  let content: string
+  try {
+    content = formatDiscordMatchReminderMessage(ctx, kickoffAtIso)
+  } catch {
+    return
+  }
 
   try {
     await processDiscordEvent({
