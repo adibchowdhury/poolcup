@@ -215,11 +215,17 @@ export function CreateCompetitionStep({
           </div>
 
           {eventsLoading ? (
-            <div className="create-competition-step__empty">
+            <div
+              key={`${activeSport}-loading`}
+              className="create-competition-step__empty create-mode-competition-swap"
+            >
               Loading competitions…
             </div>
           ) : eventsError ? (
-            <div className="create-competition-step__empty">
+            <div
+              key={`${activeSport}-error`}
+              className="create-competition-step__empty create-mode-competition-swap"
+            >
               <div>
                 <p>{eventsError}</p>
                 <button
@@ -233,11 +239,17 @@ export function CreateCompetitionStep({
               </div>
             </div>
           ) : rows.length === 0 ? (
-            <div className="create-competition-step__empty">
+            <div
+              key={`${activeSport}-empty`}
+              className="create-competition-step__empty create-mode-competition-swap"
+            >
               No competitions available for {sportMeta.label} right now
             </div>
           ) : (
-            <div className="create-competition-step__list">
+            <div
+              key={`${activeSport}-list`}
+              className="create-competition-step__list create-mode-competition-swap"
+            >
               {rows.map((row) => {
                 const pressed = row.eventId === selectedEventId
                 return (

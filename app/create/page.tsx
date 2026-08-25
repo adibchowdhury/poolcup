@@ -138,9 +138,12 @@ const STEPPER_GREEN = '#00e676'
 const STEPPER_MOTION_CLASS =
   'transition-all duration-[225ms] ease-out motion-reduce:transition-none motion-reduce:duration-0'
 
-/** Desktop: fixed card height. Mobile: full viewport (no bordered box). */
-const CREATE_POOL_SHELL_HEIGHT_CLASS =
-  'h-dvh lg:h-[min(720px,calc(100dvh-7rem))]'
+/**
+ * Mobile: full viewport (flex children scroll inside).
+ * Desktop: height follows content so step-1 competitions aren’t clipped by a
+ * fixed shell (former `lg:h-[min(720px,calc(100dvh-7rem))]` + pane overflow-y-auto).
+ */
+const CREATE_POOL_SHELL_HEIGHT_CLASS = 'h-dvh lg:h-auto'
 const CREATE_POOL_SHELL_WIDTH_CLASS = 'w-full lg:max-w-2xl'
 const CREATE_POOL_CARD_CLASS = cn(
   'flex min-h-0 flex-col bg-transparent px-4 pt-4',
@@ -161,13 +164,10 @@ const CREATE_POOL_FOOTER_CLASS =
   'flex shrink-0 flex-col justify-end pt-4 max-lg:min-h-0'
 const CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS = 'lg:min-h-[8.75rem]'
 
+/** Secondary / Back — uses design-system outline (neutral), not primary green. */
 const CREATE_POOL_BTN_BACK_CLASS = cn(
-  'ui-tactile-btn w-[38%] min-w-0 shrink-0 font-semibold text-foreground',
+  'w-full min-w-0 shrink-0 font-semibold lg:w-[38%]',
   '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
-  'bg-[linear-gradient(180deg,#243044,#111a27)]',
-  'hover:bg-[linear-gradient(180deg,#243044,#111a27)]',
-  'active:bg-[linear-gradient(180deg,#243044,#111a27)]',
-  'disabled:pointer-events-none disabled:opacity-50',
 )
 
 const CREATE_POOL_BTN_PRIMARY_CLASS = cn(
@@ -206,15 +206,18 @@ function CreatePoolNavFooter({
   return (
     <div
       className={cn(
-        'flex w-full items-stretch gap-3 pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]',
-        !showBack && 'justify-center',
+        'flex w-full items-stretch pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]',
+        showBack
+          ? 'max-lg:flex-col max-lg:gap-2.5 lg:flex-row lg:gap-3'
+          : 'justify-center gap-3',
       )}
     >
       {showBack ? (
         <Button
           type="button"
           size="lg"
-          className={cn(CREATE_POOL_BTN_BACK_CLASS, 'hidden lg:inline-flex')}
+          variant="outline"
+          className={CREATE_POOL_BTN_BACK_CLASS}
           disabled={backDisabled}
           onClick={onBack}
         >
@@ -224,7 +227,7 @@ function CreatePoolNavFooter({
       <div
         className={cn(
           showBack
-            ? 'min-w-0 flex-1 max-lg:w-full'
+            ? 'min-w-0 w-full lg:flex-1'
             : 'w-full max-lg:w-full lg:w-auto',
         )}
       >
@@ -503,6 +506,9 @@ function CreatePoolPageInner() {
   const [leftOpacity, setLeftOpacity] = useState(1)
   const [rightOpacity, setRightOpacity] = useState(0)
   const slideTimersRef = useRef<number[]>([])
+  /** Stable slide viewport while both panes are mounted (desktop card is height:auto). */
+  const slideViewportRef = useRef<HTMLDivElement>(null)
+  const [slideLockPx, setSlideLockPx] = useState<number | null>(null)
   const [selectedSport, setSelectedSport] = useState<SportId | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [creatableEvents, setCreatableEvents] = useState<SportingEvent[]>([])
@@ -638,6 +644,7 @@ function CreatePoolPageInner() {
       if (next === step || isSliding || next < 1 || next > TOTAL_FLOW_STEPS) return
 
       if (prefersReducedMotion) {
+        setSlideLockPx(null)
         setStep(next)
         setLeftPanelStep(next)
         setRightPanelStep(createPoolNextStep(next))
@@ -655,7 +662,12 @@ function CreatePoolPageInner() {
       const endLeft = dir === 1 ? 0 : 1
       const endRight = dir === 1 ? 1 : 0
 
+      // Freeze outgoing viewport height before mounting the incoming pane so
+      // lg:h-auto card content cannot reflow the track mid translate+fade.
+      const lockPx = slideViewportRef.current?.getBoundingClientRect().height ?? 0
+
       flushSync(() => {
+        if (lockPx > 0) setSlideLockPx(lockPx)
         if (dir === 1) {
           setLeftPanelStep(step)
           setRightPanelStep(next)
@@ -689,6 +701,7 @@ function CreatePoolPageInner() {
         setLeftOpacity(1)
         setRightOpacity(0)
         setIsSliding(false)
+        setSlideLockPx(null)
         cancelAnimationFrame(rafEnable)
         cancelAnimationFrame(rafEnd)
       }, STEP_TRANSITION_MS)
@@ -2081,7 +2094,20 @@ function CreatePoolPageInner() {
             </div>
           </header>
 
-          <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div
+            ref={slideViewportRef}
+            className={cn(
+              // overflow-hidden clips the dual-pane translateX slide (pre-session geometry).
+              // Desktop unlocked: hug step content (lg:h-auto card). Locked: fixed px height.
+              'mt-4 flex min-h-0 flex-col overflow-hidden',
+              slideLockPx != null ? 'flex-none' : 'flex-1 lg:flex-none',
+            )}
+            style={
+              slideLockPx != null
+                ? { height: slideLockPx, flexGrow: 0, flexShrink: 0 }
+                : undefined
+            }
+          >
             {checkoutPhase === 'finalizing' || checkoutPhase === 'slow' ? (
               <div className="flex h-full min-h-0 flex-col items-center justify-center px-2 text-center">
                 <Loader2
@@ -2109,7 +2135,12 @@ function CreatePoolPageInner() {
               </div>
             ) : (
             <div
-              className="flex h-full min-h-0 w-[200%] flex-1 will-change-transform"
+              className={cn(
+                'flex min-h-0 w-[200%] will-change-transform',
+                slideLockPx != null
+                  ? 'h-full flex-1'
+                  : 'h-full flex-1 lg:h-auto lg:flex-none',
+              )}
               style={{
                 transform: `translateX(${trackX}%)`,
                 ...createPoolSlideMotionStyle('transform', trackTransition),
@@ -2119,7 +2150,12 @@ function CreatePoolPageInner() {
                 className={cn(
                   // Horizontal gutter keeps selection rings inside overflow clip
                   // (overflow-x-hidden + ring-2 otherwise crops left/right edges).
-                  'scrollbar-none flex h-full min-h-0 w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
+                  // Unlocked desktop: h-auto so step-1 list stays natural height.
+                  // Locked / mobile: h-full + overflow-y-auto (original slide ports).
+                  'scrollbar-none flex w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
+                  slideLockPx != null
+                    ? 'h-full min-h-0'
+                    : 'h-full min-h-0 lg:h-auto',
                   isSliding && 'pointer-events-none will-change-[opacity]',
                 )}
                 style={{
@@ -2131,7 +2167,10 @@ function CreatePoolPageInner() {
               </div>
               <div
                 className={cn(
-                  'scrollbar-none pointer-events-none flex h-full min-h-0 w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
+                  'scrollbar-none pointer-events-none flex w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
+                  slideLockPx != null
+                    ? 'h-full min-h-0'
+                    : 'h-full min-h-0 lg:h-auto',
                   isSliding && 'will-change-[opacity]',
                 )}
                 style={{
