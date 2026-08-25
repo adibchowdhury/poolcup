@@ -192,8 +192,6 @@ export function AdminUserDetailView({ userId }: { userId: string }) {
             ['Username', profile.username],
             ['Display name', profile.display_name],
             ['Email', profile.email],
-            ['Tier', profile.tier],
-            ['Subscription status', profile.subscription_status],
             ['Stripe customer', profile.stripe_customer_id],
             ['Banned', banned ? 'Yes' : 'No'],
             ['Points', profile.points],
@@ -234,6 +232,11 @@ export function AdminUserDetailView({ userId }: { userId: string }) {
                 >
                   {pool.name ?? pool.id}
                 </Link>
+                {pool.plan === 'custom' ? (
+                  <span className="ml-2 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-700 dark:text-amber-400">
+                    Custom Pool
+                  </span>
+                ) : null}
                 <span className="ml-2 text-muted-foreground">
                   {formatAdminWhen(pool.created_at)}
                 </span>

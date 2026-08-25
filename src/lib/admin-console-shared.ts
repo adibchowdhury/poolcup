@@ -3,13 +3,14 @@ export type AdminMetrics = {
   dau: number
   predictions_today: number
   pools_created_today: number
-  subs_free: number
-  subs_pro: number
-  subs_commissioner: number
-  mrr_estimate: number
   total_pools: number
   total_predictions: number
   banned_users: number
+  /** Legacy fields still returned by admin_get_metrics until SQL is updated. */
+  subs_free?: number
+  subs_pro?: number
+  subs_commissioner?: number
+  mrr_estimate?: number
 }
 
 export type AdminUserLookupRow = {
@@ -17,7 +18,6 @@ export type AdminUserLookupRow = {
   username: string | null
   display_name: string | null
   email: string | null
-  tier: string | null
   banned: boolean | null
   created_at: string | null
   last_active_at: string | null
@@ -29,8 +29,6 @@ export type AdminUserDetail = {
     username: string | null
     display_name: string | null
     email: string | null
-    tier: string | null
-    subscription_status: string | null
     stripe_customer_id: string | null
     banned: boolean | null
     is_admin: boolean | null
@@ -43,6 +41,7 @@ export type AdminUserDetail = {
     id: string
     name: string | null
     created_at: string | null
+    plan?: string | null
   }>
   pools_joined_count: number
   recent_predictions: Array<{
@@ -73,12 +72,12 @@ export type AdminPoolDetail = {
     created_at: string | null
     scoring_style: string | null
     event_id: string | null
+    plan?: string | null
   } | null
   owner: {
     id: string
     display_name: string | null
     email: string | null
-    tier: string | null
   } | null
   member_count: number
   co_commissioners: number

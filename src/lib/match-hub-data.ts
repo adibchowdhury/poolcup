@@ -12,12 +12,6 @@ export type MatchEventInfo = {
   sport: string | null
 }
 
-export type MatchConsensus = {
-  homePct: number
-  drawPct: number
-  awayPct: number
-  total: number
-}
 
 export type MatchCommonScore = {
   score: string
@@ -142,32 +136,6 @@ export async function fetchMatchEventInfo(
   }
 }
 
-export function parseMatchConsensus(data: unknown): MatchConsensus | null {
-  if (!data || typeof data !== 'object') return null
-  const row = data as Record<string, unknown>
-
-  const homePct =
-    asNumber(row.home_pct) ??
-    asNumber(row.homePct) ??
-    asNumber(row.team1_pct)
-  const drawPct = asNumber(row.draw_pct) ?? asNumber(row.drawPct)
-  const awayPct =
-    asNumber(row.away_pct) ??
-    asNumber(row.awayPct) ??
-    asNumber(row.team2_pct)
-  const total = asNumber(row.total) ?? asNumber(row.prediction_count)
-
-  if (
-    homePct == null ||
-    drawPct == null ||
-    awayPct == null ||
-    total == null
-  ) {
-    return null
-  }
-
-  return { homePct, drawPct, awayPct, total }
-}
 
 export function parseMatchCommonScores(data: unknown): MatchCommonScore[] {
   if (!Array.isArray(data)) return []
@@ -226,17 +194,6 @@ export function parseFriendsMatchPredictions(
     .filter((row): row is FriendMatchPrediction => row != null)
 }
 
-export async function fetchMatchConsensus(
-  supabase: SupabaseClient,
-  matchId: string,
-): Promise<MatchConsensus | null> {
-  for (const args of [{ p_match_id: matchId }, { match_id: matchId }] as const) {
-    const { data, error } = await supabase.rpc('get_match_consensus', args)
-    if (!error) return parseMatchConsensus(data)
-    console.error('get_match_consensus failed:', error.message)
-  }
-  return null
-}
 
 export async function fetchMatchCommonScores(
   supabase: SupabaseClient,
@@ -792,7 +749,6 @@ export function buildPoolMatchDistribution(
 
 /** TEMPORARY — frontend-only mock hub payload. Never written to the DB. */
 export type MatchHubMockBundle = {
-  consensus: MatchConsensus
   commonScores: MatchCommonScore[]
   friends: FriendMatchPrediction[]
   myPredictions: MyMatchPredictions
@@ -821,12 +777,6 @@ export function buildMockMatchHub(
   const away = team2Name.trim() || 'Houston Dynamo'
 
   return {
-    consensus: {
-      homePct: 48,
-      drawPct: 24,
-      awayPct: 28,
-      total: 14_820,
-    },
     commonScores: [
       { score: '2–1', team1: 2, team2: 1, count: 2668, pct: 18 },
       { score: '1–1', team1: 1, team2: 1, count: 2223, pct: 15 },

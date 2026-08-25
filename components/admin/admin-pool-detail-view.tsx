@@ -151,7 +151,14 @@ export function AdminPoolDetailView({ poolId }: { poolId: string }) {
             ['Co-commissioners', detail.co_commissioners],
             ['Owner', detail.owner?.display_name],
             ['Owner email', detail.owner?.email],
-            ['Owner tier', detail.owner?.tier],
+            [
+              'Plan',
+              pool.plan === 'custom'
+                ? 'Custom Pool'
+                : pool.plan
+                  ? String(pool.plan)
+                  : '—',
+            ],
           ] as const
         ).map(([label, value]) => (
           <div

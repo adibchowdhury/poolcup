@@ -108,7 +108,6 @@ export function AdminUsersDashboard() {
                 <th className="px-3 py-3 font-medium">Username</th>
                 <th className="px-3 py-3 font-medium">Display name</th>
                 <th className="px-3 py-3 font-medium">Email</th>
-                <th className="px-3 py-3 font-medium">Tier</th>
                 <th className="px-3 py-3 font-medium">Banned</th>
                 <th className="px-3 py-3 font-medium">Created</th>
               </tr>
@@ -132,7 +131,6 @@ export function AdminUsersDashboard() {
                   </td>
                   <td className="px-3 py-2.5">{user.display_name ?? '—'}</td>
                   <td className="px-3 py-2.5 break-all">{user.email ?? '—'}</td>
-                  <td className="px-3 py-2.5">{user.tier ?? '—'}</td>
                   <td className="px-3 py-2.5">
                     {user.banned ? (
                       <span className="text-destructive">Yes</span>

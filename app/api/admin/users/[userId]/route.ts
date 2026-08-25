@@ -29,5 +29,29 @@ export async function GET(_request: Request, context: Ctx) {
     )
   }
 
-  return NextResponse.json({ detail: data })
+  // Attach pools.plan onto owned pools for Custom Pool badges (RPC has no plan yet).
+  const detail =
+    data && typeof data === 'object'
+      ? ({ ...(data as Record<string, unknown>) } as Record<string, unknown>)
+      : null
+
+  if (detail && Array.isArray(detail.pools_owned) && detail.pools_owned.length > 0) {
+    const owned = detail.pools_owned as Array<{ id?: string }>
+    const ids = owned.map((p) => p.id).filter((id): id is string => Boolean(id))
+    if (ids.length > 0) {
+      const { data: planRows } = await admin.service
+        .from('pools')
+        .select('id, plan')
+        .in('id', ids)
+      const byId = new Map(
+        (planRows ?? []).map((row) => [row.id as string, row.plan as string | null]),
+      )
+      detail.pools_owned = owned.map((pool) => ({
+        ...pool,
+        plan: pool.id ? (byId.get(pool.id) ?? null) : null,
+      }))
+    }
+  }
+
+  return NextResponse.json({ detail: detail ?? data })
 }

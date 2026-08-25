@@ -4,10 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  AdminErrorState,
-  formatUsd,
-} from '@/components/admin/admin-shell'
+import { AdminErrorState } from '@/components/admin/admin-shell'
 import type { AdminMetrics } from '@/src/lib/admin-console-shared'
 import { ADMIN_NAV } from '@/src/lib/admin-console-shared'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
@@ -120,16 +117,6 @@ export function AdminMetricsDashboard() {
             <MetricCard
               label="Pools created today"
               value={metrics.pools_created_today}
-            />
-            <MetricCard label="Subs · Free" value={metrics.subs_free} />
-            <MetricCard label="Subs · Pro" value={metrics.subs_pro} />
-            <MetricCard
-              label="Subs · Commissioner"
-              value={metrics.subs_commissioner}
-            />
-            <MetricCard
-              label="MRR estimate"
-              value={formatUsd(metrics.mrr_estimate)}
             />
             <MetricCard label="Total pools" value={metrics.total_pools} />
             <MetricCard

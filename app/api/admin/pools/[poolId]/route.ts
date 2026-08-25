@@ -29,5 +29,24 @@ export async function GET(_request: Request, context: Ctx) {
     )
   }
 
-  return NextResponse.json({ detail: data })
+  // Cheap Custom Pool signal — admin_pool_detail RPC does not yet return plan.
+  const { data: planRow } = await admin.service
+    .from('pools')
+    .select('plan')
+    .eq('id', poolId)
+    .maybeSingle()
+
+  const detail =
+    data && typeof data === 'object'
+      ? {
+          ...(data as Record<string, unknown>),
+          pool: {
+            ...(((data as { pool?: Record<string, unknown> }).pool ??
+              {}) as Record<string, unknown>),
+            plan: planRow?.plan ?? null,
+          },
+        }
+      : data
+
+  return NextResponse.json({ detail })
 }
