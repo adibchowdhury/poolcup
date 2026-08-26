@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server'
 import { isCronAuthorized, requireCronSecretConfigured } from '@/src/lib/cron-auth'
 import { retryPendingDiscordEvents } from '@/src/lib/discord-pucky'
 import {
-  resolveEventName,
   tryEmitDiscordMatchReminder,
 } from '@/src/lib/discord-soccer-events'
+import {
+  PROVIDER_TO_DISCORD_CHANNEL,
+  tryEmitUsSportMatchReminder,
+  type DiscordUsSportKey,
+} from '@/src/lib/discord-us-sport-events'
 import { createAdminSupabaseClient } from '@/src/lib/supabase/admin'
 import { withSyncJob } from '@/src/lib/sync-jobs'
 
@@ -16,12 +20,26 @@ export const maxDuration = 120
 const REMINDER_HORIZON_MS = 65 * 60 * 1000
 const RETRY_BATCH_SIZE = 10
 
+const REMINDER_PROVIDERS = [
+  'api-football',
+  'api-american-football',
+  'api-basketball',
+  'api-baseball',
+  'api-hockey',
+] as const
+
 type MatchRow = {
   id: string
   event_id: string | null
   team1_name: string
   team2_name: string
   kickoff_at: string
+}
+
+type EventRow = {
+  id: string
+  name: string
+  provider: string | null
 }
 
 async function handleDiscordMatchReminders(request: Request) {
@@ -51,22 +69,33 @@ async function handleDiscordMatchReminders(request: Request) {
 
         const { data: events, error: eventsError } = await admin
           .from('sporting_events')
-          .select('id, name')
-          .eq('provider', 'api-football')
+          .select('id, name, provider')
+          .in('provider', [...REMINDER_PROVIDERS])
           .in('status', ['live', 'upcoming'])
 
         if (eventsError) throw new Error(eventsError.message)
 
-        const eventIds = (events ?? []).map((row) => String(row.id))
-        const eventNameById = new Map(
-          (events ?? []).map((row) => [String(row.id), String(row.name)]),
+        const eventRows = (events ?? []) as EventRow[]
+        const eventIds = eventRows.map((row) => String(row.id))
+        const eventMetaById = new Map(
+          eventRows.map((row) => [
+            String(row.id),
+            {
+              name: String(row.name),
+              provider: row.provider ? String(row.provider) : null,
+            },
+          ]),
         )
 
         if (eventIds.length === 0) {
           return {
             itemsProcessed: retried.processed,
             itemsChanged: retried.sent,
-            detail: { retried, remindersAttempted: 0 },
+            detail: {
+              retried,
+              remindersAttempted: 0,
+              byChannel: {} as Record<string, number>,
+            },
             result: { retried, remindersAttempted: 0 },
           }
         }
@@ -82,18 +111,39 @@ async function handleDiscordMatchReminders(request: Request) {
         if (matchError) throw new Error(matchError.message)
 
         const upcoming = (matches ?? []) as MatchRow[]
+        const byChannel: Record<string, number> = {}
 
         for (const match of upcoming) {
-          await tryEmitDiscordMatchReminder(
-            admin,
-            {
-              matchId: match.id,
-              team1Name: match.team1_name,
-              team2Name: match.team2_name,
-              eventName: resolveEventName(eventNameById, match.event_id),
-            },
-            match.kickoff_at,
-          )
+          const meta = match.event_id
+            ? eventMetaById.get(match.event_id)
+            : undefined
+          const provider = meta?.provider ?? null
+          const channel =
+            provider != null
+              ? PROVIDER_TO_DISCORD_CHANNEL[provider]
+              : undefined
+
+          if (!channel) continue
+
+          byChannel[channel] = (byChannel[channel] ?? 0) + 1
+
+          const ctx = {
+            matchId: match.id,
+            team1Name: match.team1_name,
+            team2Name: match.team2_name,
+            eventName: meta?.name ?? null,
+          }
+
+          if (channel === 'soccer') {
+            await tryEmitDiscordMatchReminder(admin, ctx, match.kickoff_at)
+          } else {
+            await tryEmitUsSportMatchReminder(
+              admin,
+              channel as DiscordUsSportKey,
+              ctx,
+              match.kickoff_at,
+            )
+          }
         }
 
         return {
@@ -102,6 +152,7 @@ async function handleDiscordMatchReminders(request: Request) {
           detail: {
             retried,
             remindersAttempted: upcoming.length,
+            byChannel,
           },
           result: {
             retried,

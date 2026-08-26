@@ -21,6 +21,15 @@ import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
 import { withTransientDbRetry } from '@/src/lib/db-transient-retry'
 import { withSyncJob } from '@/src/lib/sync-jobs'
+import {
+  loadSportEventNameMap,
+  resolveSportEventName,
+  tryEmitUsSportFinal,
+  tryEmitUsSportFinalsForMatchIds,
+  tryEmitUsSportKickoff,
+  tryEmitUsSportScoreChange,
+  tryEmitUsSportVoid,
+} from '@/src/lib/discord-us-sport-events'
 
 export const API_BASEBALL_PROVIDER = 'api-baseball'
 
@@ -389,6 +398,11 @@ async function syncOneBaseballEvent(
             scored.matchIds,
             'sync-baseball:batch',
           )
+          await tryEmitUsSportFinalsForMatchIds(
+            supabase,
+            'baseball',
+            scored.matchIds,
+          )
         }
       }
 
@@ -504,6 +518,8 @@ type BaseballLiveMatchRow = {
   is_final: boolean
   status_short: string | null
   event_id: string | null
+  team1_name: string
+  team2_name: string
 }
 
 /**
@@ -575,7 +591,7 @@ export async function syncBaseballLiveScores(
       const { data, error } = await supabase
         .from('matches')
         .select(
-          'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id',
+          'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id, team1_name, team2_name',
         )
         .in('event_id', eventIds)
         .eq('is_final', false)
@@ -600,6 +616,11 @@ export async function syncBaseballLiveScores(
 
   // Dates to poll: today + UTC dates of candidate kickoffs (covers late games).
   const datesNeeded = new Set<string>([todayUtcDateString()])
+    const discordEventNameById = await loadSportEventNameMap(
+    supabase,
+    candidates.map((m) => m.event_id).filter(Boolean) as string[],
+  )
+
   for (const match of candidates) {
     const d = new Date(match.kickoff_at).toISOString().slice(0, 10)
     if (d) datesNeeded.add(d)
@@ -715,6 +736,46 @@ export async function syncBaseballLiveScores(
 
     matchesUpdated += 1
 
+    const discordCtx = {
+      matchId: match.id,
+      team1Name: match.team1_name,
+      team2Name: match.team2_name,
+      eventName: resolveSportEventName(discordEventNameById, match.event_id),
+    }
+
+    await tryEmitUsSportKickoff(
+      supabase,
+      'baseball',
+      discordCtx,
+      match.status_short,
+      statusShort,
+    )
+
+    if (
+      !becomingFinal &&
+      runs != null &&
+      (match.result_team1 !== runs.resultTeam1 ||
+        match.result_team2 !== runs.resultTeam2)
+    ) {
+      await tryEmitUsSportScoreChange(
+        supabase,
+        'baseball',
+        discordCtx,
+        { t1: match.result_team1, t2: match.result_team2 },
+        { t1: runs.resultTeam1, t2: runs.resultTeam2 },
+        statusShort,
+      )
+    }
+
+    await tryEmitUsSportVoid(
+      supabase,
+      'baseball',
+      discordCtx,
+      match.status_short,
+      statusShort,
+    )
+
+
     if (becomingFinal) {
       const { error: rpcError } = await supabase.rpc('calculate_match_points', {
         p_match_id: match.id,
@@ -726,6 +787,14 @@ export async function syncBaseballLiveScores(
       } else {
         pointsScored += 1
         scoredMatchIds.push(match.id)
+        await tryEmitUsSportFinal(
+          supabase,
+          'baseball',
+          discordCtx,
+          runs!.resultTeam1,
+          runs!.resultTeam2,
+          statusShort,
+        )
         await tryPostMatchMoments(supabase, match.id, 'sync-baseball-live')
         await tryAwardPredictionXp(supabase, match.id, 'sync-baseball-live')
       }

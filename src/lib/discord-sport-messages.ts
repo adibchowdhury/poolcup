@@ -16,7 +16,7 @@ export type MatchDiscordMessageContext = {
   eventName?: string | null
 }
 
-type SportMessageStyle = {
+export type SportMessageStyle = {
   emoji: string
   /** Reminder: "{emoji} {teams} {term} <t:…:R> …" */
   reminderStartTerm: string
@@ -26,7 +26,8 @@ type SportMessageStyle = {
   finalLabel: string
 }
 
-const US_SPORT_STYLES: Record<DiscordUsSportKey, SportMessageStyle> = {
+/** Per-sport copy used by formatters and live hooks. */
+export const US_SPORT_STYLES: Record<DiscordUsSportKey, SportMessageStyle> = {
   football: {
     emoji: '🏈',
     reminderStartTerm: 'Kickoff',
@@ -56,6 +57,12 @@ const US_SPORT_STYLES: Record<DiscordUsSportKey, SportMessageStyle> = {
     finalLabel: 'FINAL',
   },
 }
+
+/** Pre-game status codes observed in US-sport sync skip/start logic. */
+export const US_SPORT_PRE_GAME_STATUSES = new Set(['NS'])
+
+/** Void-equivalent status written when API returns POST. */
+export const US_SPORT_VOID_STATUSES = new Set(['PST'])
 
 function withCompetitionPrefix(
   content: string,
@@ -112,15 +119,106 @@ export function formatSportScoreMessage(
   )
 }
 
+/**
+ * Basketball period-break posts (not every basket).
+ * Example: `🏀 [NBA] End of Q1 — Lakers 28-24 Celtics`
+ */
+export function formatSportPeriodMessage(
+  sport: DiscordUsSportKey,
+  ctx: MatchDiscordMessageContext,
+  periodHeadline: string,
+  scores: { t1: number; t2: number },
+): string {
+  const { emoji } = styleFor(sport)
+  return withCompetitionPrefix(
+    `${emoji} ${periodHeadline} — ${ctx.team1Name} ${scores.t1}-${scores.t2} ${ctx.team2Name}`,
+    ctx.eventName,
+  )
+}
+
+/** Map the *new* live status (just entered) → period-break headline. */
+export function basketballPeriodHeadline(newStatus: string): string | null {
+  switch (newStatus.trim().toUpperCase()) {
+    case 'Q2':
+      return 'End of Q1'
+    case 'HT':
+      return 'Halftime'
+    case 'Q3':
+      return 'End of Halftime'
+    case 'Q4':
+      return 'End of Q3'
+    case 'OT':
+      return 'End of regulation'
+    case 'BT':
+      return 'Break'
+    default:
+      return null
+  }
+}
+
+/**
+ * Human period/inning label for score posts when status_short is at hand.
+ * Football: Q1–Q4/HT/OT; Hockey: P1–P3/OT; Baseball: IN0–IN9.
+ */
+export function periodLabelFromStatus(
+  sport: DiscordUsSportKey,
+  statusShort: string | null | undefined,
+): string | null {
+  if (!statusShort) return null
+  const status = statusShort.trim().toUpperCase()
+  if (!status || status === 'NS' || status === 'LIVE') return null
+
+  if (sport === 'baseball' && /^IN\d+$/.test(status)) {
+    const n = status.slice(2)
+    if (n === '0') return 'Extras'
+    return `IN${n}`
+  }
+
+  return status
+}
+
+function finalStatusSuffix(
+  sport: DiscordUsSportKey,
+  statusShort?: string | null,
+): string {
+  if (!statusShort) return ''
+  const status = statusShort.trim().toUpperCase()
+  if (status === 'AOT') return ' (OT)'
+  if (status === 'AP') return ' (SO)'
+  return ''
+}
+
 export function formatSportFinalMessage(
   sport: DiscordUsSportKey,
   ctx: MatchDiscordMessageContext,
   resultTeam1: number,
   resultTeam2: number,
+  statusShort?: string | null,
 ): string {
   const { emoji, finalLabel } = styleFor(sport)
   return withCompetitionPrefix(
-    `${emoji} ${finalLabel} — ${ctx.team1Name} ${resultTeam1}-${resultTeam2} ${ctx.team2Name}`,
+    `${emoji} ${finalLabel} — ${ctx.team1Name} ${resultTeam1}-${resultTeam2} ${ctx.team2Name}${finalStatusSuffix(sport, statusShort)}`,
+    ctx.eventName,
+  )
+}
+
+export function formatSportVoidMessage(
+  sport: DiscordUsSportKey,
+  ctx: MatchDiscordMessageContext,
+  voidStatusShort: string,
+): string {
+  const { emoji } = styleFor(sport)
+  const status = voidStatusShort.trim().toUpperCase()
+  const phrase =
+    status === 'PST'
+      ? 'postponed'
+      : status === 'CANC'
+        ? 'cancelled'
+        : status === 'ABD'
+          ? 'abandoned'
+          : 'voided'
+  return withCompetitionPrefix(
+    `⚠️ ${emoji} ${ctx.team1Name} vs ${ctx.team2Name} has been ${phrase}`,
     ctx.eventName,
   )
 }
@@ -130,7 +228,10 @@ export const US_SPORT_PREVIEW_FIXTURES: Record<
   DiscordUsSportKey,
   {
     ctx: MatchDiscordMessageContext
-    previewScores: { live: { t1: number; t2: number }; final: { t1: number; t2: number } }
+    previewScores: {
+      live: { t1: number; t2: number }
+      final: { t1: number; t2: number }
+    }
     periodLabel: string
   }
 > = {
@@ -141,7 +242,7 @@ export const US_SPORT_PREVIEW_FIXTURES: Record<
       eventName: 'NFL',
     },
     previewScores: { live: { t1: 7, t2: 0 }, final: { t1: 24, t2: 21 } },
-    periodLabel: 'Q2 5:00',
+    periodLabel: 'Q2',
   },
   basketball: {
     ctx: {
@@ -150,7 +251,7 @@ export const US_SPORT_PREVIEW_FIXTURES: Record<
       eventName: 'NBA',
     },
     previewScores: { live: { t1: 52, t2: 48 }, final: { t1: 108, t2: 102 } },
-    periodLabel: 'Q2 5:32',
+    periodLabel: 'Q2',
   },
   baseball: {
     ctx: {
@@ -159,7 +260,7 @@ export const US_SPORT_PREVIEW_FIXTURES: Record<
       eventName: 'MLB',
     },
     previewScores: { live: { t1: 1, t2: 0 }, final: { t1: 4, t2: 3 } },
-    periodLabel: 'Top 3rd',
+    periodLabel: 'IN3',
   },
   hockey: {
     ctx: {
@@ -168,7 +269,7 @@ export const US_SPORT_PREVIEW_FIXTURES: Record<
       eventName: 'NHL',
     },
     previewScores: { live: { t1: 1, t2: 0 }, final: { t1: 3, t2: 2 } },
-    periodLabel: 'P1 12:34',
+    periodLabel: 'P1',
   },
 }
 

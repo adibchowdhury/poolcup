@@ -26,6 +26,15 @@ import { tryRefreshMatchCrowdPicks } from '@/src/lib/match-crowd-picks'
 import { tryNotifyPredictionScoredBatch } from '@/src/lib/notify-scoring-batch'
 import { withTransientDbRetry } from '@/src/lib/db-transient-retry'
 import { withSyncJob } from '@/src/lib/sync-jobs'
+import {
+  loadSportEventNameMap,
+  resolveSportEventName,
+  tryEmitUsSportFinal,
+  tryEmitUsSportFinalsForMatchIds,
+  tryEmitUsSportKickoff,
+  tryEmitUsSportScoreChange,
+  tryEmitUsSportVoid,
+} from '@/src/lib/discord-us-sport-events'
 
 export const API_AMERICAN_FOOTBALL_PROVIDER = 'api-american-football'
 
@@ -398,6 +407,11 @@ async function syncOneAmericanFootballEvent(
             scored.matchIds,
             'sync-american-football:batch',
           )
+          await tryEmitUsSportFinalsForMatchIds(
+            supabase,
+            'football',
+            scored.matchIds,
+          )
         }
       }
 
@@ -514,6 +528,8 @@ type AmericanFootballLiveMatchRow = {
   is_final: boolean
   status_short: string | null
   event_id: string | null
+  team1_name: string
+  team2_name: string
 }
 
 /**
@@ -583,7 +599,7 @@ export async function syncAmericanFootballLiveScores(
       const { data, error } = await supabase
         .from('matches')
         .select(
-          'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id',
+          'id, fixture_id, kickoff_at, result_team1, result_team2, is_final, status_short, event_id, team1_name, team2_name',
         )
         .in('event_id', eventIds)
         .eq('is_final', false)
@@ -607,6 +623,11 @@ export async function syncAmericanFootballLiveScores(
   }
 
   const datesNeeded = new Set<string>([todayUtcDateString()])
+    const discordEventNameById = await loadSportEventNameMap(
+    supabase,
+    candidates.map((m) => m.event_id).filter(Boolean) as string[],
+  )
+
   for (const match of candidates) {
     const d = new Date(match.kickoff_at).toISOString().slice(0, 10)
     if (d) datesNeeded.add(d)
@@ -728,6 +749,46 @@ export async function syncAmericanFootballLiveScores(
 
     matchesUpdated += 1
 
+    const discordCtx = {
+      matchId: match.id,
+      team1Name: match.team1_name,
+      team2Name: match.team2_name,
+      eventName: resolveSportEventName(discordEventNameById, match.event_id),
+    }
+
+    await tryEmitUsSportKickoff(
+      supabase,
+      'football',
+      discordCtx,
+      match.status_short,
+      statusShort,
+    )
+
+    if (
+      !becomingFinal &&
+      points != null &&
+      (match.result_team1 !== points.resultTeam1 ||
+        match.result_team2 !== points.resultTeam2)
+    ) {
+      await tryEmitUsSportScoreChange(
+        supabase,
+        'football',
+        discordCtx,
+        { t1: match.result_team1, t2: match.result_team2 },
+        { t1: points.resultTeam1, t2: points.resultTeam2 },
+        statusShort,
+      )
+    }
+
+    await tryEmitUsSportVoid(
+      supabase,
+      'football',
+      discordCtx,
+      match.status_short,
+      statusShort,
+    )
+
+
     if (becomingFinal) {
       const { error: rpcError } = await supabase.rpc('calculate_match_points', {
         p_match_id: match.id,
@@ -739,6 +800,14 @@ export async function syncAmericanFootballLiveScores(
       } else {
         pointsScored += 1
         scoredMatchIds.push(match.id)
+        await tryEmitUsSportFinal(
+          supabase,
+          'football',
+          discordCtx,
+          points!.resultTeam1,
+          points!.resultTeam2,
+          statusShort,
+        )
         await tryPostMatchMoments(
           supabase,
           match.id,
