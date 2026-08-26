@@ -144,7 +144,7 @@ export function basketballPeriodHeadline(newStatus: string): string | null {
     case 'HT':
       return 'Halftime'
     case 'Q3':
-      return 'End of Halftime'
+      return 'Start of Q3'
     case 'Q4':
       return 'End of Q3'
     case 'OT':
@@ -221,91 +221,4 @@ export function formatSportVoidMessage(
     `⚠️ ${emoji} ${ctx.team1Name} vs ${ctx.team2Name} has been ${phrase}`,
     ctx.eventName,
   )
-}
-
-/** Preview sample fixtures per US sport (reused by preview route; hooks use live data). */
-export const US_SPORT_PREVIEW_FIXTURES: Record<
-  DiscordUsSportKey,
-  {
-    ctx: MatchDiscordMessageContext
-    previewScores: {
-      live: { t1: number; t2: number }
-      final: { t1: number; t2: number }
-    }
-    periodLabel: string
-  }
-> = {
-  football: {
-    ctx: {
-      team1Name: 'Cowboys',
-      team2Name: 'Eagles',
-      eventName: 'NFL',
-    },
-    previewScores: { live: { t1: 7, t2: 0 }, final: { t1: 24, t2: 21 } },
-    periodLabel: 'Q2',
-  },
-  basketball: {
-    ctx: {
-      team1Name: 'Lakers',
-      team2Name: 'Celtics',
-      eventName: 'NBA',
-    },
-    previewScores: { live: { t1: 52, t2: 48 }, final: { t1: 108, t2: 102 } },
-    periodLabel: 'Q2',
-  },
-  baseball: {
-    ctx: {
-      team1Name: 'Yankees',
-      team2Name: 'Dodgers',
-      eventName: 'MLB',
-    },
-    previewScores: { live: { t1: 1, t2: 0 }, final: { t1: 4, t2: 3 } },
-    periodLabel: 'IN3',
-  },
-  hockey: {
-    ctx: {
-      team1Name: 'Rangers',
-      team2Name: 'Bruins',
-      eventName: 'NHL',
-    },
-    previewScores: { live: { t1: 1, t2: 0 }, final: { t1: 3, t2: 2 } },
-    periodLabel: 'P1',
-  },
-}
-
-export function buildUsSportPreviewMessages(
-  sport: DiscordUsSportKey,
-  startAtIso: string,
-): Array<{ type: 'reminder' | 'start' | 'score' | 'final'; content: string }> {
-  const fixture = US_SPORT_PREVIEW_FIXTURES[sport]
-  const { ctx, previewScores, periodLabel } = fixture
-
-  return [
-    {
-      type: 'reminder',
-      content: formatSportReminderMessage(sport, ctx, startAtIso),
-    },
-    {
-      type: 'start',
-      content: formatSportStartMessage(sport, ctx),
-    },
-    {
-      type: 'score',
-      content: formatSportScoreMessage(
-        sport,
-        ctx,
-        previewScores.live,
-        periodLabel,
-      ),
-    },
-    {
-      type: 'final',
-      content: formatSportFinalMessage(
-        sport,
-        ctx,
-        previewScores.final.t1,
-        previewScores.final.t2,
-      ),
-    },
-  ]
 }
