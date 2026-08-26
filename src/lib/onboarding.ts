@@ -48,7 +48,7 @@ export const ONBOARDING_REFERRAL_OPTIONS = [
   { id: 'tiktok', label: 'TikTok' },
   { id: 'x', label: 'X' },
   { id: 'youtube', label: 'YouTube' },
-  { id: 'reddit', label: 'Reddit' },
+  { id: 'discord', label: 'Discord' },
   { id: 'google', label: 'Google Search' },
   { id: 'facebook', label: 'Facebook' },
   { id: 'friend', label: 'Friend/Word of mouth' },

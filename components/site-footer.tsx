@@ -8,6 +8,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import { DiscordMarkIcon } from '@/components/discord-mark-icon'
+import {
+  DISCORD_BLURPLE,
+  DISCORD_BLURPLE_HOVER,
+  DISCORD_INVITE_URL,
+} from '@/src/lib/discord-invite'
 
 type FooterLink =
   | { label: string; href: string; external?: boolean }
@@ -28,8 +34,6 @@ const legal: { label: string; href: string }[] = [
   { label: 'Cookie Policy', href: '/cookies' },
   { label: 'How We Protect Your Data', href: '/security' },
 ]
-
-const REDDIT_COMMUNITY_URL = 'https://www.reddit.com/r/PoolCupCommunity/'
 
 const linkClassName =
   'font-sans text-sm text-[#5a7080] transition-colors hover:text-primary'
@@ -63,23 +67,6 @@ function FooterLinkItem({ item }: { item: FooterLink }) {
   )
 }
 
-/** Official-style Reddit mark (Simple Icons path), sized for inline button use. */
-function RedditMarkIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width={24}
-      height={24}
-      fill="currentColor"
-      aria-hidden
-      className={className}
-    >
-      <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.028l2.907.617a1.214 1.214 0 0 1 1.108-.701zM9.607 12c-.534 0-.969.434-.969.969 0 .535.435.969.969.969.535 0 .969-.434.969-.969 0-.535-.434-.969-.969-.969zm4.786 0c-.535 0-.969.434-.969.969 0 .535.434.969.969.969.534 0 .969-.434.969-.969 0-.535-.435-.969-.969-.969zm-4.786 2.378a.715.715 0 0 0 0 1.428c.957 0 1.843.34 2.536.907a.715.715 0 0 0 .995 0c.693-.567 1.579-.907 2.536-.907a.715.715 0 0 0 0-1.428c-1.254 0-2.397.465-3.286 1.21-.889-.745-2.032-1.21-3.286-1.21z" />
-    </svg>
-  )
-}
-
 /**
  * Dedicated Community column (lg+) / stacked block (mobile).
  * Future member-count line would sit between benefit copy and the CTA.
@@ -91,18 +78,25 @@ function CommunityColumnBlock() {
         Join the PoolCup Community
       </h3>
       <p className="mt-3 max-w-sm font-sans text-sm leading-relaxed text-[#5a7080]">
-        Talk predictions, share pools, suggest features, and help shape what we
-        build next.
+        Talk predictions, get live match alerts from Pucky, suggest features,
+        and help shape what we build next.
       </p>
       {/* Future: member-count line here, e.g. "X,XXX members" */}
       <a
-        href={REDDIT_COMMUNITY_URL}
+        href={DISCORD_INVITE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-5 inline-flex max-w-full items-center justify-center gap-2.5 rounded-lg bg-[#FF4500] px-4 py-3.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-[#E03E00]"
+        className="mt-5 inline-flex max-w-full items-center justify-center gap-2.5 rounded-lg px-4 py-3.5 font-sans text-sm font-semibold text-white transition-colors hover:opacity-90"
+        style={{ backgroundColor: DISCORD_BLURPLE }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = DISCORD_BLURPLE_HOVER
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = DISCORD_BLURPLE
+        }}
       >
-        <RedditMarkIcon className="shrink-0" />
-        <span className="whitespace-nowrap">Join us on Reddit →</span>
+        <DiscordMarkIcon className="shrink-0" size={24} />
+        <span className="whitespace-nowrap">Join us on Discord →</span>
       </a>
     </div>
   )

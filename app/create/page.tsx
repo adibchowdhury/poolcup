@@ -84,11 +84,13 @@ import {
   readPrefersReducedMotion,
 } from '@/src/lib/create-pool-transition'
 import { CreateCompetitionStep } from '@/components/create/create-competition-step'
+import { DiscordMarkIcon } from '@/components/discord-mark-icon'
 import { cn } from '@/lib/utils'
 import {
   formatOfficialLeagueName,
   formatOfficialSeasonLabel,
 } from '@/src/lib/fetch-official-pools'
+import { DISCORD_INVITE_URL } from '@/src/lib/discord-invite'
 
 const CREATE_POOL_STEPS = [
   { id: 'competition' as const, chromeTitle: 'Competition' },
@@ -99,24 +101,6 @@ const CREATE_POOL_STEPS = [
 ] as const
 
 const SUCCESS_CHROME_TITLE = 'Pool Created 🎉'
-const REDDIT_COMMUNITY_URL = 'https://www.reddit.com/r/PoolCupCommunity/'
-
-/** Compact Reddit glyph for the congrats secondary link. */
-function RedditMarkIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width={14}
-      height={14}
-      fill="currentColor"
-      aria-hidden
-      className={className}
-    >
-      <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.028l2.907.617a1.214 1.214 0 0 1 1.108-.701zM9.607 12c-.534 0-.969.434-.969.969 0 .535.435.969.969.969.535 0 .969-.434.969-.969 0-.535-.434-.969-.969-.969zm4.786 0c-.535 0-.969.434-.969.969 0 .535.434.969.969.969.534 0 .969-.434.969-.969 0-.535-.435-.969-.969-.969zm-4.786 2.378a.715.715 0 0 0 0 1.428c.957 0 1.843.34 2.536.907a.715.715 0 0 0 .995 0c.693-.567 1.579-.907 2.536-.907a.715.715 0 0 0 0-1.428c-1.254 0-2.397.465-3.286 1.21-.889-.745-2.032-1.21-3.286-1.21z" />
-    </svg>
-  )
-}
 
 /** Progress indicator: five wizard steps only (success is a terminal page). */
 const STEPPER_STEP_COUNT = CREATE_POOL_STEPS.length
@@ -2039,11 +2023,11 @@ function CreatePoolPageInner() {
                 </div>
 
                 <a
-                  href={REDDIT_COMMUNITY_URL}
+                  href={DISCORD_INVITE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
-                    capturePostHog('reddit_cta_clicked', {
+                    capturePostHog('discord_cta_clicked', {
                       source: 'pool_created',
                     })
                   }}
@@ -2053,11 +2037,14 @@ function CreatePoolPageInner() {
                     'rounded-md',
                   )}
                 >
-                  <RedditMarkIcon className="h-3.5 w-3.5 shrink-0 text-[#FF4500]" />
+                  <DiscordMarkIcon
+                    className="h-3.5 w-3.5 shrink-0 text-[#5865F2]"
+                    size={14}
+                  />
                   <span>
                     You&apos;re a commissioner now —{' '}
-                    <span className="font-semibold text-[#FF4500]">
-                      join r/PoolCupCommunity →
+                    <span className="font-semibold text-[#5865F2]">
+                      join the Discord →
                     </span>
                   </span>
                 </a>
@@ -2129,7 +2116,7 @@ function CreatePoolPageInner() {
                     </div>
                   </div>
 
-                  {/* Right — Share primary + Reddit secondary card */}
+                  {/* Right — Share primary + Discord secondary card */}
                   <div className="flex flex-col">
                     <button
                       type="button"
@@ -2144,28 +2131,28 @@ function CreatePoolPageInner() {
 
                     <div className="mt-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/80 p-3.5">
                       <div className="flex items-start gap-2.5">
-                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FF4500]/15 text-[#FF4500]">
-                          <RedditMarkIcon className="h-4 w-4" />
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5865F2]/15 text-[#5865F2]">
+                          <DiscordMarkIcon className="h-4 w-4" size={16} />
                         </span>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-[#f0f4f8]">
                             You&apos;re a commissioner now
                           </p>
                           <p className="mt-1 text-xs leading-snug text-[#5a7080]">
-                            Swap scoring ideas, show off your pool, and vote on
-                            what we build next.
+                            Join the PoolCup Discord to talk strategy, catch live
+                            match alerts, and shape what we build next.
                           </p>
                           <a
-                            href={REDDIT_COMMUNITY_URL}
+                            href={DISCORD_INVITE_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => {
-                              capturePostHog('reddit_cta_clicked', {
+                              capturePostHog('discord_cta_clicked', {
                                 source: 'pool_created',
                               })
                             }}
                             className={cn(
-                              'mt-2 inline-flex text-sm font-semibold text-[#FF4500] transition-colors hover:text-[#E03E00]',
+                              'mt-2 inline-flex text-sm font-semibold text-[#5865F2] transition-colors hover:text-[#4752C4]',
                               FOCUS_RING_CLASS,
                               'rounded-md',
                             )}
