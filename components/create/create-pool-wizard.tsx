@@ -5,7 +5,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -14,7 +13,24 @@ import {
 import { flushSync } from 'react-dom'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Check, Download, Globe, Handshake, Loader2, Lock, Target, X, Zap } from 'lucide-react'
+import {
+  Check,
+  ArrowLeft,
+  Crown,
+  Download,
+  Globe,
+  Handshake,
+  Loader2,
+  Lock,
+  Megaphone,
+  Palette,
+  ShieldCheck,
+  SlidersHorizontal,
+  Target,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
@@ -48,24 +64,11 @@ import { normalizeTeamLogoUrl } from '@/src/lib/team-logos'
 import { startDraftCustomPoolCheckout } from '@/src/lib/draft-custom-pool-checkout-client'
 import {
   clearCreateWizardState,
-  clearStagedEmblem,
-  dataUrlToFile,
   loadCreateWizardState,
-  loadPendingEmblemDataUrl,
-  loadStagedEmblemDataUrl,
-  persistPendingEmblem,
-  persistStagedEmblem,
   saveCreateWizardState,
   type CreateWizardPersistedState,
   type PoolCreationDraftPayload,
 } from '@/src/lib/create-wizard-persistence'
-import { uploadPoolEmblem } from '@/src/lib/upload-pool-emblem'
-import { patchPoolSettings } from '@/src/lib/pool-settings-client'
-import {
-  DEFAULT_POOL_THEME_COLOR,
-  normalizePoolThemeColor,
-  POOL_THEME_COLOR_PRESETS,
-} from '@/src/lib/pool-theme'
 import {
   beginCreatePoolExit,
   clearCreateModeDashboardExitClass,
@@ -122,7 +125,7 @@ const CREATE_POOL_STEPS = [
     id: 'plan' as const,
     label: 'Choose Your Pool',
     stepperLabel: 'Plan',
-    chromeTitle: 'Choose your pool plan',
+    chromeTitle: 'Choose your pool experience',
   },
   {
     id: 'review' as const,
@@ -178,7 +181,7 @@ const STEPPER_MOTION_CLASS =
  * Height: min(760px, 90vh, 100dvh − overlay padding) — soft content cap + short-viewport fit.
  */
 const CREATE_POOL_CARD_PAGE_CLASS = cn(
-  'flex min-h-0 flex-col bg-transparent px-4 pt-4',
+  'create-pool-wizard--page flex min-h-0 flex-col bg-transparent px-4 pt-4',
   'pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
   'h-dvh',
 )
@@ -186,7 +189,7 @@ const CREATE_POOL_CARD_PAGE_CLASS = cn(
 const CREATE_POOL_MODAL_HEIGHT_CLASS =
   'h-[min(760px,90vh,calc(100dvh-3rem))]'
 const CREATE_POOL_CARD_MODAL_CLASS = cn(
-  'relative flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border-2 border-[#292929] bg-[#111111] p-8 shadow-2xl',
+  'create-pool-wizard--modal relative flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border-2 border-[#292929] bg-[#111111] p-8 shadow-2xl',
   CREATE_POOL_MODAL_HEIGHT_CLASS,
   'create-pool-modal-enter',
 )
@@ -223,8 +226,26 @@ const CREATE_POOL_SELECTION_TILE_CLASS = cn(
   FOCUS_RING_CLASS,
 )
 
+const CREATE_POOL_CUSTOM_PLAN_BENEFITS = [
+  { label: 'Custom scoring', Icon: SlidersHorizontal },
+  { label: 'Custom branding', Icon: Palette },
+  { label: 'Announcements & polls', Icon: Megaphone },
+  { label: 'Co-commissioners', Icon: Users },
+  { label: 'Advanced moderation', Icon: ShieldCheck },
+  { label: 'Export Pool Results', Icon: Download },
+] as const
+
+const CREATE_POOL_BASIC_PLAN_BENEFITS = [
+  'Predictions & leaderboard',
+  'Invites & chat',
+  'Standard scoring',
+  'Basic pool controls',
+  'Unlimited pools',
+] as const
+
 function CreatePoolNavFooter({
   showBack,
+  isModal = false,
   onBack,
   continueLabel,
   continueDisabled,
@@ -234,6 +255,7 @@ function CreatePoolNavFooter({
   backDisabled = false,
 }: {
   showBack: boolean
+  isModal?: boolean
   onBack?: () => void
   continueLabel: string
   continueDisabled: boolean
@@ -242,16 +264,17 @@ function CreatePoolNavFooter({
   continueForm?: string
   backDisabled?: boolean
 }) {
+  const showBackButton = showBack && !isModal
   return (
     <div
       className={cn(
         'flex w-full items-stretch pb-1.5 pr-1.5 [-webkit-tap-highlight-color:transparent]',
-        showBack
+        showBackButton
           ? 'max-lg:flex-col max-lg:gap-2.5 lg:flex-row lg:gap-3'
           : 'justify-center gap-3',
       )}
     >
-      {showBack ? (
+      {showBackButton ? (
         <Button
           type="button"
           size="lg"
@@ -265,7 +288,7 @@ function CreatePoolNavFooter({
       ) : null}
       <div
         className={cn(
-          showBack
+          showBackButton
             ? 'min-w-0 w-full lg:flex-1'
             : 'w-full max-lg:w-full lg:w-auto',
         )}
@@ -276,7 +299,8 @@ function CreatePoolNavFooter({
           form={continueForm}
           className={cn(
             CREATE_POOL_BTN_PRIMARY_CLASS,
-            !showBack && 'lg:w-auto lg:min-w-[16rem]',
+            !showBackButton && !isModal && 'lg:w-auto lg:min-w-[16rem]',
+            (isModal || !showBackButton) && 'w-full max-w-[20rem]',
           )}
           disabled={continueDisabled}
           onClick={continueType === 'button' ? onContinue : undefined}
@@ -663,11 +687,9 @@ export function CreatePoolWizard({
 
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const goToPoolRef = useRef<HTMLAnchorElement>(null)
-  const emblemInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
-  const emblemInputId = useId()
 
   const [step, setStep] = useState(1)
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -701,10 +723,7 @@ export function CreatePoolWizard({
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [createdPool, setCreatedPool] = useState<CreatedPool | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'custom'>('basic')
-  const [themeColor, setThemeColor] = useState<string | null>(null)
-  const [emblemFile, setEmblemFile] = useState<File | null>(null)
-  const [emblemPreviewUrl, setEmblemPreviewUrl] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'custom' | null>(null)
   const [checkoutPhase, setCheckoutPhase] = useState<
     'idle' | 'finalizing' | 'slow'
   >('idle')
@@ -930,20 +949,13 @@ export function CreatePoolWizard({
     setPoolDescription(saved.poolDescription)
     setScoringStyle(saved.scoringStyle === 'winner' ? 'winner' : 'classic')
     setIsPublic(Boolean(saved.isPublic))
-    setSelectedPlan(saved.selectedPlan === 'custom' ? 'custom' : 'basic')
-    setThemeColor(
-      saved.themeColor ? normalizePoolThemeColor(saved.themeColor) : null,
+    setSelectedPlan(
+      saved.selectedPlan === 'custom'
+        ? 'custom'
+        : saved.selectedPlan === 'basic'
+          ? 'basic'
+          : null,
     )
-    if (saved.hasPendingEmblem) {
-      const dataUrl = loadPendingEmblemDataUrl()
-      if (dataUrl) {
-        const file = dataUrlToFile(dataUrl, 'pool-emblem.jpg')
-        if (file) {
-          setEmblemFile(file)
-          setEmblemPreviewUrl(dataUrl)
-        }
-      }
-    }
   }, [])
 
   useEffect(() => {
@@ -1007,22 +1019,8 @@ export function CreatePoolWizard({
       const inviteCode = payload.inviteCode?.trim() || ''
       const name = payload.name?.trim() || 'Your pool'
 
-      setFinalizingMessage('Finishing branding…')
+      setFinalizingMessage('Payment received — setting up your pool')
 
-      const staged = loadStagedEmblemDataUrl(finalizingDraftId!)
-      if (staged) {
-        const file = dataUrlToFile(staged, 'pool-emblem.jpg')
-        if (file) {
-          const upload = await uploadPoolEmblem(supabase, poolId, file)
-          if (upload.publicUrl) {
-            await patchPoolSettings(poolId, { emblemUrl: upload.publicUrl })
-          } else {
-            console.warn('create: staged emblem upload failed', upload.error)
-          }
-        }
-      }
-
-      clearStagedEmblem(finalizingDraftId!)
       clearCreateWizardState()
 
       if (!inviteCode) {
@@ -1107,8 +1105,6 @@ export function CreatePoolWizard({
       scoringStyle,
       isPublic,
       selectedPlan,
-      themeColor,
-      hasPendingEmblem: Boolean(emblemFile),
     })
   }, [
     checkoutPhase,
@@ -1120,8 +1116,6 @@ export function CreatePoolWizard({
     scoringStyle,
     isPublic,
     selectedPlan,
-    themeColor,
-    emblemFile,
   ])
 
   useEffect(() => {
@@ -1288,10 +1282,6 @@ export function CreatePoolWizard({
 
     const trimmedName = normalizePoolName(poolName)
     const trimmedDescription = normalizePoolDescription(poolDescription)
-    const normalizedTheme =
-      selectedPlan === 'custom'
-        ? normalizePoolThemeColor(themeColor) ?? themeColor
-        : null
 
     saveCreateWizardState({
       step: REVIEW_STEP,
@@ -1302,16 +1292,11 @@ export function CreatePoolWizard({
       scoringStyle,
       isPublic,
       selectedPlan,
-      themeColor: normalizedTheme,
-      hasPendingEmblem: Boolean(emblemFile),
     })
 
     // Custom: draft → Stripe → webhook creates pool. No pool until congrats.
     if (selectedPlan === 'custom') {
       setLoadingMessage('Preparing checkout…')
-      if (emblemFile) {
-        await persistPendingEmblem(emblemFile)
-      }
 
       const payload: PoolCreationDraftPayload = {
         name: trimmedName,
@@ -1320,8 +1305,6 @@ export function CreatePoolWizard({
         eventId: selectedEvent.id,
         eventName: selectedEvent.name,
         isPublic,
-        themeColor: normalizedTheme,
-        hasPendingEmblem: Boolean(emblemFile),
       }
 
       const checkout = await startDraftCustomPoolCheckout(payload)
@@ -1330,10 +1313,6 @@ export function CreatePoolWizard({
         setLoadingMessage(null)
         setError(checkout.error || 'Could not start checkout. Please try again.')
         return
-      }
-
-      if (emblemFile) {
-        await persistStagedEmblem(checkout.draftId, emblemFile)
       }
 
       setLoadingMessage('Redirecting to payment…')
@@ -1409,7 +1388,6 @@ export function CreatePoolWizard({
     void awardClientXp({ sourceType: 'pool_create', sourceId: pool.id })
 
     clearCreateWizardState()
-    clearStagedEmblem()
 
     setCreatedPool({
       id: pool.id,
@@ -1617,36 +1595,10 @@ export function CreatePoolWizard({
             <dt className="text-[#5a7080]">Plan</dt>
             <dd className="text-right font-medium text-[#f0f4f8]">
               {selectedPlan === 'custom'
-                ? 'Upgraded ($9.99 one-time)'
+                ? 'Custom Pool ($9.99 one-time)'
                 : 'Basic (Free)'}
             </dd>
           </div>
-          {selectedPlan === 'custom' ? (
-            <>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#5a7080]">Theme</dt>
-                <dd className="flex items-center justify-end gap-2 font-medium text-[#f0f4f8]">
-                  <span
-                    className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-[#1e2d3d]"
-                    style={{
-                      backgroundColor:
-                        themeColor ?? DEFAULT_POOL_THEME_COLOR,
-                    }}
-                    aria-hidden
-                  />
-                  {(themeColor ?? DEFAULT_POOL_THEME_COLOR).toUpperCase()}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#5a7080]">Logo</dt>
-                <dd className="text-right font-medium text-[#f0f4f8]">
-                  {emblemFile || emblemPreviewUrl
-                    ? 'Staged — uploads after payment'
-                    : 'None — add later in settings'}
-                </dd>
-              </div>
-            </>
-          ) : null}
         </dl>
       </div>
     )
@@ -1751,12 +1703,7 @@ export function CreatePoolWizard({
                       </p>
 
                       {isModal ? (
-                        <div
-                          className={cn(
-                            'mt-4 w-full rounded-lg border border-[#1e2d3d]/80 bg-black/40 px-3 py-2 text-left',
-                            'shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
-                          )}
-                        >
+                        <div className="create-pool-inset-panel mt-4 w-full text-left">
                           <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5a7080]">
                             Points System
                           </p>
@@ -1829,7 +1776,7 @@ export function CreatePoolWizard({
             >
               {isModal ? (
                 <aside className="flex w-[42%] shrink-0 flex-col items-center justify-center px-2 text-center">
-                  <div className="relative flex h-[clamp(13.75rem,36vh,16rem)] w-[clamp(13.75rem,36vh,16rem)] items-center justify-center">
+                  <div className="relative flex h-[clamp(14.5rem,38vh,17rem)] w-[clamp(14.5rem,38vh,17rem)] items-center justify-center">
                     <span
                       aria-hidden
                       className="pointer-events-none absolute inset-[-14%] rounded-full bg-[radial-gradient(circle_at_center,rgba(0,230,118,0.16)_0%,rgba(167,139,250,0.06)_42%,transparent_68%)]"
@@ -1856,10 +1803,7 @@ export function CreatePoolWizard({
                       draggable={false}
                     />
                   </div>
-                  <h2 className="mt-5 font-display text-2xl tracking-wide text-[#f0f4f8]">
-                    Set up your pool
-                  </h2>
-                  <p className="mt-2 max-w-[16rem] text-sm leading-snug text-[#5a7080]">
+                  <p className="mt-4 max-w-[16rem] text-sm leading-snug text-[#5a7080]">
                     Give your pool a name and decide who gets to join.
                   </p>
                 </aside>
@@ -2106,204 +2050,163 @@ export function CreatePoolWizard({
 
           {panelStep === PLAN_STEP && (
             <>
-              <p className="text-sm text-[#5a7080]">
-                Basic is free. Upgrade once for branding — no subscription.
-              </p>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div
+                className="create-pool-plan-grid overflow-visible"
+                role="radiogroup"
+                aria-label="Pool plan"
+              >
+                <div
+                  role="radio"
+                  aria-checked={selectedPlan === 'basic'}
+                  tabIndex={0}
+                  onClick={() => setSelectedPlan('basic')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedPlan('basic')
+                    }
+                  }}
+                  className={cn('create-pool-plan-card', FOCUS_RING_CLASS)}
+                >
+                  <p className="create-pool-plan-card__title">Basic Pool</p>
+                  <p className="create-pool-plan-card__price create-pool-plan-card__price--basic">
+                    Free
+                  </p>
+                  <p className="create-pool-plan-card__tagline create-pool-plan-card__tagline--muted">
+                    For friends and groups who just want to play.
+                  </p>
+                  <div className="create-pool-plan-card__body">
+                    <p className="create-pool-plan-card__features-label">Includes:</p>
+                    <ul className="create-pool-plan-card__features flex flex-col gap-2 text-[12.5px] leading-snug text-[#b0bec9]">
+                      {CREATE_POOL_BASIC_PLAN_BENEFITS.map((item) => (
+                        <li key={item} className="flex items-start gap-2">
+                          <Check
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70"
+                            strokeWidth={2.25}
+                            aria-hidden
+                          />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                     <button
                       type="button"
-                  onClick={() => setSelectedPlan('basic')}
-                  className={cn(
-                    'rounded-xl border px-4 py-4 text-left transition-colors',
-                    FOCUS_RING_CLASS,
-                    selectedPlan === 'basic'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/40 hover:border-[#2a3d52]',
-                  )}
-                  aria-pressed={selectedPlan === 'basic'}
-                >
-                  <p className="font-semibold text-[#f0f4f8]">Basic</p>
-                  <p className="mt-1 text-sm font-semibold text-primary">Free</p>
-                  <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-[#5a7080]">
-                    {[
-                      'Predictions',
-                      'Leaderboard',
-                      'Invites',
-                      'Chat',
-                      'Standard management',
-                    ].map((item) => (
-                      <li key={item} className="flex gap-2">
-                        <span
-                          className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary"
-                          aria-hidden
-                        />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                    </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlan('custom')}
-                  className={cn(
-                    'rounded-xl border px-4 py-4 text-left transition-colors',
-                    FOCUS_RING_CLASS,
-                    selectedPlan === 'custom'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/40 hover:border-[#2a3d52]',
-                  )}
-                  aria-pressed={selectedPlan === 'custom'}
-                >
-                  <p className="font-semibold text-[#f0f4f8]">Upgraded</p>
-                  <p className="mt-1 text-sm font-semibold text-primary">
-                    $9.99 one-time · No subscription.
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-[#5a7080]">
-                    Everything in Basic, plus:
-                  </p>
-                  <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-[#5a7080]">
-                    {[
-                      'Custom logo',
-                      'Theme color',
-                      'Custom scoring',
-                      'Announcements & polls',
-                      'Co-commissioners',
-                      'Moderation & exports',
-                    ].map((item) => (
-                      <li key={item} className="flex gap-2">
-                        <span
-                          className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary"
-                          aria-hidden
-                        />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </button>
-              </div>
-
-              {selectedPlan === 'custom' ? (
-                <div className="mt-6 space-y-4 rounded-xl border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/50 px-4 py-4">
-                  <div>
-                    <p className="text-sm font-medium text-[#f0f4f8]">
-                      Stage branding (optional)
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-[#5a7080]">
-                      Theme applies when your pool is created after payment. Logo
-                      uploads once the pool exists — if you close this tab after
-                      paying, add it later in pool settings.
-                    </p>
-              </div>
-
-                <div>
-                  <label
-                      htmlFor={emblemInputId}
-                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
-                  >
-                      Pool logo
-                  </label>
-                  <input
-                      ref={emblemInputRef}
-                      id={emblemInputId}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] ?? null
-                        if (!file) return
-                        setEmblemFile(file)
-                        const url = URL.createObjectURL(file)
-                        setEmblemPreviewUrl((prev) => {
-                          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev)
-                          return url
-                        })
-                        void persistPendingEmblem(file)
-                      }}
-                    />
-                    <div className="flex flex-wrap items-center gap-3">
-                      {emblemPreviewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={emblemPreviewUrl}
-                          alt=""
-                          className="h-14 w-14 rounded-lg object-cover ring-1 ring-[#1e2d3d]"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-[#2a3d52] text-[10px] text-[#5a7080]">
-                          None
-                </div>
+                      tabIndex={-1}
+                      className={cn(
+                        'create-pool-plan-card__select',
+                        FOCUS_RING_CLASS,
+                        selectedPlan === 'basic'
+                          ? 'create-pool-plan-card__select--on'
+                          : 'create-pool-plan-card__select--idle',
                       )}
-                      <button
-                        type="button"
-                        className={cn(
-                          'rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] hover:border-primary/50',
-                          FOCUS_RING_CLASS,
-                        )}
-                        onClick={() => emblemInputRef.current?.click()}
-                      >
-                        {emblemFile ? 'Change logo' : 'Choose logo'}
-                      </button>
-                      {emblemFile ? (
-                        <button
-                          type="button"
-                          className={cn(
-                            'text-xs font-medium text-[#5a7080] hover:text-[#e8eef4]',
-                            FOCUS_RING_CLASS,
-                            'rounded-md',
-                          )}
-                          onClick={() => {
-                            setEmblemFile(null)
-                            setEmblemPreviewUrl((prev) => {
-                              if (prev?.startsWith('blob:')) {
-                                URL.revokeObjectURL(prev)
-                              }
-                              return null
-                            })
-                            clearStagedEmblem()
-                            if (emblemInputRef.current) {
-                              emblemInputRef.current.value = ''
-                            }
-                          }}
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                  </div>
-                  </div>
-
-                  <div>
-                    <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
-                      Theme color
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {POOL_THEME_COLOR_PRESETS.map((preset) => {
-                        const selected =
-                          (themeColor ?? DEFAULT_POOL_THEME_COLOR).toLowerCase() ===
-                          preset.hex.toLowerCase()
-                    return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            title={preset.label}
-                            aria-label={preset.label}
-                            aria-pressed={selected}
-                            onClick={() => setThemeColor(preset.hex)}
-                            className={cn(
-                              'h-8 w-8 rounded-full border-2 transition-transform',
-                              FOCUS_RING_CLASS,
-                              selected
-                                ? 'scale-110 border-white'
-                                : 'border-transparent opacity-80 hover:opacity-100',
-                            )}
-                            style={{ backgroundColor: preset.hex }}
-                          />
-                        )
-                      })}
-                    </div>
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedPlan('basic')
+                      }}
+                    >
+                      {selectedPlan === 'basic' ? (
+                        <>
+                          <Check strokeWidth={2.75} aria-hidden />
+                          Selected
+                        </>
+                      ) : (
+                        'Select Basic'
+                      )}
+                    </button>
                   </div>
                 </div>
-              ) : null}
+
+                <div
+                  role="radio"
+                  aria-checked={selectedPlan === 'custom'}
+                  tabIndex={0}
+                  onClick={() => setSelectedPlan('custom')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedPlan('custom')
+                    }
+                  }}
+                  className={cn(
+                    'create-pool-plan-card create-pool-plan-card--custom',
+                    FOCUS_RING_CLASS,
+                  )}
+                >
+                  <span className="create-pool-plan-card__badge">
+                    Best for commissioners
+                  </span>
+                  {isModal ? (
+                    <img
+                      src="/fire_streak.png"
+                      alt=""
+                      className="create-pool-plan-card__fire-streak"
+                      aria-hidden
+                    />
+                  ) : (
+                    <span
+                      className="create-pool-plan-card__crown"
+                      aria-hidden
+                    >
+                      <Crown strokeWidth={1.75} />
+                    </span>
+                  )}
+                  <p className="create-pool-plan-card__title">Custom Pool</p>
+                  <p className="create-pool-plan-card__price-line">
+                    <span className="create-pool-plan-card__price create-pool-plan-card__price--custom">
+                      $9.99
+                    </span>
+                    <span className="create-pool-plan-card__price-note">
+                      one-time
+                    </span>
+                  </p>
+                  <p className="create-pool-plan-card__tagline create-pool-plan-card__tagline--muted">
+                    For commissioners who want full control.
+                  </p>
+                  <div className="create-pool-plan-card__body">
+                    <p className="create-pool-plan-card__features-label">
+                      Everything in Free, PLUS:
+                    </p>
+                    <ul className="create-pool-plan-card__features flex flex-col gap-1.5 text-[12.5px] leading-snug text-[#e8eef4]/90">
+                      {CREATE_POOL_CUSTOM_PLAN_BENEFITS.map(
+                        ({ label, Icon }) => (
+                          <li key={label} className="flex items-start gap-2">
+                            <Icon
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#F2C94C]"
+                              strokeWidth={1.75}
+                              aria-hidden
+                            />
+                            <span>{label}</span>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className={cn(
+                        'create-pool-plan-card__select',
+                        FOCUS_RING_CLASS,
+                        selectedPlan === 'custom'
+                          ? 'create-pool-plan-card__select--on'
+                          : 'create-pool-plan-card__select--idle',
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedPlan('custom')
+                      }}
+                    >
+                      {selectedPlan === 'custom' ? (
+                        <>
+                          <Check strokeWidth={2.75} aria-hidden />
+                          Selected
+                        </>
+                      ) : (
+                        'Select Custom'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </>
           )}
 
@@ -2336,7 +2239,7 @@ export function CreatePoolWizard({
               <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[var(--dashboard-card-bg)]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
                 Predictions lock when each match kicks off. Advanced scoring and
                 commissioner tools live in pool settings after creation
-                {selectedPlan === 'custom' ? ' (included with Upgraded)' : ''}.
+                {selectedPlan === 'custom' ? ' (included with Custom Pool)' : ''}.
               </p>
 
               <form
@@ -2731,19 +2634,40 @@ export function CreatePoolWizard({
                 ) : null}
               </div>
 
-              <div className={cn('px-10 text-center', !isModal && 'hidden')}>
+              <div className={cn('px-10', !isModal && 'hidden')}>
                 {!isSuccessPage ? (
-                  <CreatePoolStepper currentStep={step} labelMode="all" />
+                  <div className="relative">
+                    {step > 1 ? (
+                      <button
+                        type="button"
+                        aria-label="Go back"
+                        disabled={navLocked}
+                        onClick={() => goToStep(step - 1, -1)}
+                        className={cn(
+                          'absolute left-0 z-10 flex h-9 w-9 items-center justify-center rounded-md',
+                          'text-[#5a7080] transition-colors hover:text-[#e8eef4]',
+                          'disabled:pointer-events-none disabled:opacity-40',
+                          FOCUS_RING_CLASS,
+                        )}
+                        style={{
+                          top: STEPPER_CIRCLE_TRACK_PX / 2,
+                          transform: 'translateY(-50%)',
+                        }}
+                      >
+                        <ArrowLeft
+                          className="h-[22px] w-[22px]"
+                          strokeWidth={2.25}
+                          aria-hidden
+                        />
+                      </button>
+                    ) : null}
+                    <CreatePoolStepper currentStep={step} labelMode="all" />
+                  </div>
                 ) : null}
                 <h1
                   className={cn(
-                    'font-display text-2xl tracking-wide text-foreground',
+                    'text-center font-display text-2xl tracking-wide text-foreground',
                     !isSuccessPage && 'mt-8',
-                    // Step 3 modal: title lives in the left brand column instead.
-                    isModal &&
-                      step === 3 &&
-                      !isSuccessPage &&
-                      'hidden',
                   )}
                 >
                   {chromeTitle}
@@ -2757,7 +2681,7 @@ export function CreatePoolWizard({
               // overflow-hidden clips the dual-pane translateX slide.
               // Modal: mt-8 — balanced rhythm under instructional title; flex-1 body absorbs it.
               'flex min-h-0 flex-col overflow-hidden',
-              isModal ? (step === 3 ? 'mt-5' : 'mt-8') : 'mt-4',
+              isModal ? 'mt-8' : 'mt-4',
               isModal
                 ? 'min-h-0 flex-1 basis-0'
                 : slideLockPx != null
@@ -2881,6 +2805,7 @@ export function CreatePoolWizard({
           >
             {checkoutPhase === 'idle' && step === 1 ? (
               <CreatePoolNavFooter
+                isModal={isModal}
                 showBack={false}
                 continueLabel="Continue"
                 continueDisabled={!canContinueStep || navLocked}
@@ -2890,6 +2815,7 @@ export function CreatePoolWizard({
 
             {checkoutPhase === 'idle' && step === 2 ? (
               <CreatePoolNavFooter
+                isModal={isModal}
                 showBack
                 backDisabled={navLocked}
                 onBack={() => goToStep(1, -1)}
@@ -2901,6 +2827,7 @@ export function CreatePoolWizard({
 
             {checkoutPhase === 'idle' && step === 3 ? (
               <CreatePoolNavFooter
+                isModal={isModal}
                 showBack
                 backDisabled={navLocked}
                 onBack={() => goToStep(2, -1)}
@@ -2912,10 +2839,17 @@ export function CreatePoolWizard({
 
             {checkoutPhase === 'idle' && step === PLAN_STEP ? (
               <CreatePoolNavFooter
+                isModal={isModal}
                 showBack
                 backDisabled={navLocked}
                 onBack={() => goToStep(3, -1)}
-                continueLabel="Continue"
+                continueLabel={
+                  selectedPlan === 'custom'
+                    ? 'Upgrade & Continue · $9.99'
+                    : selectedPlan === 'basic'
+                      ? 'Continue with Basic'
+                      : 'Continue'
+                }
                 continueDisabled={!canContinueStep || navLocked}
                 onContinue={handleContinueFromStep}
               />
@@ -2923,6 +2857,7 @@ export function CreatePoolWizard({
 
             {checkoutPhase === 'idle' && step === REVIEW_STEP ? (
               <CreatePoolNavFooter
+                isModal={isModal}
                 showBack
                 backDisabled={navLocked}
                 onBack={() => goToStep(PLAN_STEP, -1)}

@@ -1538,6 +1538,386 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   color: #22d3ee;
 }
 
+/* Recessed inner panel — step 2 Points System + plan card custom inset. */
+.create-pool-inset-panel {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, #1e2d3d 80%, transparent);
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+/* Badge straddles card top border — reserve headroom inside scroll containers. */
+.create-pool-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding-top: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .create-pool-plan-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.create-pool-plan-card {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  width: 100%;
+  overflow: visible;
+  border-radius: 0.75rem;
+  border: 1px solid #1e2d3d;
+  background: color-mix(in srgb, var(--dashboard-card-bg) 40%, transparent);
+  padding: 0.875rem 0.9375rem 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+/* Desktop modal — solid layered surfaces (Notion-style depth). */
+.create-pool-wizard--modal .create-pool-plan-card {
+  height: auto;
+  border: 2px solid #363636;
+  background: #151515;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card--custom,
+.create-pool-wizard--modal .create-pool-plan-card--custom:hover {
+  border: none;
+  background: #222220;
+}
+
+/* Desktop modal — content-driven card heights (top-align; each button at its own bottom). */
+.create-pool-wizard--modal .create-pool-plan-grid {
+  align-items: start;
+  column-gap: 1.75rem;
+  row-gap: 0.75rem;
+  padding-inline: 0;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__body {
+  flex: 0 0 auto;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__select {
+  margin-top: 1.25rem;
+}
+
+/* Desktop modal — simplified gold badge (Custom card). */
+.create-pool-wizard--modal .create-pool-plan-card__badge {
+  padding: 4px 12px;
+  font-size: 0.65625rem;
+  line-height: 1.2;
+  border: 0;
+  border-radius: 9px;
+  background: #f2c94c;
+  letter-spacing: 0.065em;
+  color: #332806;
+  box-shadow:
+    0 3px 0 #a5822f,
+    0 6px 10px rgba(0, 0, 0, 0.14);
+}
+
+/* Desktop modal — nudge card copy right; select buttons stay full-width. */
+.create-pool-wizard--modal .create-pool-plan-card__title,
+.create-pool-wizard--modal .create-pool-plan-card__price,
+.create-pool-wizard--modal .create-pool-plan-card__price-line,
+.create-pool-wizard--modal .create-pool-plan-card__tagline,
+.create-pool-wizard--modal .create-pool-plan-card__features-label,
+.create-pool-wizard--modal .create-pool-plan-card__features {
+  padding-left: 5px;
+}
+
+/* Desktop modal — fire streak accent (Custom card; no circular container). */
+.create-pool-wizard--modal .create-pool-plan-card__fire-streak {
+  position: absolute;
+  top: 1rem;
+  right: 0.875rem;
+  z-index: 1;
+  height: 46px;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Desktop modal — all card copy white; icons keep accent colors. */
+.create-pool-wizard--modal .create-pool-plan-card__title,
+.create-pool-wizard--modal .create-pool-plan-card__price,
+.create-pool-wizard--modal .create-pool-plan-card__price--basic,
+.create-pool-wizard--modal .create-pool-plan-card__price--custom,
+.create-pool-wizard--modal .create-pool-plan-card__price-note,
+.create-pool-wizard--modal .create-pool-plan-card__tagline,
+.create-pool-wizard--modal .create-pool-plan-card__tagline--muted,
+.create-pool-wizard--modal .create-pool-plan-card__tagline--accent,
+.create-pool-wizard--modal .create-pool-plan-card__features-label,
+.create-pool-wizard--modal .create-pool-plan-card__features {
+  color: #ffffff;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__title {
+  margin-top: 12px;
+}
+
+/* Desktop modal — plan card typography/spacing (Notion-pricing readability). */
+.create-pool-wizard--modal .create-pool-plan-card__tagline {
+  margin-top: 12px;
+  line-height: 1.45;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__body {
+  margin-top: 24px;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__features-label {
+  font-weight: 600;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__features {
+  margin-top: 11px;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__features li {
+  font-weight: 400;
+}
+
+/* Desktop modal — restrained select buttons (neutral; footer Continue stays primary). */
+.create-pool-wizard--modal .create-pool-plan-card__select--idle {
+  border: 1px solid #3a3a3a;
+  background: transparent;
+  color: #ffffff;
+}
+
+.create-pool-wizard--modal
+  .create-pool-plan-card:not(.create-pool-plan-card--custom)
+  .create-pool-plan-card__select--idle {
+  background: #222220;
+}
+
+.create-pool-wizard--modal
+  .create-pool-plan-card:not(.create-pool-plan-card--custom)
+  .create-pool-plan-card__select--idle:hover {
+  background: #222220;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__select--idle:hover {
+  border-color: #484848;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__select--on {
+  border: 1px solid #626262;
+  background: #363636;
+  color: #ffffff;
+}
+
+.create-pool-wizard--modal .create-pool-plan-card__select--on:hover {
+  border-color: #626262;
+  background: #363636;
+  color: #ffffff;
+}
+
+/* Page/mobile — gold wash on custom tier only. */
+.create-pool-wizard--page .create-pool-plan-card--custom {
+  background: rgba(242, 201, 76, 0.045);
+}
+
+.create-pool-wizard--page .create-pool-plan-card--custom:hover {
+  background: rgba(242, 201, 76, 0.055);
+}
+
+.create-pool-plan-card__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: #f0f4f8;
+}
+
+.create-pool-plan-card__price {
+  margin: 9px 0 0;
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.create-pool-plan-card__price--basic {
+  color: #f0f4f8;
+}
+
+.create-pool-plan-card__price-line {
+  display: flex;
+  margin: 9px 0 0;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+
+.create-pool-plan-card__price-line .create-pool-plan-card__price {
+  margin: 0;
+}
+
+.create-pool-plan-card__price--custom {
+  color: #f2c94c;
+}
+
+.create-pool-plan-card__price-note {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(242, 201, 76, 0.65);
+}
+
+.create-pool-plan-card__tagline {
+  display: flex;
+  margin: 9px 0 0;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 12px;
+  line-height: 1.375;
+}
+
+.create-pool-plan-card__tagline--muted {
+  color: #5a7080;
+}
+
+.create-pool-plan-card__tagline--accent {
+  color: #00e887;
+}
+
+.create-pool-plan-card__tagline svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.create-pool-plan-card__body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+
+.create-pool-plan-card__features-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.375;
+  color: #e5e7eb;
+}
+
+.create-pool-plan-card__features {
+  margin: 0.4375rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-pool-plan-card:hover {
+  border-color: #2a3d52;
+}
+
+.create-pool-plan-card__badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 9999px;
+  background: #f2c94c;
+  padding: 3px 10px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #3b2e07;
+  pointer-events: none;
+}
+
+.create-pool-plan-card__crown {
+  position: absolute;
+  top: 0.875rem;
+  right: 0.9375rem;
+  display: flex;
+  height: 34px;
+  width: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(242, 201, 76, 0.12);
+  color: #f2c94c;
+  pointer-events: none;
+}
+
+.create-pool-plan-card__crown svg {
+  width: 18px;
+  height: 18px;
+}
+
+.create-pool-plan-card__select {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: auto;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out;
+}
+
+.create-pool-plan-card__select--idle {
+  border: 1px solid #2a3d52;
+  background: transparent;
+  color: #e8eef4;
+}
+
+.create-pool-plan-card__select--idle:hover {
+  border-color: #3d5368;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.create-pool-plan-card__select--on {
+  border: 1px solid #00e887;
+  background: #00e887;
+  color: #080b0f;
+}
+
+.create-pool-plan-card__select--on:hover {
+  border-color: #00e887;
+  background: #00e887;
+  color: #080b0f;
+}
+
+.create-pool-plan-card__select svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .create-pool-entry-btn,
   .create-pool-entry-btn.create-pool-entry-pressed {
@@ -1546,7 +1926,8 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   }
 
   .create-pool-visibility-toggle__thumb,
-  .create-pool-visibility-toggle__segment {
+  .create-pool-visibility-toggle__segment,
+  .create-pool-plan-card {
     transition: none !important;
   }
 

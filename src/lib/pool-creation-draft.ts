@@ -22,9 +22,6 @@ export type PoolCreationDraftPayload = {
   eventId: string
   eventName: string
   isPublic: boolean
-  themeColor: string | null
-  /** Client will upload emblem after pool exists (finalizing state). */
-  hasPendingEmblem: boolean
 }
 
 export type ValidatedPoolCreationDraft = {
@@ -34,8 +31,11 @@ export type ValidatedPoolCreationDraft = {
   eventId: string
   eventName: string
   isPublic: boolean
+  /**
+   * Optional for older in-flight drafts that still carried theme_color.
+   * New clients omit branding — materialize uses null when absent.
+   */
   themeColor: string | null
-  hasPendingEmblem: boolean
 }
 
 export type DraftValidationResult =
@@ -116,18 +116,13 @@ export async function validatePoolCreationDraftPayload(
 
   const isPublic = Boolean(body.isPublic ?? body.is_public)
 
+  // Branding is set in pool settings after create. Older in-flight drafts may
+  // still include theme_color — honor a valid value; ignore if absent/invalid.
   let themeColor: string | null = null
   const themeRaw = body.themeColor ?? body.theme_color
   if (typeof themeRaw === 'string' && themeRaw.trim()) {
     themeColor = normalizePoolThemeColor(themeRaw)
-    if (!themeColor) {
-      return { ok: false, error: 'invalid_theme_color', field: 'themeColor' }
-    }
   }
-
-  const hasPendingEmblem = Boolean(
-    body.hasPendingEmblem ?? body.has_pending_emblem,
-  )
 
   return {
     ok: true,
@@ -139,7 +134,6 @@ export async function validatePoolCreationDraftPayload(
       eventName: String(event.name ?? ''),
       isPublic,
       themeColor,
-      hasPendingEmblem,
     },
   }
 }

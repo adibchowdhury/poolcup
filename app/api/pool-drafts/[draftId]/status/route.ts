@@ -63,9 +63,5 @@ export async function GET(_request: Request, context: Ctx) {
     inviteCode:
       typeof pool?.invite_code === 'string' ? pool.invite_code : null,
     name: typeof pool?.name === 'string' ? pool.name : null,
-    hasPendingEmblem: Boolean(
-      (draft.payload as { hasPendingEmblem?: boolean } | null)
-        ?.hasPendingEmblem,
-    ),
   })
 }
