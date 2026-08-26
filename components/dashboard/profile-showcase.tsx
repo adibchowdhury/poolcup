@@ -169,7 +169,7 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
           className="relative h-6 w-6 text-primary"
           aria-hidden
         />
-        <p className="relative mt-2 font-display text-6xl leading-none tabular-nums tracking-wide text-foreground sm:text-7xl">
+        <p className="relative mt-2 font-mono text-6xl leading-none tabular-nums tracking-wide text-foreground sm:text-7xl">
           {data.poolsWon.toLocaleString()}
         </p>
         <p className="relative mt-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -188,7 +188,7 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
           data-career-hero="best-finish"
           className="flex flex-col items-center px-3 text-center"
         >
-          <p className="font-display text-4xl leading-none tabular-nums tracking-wide text-[#ffb300] sm:text-5xl">
+          <p className="font-mono text-4xl leading-none tabular-nums tracking-wide text-[#ffb300] sm:text-5xl">
             {data.bestFinish != null ? `#${data.bestFinish}` : '—'}
           </p>
           <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -199,7 +199,7 @@ function CareerHighlightsResume({ data }: { data: CareerHighlightsData }) {
           data-career-hero="accuracy"
           className="flex flex-col items-center border-l border-white/[0.08] px-3 text-center"
         >
-          <p className="font-display text-4xl leading-none tabular-nums tracking-wide text-sky-300 sm:text-5xl">
+          <p className="font-mono text-4xl leading-none tabular-nums tracking-wide text-sky-300 sm:text-5xl">
             {data.accuracy != null ? `${data.accuracy}%` : '—'}
           </p>
           <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -1054,7 +1054,7 @@ export function ProfileShowcase({
           <h2 className="font-display text-xl tracking-wide text-foreground">
             Prediction Accuracy
           </h2>
-          <p className="mt-2 font-display text-4xl tabular-nums text-foreground">
+          <p className="mt-2 font-mono text-4xl tabular-nums text-foreground">
             {accuracy == null ? '—' : `${accuracy}%`}
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">

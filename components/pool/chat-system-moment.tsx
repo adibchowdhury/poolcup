@@ -64,7 +64,7 @@ function FullTimeMoment({
           </p>
         </div>
         <div className="flex flex-col items-center px-1">
-          <p className="font-display text-2xl leading-none tabular-nums tracking-wide text-foreground">
+          <p className="font-mono text-2xl leading-none tabular-nums tracking-wide text-foreground">
             {score1}
             <span className="mx-1 text-muted-foreground">–</span>
             {score2}

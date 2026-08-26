@@ -225,7 +225,7 @@ function PodiumPedestal({
               </span>
             ) : null}
             <p
-              className="mt-0.5 font-display text-xl tabular-nums leading-tight tracking-wide sm:text-2xl"
+              className="mt-0.5 font-mono text-xl tabular-nums leading-tight tracking-wide sm:text-2xl"
               style={{ color: ACCENT_GREEN }}
             >
               {member.points}
@@ -296,7 +296,7 @@ function PodiumPedestal({
               </span>
             ) : null}
             <p
-              className="mt-1.5 font-display text-xl tabular-nums tracking-wide sm:text-2xl"
+              className="mt-1.5 font-mono text-xl tabular-nums tracking-wide sm:text-2xl"
               style={{ color: ACCENT_GREEN }}
             >
               {member.points}
@@ -426,7 +426,7 @@ function StandingListRow({
 
       <div className="w-14 shrink-0 text-right sm:w-16">
         <span
-          className="font-display text-lg tabular-nums sm:text-xl"
+          className="font-mono text-lg tabular-nums sm:text-xl"
           style={{ color: ACCENT_GREEN }}
         >
           {member.points}

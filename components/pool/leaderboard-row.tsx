@@ -97,7 +97,7 @@ export function LeaderboardRow({ member, rank }: LeaderboardRowProps) {
       </div>
 
       <div className="shrink-0 text-right">
-        <div className="font-display text-2xl text-foreground">{member.points}</div>
+        <div className="font-mono text-2xl text-foreground">{member.points}</div>
         <div className="text-xs text-muted-foreground">pts</div>
       </div>
     </div>

@@ -25,7 +25,7 @@ function RankBadge({ rank }: { rank: number }) {
     )
   }
   return (
-    <span className="w-5 shrink-0 text-center font-display text-sm tabular-nums text-muted-foreground">
+    <span className="w-5 shrink-0 text-center font-mono text-sm tabular-nums text-muted-foreground">
       {rank}
     </span>
   )
@@ -125,7 +125,7 @@ export function FriendsXpLeaderboard({
                     </UserProfileLink>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="inline-flex items-center gap-1 font-display text-lg tabular-nums text-primary">
+                    <p className="inline-flex items-center gap-1 font-mono text-lg tabular-nums text-primary">
                       <Zap className="h-3.5 w-3.5" aria-hidden />
                       {row.total_xp.toLocaleString()}
                     </p>

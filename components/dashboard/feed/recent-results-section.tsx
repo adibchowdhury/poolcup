@@ -63,7 +63,7 @@ function PointsHero({
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           Total points
         </p>
-        <p className="mt-1 font-display text-4xl leading-none tracking-tight tabular-nums text-foreground sm:text-5xl">
+        <p className="mt-1 font-mono text-4xl leading-none tracking-tight tabular-nums text-foreground sm:text-5xl">
           {points.toLocaleString()}
         </p>
       </div>

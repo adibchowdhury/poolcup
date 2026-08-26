@@ -139,19 +139,19 @@ export function LandingPoolCustomizePreview({
             <ul className="mt-1.5 space-y-1 text-xs">
               <li className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Exact</span>
-                <span className="font-display tabular-nums text-primary">
+                <span className="font-mono tabular-nums text-primary">
                   {EXAMPLE.scoring.exact} pts
                 </span>
               </li>
               <li className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Winner</span>
-                <span className="font-display tabular-nums text-primary">
+                <span className="font-mono tabular-nums text-primary">
                   {EXAMPLE.scoring.winner} pts
                 </span>
               </li>
               <li className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Draw</span>
-                <span className="font-display tabular-nums text-primary">
+                <span className="font-mono tabular-nums text-primary">
                   {EXAMPLE.scoring.draw} pts
                 </span>
               </li>

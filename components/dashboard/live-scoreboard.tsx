@@ -375,7 +375,7 @@ function CompactLiveScoreboardCard({
 
           <div className="flex shrink-0 flex-col items-center justify-center px-0.5 sm:px-1">
             {isLive || mode === 'final' ? (
-              <p className="font-display text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
+              <p className="font-mono text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
                 <span className="text-primary">{score1}</span>
                 <span className="mx-0.5 text-muted-foreground/80">–</span>
                 <span className="text-primary">{score2}</span>
@@ -555,7 +555,7 @@ export function LiveScoreboardCard({
             )}
           >
             {isLive || mode === 'final' ? (
-              <p className="font-display text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
+              <p className="font-mono text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
                 <span className="text-primary">{score1}</span>
                 <span className="mx-1 text-muted-foreground/80 sm:mx-1.5">–</span>
                 <span className="text-primary">{score2}</span>
@@ -625,7 +625,7 @@ export function LiveScoreboardCard({
           )}
         >
           {isLive || mode === 'final' ? (
-            <p className="font-display text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
+            <p className="font-mono text-4xl leading-none tracking-wider text-foreground tabular-nums sm:text-5xl">
               <span className="text-primary">{score1}</span>
               <span className="mx-1 text-muted-foreground/80 sm:mx-1.5">–</span>
               <span className="text-primary">{score2}</span>

@@ -556,7 +556,7 @@ export function PremiumMatchCard({
                 'leading-none tabular-nums',
                 isLiveStripLayout
                   ? 'font-mono text-3xl font-bold tracking-[0.02em] sm:text-4xl'
-                  : 'font-display text-4xl tracking-[0.02em] sm:text-5xl',
+                  : 'font-mono text-4xl tracking-[0.02em] sm:text-5xl',
               )}
               style={{
                 color: 'var(--match-card-score)',

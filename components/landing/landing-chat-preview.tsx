@@ -123,7 +123,7 @@ function LandingLiveScoreboard() {
           </span>
         </div>
 
-        <p className="shrink-0 font-display text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
+        <p className="shrink-0 font-mono text-lg leading-none tracking-wide text-foreground tabular-nums sm:text-xl">
           <span className="text-primary">2</span>
           <span className="mx-0.5 text-muted-foreground/80">–</span>
           <span className="text-primary">1</span>

@@ -327,7 +327,7 @@ function AchievementsPageContent() {
         </div>
 
         <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm">
-          <p className="font-display text-2xl tracking-wide tabular-nums text-foreground">
+          <p className="font-mono text-2xl tracking-wide tabular-nums text-foreground">
             {earned}
             <span className="text-muted-foreground"> / {total}</span>
           </p>

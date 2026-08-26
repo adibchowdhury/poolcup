@@ -353,7 +353,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 font-display text-3xl tabular-nums tracking-wide text-foreground">
+      <p className="mt-1 font-mono text-3xl tabular-nums tracking-wide text-foreground">
         {value}
       </p>
     </div>

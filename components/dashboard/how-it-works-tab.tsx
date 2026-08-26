@@ -363,7 +363,7 @@ export function HowItWorksTab({ currentXp = 0 }: HowItWorksTabProps) {
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Your level
               </p>
-              <p className="mt-0.5 font-display text-4xl tabular-nums text-foreground">
+              <p className="mt-0.5 font-mono text-4xl tabular-nums text-foreground">
                 {level.level}
               </p>
             </div>

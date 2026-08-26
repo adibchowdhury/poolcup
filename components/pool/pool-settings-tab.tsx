@@ -956,7 +956,7 @@ export function PoolSettingsSectionContent({
               <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Members
               </dt>
-              <dd className="font-display text-2xl tabular-nums text-foreground">
+              <dd className="font-mono text-2xl tabular-nums text-foreground">
                 {members.length}
               </dd>
             </div>
@@ -964,7 +964,7 @@ export function PoolSettingsSectionContent({
               <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 With points
               </dt>
-              <dd className="font-display text-2xl tabular-nums text-foreground">
+              <dd className="font-mono text-2xl tabular-nums text-foreground">
                 {members.length - missingPredictionCount}
               </dd>
             </div>
@@ -972,7 +972,7 @@ export function PoolSettingsSectionContent({
               <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Still at 0 pts
               </dt>
-              <dd className="font-display text-2xl tabular-nums text-foreground">
+              <dd className="font-mono text-2xl tabular-nums text-foreground">
                 {missingPredictionCount}
               </dd>
             </div>
@@ -1513,19 +1513,19 @@ export function PoolSettingsSectionContent({
                 <ul className="space-y-1.5 text-sm text-foreground">
                   <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Exact score</span>
-                    <span className="font-display tabular-nums text-primary">
+                    <span className="font-mono tabular-nums text-primary">
                       {resolvedScoring.exact} pts
                     </span>
                   </li>
                   <li className="flex justify-between gap-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Correct winner</span>
-                    <span className="font-display tabular-nums text-primary">
+                    <span className="font-mono tabular-nums text-primary">
                       {resolvedScoring.winner} pts
                     </span>
                   </li>
                   <li className="flex justify-between gap-3 py-1.5">
                     <span className="text-muted-foreground">Correct draw</span>
-                    <span className="font-display tabular-nums text-primary">
+                    <span className="font-mono tabular-nums text-primary">
                       {resolvedScoring.draw} pts
                     </span>
                   </li>
@@ -2012,7 +2012,7 @@ export function PoolSettingsSectionContent({
                       ) : null}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      <span className="font-display tabular-nums text-primary">
+                      <span className="font-mono tabular-nums text-primary">
                         #{member.rank}
                       </span>
                       <span className="mx-1.5 text-border">·</span>

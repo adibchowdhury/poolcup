@@ -122,7 +122,7 @@ export function AchievementsFeedContent({
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Level
               </p>
-              <p className="mt-0.5 font-display text-3xl leading-none tracking-tight tabular-nums text-foreground sm:text-4xl">
+              <p className="mt-0.5 font-mono text-3xl leading-none tracking-tight tabular-nums text-foreground sm:text-4xl">
                 {level.level}
               </p>
             </div>

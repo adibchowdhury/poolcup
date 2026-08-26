@@ -37,10 +37,7 @@ function ScoreboardUnit({
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center">
       <span
-        className="text-[clamp(2.2rem,10vw,4.5rem)] leading-[0.78] tracking-[0.04em] tabular-nums text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.85),0_0_22px_rgba(0,230,118,0.35)]"
-        style={{
-          fontFamily: 'VT323, var(--font-mono), monospace',
-        }}
+        className="font-vt323 text-[clamp(2.2rem,10vw,4.5rem)] leading-[0.78] tracking-[0.04em] tabular-nums text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.85),0_0_22px_rgba(0,230,118,0.35)]"
       >
         {value == null ? '--' : String(value).padStart(2, '0')}
       </span>
@@ -54,10 +51,7 @@ function ScoreboardUnit({
 function ScoreboardColon() {
   return (
     <span
-      className="mb-4 shrink-0 text-[clamp(1.9rem,7vw,3.75rem)] leading-none text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.8)]"
-      style={{
-        fontFamily: 'VT323, var(--font-mono), monospace',
-      }}
+      className="font-vt323 mb-4 shrink-0 text-[clamp(1.9rem,7vw,3.75rem)] leading-none text-primary [text-shadow:0_0_8px_rgba(0,230,118,0.8)]"
       aria-hidden
     >
       :
@@ -91,8 +85,7 @@ function LaunchCountdown() {
       {ready && parts == null ? (
         <div className="relative mt-4 overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#030705] px-5 py-8 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_2px_0_rgba(255,255,255,0.05)_inset,0_-2px_0_rgba(0,0,0,0.8)_inset]">
           <p
-            className="text-4xl tracking-wider text-primary [text-shadow:0_0_10px_rgba(0,230,118,0.8)] sm:text-5xl"
-            style={{ fontFamily: 'VT323, var(--font-mono), monospace' }}
+            className="font-vt323 text-4xl tracking-wider text-primary [text-shadow:0_0_10px_rgba(0,230,118,0.8)] sm:text-5xl"
           >
             Launching soon!
           </p>

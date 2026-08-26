@@ -390,7 +390,7 @@ function TrendingPoolRow({
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
         <span
-          className="w-6 shrink-0 text-center font-display text-lg tabular-nums text-primary sm:w-7 sm:text-xl"
+          className="w-6 shrink-0 text-center font-mono text-lg tabular-nums text-primary sm:w-7 sm:text-xl"
           aria-label={`Rank ${rank}`}
         >
           {rank}
