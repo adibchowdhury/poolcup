@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -127,15 +127,15 @@ const MASCOT_FRAME_HERO_CLASS =
 const MASCOT_IMAGE_CLASS =
   'h-full w-full object-contain object-bottom'
 const ONBOARDING_TITLE_CLASS =
-  'text-center font-display text-3xl leading-tight tracking-wide text-foreground sm:text-5xl lg:text-left'
+  'text-center font-display text-[2.25rem] leading-[1.05] tracking-wide text-foreground sm:text-[2.5rem] lg:text-left lg:text-[2.75rem]'
 const PANEL_SHELL_CLASS =
   'flex min-h-0 w-full flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-rows-1 lg:gap-x-12 xl:gap-x-16'
 /** image→dots: 5rem (80px) */
 const MOBILE_IMAGE_TO_DOTS_GAP_CLASS = 'h-20 shrink-0 lg:hidden'
 /** title→copy / copy→pills: 32px */
 const MOBILE_GROUP_GAP_CLASS = 'h-8 shrink-0 lg:hidden'
-/** dots→title: 48px */
-const MOBILE_DOTS_TO_TITLE_GAP_CLASS = 'h-12 shrink-0 lg:hidden'
+/** dots→title: 40px (tightened vs 48px so larger titles still fit) */
+const MOBILE_DOTS_TO_TITLE_GAP_CLASS = 'h-10 shrink-0 lg:hidden'
 
 /**
  * 3D motion durations — applied as CSS vars on the shell; motion lives in
@@ -1270,12 +1270,12 @@ export function OnboardingFlow({
               <section
                 className={cn(
                   'text-center lg:text-left',
-                  infoSlide.id === 'welcome' ? 'space-y-2.5' : null,
+                  infoSlide.id === 'welcome' ? 'space-y-2' : null,
                 )}
               >
                 {infoSlide.id === 'welcome' ? (
-                  <div className="mx-auto flex w-fit flex-col items-center gap-2.5 lg:mx-0">
-                    <h1 className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] sm:text-4xl">
+                  <div className="mx-auto flex w-fit flex-col items-center gap-2 lg:mx-0">
+                    <h1 className={ONBOARDING_TITLE_CLASS}>
                       {infoSlide.title}
                     </h1>
                     <div className="flex justify-center">
@@ -1655,9 +1655,9 @@ export function OnboardingFlow({
             />
             {desktopChrome}
             {mobileDots}
-            <div className="max-lg:order-3 scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-3 pt-12 lg:max-h-full lg:flex-none lg:pb-0 lg:pt-0">
+            <div className="max-lg:order-3 scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-3 pt-10 lg:max-h-full lg:flex-none lg:pb-0 lg:pt-0">
               {headlineBlock}
-              <div className="h-6 shrink-0 lg:h-4" aria-hidden />
+              <div className="h-5 shrink-0 lg:h-4" aria-hidden />
               {controlsBlock}
             </div>
             {desktopActions}

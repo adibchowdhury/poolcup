@@ -19,6 +19,7 @@ import {
   dashboardGlassSurfaceClass,
 } from '@/components/dashboard/dashboard-glass-surface'
 import { beginCreatePoolEntry } from '@/src/lib/create-pool-transition'
+import { useCreatePoolModalOptional } from '@/components/create/create-pool-modal'
 
 function normalizeInviteCode(input: string): string {
   const trimmed = input.trim()
@@ -37,6 +38,7 @@ type DialogStep = 'choose' | 'join'
 
 export function JoinOrCreatePoolCard() {
   const router = useRouter()
+  const createModal = useCreatePoolModalOptional()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<DialogStep>('choose')
   const [inviteCode, setInviteCode] = useState('')
@@ -56,7 +58,11 @@ export function JoinOrCreatePoolCard() {
   function handleCreate() {
     setOpen(false)
     resetDialog()
-    beginCreatePoolEntry(router)
+    beginCreatePoolEntry(router, {
+      openModal: createModal
+        ? () => createModal.openCreatePoolModal()
+        : undefined,
+    })
   }
 
   function handleJoinSubmit(e: React.FormEvent) {

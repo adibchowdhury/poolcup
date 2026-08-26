@@ -1,6 +1,6 @@
 type RouterPush = { push: (href: string) => void }
 
-/** sessionStorage key coordinating dashboard ↔ /create handoff. */
+/** sessionStorage key coordinating dashboard ↔ /create handoff (mobile only). */
 export const CREATE_POOL_TRANSITION_KEY = 'poolcup_create_transition'
 
 export type CreatePoolTransitionKind = 'enter' | 'exit'
@@ -17,6 +17,12 @@ export const CREATE_POOL_SCREEN_EXIT_MS = 240
 export function readPrefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/** @deprecated Use isCreatePoolDesktopModalViewport from create-pool-modal-handoff. */
+export function isCreatePoolDesktopInShell(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(min-width: 1024px)').matches
 }
 
 export function setCreatePoolTransition(kind: CreatePoolTransitionKind): void {
@@ -44,12 +50,26 @@ export function clearCreateModeDashboardExitClass(): void {
   document.documentElement.classList.remove('create-mode-dashboard-exit')
 }
 
+type BeginCreatePoolEntryOptions = {
+  /** Desktop: open hub modal instead of navigating. */
+  openModal?: () => void
+}
+
 /**
- * Dashboard → /create: mark enter handoff, recede hub shell, then navigate.
- * Caller should run button press feedback (~100ms) before calling this, or
- * use `startCreatePoolEntryFromClick`.
+ * Create Pool entry: desktop opens the hub modal (no navigation);
+ * mobile keeps the full-screen /create choreography.
+ * Viewport is read at click time (not during render).
  */
-export function beginCreatePoolEntry(router: RouterPush): void {
+export function beginCreatePoolEntry(
+  router: RouterPush,
+  options?: BeginCreatePoolEntryOptions,
+): void {
+  if (options?.openModal && isCreatePoolDesktopInShell()) {
+    clearCreateModeDashboardExitClass()
+    options.openModal()
+    return
+  }
+
   if (readPrefersReducedMotion()) {
     clearCreateModeDashboardExitClass()
     router.push('/create')
@@ -63,12 +83,19 @@ export function beginCreatePoolEntry(router: RouterPush): void {
 }
 
 /**
- * Full click choreography: transient press scale, then dashboard exit + navigate.
+ * Full click choreography: transient press scale, then entry.
  */
 export function startCreatePoolEntryFromClick(
   router: RouterPush,
   button: HTMLElement | null,
+  options?: BeginCreatePoolEntryOptions,
 ): void {
+  if (options?.openModal && isCreatePoolDesktopInShell()) {
+    clearCreateModeDashboardExitClass()
+    options.openModal()
+    return
+  }
+
   if (readPrefersReducedMotion()) {
     clearCreateModeDashboardExitClass()
     router.push('/create')
@@ -83,18 +110,19 @@ export function startCreatePoolEntryFromClick(
     if (button) {
       button.classList.remove('create-pool-entry-pressed')
     }
-    beginCreatePoolEntry(router)
+    beginCreatePoolEntry(router, options)
   }, CREATE_POOL_PRESS_MS)
 }
 
 /**
- * /create → dashboard: set exit flag, run screen exit class via onStart, then navigate.
+ * /create → dashboard (mobile page exit choreography).
+ * Modal close should call the modal context closer instead.
  */
 export function beginCreatePoolExit(
   router: RouterPush,
   onStart?: () => void,
 ): void {
-  if (readPrefersReducedMotion()) {
+  if (readPrefersReducedMotion() || isCreatePoolDesktopInShell()) {
     router.push('/dashboard')
     return
   }

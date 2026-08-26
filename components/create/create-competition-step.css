@@ -1,12 +1,12 @@
 /* Scoped to .create-competition-step — surfaces align with create-wizard cards. */
 
 .create-competition-step {
-  /* Wizard / deck tokens (same family as create/page selection tiles). */
-  --cc-surface: #080b0f;
+  --cc-surface: var(--dashboard-card-bg);
   --cc-border: #1e2d3d;
   --cc-fg: #f0f4f8;
   --cc-muted: #5a7080;
   --cc-eyebrow: #5a7080;
+  --cc-panel-fill: #0b0d10;
 
   width: 100%;
   color: var(--cc-fg);
@@ -30,8 +30,6 @@
 
 .create-competition-step__layout {
   display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
-  column-gap: 10px;
   align-items: start;
   margin-top: 16px;
 }
@@ -42,22 +40,15 @@
 
 .create-competition-step__rail {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
 .create-competition-step__sport {
   position: relative;
   display: flex;
-  width: 100%;
   align-items: center;
-  gap: 10px;
   border: 1px solid transparent;
-  border-right: 0;
-  border-radius: 12px 0 0 12px;
   background: transparent;
-  padding: 10px;
   color: var(--cc-muted);
   text-align: left;
   cursor: pointer;
@@ -65,8 +56,7 @@
     background-color 160ms ease,
     color 160ms ease,
     border-color 160ms ease,
-    margin 160ms ease,
-    padding 160ms ease;
+    box-shadow 160ms ease;
 }
 
 .create-competition-step__sport:hover {
@@ -74,37 +64,13 @@
   color: var(--cc-fg);
 }
 
-.create-competition-step__sport[aria-selected='true'] {
-  z-index: 2;
-  margin-right: -13px;
-  padding-right: 23px;
-  border-color: var(--cc-border);
-  border-right-color: transparent;
-  background: color-mix(in srgb, var(--cc-surface) 70%, transparent);
-  color: var(--cc-fg);
-}
-
-.create-competition-step__sport[aria-selected='true']::before {
-  content: '';
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 0;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-
 .create-competition-step__sport:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary) 50%, transparent);
   outline-offset: 3px;
 }
 
-/* Full-color /sports/*.png — opacity treatment matches sport-bubbles-row. */
 .create-competition-step__sport-ball {
   display: block;
-  width: 20px;
-  height: 20px;
   flex-shrink: 0;
   object-fit: contain;
   opacity: 0.9;
@@ -118,22 +84,18 @@
 }
 
 .create-competition-step__sport-label {
-  font-size: 12.5px;
   font-weight: 600;
   line-height: 1.2;
 }
 
-/* Standard wizard card surface (create/page tiles). */
 .create-competition-step__panel {
   position: relative;
-  z-index: 1;
   display: flex;
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--cc-border);
-  border-radius: 0.75rem; /* rounded-xl */
-  background: color-mix(in srgb, var(--cc-surface) 70%, transparent);
+  background: var(--cc-panel-fill);
   padding: 12px;
 }
 
@@ -147,19 +109,26 @@
   border-bottom: 1px solid var(--cc-border);
 }
 
-/* Natural height for all breakpoints — panel grows with row count.
- * Thin internal-scrollbar rules removed (dead without a height cap). */
 .create-competition-step__list {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
-  /* Soft floor so 1-row sports don’t collapse to a stub vs empty state. */
   min-height: 140px;
 }
 
-/* List rows — same family as selectionTileClass / plan cards. */
+.create-competition-step__group-heading {
+  margin: 0;
+  padding: 2px 2px 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cc-eyebrow);
+}
+
 .create-competition-step__row {
+  position: relative;
   display: flex;
   width: 100%;
   align-items: center;
@@ -191,39 +160,55 @@
   outline-offset: 3px;
 }
 
+.create-competition-step__card-body {
+  flex: 1;
+  min-width: 0;
+  order: 1;
+}
+
+.create-competition-step__title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
 .create-competition-step__crest {
   display: flex;
-  height: 34px;
-  width: 34px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--cc-border);
-  border-radius: 0.5rem;
-  background: var(--cc-surface);
 }
 
+.create-competition-step__crest-img,
 .create-competition-step__crest-ball {
   display: block;
-  width: 19px;
-  height: 19px;
   object-fit: contain;
 }
 
-.create-competition-step__row[aria-pressed='true'] .create-competition-step__crest {
-  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+.create-competition-step__crest-img--league {
+  width: 22px;
+  height: 22px;
 }
 
-.create-competition-step__meta {
+.create-competition-step__crest-img--fallback {
+  width: 22px;
+  height: 22px;
+}
+
+.create-competition-step__crest-backing {
   display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 3px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
 }
 
 .create-competition-step__name {
   margin: 0;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -233,44 +218,37 @@
   color: var(--cc-fg);
 }
 
-.create-competition-step__season {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.2;
-  color: var(--cc-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.create-competition-step__right {
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  text-align: right;
-}
-
-.create-competition-step__dates {
-  font-size: 10.5px;
-  line-height: 1.2;
-  color: var(--cc-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 .create-competition-step__status {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 6px;
-  font-size: 10px;
+  gap: 4px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--cc-muted);
 }
 
+.create-competition-step__status--badge {
+  order: 2;
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--cc-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cc-fg) 4%, var(--cc-surface));
+}
+
+/* Muted live pill — same recipe as green subtle pills (border/35, bg/10, tinted text), red hue. */
 .create-competition-step__status--in-season {
-  color: var(--primary);
+  border-color: color-mix(in srgb, var(--destructive) 35%, var(--cc-border));
+  background: color-mix(in srgb, var(--destructive) 10%, var(--cc-surface));
+  color: #f87171;
+}
+
+.create-competition-step__status--in-season .stage-live-dot-light {
+  flex-shrink: 0;
+  background-color: currentColor;
 }
 
 .create-competition-step__dot {
@@ -279,22 +257,6 @@
   width: 6px;
   border-radius: 999px;
   background: currentColor;
-}
-
-.create-competition-step__status--in-season .create-competition-step__dot {
-  animation: create-competition-step-pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes create-competition-step-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent);
-  }
-  50% {
-    opacity: 0.55;
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 0%, transparent);
-  }
 }
 
 .create-competition-step__empty {
@@ -308,7 +270,6 @@
   color: var(--cc-muted);
 }
 
-/* Retry CTA only (error empty-state). */
 .create-competition-step__cta {
   flex-shrink: 0;
   border: 0;
@@ -337,17 +298,266 @@
   outline-offset: 3px;
 }
 
-/* Below Tailwind `lg` (1024px): stacked chip row + natural list height.
- * Desktop (≥1024) rules above stay unchanged. */
-@media (max-width: 1023px) {
-  /* Desktop rail keeps the "Sport" eyebrow; hide on mobile chip row. */
-  .create-competition-step__rail-col > .create-competition-step__eyebrow {
-    display: none;
+/* Desktop page (≥1024): vertical rail + fused tab join. */
+@media (min-width: 1024px) {
+  .create-competition-step:not(.create-competition-step--modal) {
+    --cc-rail-gutter: 10px;
+    --cc-panel-border: 1px;
+    --cc-tab-join: calc(var(--cc-rail-gutter) + var(--cc-panel-border) + 1px);
   }
 
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__layout {
+    grid-template-columns: 168px minmax(0, 1fr);
+    column-gap: var(--cc-rail-gutter);
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__rail-col {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__rail {
+    flex-direction: column;
+    gap: 4px;
+    overflow: visible;
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__sport {
+    width: 100%;
+    gap: 10px;
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+    padding: 10px;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      margin 160ms ease,
+      padding 160ms ease;
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__sport[aria-selected='true'] {
+    z-index: 3;
+    width: calc(100% + var(--cc-tab-join));
+    max-width: none;
+    margin-right: calc(-1 * var(--cc-tab-join));
+    padding-right: calc(10px + var(--cc-tab-join));
+    border-color: var(--cc-border);
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+    background: var(--cc-panel-fill);
+    color: var(--cc-fg);
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__sport[aria-selected='true']::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 0;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--primary);
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__sport-ball {
+    width: 28px;
+    height: 28px;
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__sport-label {
+    font-size: 15px;
+  }
+
+  .create-competition-step:not(.create-competition-step--modal)
+    .create-competition-step__panel {
+    z-index: 1;
+    border-radius: 0 0.75rem 0.75rem 0;
+  }
+
+  /* Desktop modal (≥1024): centered sport chips + bare 2-col competition cards. */
+  .create-competition-step--modal .create-competition-step__layout {
+    grid-template-columns: 1fr;
+    row-gap: 32px;
+    margin-top: 0;
+  }
+
+  .create-competition-step--modal .create-competition-step__rail-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .create-competition-step--modal .create-competition-step__rail {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  /* Stacked chips: 48px ball above 14px label — fits five across modal width. */
+  .create-competition-step--modal .create-competition-step__sport {
+    box-sizing: border-box;
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 6.25rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .create-competition-step--modal .create-competition-step__sport-ball {
+    width: 48px;
+    height: 48px;
+    margin-inline: auto;
+  }
+
+  .create-competition-step--modal .create-competition-step__sport-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: inherit;
+  }
+
+  .create-competition-step--modal
+    .create-competition-step__sport[aria-selected='true'] {
+    border-color: color-mix(in srgb, var(--primary) 70%, var(--cc-border));
+    background: color-mix(in srgb, var(--primary) 26%, var(--cc-surface));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+    color: var(--cc-fg);
+  }
+
+  /* No panel chrome — cards sit directly on the modal body. */
+  .create-competition-step--modal .create-competition-step__panel {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .create-competition-step--modal .create-competition-step__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-content: start;
+    margin-top: 0;
+    min-height: 0;
+  }
+
+  .create-competition-step--modal .create-competition-step__empty {
+    grid-column: 1 / -1;
+    min-height: 120px;
+    border: 1px solid var(--cc-border);
+    border-radius: 0.75rem;
+    background: var(--cc-surface);
+  }
+
+  /* Uniform compact cards — logo + title + corner status.
+     Surface language matches sport chips: transparent default, faint hover tint. */
+  .create-competition-step--modal .create-competition-step__row {
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+    min-height: 76px;
+    padding: 12px 10px;
+    background: transparent;
+    color: var(--cc-muted);
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .create-competition-step--modal .create-competition-step__row:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--cc-border);
+    color: var(--cc-fg);
+  }
+
+  .create-competition-step--modal
+    .create-competition-step__row[aria-pressed='true'] {
+    color: var(--cc-fg);
+  }
+
+  .create-competition-step--modal
+    .create-competition-step__row[aria-pressed='true']:hover {
+    /* Selection owns the surface — don't wash it with the faint hover tint. */
+    background: transparent;
+  }
+
+  .create-competition-step--modal .create-competition-step__status--badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    margin-left: 0;
+    letter-spacing: 0.08em;
+    padding: 2px 5px;
+  }
+
+  .create-competition-step--modal .create-competition-step__card-body {
+    display: flex;
+    align-items: center;
+    padding-right: 4.75rem;
+  }
+
+  .create-competition-step--modal .create-competition-step__title-row {
+    gap: 10px;
+  }
+
+  .create-competition-step--modal .create-competition-step__crest-img--league {
+    width: 40px;
+    height: 40px;
+  }
+
+  .create-competition-step--modal .create-competition-step__crest-img--fallback {
+    width: 40px;
+    height: 40px;
+  }
+
+  .create-competition-step--modal .create-competition-step__crest-backing {
+    width: 48px;
+    height: 48px;
+  }
+
+  .create-competition-step--modal .create-competition-step__name {
+    white-space: normal;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+}
+
+/* Below Tailwind `lg` (1024px): stacked chip row + single-column list. */
+@media (max-width: 1023px) {
   .create-competition-step__layout {
     grid-template-columns: 1fr;
     row-gap: 12px;
+  }
+
+  .create-competition-step__panel {
+    border-radius: 0.75rem;
   }
 
   .create-competition-step__rail-col {
@@ -364,7 +574,6 @@
     width: max-content;
     max-width: 100%;
     margin-inline: auto;
-    margin-top: 0 !important; /* override inline style={{ marginTop: 8 }} */
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: none;
@@ -383,7 +592,6 @@
     justify-content: center;
     border: 1px solid transparent;
     border-radius: 11px;
-    margin-right: 0;
     padding: 5px 6px;
   }
 
@@ -397,20 +605,22 @@
   }
 
   .create-competition-step__sport[aria-selected='true'] {
-    margin-right: 0;
-    padding-right: 6px;
     border: 1px solid var(--cc-border);
     border-radius: 11px;
-    background: color-mix(in srgb, var(--cc-surface) 70%, transparent);
+    background: var(--cc-panel-fill);
   }
 
   .create-competition-step__sport[aria-selected='true']::before {
+    content: '';
+    position: absolute;
     top: auto;
     right: 8px;
     bottom: 4px;
     left: 8px;
     width: auto;
     height: 2px;
+    border-radius: 2px;
+    background: var(--primary);
   }
 
   .create-competition-step__cta {
@@ -423,9 +633,5 @@
   .create-competition-step__row,
   .create-competition-step__cta {
     transition: none !important;
-  }
-
-  .create-competition-step__status--in-season .create-competition-step__dot {
-    animation: none !important;
   }
 }

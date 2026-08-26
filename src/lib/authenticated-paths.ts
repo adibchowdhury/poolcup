@@ -2,7 +2,8 @@
  * Routes that use the authenticated app shell / bottom nav chrome.
  * Includes public-but-chrome paths like /join and /match — NOT an auth gate.
  *
- * Full-screen surfaces (no bottom nav): /onboarding, /create, /pool/* —
+ * Full-screen surfaces (no bottom nav): /onboarding, /create (mobile takeover;
+ * desktop uses hub shell with bottom nav still omitted), /pool/* —
  * those stay protected via isProtectedAppPath but skip AuthenticatedChrome.
  */
 export function isAuthenticatedAppPath(pathname: string): boolean {

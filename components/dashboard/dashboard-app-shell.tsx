@@ -198,18 +198,28 @@ export function DashboardAppShell({
 
   const showHubNav = forceHubNav || resolvedHubNav != null
   const isDashboardCanvas = isDashboardRoutePath(pathname)
+  /** Full-screen wizard on mobile; hub chrome stays mounted (CSS-hidden) for hydration safety. */
+  const isCreateRoute = pathname === '/create'
   const canvasClass =
     hubCanvasClassName ??
-    (isDashboardCanvas ? DASHBOARD_CANVAS_CLASS : 'bg-app-background')
-  const chromeSurfaceClass = isDashboardCanvas
-    ? 'bg-[#0D0D0D]/95'
-    : 'bg-[#0A0E0E]/95'
+    (isDashboardCanvas || isCreateRoute
+      ? DASHBOARD_CANVAS_CLASS
+      : 'bg-app-background')
+  const chromeSurfaceClass =
+    isDashboardCanvas || isCreateRoute
+      ? 'bg-[#0D0D0D]/95'
+      : 'bg-[#0A0E0E]/95'
 
   return (
     <BadgeUnlockProvider>
       <div
         data-hub-shell
-        className={cn('min-h-screen max-w-full min-w-0 overflow-x-clip lg:flex', canvasClass)}
+        data-create-route={isCreateRoute ? 'true' : undefined}
+        className={cn(
+          'min-h-screen max-w-full min-w-0 overflow-x-clip lg:flex',
+          isCreateRoute && 'max-lg:h-dvh max-lg:min-h-0 max-lg:overflow-hidden',
+          canvasClass,
+        )}
       >
         {showHubNav ? (
           <HubDesktopSidebar
@@ -226,8 +236,20 @@ export function DashboardAppShell({
           />
         ) : null}
 
-        <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-          <div className={cn('z-50 shrink-0 lg:hidden', canvasClass)}>
+        <div
+          className={cn(
+            'relative flex min-h-screen min-w-0 flex-1 flex-col',
+            isCreateRoute && 'max-lg:h-dvh max-lg:min-h-0',
+          )}
+        >
+          <div
+            className={cn(
+              'z-50 shrink-0 lg:hidden',
+              // Pathname-driven CSS hide — always mounted; SSR/client trees match.
+              isCreateRoute && 'hidden',
+              canvasClass,
+            )}
+          >
             <div
               aria-hidden
               className="dashboard-header-top-gap w-full shrink-0"
@@ -438,11 +460,14 @@ export function DashboardAppShell({
 
           <main
             className={cn(
-              'mx-auto w-full min-w-0 flex-1 bg-transparent py-6 lg:py-8',
+              'mx-auto w-full min-w-0 flex-1 bg-transparent',
+              isCreateRoute
+                ? 'max-lg:min-h-0 max-lg:overflow-hidden max-lg:p-0 lg:py-8'
+                : 'py-6 lg:py-8',
               showHubNav
                 ? cn('lg:max-w-none', HUB_DESKTOP_CONTENT_GUTTER_CLASS)
                 : 'max-w-6xl px-4',
-              MOBILE_BOTTOM_NAV_PAD_CLASS,
+              !isCreateRoute && MOBILE_BOTTOM_NAV_PAD_CLASS,
               mainClassName,
             )}
           >

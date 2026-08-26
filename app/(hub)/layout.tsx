@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CreatePoolModalProvider } from '@/components/create/create-pool-modal'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { HubChromeProfileProvider } from '@/components/dashboard/hub-chrome-profile'
 import { HubLayoutMarker } from '@/components/dashboard/hub-layout-context'
@@ -27,16 +28,18 @@ export default async function HubLayout({
         customAvatarUrl: profile?.custom_avatar_url ?? null,
       }}
     >
-      <DashboardAppShell
-        userId={user.id}
-        email={user.email ?? ''}
-        displayName={displayName}
-        avatar={profile?.avatar ?? null}
-        customAvatarUrl={profile?.custom_avatar_url ?? null}
-        forceHubNav
-      >
-        <HubLayoutMarker>{children}</HubLayoutMarker>
-      </DashboardAppShell>
+      <CreatePoolModalProvider>
+        <DashboardAppShell
+          userId={user.id}
+          email={user.email ?? ''}
+          displayName={displayName}
+          avatar={profile?.avatar ?? null}
+          customAvatarUrl={profile?.custom_avatar_url ?? null}
+          forceHubNav
+        >
+          <HubLayoutMarker>{children}</HubLayoutMarker>
+        </DashboardAppShell>
+      </CreatePoolModalProvider>
     </HubChromeProfileProvider>
   )
 }

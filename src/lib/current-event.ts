@@ -16,10 +16,11 @@ export type SportingEvent = {
   event_type: string
   start_date: string | null
   end_date: string | null
+  logo_url: string | null
 }
 
 const SPORTING_EVENT_SELECT =
-  'id, name, slug, sport, status, provider, provider_league_id, provider_season, event_type, start_date, end_date'
+  'id, name, slug, sport, status, provider, provider_league_id, provider_season, event_type, start_date, end_date, logo_url'
 
 /**
  * Resolve the "current" sporting event for writes that need event_id.

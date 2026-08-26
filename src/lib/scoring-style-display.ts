@@ -1,14 +1,30 @@
+export type PoolScoringRow = {
+  id: 'exact' | 'winner' | 'draw'
+  label: string
+  points: string
+}
+
 export const POOL_SCORING_STYLE_OPTIONS = [
   {
     id: 'classic' as const,
     label: 'Score Predictor',
-    /** Short line on create-step cards and review. */
-    tagline: 'Predict the score of every match.',
-    /** Card bullets on the Choose Pool Type step. */
+    /** Primary line on create-step cards and review summary. */
+    tagline: 'Predict the exact score',
+    /** Secondary supporting line on create-step cards. */
+    secondaryLine: 'Exact scores · More ways to earn points',
+    /** Default points rows for desktop create-step scoring inset. */
+    scoringRows: [
+      { id: 'exact' as const, label: 'Exact score', points: '+5 pts' },
+      { id: 'winner' as const, label: 'Correct winner', points: '+2 pts' },
+      { id: 'draw' as const, label: 'Draw', points: '+3 pts' },
+    ] satisfies PoolScoringRow[],
+    /**
+     * @deprecated Prefer tagline + secondaryLine on create cards.
+     * Kept for any callers that still expect a bullet list.
+     */
     highlights: [
-      'Earn points for exact scores and correct outcomes',
-      'Climb the pool leaderboard match by match',
-      'Best for groups who follow along all season',
+      'Predict the exact score',
+      'Exact scores · More ways to earn points',
     ],
     /** Detailed scoring shown on Rules & Create. */
     rules: [
@@ -22,11 +38,15 @@ export const POOL_SCORING_STYLE_OPTIONS = [
   {
     id: 'winner' as const,
     label: 'Winner Only',
-    tagline: 'Just pick who wins each match.',
+    tagline: 'Just pick the winner',
+    secondaryLine: 'Quick picks · Great for casual groups',
+    scoringRows: [
+      { id: 'winner' as const, label: 'Correct winner', points: '+2 pts' },
+      { id: 'draw' as const, label: 'Draw', points: '+3 pts' },
+    ] satisfies PoolScoringRow[],
     highlights: [
-      'One tap per match — home, away, or draw where allowed',
-      'Earn points for each correct winner pick',
-      'No scorelines — quick picks for casual groups',
+      'Just pick the winner',
+      'Quick picks · Great for casual groups',
     ],
     rules: [
       'Pick the winner of each match (or a draw in soccer/hockey leagues)',

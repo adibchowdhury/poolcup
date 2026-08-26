@@ -44,7 +44,9 @@ function pathnameHasInlineDesktopReportIssue(pathname: string): boolean {
     pathname.startsWith('/dashboard/') ||
     pathname.startsWith('/friends') ||
     pathname.startsWith('/discover') ||
-    pathname.startsWith('/chat')
+    pathname.startsWith('/chat') ||
+    // Create lives in the hub shell on desktop — hub top bar owns Report issue.
+    pathname === '/create'
   ) {
     return true
   }
@@ -93,7 +95,9 @@ export function ReportIssueButton({ className }: { className?: string }) {
 
 /**
  * Fixed top-right fallback for logged-in desktop pages that lack an inline
- * top-bar placement (create wizard, analytics, settings, onboarding, etc.).
+ * top-bar placement (analytics, settings, onboarding, etc.).
+ * Not used on hub routes (including /create) — those mount ReportIssueButton
+ * in HubDesktopContentTopBar.
  */
 function LoggedInDesktopReportIssueFixed() {
   const { user } = useAuth()

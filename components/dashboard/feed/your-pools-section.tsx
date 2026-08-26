@@ -8,6 +8,7 @@ import { ActivePoolsTab } from '@/components/dashboard/active-pools-tab'
 import { DashboardFeedSection } from '@/components/dashboard/feed/dashboard-feed'
 import type { DashboardPoolCardData } from '@/components/dashboard/pool-card'
 import { startCreatePoolEntryFromClick } from '@/src/lib/create-pool-transition'
+import { useCreatePoolModalOptional } from '@/components/create/create-pool-modal'
 import { cn } from '@/lib/utils'
 
 const DESKTOP_POOL_PREVIEW = 6
@@ -33,6 +34,7 @@ export function YourPoolsSection({
   desktopPanel = false,
 }: YourPoolsSectionProps) {
   const router = useRouter()
+  const createModal = useCreatePoolModalOptional()
   const [showAllDesktopPools, setShowAllDesktopPools] = useState(false)
   const [enteringCreate, setEnteringCreate] = useState(false)
 
@@ -43,7 +45,18 @@ export function YourPoolsSection({
   function handleCreatePoolClick(event: MouseEvent<HTMLButtonElement>) {
     if (enteringCreate) return
     setEnteringCreate(true)
-    startCreatePoolEntryFromClick(router, event.currentTarget)
+    startCreatePoolEntryFromClick(router, event.currentTarget, {
+      openModal: createModal
+        ? () => {
+            setEnteringCreate(false)
+            createModal.openCreatePoolModal()
+          }
+        : undefined,
+    })
+    if (createModal && typeof window !== 'undefined') {
+      // Desktop modal path never navigates — clear local pending flag.
+      window.setTimeout(() => setEnteringCreate(false), 0)
+    }
   }
 
   return (

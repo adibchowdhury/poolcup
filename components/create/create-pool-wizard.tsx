@@ -14,20 +14,9 @@ import {
 import { flushSync } from 'react-dom'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Check, Download, Loader2, Target, Trophy, Zap } from 'lucide-react'
+import { Check, Download, Globe, Handshake, Loader2, Lock, Target, X, Zap } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/src/lib/auth-context'
 import {
@@ -55,6 +44,7 @@ import {
   validatePoolName,
 } from '@/src/lib/pool-name'
 import { normalizeSportKey } from '@/src/lib/sport-display'
+import { normalizeTeamLogoUrl } from '@/src/lib/team-logos'
 import { startDraftCustomPoolCheckout } from '@/src/lib/draft-custom-pool-checkout-client'
 import {
   clearCreateWizardState,
@@ -91,13 +81,55 @@ import {
   formatOfficialSeasonLabel,
 } from '@/src/lib/fetch-official-pools'
 import { DISCORD_INVITE_URL } from '@/src/lib/discord-invite'
+import type { CreatePoolModalHandoff } from '@/src/lib/create-pool-modal-handoff'
 
+export type CreatePoolWizardProps = {
+  /** `page` = mobile full-screen /create; `modal` = desktop hub overlay card. */
+  variant: 'page' | 'modal'
+  /** Modal × / close — required for variant="modal". */
+  onRequestClose?: () => void
+  /**
+   * Desktop bounce handoff (Stripe return params). When set, used instead of
+   * URL searchParams for checkout bootstrap.
+   */
+  checkoutHandoff?: CreatePoolModalHandoff | null
+}
+
+/**
+ * `label` = stepper waypoint (short). `chromeTitle` = instruction heading
+ * (modal + mobile full-screen chrome — same copy both platforms).
+ */
 const CREATE_POOL_STEPS = [
-  { id: 'competition' as const, chromeTitle: 'Competition' },
-  { id: 'type' as const, chromeTitle: 'Pool Type' },
-  { id: 'details' as const, chromeTitle: 'Pool Details' },
-  { id: 'plan' as const, chromeTitle: 'Choose Your Pool' },
-  { id: 'review' as const, chromeTitle: 'Review & Create' },
+  {
+    id: 'competition' as const,
+    label: 'Competition',
+    stepperLabel: 'Competition',
+    chromeTitle: 'Choose a competition',
+  },
+  {
+    id: 'type' as const,
+    label: 'Pool Type',
+    stepperLabel: 'Pool Type',
+    chromeTitle: 'How do you want to play?',
+  },
+  {
+    id: 'details' as const,
+    label: 'Pool Details',
+    stepperLabel: 'Details',
+    chromeTitle: 'Set up your pool',
+  },
+  {
+    id: 'plan' as const,
+    label: 'Choose Your Pool',
+    stepperLabel: 'Plan',
+    chromeTitle: 'Choose your pool plan',
+  },
+  {
+    id: 'review' as const,
+    label: 'Review & Create',
+    stepperLabel: 'Review',
+    chromeTitle: 'Review and create your pool',
+  },
 ] as const
 
 const SUCCESS_CHROME_TITLE = 'Pool Created 🎉'
@@ -141,17 +173,22 @@ const STEPPER_MOTION_CLASS =
   'transition-all duration-[225ms] ease-out motion-reduce:transition-none motion-reduce:duration-0'
 
 /**
- * Mobile: full viewport (flex children scroll inside).
- * Desktop: height follows content so step-1 competitions aren’t clipped by a
- * fixed shell (former `lg:h-[min(720px,calc(100dvh-7rem))]` + pane overflow-y-auto).
+ * Mobile page: full viewport.
+ * Desktop modal: uniform viewport-derived frame across all steps.
+ * Height: min(760px, 90vh, 100dvh − overlay padding) — soft content cap + short-viewport fit.
  */
-const CREATE_POOL_SHELL_HEIGHT_CLASS = 'h-dvh lg:h-auto'
-const CREATE_POOL_SHELL_WIDTH_CLASS = 'w-full lg:max-w-2xl'
-const CREATE_POOL_CARD_CLASS = cn(
+const CREATE_POOL_CARD_PAGE_CLASS = cn(
   'flex min-h-0 flex-col bg-transparent px-4 pt-4',
   'pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
-  'lg:rounded-2xl lg:border-2 lg:border-[#292929] lg:p-8',
-  CREATE_POOL_SHELL_HEIGHT_CLASS,
+  'h-dvh',
+)
+/** Shared modal frame — 760px soft cap (~40px above the old 720 for footer chrome). */
+const CREATE_POOL_MODAL_HEIGHT_CLASS =
+  'h-[min(760px,90vh,calc(100dvh-3rem))]'
+const CREATE_POOL_CARD_MODAL_CLASS = cn(
+  'relative flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border-2 border-[#292929] bg-[#111111] p-8 shadow-2xl',
+  CREATE_POOL_MODAL_HEIGHT_CLASS,
+  'create-pool-modal-enter',
 )
 
 const FOCUS_RING_CLASS =
@@ -161,7 +198,7 @@ const FOCUS_RING_CLASS =
 const CREATE_POOL_STEP_HEADING_CLASS =
   'font-display text-2xl tracking-wide text-[#f0f4f8]'
 
-/** Pinned CTA row. Desktop keeps a tall slot when chrome owns the CTA; mobile hugs content. */
+/** Pinned CTA row. Desktop page keeps a tall slot; modal hugs the buttons. */
 const CREATE_POOL_FOOTER_CLASS =
   'flex shrink-0 flex-col justify-end pt-4 max-lg:min-h-0'
 const CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS = 'lg:min-h-[8.75rem]'
@@ -296,7 +333,7 @@ function fireConfettiBursts() {
 }
 
 const SHARE_BUTTON_CLASS = cn(
-  'w-full rounded-lg border border-[#1e2d3d] px-2 py-1.5 text-[10px] font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[#080b0f] hover:text-[#f0f4f8] sm:text-xs sm:px-2',
+  'w-full rounded-lg border border-[#1e2d3d] px-2 py-1.5 text-[10px] font-medium text-[#5a7080] transition-colors hover:border-[#1e2d3d] hover:bg-[var(--dashboard-card-bg)] hover:text-[#f0f4f8] sm:text-xs sm:px-2',
   FOCUS_RING_CLASS,
 )
 
@@ -327,15 +364,10 @@ function usePrefersReducedMotion() {
   return reduced
 }
 
-/** Always green — progress is shown on circles, not line fill. */
-function CreatePoolStepConnector() {
-  return (
-    <div
-      className="h-0.5 min-w-[0.375rem] flex-1 shrink self-center bg-[#00e676] -mx-px"
-      aria-hidden
-    />
-  )
-}
+/** Current-step ring (44px) — longest radius used so connectors butt every circle. */
+const STEPPER_CIRCLE_TRACK_PX = 44
+/** Non-current circle diameter (36px). */
+const STEPPER_CIRCLE_DEFAULT_PX = 36
 
 function CreatePoolStepCircle({
   stepNumber,
@@ -351,9 +383,9 @@ function CreatePoolStepCircle({
   const motion = animate ? STEPPER_MOTION_CLASS : ''
 
   if (isCurrent) {
-  return (
+    return (
       <div
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 bg-transparent"
+        className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 bg-[#111111]"
         style={{ borderColor: STEPPER_GREEN }}
         aria-current="step"
       >
@@ -373,12 +405,13 @@ function CreatePoolStepCircle({
   return (
     <div
       className={cn(
-        'relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2',
+        'relative z-10 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2',
         motion,
+        isCompleted ? 'bg-[#00e676]' : 'bg-[#111111]',
       )}
       style={{
         borderColor: STEPPER_GREEN,
-        backgroundColor: isCompleted ? STEPPER_GREEN : 'transparent',
+        backgroundColor: isCompleted ? STEPPER_GREEN : '#111111',
       }}
     >
       <span
@@ -408,12 +441,25 @@ function CreatePoolStepCircle({
   )
 }
 
-/** Numbered circles only — five wizard steps; success has no progress bar. */
-function CreatePoolStepper({ currentStep }: { currentStep: number }) {
+/**
+ * Progress stepper: equal-width columns.
+ * Circle track is a fixed-height row; half-line connectors are absolutely
+ * placed at that row's vertical center (labels hang below and never shift lines).
+ * Lines butt the circle edge via `calc(50% ± radius)`.
+ */
+function CreatePoolStepper({
+  currentStep,
+  labelMode = 'none',
+}: {
+  currentStep: number
+  /** `all` = every label (modal + mobile); `active-only` = current step only. */
+  labelMode?: 'none' | 'all' | 'active-only'
+}) {
   const reducedMotion = usePrefersReducedMotion()
   const totalSteps = STEPPER_STEP_COUNT
   const animate = !reducedMotion
   const displayStep = Math.min(Math.max(currentStep, 1), totalSteps)
+  const showLabels = labelMode !== 'none'
 
   return (
     <nav
@@ -421,7 +467,7 @@ function CreatePoolStepper({ currentStep }: { currentStep: number }) {
       aria-label="Pool creation progress"
     >
       <ol
-        className="flex w-[94%] min-w-0 max-w-full list-none items-center gap-0 p-0 m-0 sm:w-[68%] sm:min-w-[17rem]"
+        className="m-0 flex w-[88%] min-w-0 max-w-full list-none gap-0 p-0"
         role="progressbar"
         aria-valuenow={displayStep}
         aria-valuemin={1}
@@ -436,22 +482,61 @@ function CreatePoolStepper({ currentStep }: { currentStep: number }) {
               : displayStep === stepNumber
                 ? 'current'
                 : 'upcoming'
+          const labelVisible =
+            showLabels &&
+            (labelMode === 'all' ||
+              (labelMode === 'active-only' && status === 'current'))
+          const radiusPx =
+            status === 'current'
+              ? STEPPER_CIRCLE_TRACK_PX / 2
+              : STEPPER_CIRCLE_DEFAULT_PX / 2
 
           return (
             <li
               key={poolStep.id}
-              className={cn(
-                'flex items-center gap-0',
-                index > 0 ? 'min-w-0 flex-1' : 'shrink-0',
-              )}
-              aria-label={`Step ${stepNumber} of ${totalSteps}`}
+              className="flex min-w-0 flex-1 flex-col items-center"
+              aria-label={`Step ${stepNumber}: ${poolStep.stepperLabel}`}
             >
-              {index > 0 ? <CreatePoolStepConnector /> : null}
-              <CreatePoolStepCircle
-                stepNumber={stepNumber}
-                status={status}
-                animate={animate}
-              />
+              {/* Circle track — connectors live only in this row */}
+              <div
+                className="relative flex w-full items-center justify-center"
+                style={{ height: STEPPER_CIRCLE_TRACK_PX }}
+              >
+                {index > 0 ? (
+                  <span
+                    className="absolute top-1/2 left-0 h-0.5 -translate-y-1/2 bg-[#00e676]"
+                    style={{ right: `calc(50% + ${radiusPx}px)` }}
+                    aria-hidden
+                  />
+                ) : null}
+                {index < totalSteps - 1 ? (
+                  <span
+                    className="absolute top-1/2 right-0 h-0.5 -translate-y-1/2 bg-[#00e676]"
+                    style={{ left: `calc(50% + ${radiusPx}px)` }}
+                    aria-hidden
+                  />
+                ) : null}
+                <CreatePoolStepCircle
+                  stepNumber={stepNumber}
+                  status={status}
+                  animate={animate}
+                />
+              </div>
+
+              {labelVisible ? (
+                <span
+                  className={cn(
+                    'mt-1.5 max-w-full truncate px-0.5 text-center text-[10px] font-medium leading-tight tracking-wide sm:text-[11px]',
+                    status === 'current'
+                      ? 'font-semibold text-primary'
+                      : status === 'completed'
+                        ? 'text-[#5a7080]'
+                        : 'text-[#5a7080]/80',
+                  )}
+                >
+                  {poolStep.stepperLabel}
+                </span>
+              ) : null}
             </li>
           )
         })}
@@ -468,10 +553,90 @@ function formatSportLabel(sport: SportId | null): string {
 function selectionTileClass(selected: boolean) {
   return cn(
     CREATE_POOL_SELECTION_TILE_CLASS,
-    'bg-[#080b0f]',
+    // Transparent default, chip hover; selection = green border only.
+    'border bg-transparent text-[#5a7080] transition-[background-color,color,border-color,box-shadow] duration-160',
     selected
-      ? 'border-2 border-primary ring-2 ring-primary/40'
-      : 'border border-[#1e2d3d] hover:border-primary/50',
+      ? 'border-primary'
+      : 'border-[#1e2d3d] hover:bg-white/[0.03] hover:text-[#f0f4f8]',
+  )
+}
+
+/** Line-drawn scoreboard motif for Score Predictor cards (~48px). */
+function ScorePredictorModeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
+    >
+      <rect
+        x="5"
+        y="10"
+        width="38"
+        height="28"
+        rx="5"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path d="M24 10v28" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M12 20h6M15 20v12"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M30 20h6v6h-6v6h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/** Line-drawn trophy motif for Winner Only cards (~48px). */
+function WinnerOnlyModeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
+    >
+      <path
+        d="M16 12h16v8a8 8 0 0 1-16 0v-8Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 14H11a3 3 0 0 0 3 7h2M32 14h5a3 3 0 0 1-3 7h-2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M24 28v4M18 38h12M20 34h8v4h-8v-4Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M21 18.5 23.2 20.7 27.5 16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
@@ -489,7 +654,13 @@ function formatCreateFlowCompetitionDisplay(event: SportingEvent): {
   }
 }
 
-function CreatePoolPageInner() {
+export function CreatePoolWizard({
+  variant,
+  onRequestClose,
+  checkoutHandoff = null,
+}: CreatePoolWizardProps) {
+  const isModal = variant === 'modal';
+
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const goToPoolRef = useRef<HTMLAnchorElement>(null)
   const emblemInputRef = useRef<HTMLInputElement>(null)
@@ -521,7 +692,8 @@ function CreatePoolPageInner() {
   const [poolDescription, setPoolDescription] = useState('')
   const [scoringStyle, setScoringStyle] = useState<PoolScoringStyleId>('classic')
   const [isPublic, setIsPublic] = useState(false)
-  const [publicConfirmOpen, setPublicConfirmOpen] = useState(false)
+  const [poolNameFocused, setPoolNameFocused] = useState(false)
+  const [poolDescriptionFocused, setPoolDescriptionFocused] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -619,15 +791,32 @@ function CreatePoolPageInner() {
     [scoringStyle],
   )
 
+  const creatableEventsRef = useRef<SportingEvent[]>([])
+  creatableEventsRef.current = creatableEvents
+
   const loadCreatableEvents = useCallback(async () => {
-    setEventsLoading(true)
+    // Soft refresh when rows already exist — never blank the grid on back-nav.
+    const showLoadingFrame = creatableEventsRef.current.length === 0
+    if (showLoadingFrame) setEventsLoading(true)
     setEventsError(null)
     try {
       const rows = await listCreatableSportingEvents(supabase)
       setCreatableEvents(rows)
+      // Warm CDN logos so remounted tiles paint from memory cache.
+      if (typeof window !== 'undefined') {
+        for (const row of rows) {
+          const url = normalizeTeamLogoUrl(row.logo_url)
+          if (!url) continue
+          const img = new window.Image()
+          img.decoding = 'async'
+          img.src = url
+        }
+      }
     } catch (err) {
       console.error('create: failed to load creatable events', err)
-      setCreatableEvents([])
+      if (creatableEventsRef.current.length === 0) {
+        setCreatableEvents([])
+      }
       setEventsError('Could not load events. Please try again.')
     } finally {
       setEventsLoading(false)
@@ -659,14 +848,20 @@ function CreatePoolPageInner() {
 
       const startX = dir === 1 ? 0 : -50
       const endX = dir === 1 ? -50 : 0
-      const startLeft = dir === 1 ? 1 : 0
+      // Forward: cross-fade. Back: both panes stay opaque — remounted step-1
+      // content slides in fully painted (events already in memory).
+      const startLeft = 1
       const startRight = dir === 1 ? 0 : 1
       const endLeft = dir === 1 ? 0 : 1
-      const endRight = dir === 1 ? 1 : 0
+      const endRight = 1
 
       // Freeze outgoing viewport height before mounting the incoming pane so
-      // lg:h-auto card content cannot reflow the track mid translate+fade.
-      const lockPx = slideViewportRef.current?.getBoundingClientRect().height ?? 0
+      // page variant (lg:h-auto) cannot reflow the track mid translate+fade.
+      // Modal uses a fixed card height — lock is unnecessary there.
+      const lockPx =
+        variant === 'modal'
+          ? 0
+          : (slideViewportRef.current?.getBoundingClientRect().height ?? 0)
 
       flushSync(() => {
         if (lockPx > 0) setSlideLockPx(lockPx)
@@ -709,7 +904,7 @@ function CreatePoolPageInner() {
       }, STEP_TRANSITION_MS)
       slideTimersRef.current.push(doneTimer)
     },
-    [isSliding, prefersReducedMotion, step],
+    [isSliding, prefersReducedMotion, step, variant],
   )
 
   goToStepRef.current = goToStep
@@ -753,9 +948,16 @@ function CreatePoolPageInner() {
 
   useEffect(() => {
     if (checkoutHandledRef.current) return
-    const checkout = searchParams.get('checkout')
+    const checkout =
+      checkoutHandoff?.checkout ??
+      (searchParams.get('checkout') as 'success' | 'cancel' | null)
     if (!checkout) return
     checkoutHandledRef.current = true
+
+    const clearCheckoutUrl = () => {
+      if (isModal) return
+      router.replace('/create', { scroll: false })
+    }
 
     if (checkout === 'cancel') {
       const saved = loadCreateWizardState()
@@ -765,15 +967,17 @@ function CreatePoolPageInner() {
         setLeftPanelStep(REVIEW_STEP)
         setRightPanelStep(createPoolNextStep(REVIEW_STEP))
       }
-      router.replace('/create', { scroll: false })
+      clearCheckoutUrl()
       return
     }
 
     if (checkout === 'success') {
-      const draftId = searchParams.get('draft_id')?.trim()
+      const draftId =
+        checkoutHandoff?.draftId?.trim() ||
+        searchParams.get('draft_id')?.trim()
       if (!draftId) {
         setError('Missing checkout draft. Check your pools shortly.')
-        router.replace('/create', { scroll: false })
+        clearCheckoutUrl()
         return
       }
       setFinalizingDraftId(draftId)
@@ -783,7 +987,7 @@ function CreatePoolPageInner() {
       setLeftPanelStep(SUCCESS_STEP)
       setRightPanelStep(null)
     }
-  }, [applyWizardState, router, searchParams])
+  }, [applyWizardState, checkoutHandoff, isModal, router, searchParams])
 
   useEffect(() => {
     if (checkoutPhase === 'idle' || !finalizingDraftId || !user) return
@@ -950,15 +1154,20 @@ function CreatePoolPageInner() {
 
   function handleExitToDashboard() {
     if (submitting) return
+    if (isModal) {
+      onRequestClose?.()
+      return
+    }
     beginCreatePoolExit(router, () => {
       setScreenMotionClass('create-mode-screen-exit')
     })
   }
 
+  // Load once when the wizard mounts (modal or page). Re-entering step 1 must
+  // not refetch into a loading frame — soft refresh only via retry CTA.
   useEffect(() => {
-    if (step !== 1) return
     void loadCreatableEvents()
-  }, [step, loadCreatableEvents])
+  }, [loadCreatableEvents])
 
 
   useEffect(() => {
@@ -1337,7 +1546,7 @@ function CreatePoolPageInner() {
     return (
       <div
         className={cn(
-          'rounded-xl border border-[#1e2d3d] bg-[#080b0f]/70 px-4 py-3',
+          'rounded-xl border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/70 px-4 py-3',
           compact ? 'mt-4' : 'mt-6',
         )}
       >
@@ -1448,6 +1657,7 @@ function CreatePoolPageInner() {
       <>
           {panelStep === 1 && (
             <CreateCompetitionStep
+              layoutMode={isModal ? 'modal' : 'page'}
               selectedSport={selectedSport}
               selectedEventId={selectedEventId}
               creatableEvents={creatableEvents}
@@ -1461,206 +1671,443 @@ function CreatePoolPageInner() {
           )}
 
           {panelStep === 2 && (
-            <>
-              <p className="text-sm text-[#5a7080]">
-                How should members earn points in this pool?
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
+            <div
+              className={cn(
+                // Modal: animated pane owns [scrollable cards | pinned disclaimer].
+                isModal && 'flex h-full min-h-0 flex-col',
+              )}
+            >
+              <div
+                className={cn(
+                  'mt-2 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-stretch lg:gap-4',
+                  isModal && 'min-h-0 flex-1 overflow-y-auto scrollbar-none',
+                )}
+              >
                 {POOL_SCORING_STYLE_OPTIONS.map((style) => {
                   const selected = scoringStyle === style.id
-                  const Icon = style.id === 'classic' ? Target : Trophy
+                  const isClassic = style.id === 'classic'
                   return (
                     <button
                       key={style.id}
                       type="button"
                       onClick={() => setScoringStyle(style.id)}
+                      aria-pressed={selected}
                       className={cn(
-                        'flex flex-1 flex-col rounded-xl border p-4 text-left transition-all',
+                        'relative flex flex-1 flex-col rounded-xl',
+                        isModal
+                          ? 'items-center px-4 py-4 text-center'
+                          : 'items-start p-5 text-left',
                         selectionTileClass(selected),
+                        selected && 'hover:bg-transparent',
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-[#080b0f]',
-                            selected
-                              ? 'border-primary text-primary'
-                              : 'border-[#1e2d3d] text-[#5a7080]',
-                          )}
-                          aria-hidden
-                        >
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <p
-                          className={cn(
-                            'text-sm font-semibold',
-                            selected ? 'text-primary' : 'text-[#f0f4f8]',
-                          )}
-                        >
-                          {style.label}
-                        </p>
-                      </div>
-                      <p className="mt-3 text-sm leading-snug text-[#5a7080]">
+                      <span
+                        className={cn(
+                          'flex items-center justify-center',
+                          isModal
+                            ? 'mb-2.5 h-[10.75rem] w-[10.75rem]'
+                            : 'mb-4 h-12 w-12',
+                        )}
+                      >
+                        {isModal ? (
+                          /* eslint-disable-next-line @next/next/no-img-element -- static public mascot */
+                          <img
+                            src={
+                              isClassic
+                                ? '/mascot/pucky_score_predictor.png'
+                                : '/mascot/pucky_winner_only.png'
+                            }
+                            alt=""
+                            width={172}
+                            height={172}
+                            className="h-[10.75rem] w-[10.75rem] object-contain"
+                            draggable={false}
+                          />
+                        ) : isClassic ? (
+                          <ScorePredictorModeIcon className="h-12 w-12" />
+                        ) : (
+                          <WinnerOnlyModeIcon className="h-12 w-12" />
+                        )}
+                      </span>
+
+                      <p className="text-base font-semibold tracking-wide text-[#f0f4f8]">
+                        {style.label}
+                      </p>
+                      <p
+                        className={cn(
+                          'font-medium leading-snug text-[#f0f4f8]/90',
+                          isModal ? 'mt-1.5 text-sm' : 'mt-2 text-sm',
+                        )}
+                      >
                         {style.tagline}
                       </p>
-                      <ul className="mt-3 space-y-1.5 text-xs leading-snug text-[#5a7080]">
-                        {style.highlights.map((line) => (
-                          <li key={line} className="flex gap-2">
-                            <span
-                              className={cn(
-                                'mt-1.5 h-1 w-1 shrink-0 rounded-full',
-                                selected ? 'bg-primary' : 'bg-[#5a7080]',
-                              )}
-                              aria-hidden
-                            />
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <p
+                        className={cn(
+                          'leading-snug text-[#F2C94C]',
+                          isModal ? 'mt-1 text-xs' : 'mt-1.5 text-xs',
+                        )}
+                      >
+                        {style.secondaryLine}
+                      </p>
+
+                      {isModal ? (
+                        <div
+                          className={cn(
+                            'mt-4 w-full rounded-lg border border-[#1e2d3d]/80 bg-black/40 px-3 py-2 text-left',
+                            'shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
+                          )}
+                        >
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5a7080]">
+                            Points System
+                          </p>
+                          <ul
+                            className={cn(
+                              // Shared 3-row tall track so insets match; Winner Only centers its 2 rows under the eyebrow.
+                              'flex min-h-[66px] flex-col gap-1.5',
+                              isClassic ? 'justify-start' : 'justify-center',
+                            )}
+                          >
+                            {style.scoringRows.map((row) => {
+                              const Icon =
+                                row.id === 'exact'
+                                  ? Target
+                                  : row.id === 'draw'
+                                    ? Handshake
+                                    : Check
+                              return (
+                                <li
+                                  key={row.id}
+                                  className="flex h-[18px] items-center justify-between gap-3"
+                                >
+                                  <span className="flex min-w-0 items-center gap-2 text-[12px] leading-none text-[#c5d0da]">
+                                    <Icon
+                                      className="h-3.5 w-3.5 shrink-0 text-[#5a7080]"
+                                      aria-hidden
+                                    />
+                                    <span className="truncate">{row.label}</span>
+                                  </span>
+                                  <span className="shrink-0 text-[12px] font-semibold tabular-nums text-primary">
+                                    {row.points}
+                                  </span>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      ) : null}
                     </button>
                   )
                 })}
               </div>
-            </>
+
+              {isModal ? (
+                <p className="shrink-0 pt-3 text-center text-[12px] leading-snug text-[#5a7080]">
+                  Want different scoring? Custom scoring is available with{' '}
+                  <Link
+                    href="/pricing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'font-medium text-[#F2C94C] underline-offset-2 hover:underline',
+                      FOCUS_RING_CLASS,
+                      'rounded-sm',
+                    )}
+                  >
+                    Custom Pools
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
           )}
 
           {panelStep === 3 && (
-            <>
-              <p className="text-sm text-[#5a7080]">
-                Name your pool and choose who can find it.
-              </p>
-
-              <div className="mt-8 space-y-6">
-                <div>
-                  <label
-                    htmlFor="pool-name"
-                    className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
-                  >
-                    Pool name
-                  </label>
-                  <input
-                    id="pool-name"
-                    type="text"
-                    required
-                    maxLength={POOL_NAME_MAX_LENGTH}
-                    value={poolName}
-                    onChange={(e) => {
-                      setPoolName(e.target.value)
-                      setNameError(null)
-                    }}
-                    placeholder="Marketing Team WC 2026"
-                    aria-invalid={Boolean(nameError)}
-                    aria-describedby={
-                      nameError ? 'pool-name-error' : 'pool-name-hint'
-                    }
-                    className={cn(
-                      'w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    )}
-                  />
-                  <p
-                    id="pool-name-hint"
-                    className="mt-1.5 text-[11px] text-[#5a7080]"
-                  >
-                    2–{POOL_NAME_MAX_LENGTH} characters
-                  </p>
-                  {nameError ? (
-                    <p
-                      id="pool-name-error"
-                      className="mt-1.5 text-sm text-red-400"
-                      role="alert"
-                    >
-                      {nameError}
-                    </p>
-                  ) : null}
-              </div>
-
-                <div>
-                  <label
-                    htmlFor="pool-description"
-                    className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#5a7080]"
-                  >
-                    Description{' '}
-                    <span className="normal-case tracking-normal text-[#5a7080]/80">
-                      (optional)
-                    </span>
-                  </label>
-                  <textarea
-                    id="pool-description"
-                    rows={3}
-                    maxLength={POOL_DESCRIPTION_MAX_LENGTH}
-                    value={poolDescription}
-                    onChange={(e) => {
-                      setPoolDescription(e.target.value)
-                      setDescriptionError(null)
-                    }}
-                    placeholder="Office World Cup pool — winner buys lunch"
-                    aria-invalid={Boolean(descriptionError)}
-                    aria-describedby={
-                      descriptionError
-                        ? 'pool-description-error'
-                        : 'pool-description-hint'
-                    }
-                    className={cn(
-                      'w-full resize-y rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-[#f0f4f8] placeholder:text-[#5a7080]/60 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    )}
-                  />
-                  <p
-                    id="pool-description-hint"
-                    className="mt-1.5 text-[11px] tabular-nums text-[#5a7080]"
-                  >
-                    {normalizePoolDescription(poolDescription).length}/
-                    {POOL_DESCRIPTION_MAX_LENGTH}
-                  </p>
-                  {descriptionError ? (
-                    <p
-                      id="pool-description-error"
-                      className="mt-1.5 text-sm text-red-400"
-                      role="alert"
-                    >
-                      {descriptionError}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="flex items-start justify-between gap-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/70 px-4 py-3">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <label
-                      htmlFor="create-pool-public"
-                      className="text-sm font-medium text-[#f0f4f8]"
-                    >
-                      Make this pool public
-                    </label>
-                    <p
-                      id="create-pool-public-help"
-                      className="text-xs leading-relaxed text-[#5a7080]"
-                    >
-                      Anyone can find and join this pool from Discover.
-                    </p>
+            <div
+              className={cn(
+                isModal ? 'flex h-full min-h-0 gap-5' : 'flex flex-col',
+              )}
+            >
+              {isModal ? (
+                <aside className="flex w-[42%] shrink-0 flex-col items-center justify-center px-2 text-center">
+                  <div className="relative flex h-[clamp(13.75rem,36vh,16rem)] w-[clamp(13.75rem,36vh,16rem)] items-center justify-center">
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-[-14%] rounded-full bg-[radial-gradient(circle_at_center,rgba(0,230,118,0.16)_0%,rgba(167,139,250,0.06)_42%,transparent_68%)]"
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute top-[12%] left-[8%] h-1.5 w-1.5 rounded-full bg-[#a78bfa]/45"
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute top-[22%] right-[6%] h-1 w-1 rounded-full bg-[#22d3ee]/50"
+                    />
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute bottom-[18%] right-[14%] h-1.5 w-1.5 rounded-full bg-primary/35"
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static public mascot */}
+                    <img
+                      src="/mascot/pucky_hero.png"
+                      alt=""
+                      width={256}
+                      height={256}
+                      className="relative z-10 h-full w-full object-contain"
+                      draggable={false}
+                    />
                   </div>
-                  <Switch
-                    id="create-pool-public"
-                    checked={isPublic}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setPublicConfirmOpen(true)
-                        return
-                      }
-                      setIsPublic(false)
-                    }}
-                    disabled={submitting}
-                    aria-describedby="create-pool-public-help"
-                  />
+                  <h2 className="mt-5 font-display text-2xl tracking-wide text-[#f0f4f8]">
+                    Set up your pool
+                  </h2>
+                  <p className="mt-2 max-w-[16rem] text-sm leading-snug text-[#5a7080]">
+                    Give your pool a name and decide who gets to join.
+                  </p>
+                </aside>
+              ) : null}
+
+              {isModal ? (
+                <div
+                  className="w-px shrink-0 self-stretch bg-white/[0.06]"
+                  aria-hidden
+                />
+              ) : null}
+
+              <div
+                className={cn(
+                  isModal
+                    ? 'flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-y-auto scrollbar-none py-1 pr-1'
+                    : 'mt-0',
+                )}
+              >
+                {!isModal ? (
+                  <p className="text-sm text-[#5a7080]">
+                    Give your pool a name and choose who can join.
+                  </p>
+                ) : null}
+
+                <div
+                  className={cn(
+                    isModal ? 'flex w-full flex-col' : 'mt-8 max-w-xl space-y-5',
+                  )}
+                >
+                  <div>
+                    <label
+                      htmlFor="pool-name"
+                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]"
+                    >
+                      Pool name
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="pool-name"
+                        type="text"
+                        required
+                        maxLength={POOL_NAME_MAX_LENGTH}
+                        value={poolName}
+                        onChange={(e) => {
+                          setPoolName(e.target.value)
+                          setNameError(null)
+                        }}
+                        onFocus={() => setPoolNameFocused(true)}
+                        onBlur={() => setPoolNameFocused(false)}
+                        placeholder="Marketing Team WC 2026"
+                        aria-invalid={Boolean(nameError)}
+                        aria-describedby={
+                          nameError ? 'pool-name-error' : 'pool-name-count'
+                        }
+                        className={cn(
+                          'w-full rounded-xl border border-[#1e2d3d] bg-[var(--dashboard-card-bg)] py-3.5 pl-4 pr-14 text-[17px] leading-snug text-[#f0f4f8] placeholder:text-[#5a7080]/55',
+                          'transition-[border-color,box-shadow] duration-160',
+                          'focus:border-primary focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,230,118,0.2)]',
+                        )}
+                      />
+                      <span
+                        id="pool-name-count"
+                        className={cn(
+                          'pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[11px] tabular-nums text-[#5a7080]',
+                          !(
+                            poolNameFocused ||
+                            poolName.length >= POOL_NAME_MAX_LENGTH - 10
+                          ) && 'invisible',
+                        )}
+                        aria-live="polite"
+                      >
+                        {poolName.length}/{POOL_NAME_MAX_LENGTH}
+                      </span>
+                    </div>
+                    {nameError ? (
+                      <p
+                        id="pool-name-error"
+                        className="mt-1.5 text-sm text-red-400"
+                        role="alert"
+                      >
+                        {nameError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className={cn(isModal && 'mt-7')}>
+                    <label
+                      htmlFor="pool-description"
+                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]"
+                    >
+                      Description (optional)
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        id="pool-description"
+                        rows={2}
+                        maxLength={POOL_DESCRIPTION_MAX_LENGTH}
+                        value={poolDescription}
+                        onChange={(e) => {
+                          setPoolDescription(e.target.value)
+                          setDescriptionError(null)
+                        }}
+                        onFocus={() => setPoolDescriptionFocused(true)}
+                        onBlur={() => setPoolDescriptionFocused(false)}
+                        placeholder="Office World Cup pool — winner buys lunch"
+                        aria-invalid={Boolean(descriptionError)}
+                        aria-describedby={
+                          descriptionError
+                            ? 'pool-description-error'
+                            : 'pool-description-count'
+                        }
+                        className={cn(
+                          'w-full resize-none rounded-lg border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/70 px-3.5 py-2.5 pb-7 text-sm leading-snug text-[#f0f4f8]/90 placeholder:text-[#5a7080]/50',
+                          'transition-[border-color,box-shadow] duration-160',
+                          'focus:border-primary focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,230,118,0.18)]',
+                        )}
+                      />
+                      <span
+                        id="pool-description-count"
+                        className={cn(
+                          'pointer-events-none absolute right-3 bottom-2 text-[10px] tabular-nums text-[#5a7080]/90',
+                          !(
+                            poolDescriptionFocused ||
+                            normalizePoolDescription(poolDescription).length >=
+                              POOL_DESCRIPTION_MAX_LENGTH - 20
+                          ) && 'invisible',
+                        )}
+                        aria-live="polite"
+                      >
+                        {normalizePoolDescription(poolDescription).length}/
+                        {POOL_DESCRIPTION_MAX_LENGTH}
+                      </span>
+                    </div>
+                    {descriptionError ? (
+                      <p
+                        id="pool-description-error"
+                        className="mt-1.5 text-sm text-red-400"
+                        role="alert"
+                      >
+                        {descriptionError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className={cn(isModal && 'mt-9')}>
+                    <p className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]">
+                      Visibility
+                    </p>
+                    <div
+                      role="group"
+                      aria-label="Pool visibility"
+                      className="create-pool-visibility-toggle"
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'create-pool-visibility-toggle__thumb',
+                          isPublic &&
+                            'create-pool-visibility-toggle__thumb--public',
+                        )}
+                      />
+                      <button
+                        type="button"
+                        disabled={submitting}
+                        aria-pressed={!isPublic}
+                        onClick={() => setIsPublic(false)}
+                        className={cn(
+                          'create-pool-visibility-toggle__segment',
+                          FOCUS_RING_CLASS,
+                          !isPublic
+                            ? 'create-pool-visibility-toggle__segment--on'
+                            : 'create-pool-visibility-toggle__segment--off',
+                        )}
+                      >
+                        <Lock
+                          className={cn(
+                            'h-3.5 w-3.5 shrink-0 create-pool-visibility-toggle__icon',
+                            'create-pool-visibility-toggle__icon--private',
+                          )}
+                          aria-hidden
+                        />
+                        Private
+                      </button>
+                      <button
+                        type="button"
+                        disabled={submitting}
+                        aria-pressed={isPublic}
+                        onClick={() => setIsPublic(true)}
+                        className={cn(
+                          'create-pool-visibility-toggle__segment',
+                          FOCUS_RING_CLASS,
+                          isPublic
+                            ? 'create-pool-visibility-toggle__segment--on'
+                            : 'create-pool-visibility-toggle__segment--off',
+                        )}
+                      >
+                        <Globe
+                          className={cn(
+                            'h-3.5 w-3.5 shrink-0 create-pool-visibility-toggle__icon',
+                            'create-pool-visibility-toggle__icon--public',
+                          )}
+                          aria-hidden
+                        />
+                        Public
+                      </button>
+                    </div>
+                    <div
+                      className="create-pool-visibility-hint mt-3 grid justify-items-center"
+                      aria-live="polite"
+                    >
+                      <p
+                        className={cn(
+                          'col-start-1 row-start-1 flex items-start justify-center gap-2 text-xs leading-snug text-[#f0f4f8]/90',
+                          isPublic && 'invisible',
+                        )}
+                        aria-hidden={isPublic}
+                      >
+                        <Lock
+                          className="mt-0.5 h-3 w-3 shrink-0 text-[#a78bfa]"
+                          aria-hidden
+                        />
+                        <span>Only people with your invite can join.</span>
+                      </p>
+                      <p
+                        className={cn(
+                          'col-start-1 row-start-1 flex items-start justify-center gap-2 text-xs leading-snug text-[#f0f4f8]/90',
+                          !isPublic && 'invisible',
+                        )}
+                        aria-hidden={!isPublic}
+                      >
+                        <Globe
+                          className="mt-0.5 h-3 w-3 shrink-0 text-[#22d3ee]"
+                          aria-hidden
+                        />
+                        <span>Anyone can discover and join.</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {panelStep === PLAN_STEP && (
             <>
               <p className="text-sm text-[#5a7080]">
-                Basic is free forever. Upgrade once for branding and commissioner
-                tools — no subscription.
+                Basic is free. Upgrade once for branding — no subscription.
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -1672,7 +2119,7 @@ function CreatePoolPageInner() {
                     FOCUS_RING_CLASS,
                     selectedPlan === 'basic'
                       ? 'border-primary bg-primary/10'
-                      : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                      : 'border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/40 hover:border-[#2a3d52]',
                   )}
                   aria-pressed={selectedPlan === 'basic'}
                 >
@@ -1704,7 +2151,7 @@ function CreatePoolPageInner() {
                     FOCUS_RING_CLASS,
                     selectedPlan === 'custom'
                       ? 'border-primary bg-primary/10'
-                      : 'border-[#1e2d3d] bg-[#080b0f]/40 hover:border-[#2a3d52]',
+                      : 'border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/40 hover:border-[#2a3d52]',
                   )}
                   aria-pressed={selectedPlan === 'custom'}
                 >
@@ -1737,7 +2184,7 @@ function CreatePoolPageInner() {
               </div>
 
               {selectedPlan === 'custom' ? (
-                <div className="mt-6 space-y-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/50 px-4 py-4">
+                <div className="mt-6 space-y-4 rounded-xl border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/50 px-4 py-4">
                   <div>
                     <p className="text-sm font-medium text-[#f0f4f8]">
                       Stage branding (optional)
@@ -1863,7 +2310,7 @@ function CreatePoolPageInner() {
           {panelStep === REVIEW_STEP && (
             <>
               <p className="text-sm text-[#5a7080]">
-                Confirm everything looks right, then create your pool.
+                One last look before you go live.
               </p>
 
               {renderCreatePoolReviewSummary(true)}
@@ -1873,7 +2320,7 @@ function CreatePoolPageInner() {
                   <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
                     Scoring rules
                   </span>
-                  <div className="rounded-lg border border-[#1e2d3d] bg-[#080b0f]/60 px-4 py-3">
+                  <div className="rounded-lg border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/60 px-4 py-3">
                         <ul className="space-y-1.5 text-sm text-[#5a7080]">
                       {selectedScoring.rules.map((rule) => (
                             <li key={rule}>{rule}</li>
@@ -1886,7 +2333,7 @@ function CreatePoolPageInner() {
                 </div>
               ) : null}
 
-              <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[#080b0f]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
+              <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[var(--dashboard-card-bg)]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
                 Predictions lock when each match kicks off. Advanced scoring and
                 commissioner tools live in pool settings after creation
                 {selectedPlan === 'custom' ? ' (included with Upgraded)' : ''}.
@@ -1943,7 +2390,7 @@ function CreatePoolPageInner() {
                     type="button"
                     onClick={downloadInviteQr}
                     className={cn(
-                      'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
+                      'mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[var(--dashboard-card-bg)] hover:text-primary',
                       FOCUS_RING_CLASS,
                     )}
                   >
@@ -1972,7 +2419,7 @@ function CreatePoolPageInner() {
                     readOnly
                     value={inviteLink}
                     onFocus={(e) => e.target.select()}
-                    className="w-full rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-4 py-3 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    className="w-full rounded-lg border border-[#1e2d3d] bg-[var(--dashboard-card-bg)] px-4 py-3 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   />
                 </div>
 
@@ -2078,7 +2525,7 @@ function CreatePoolPageInner() {
                       type="button"
                       onClick={downloadInviteQr}
                       className={cn(
-                        'mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[#080b0f] hover:text-primary',
+                        'mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#1e2d3d] px-3 py-1.5 text-xs font-medium text-[#e8eef4] transition-colors hover:border-primary/50 hover:bg-[var(--dashboard-card-bg)] hover:text-primary',
                         FOCUS_RING_CLASS,
                       )}
                     >
@@ -2100,7 +2547,7 @@ function CreatePoolPageInner() {
                           readOnly
                           value={inviteLink}
                           onFocus={(e) => e.target.select()}
-                          className="min-w-0 flex-1 rounded-lg border border-[#1e2d3d] bg-[#080b0f] px-3 py-2.5 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          className="min-w-0 flex-1 rounded-lg border border-[#1e2d3d] bg-[var(--dashboard-card-bg)] px-3 py-2.5 text-sm text-[#f0f4f8] focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         />
                         <button
                           type="button"
@@ -2129,7 +2576,7 @@ function CreatePoolPageInner() {
                       Uses your device share sheet, or copies the link
                     </p>
 
-                    <div className="mt-4 rounded-xl border border-[#1e2d3d] bg-[#080b0f]/80 p-3.5">
+                    <div className="mt-4 rounded-xl border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/80 p-3.5">
                       <div className="flex items-start gap-2.5">
                         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5865F2]/15 text-[#5865F2]">
                           <DiscordMarkIcon className="h-4 w-4" size={16} />
@@ -2209,72 +2656,116 @@ function CreatePoolPageInner() {
   return (
     <main
       className={cn(
-        'min-h-dvh bg-background lg:flex lg:min-h-screen lg:items-center lg:justify-center lg:px-4 lg:py-10',
-        screenMotionClass,
+        isModal ? 'contents' : cn('min-h-dvh bg-background', screenMotionClass),
       )}
     >
-      <div className={cn('flex min-h-0 w-full flex-col', CREATE_POOL_SHELL_WIDTH_CLASS)}>
-        <div className={CREATE_POOL_CARD_CLASS}>
-          <header className="shrink-0 space-y-3 lg:space-y-4">
-            <div className="space-y-3">
-              <div className="relative flex min-h-11 items-center">
-                {isSuccessPage ? (
-              <Link
-                    href={poolHref}
-                    className={cn(
-                      'relative z-10 flex h-9 max-w-[7.5rem] shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                      FOCUS_RING_CLASS,
-                    )}
-                  >
-                    <span aria-hidden className="text-lg leading-none">
-                      ←
-                    </span>
-                    <span className="truncate">
-                      {createdPool ? 'Go to pool' : 'Dashboard'}
-                    </span>
-              </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleExitToDashboard}
-                    disabled={submitting}
-                    className={cn(
-                      'relative z-10 flex h-9 shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
-                      FOCUS_RING_CLASS,
-                    )}
-                  >
-                    <span aria-hidden className="text-lg leading-none">
-                      ←
-                    </span>
-                    Exit
-                  </button>
-                )}
-                <p
+      <div
+        className={cn(
+          isModal ? 'contents' : 'relative flex min-h-0 h-full w-full flex-col',
+        )}
+      >
+        <div className={cn(isModal ? 'contents' : 'flex min-h-0 w-full flex-col')}>
+          <div
+            className={
+              isModal ? CREATE_POOL_CARD_MODAL_CLASS : CREATE_POOL_CARD_PAGE_CLASS
+            }
+          >
+            <button
+              type="button"
+              onClick={handleExitToDashboard}
+              disabled={submitting}
+              aria-label="Close create pool"
+              className={cn(
+                'absolute right-3 top-3 z-20 h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground disabled:opacity-50',
+                isModal ? 'inline-flex' : 'hidden',
+                FOCUS_RING_CLASS,
+              )}
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+
+            <header className="shrink-0">
+              <div className={cn('space-y-3', isModal && 'hidden')}>
+                <div className="relative flex min-h-11 items-center">
+                  {isSuccessPage ? (
+                    <Link
+                      href={poolHref}
+                      className={cn(
+                        'relative z-10 flex h-9 max-w-[7.5rem] shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                        FOCUS_RING_CLASS,
+                      )}
+                    >
+                      <span aria-hidden className="text-lg leading-none">
+                        ←
+                      </span>
+                      <span className="truncate">
+                        {createdPool ? 'Go to pool' : 'Dashboard'}
+                      </span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleExitToDashboard}
+                      disabled={submitting}
+                      className={cn(
+                        'relative z-10 flex h-9 shrink-0 items-center gap-1 rounded-md px-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50',
+                        FOCUS_RING_CLASS,
+                      )}
+                    >
+                      <span aria-hidden className="text-lg leading-none">
+                        ←
+                      </span>
+                      Exit
+                    </button>
+                  )}
+                  <p className="pointer-events-none absolute inset-x-0 text-center font-display text-base tracking-wide text-[#f0f4f8] sm:text-lg">
+                    {chromeTitle}
+                  </p>
+                  <span
+                    className="relative z-10 ml-auto w-[4.25rem] shrink-0"
+                    aria-hidden
+                  />
+                </div>
+                {!isSuccessPage ? (
+                  <CreatePoolStepper currentStep={step} labelMode="all" />
+                ) : null}
+              </div>
+
+              <div className={cn('px-10 text-center', !isModal && 'hidden')}>
+                {!isSuccessPage ? (
+                  <CreatePoolStepper currentStep={step} labelMode="all" />
+                ) : null}
+                <h1
                   className={cn(
-                    'pointer-events-none absolute inset-x-0 text-center font-display text-base tracking-wide text-[#f0f4f8] sm:text-lg',
-                    isSuccessPage && 'lg:hidden',
+                    'font-display text-2xl tracking-wide text-foreground',
+                    !isSuccessPage && 'mt-8',
+                    // Step 3 modal: title lives in the left brand column instead.
+                    isModal &&
+                      step === 3 &&
+                      !isSuccessPage &&
+                      'hidden',
                   )}
                 >
                   {chromeTitle}
-                </p>
-                <span className="relative z-10 ml-auto w-[4.25rem] shrink-0" aria-hidden />
-        </div>
-              {!isSuccessPage ? (
-                <CreatePoolStepper currentStep={step} />
-              ) : null}
-      </div>
-          </header>
+                </h1>
+              </div>
+            </header>
 
           <div
             ref={slideViewportRef}
             className={cn(
-              // overflow-hidden clips the dual-pane translateX slide (pre-session geometry).
-              // Desktop unlocked: hug step content (lg:h-auto card). Locked: fixed px height.
-              'mt-4 flex min-h-0 flex-col overflow-hidden',
-              slideLockPx != null ? 'flex-none' : 'flex-1 lg:flex-none',
+              // overflow-hidden clips the dual-pane translateX slide.
+              // Modal: mt-8 — balanced rhythm under instructional title; flex-1 body absorbs it.
+              'flex min-h-0 flex-col overflow-hidden',
+              isModal ? (step === 3 ? 'mt-5' : 'mt-8') : 'mt-4',
+              isModal
+                ? 'min-h-0 flex-1 basis-0'
+                : slideLockPx != null
+                  ? 'flex-none'
+                  : 'flex-1 lg:flex-none',
             )}
             style={
-              slideLockPx != null
+              !isModal && slideLockPx != null
                 ? { height: slideLockPx, flexGrow: 0, flexShrink: 0 }
                 : undefined
             }
@@ -2308,9 +2799,11 @@ function CreatePoolPageInner() {
             <div
               className={cn(
                 'flex min-h-0 w-[200%] will-change-transform',
-                slideLockPx != null
-                  ? 'h-full flex-1'
-                  : 'h-full flex-1 lg:h-auto lg:flex-none',
+                isModal
+                  ? 'h-full min-h-0 flex-1'
+                  : slideLockPx != null
+                    ? 'h-full flex-1'
+                    : 'h-full flex-1 lg:h-auto lg:flex-none',
               )}
               style={{
                 transform: `translateX(${trackX}%)`,
@@ -2319,14 +2812,12 @@ function CreatePoolPageInner() {
             >
               <div
                 className={cn(
-                  // Horizontal gutter keeps selection rings inside overflow clip
-                  // (overflow-x-hidden + ring-2 otherwise crops left/right edges).
-                  // Unlocked desktop: h-auto so step-1 list stays natural height.
-                  // Locked / mobile: h-full + overflow-y-auto (original slide ports).
-                  'scrollbar-none flex w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
-                  slideLockPx != null
-                    ? 'h-full min-h-0'
-                    : 'h-full min-h-0 lg:h-auto',
+                  'flex w-1/2 shrink-0 flex-col overflow-x-hidden px-1.5',
+                  isModal
+                    ? 'h-full min-h-0 overflow-hidden'
+                    : slideLockPx != null
+                      ? 'h-full min-h-0 overflow-y-auto scrollbar-none'
+                      : 'h-full min-h-0 overflow-y-auto scrollbar-none lg:h-auto',
                   isSliding && 'pointer-events-none will-change-[opacity]',
                 )}
                 style={{
@@ -2334,14 +2825,26 @@ function CreatePoolPageInner() {
                   ...createPoolSlideMotionStyle('opacity', trackTransition),
                 }}
               >
-                {renderStepScrollContent(leftPanelStep)}
+                <div
+                  className={cn(
+                    'flex min-h-0 flex-1 flex-col',
+                    // Step 2 modal scrolls inside its own column; other steps scroll here.
+                    !(isModal && leftPanelStep === 2) &&
+                      isModal &&
+                      'overflow-y-auto scrollbar-none',
+                  )}
+                >
+                  {renderStepScrollContent(leftPanelStep)}
+                </div>
               </div>
               <div
                 className={cn(
-                  'scrollbar-none pointer-events-none flex w-1/2 shrink-0 flex-col overflow-x-hidden overflow-y-auto px-1.5',
-                  slideLockPx != null
-                    ? 'h-full min-h-0'
-                    : 'h-full min-h-0 lg:h-auto',
+                  'pointer-events-none flex w-1/2 shrink-0 flex-col overflow-x-hidden px-1.5',
+                  isModal
+                    ? 'h-full min-h-0 overflow-hidden'
+                    : slideLockPx != null
+                      ? 'h-full min-h-0 overflow-y-auto scrollbar-none'
+                      : 'h-full min-h-0 overflow-y-auto scrollbar-none lg:h-auto',
                   isSliding && 'will-change-[opacity]',
                 )}
                 style={{
@@ -2350,7 +2853,18 @@ function CreatePoolPageInner() {
                 }}
                 aria-hidden={!rightPanelStep}
               >
-                {rightPanelStep ? renderStepScrollContent(rightPanelStep) : null}
+                {rightPanelStep ? (
+                  <div
+                    className={cn(
+                      'flex min-h-0 flex-1 flex-col',
+                      !(isModal && rightPanelStep === 2) &&
+                        isModal &&
+                        'overflow-y-auto scrollbar-none',
+                    )}
+                  >
+                    {renderStepScrollContent(rightPanelStep)}
+                  </div>
+                ) : null}
               </div>
             </div>
             )}
@@ -2359,7 +2873,10 @@ function CreatePoolPageInner() {
           <footer
             className={cn(
               CREATE_POOL_FOOTER_CLASS,
-              CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS,
+              isModal
+                ? // Pinned nav only — step-2 disclaimer lives in the animated pane.
+                  'shrink-0'
+                : CREATE_POOL_FOOTER_DESKTOP_SLOT_CLASS,
             )}
           >
             {checkoutPhase === 'idle' && step === 1 ? (
@@ -2431,7 +2948,8 @@ function CreatePoolPageInner() {
               <Button
                 asChild
                 size="lg"
-                className={cn(CREATE_POOL_BTN_PRIMARY_CLASS, 'lg:hidden')}
+  // Open Pool CTA — show on mobile page footer; modal has it in-content on desktop.
+                className={cn(CREATE_POOL_BTN_PRIMARY_CLASS, !isModal && 'lg:hidden')}
               >
                 <Link
                   ref={(el) => {
@@ -2448,46 +2966,13 @@ function CreatePoolPageInner() {
           </footer>
         </div>
       </div>
+      </div>
 
-      <AlertDialog
-        open={publicConfirmOpen}
-        onOpenChange={(open) => {
-          setPublicConfirmOpen(open)
-          if (!open && !isPublic) {
-            // Cancel / dismiss keeps toggle off (already false).
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Make this pool public?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anyone will be able to see and join it from the Discover page.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setIsPublic(false)
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setIsPublic(true)
-              }}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </main>
   )
 }
 
-export default function CreatePoolPage() {
+export function CreatePoolWizardSuspense(props: CreatePoolWizardProps) {
   return (
     <Suspense
       fallback={
@@ -2496,7 +2981,7 @@ export default function CreatePoolPage() {
         </main>
       }
     >
-      <CreatePoolPageInner />
+      <CreatePoolWizard {...props} />
     </Suspense>
   )
 }

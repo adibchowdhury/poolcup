@@ -59,6 +59,10 @@
   --match-consensus: #fbbf24;
   --match-surface: #0d1520;
   
+  /* Dashboard elevation L2 — card surfaces (see DASHBOARD_CARD_BG in dashboard-surfaces.ts). */
+  --dashboard-card-bg: #171717;
+  --dashboard-card-border: #292929;
+  
   --radius: 0.75rem;
 
   /* PremiumMatchCard sculpted surface + content (dark default) */
@@ -281,6 +285,12 @@ html.light {
 
 .stage-live-dot {
   background-color: #ef4444;
+  animation: stage-live-pulse 1.75s ease-in-out infinite;
+}
+
+/* White variant — pulsing dot on solid red live pills (same keyframes as .stage-live-dot). */
+.stage-live-dot-light {
+  background-color: #ffffff;
   animation: stage-live-pulse 1.75s ease-in-out infinite;
 }
 
@@ -1266,6 +1276,7 @@ button.onboarding-3d-btn:disabled {
   .animate-float-slow,
   .animate-pulse-subtle,
   .stage-live-dot,
+  .stage-live-dot-light,
   .match-hero-score-live,
   .match-hero-live-pill,
   .match-hero-score-emphasis,
@@ -1437,6 +1448,96 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   will-change: opacity, transform;
 }
 
+/* Desktop /create modal card — fade + slight rise (~200ms). */
+@keyframes create-pool-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.create-pool-modal-enter {
+  animation: create-pool-modal-enter 200ms var(--create-mode-ease) both;
+  transform-origin: center center;
+  will-change: opacity, transform;
+}
+
+/* Step 3 visibility — sliding green pill behind equal segments. */
+.create-pool-visibility-toggle {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border-radius: 9999px;
+  border: 1px solid #292929;
+  background: #171717;
+  padding: 4px;
+}
+
+.create-pool-visibility-toggle__thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  z-index: 0;
+  width: calc(50% - 4px);
+  border-radius: 9999px;
+  background: #00e887;
+  transform: translateX(0);
+  transition: transform 180ms ease-out;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.create-pool-visibility-toggle__thumb--public {
+  transform: translateX(100%);
+}
+
+.create-pool-visibility-toggle__segment {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 0;
+  background: transparent;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: color 180ms ease-out;
+}
+
+.create-pool-visibility-toggle__segment--on {
+  color: #080b0f;
+}
+
+.create-pool-visibility-toggle__segment--off {
+  color: #5a7080;
+}
+
+.create-pool-visibility-toggle__segment--off:hover {
+  color: #f0f4f8;
+}
+
+.create-pool-visibility-toggle__segment--on .create-pool-visibility-toggle__icon {
+  color: #080b0f;
+}
+
+.create-pool-visibility-toggle__icon--private {
+  color: #a78bfa;
+}
+
+.create-pool-visibility-toggle__icon--public {
+  color: #22d3ee;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .create-pool-entry-btn,
   .create-pool-entry-btn.create-pool-entry-pressed {
@@ -1444,12 +1545,18 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     transform: none !important;
   }
 
+  .create-pool-visibility-toggle__thumb,
+  .create-pool-visibility-toggle__segment {
+    transition: none !important;
+  }
+
   html.create-mode-dashboard-exit [data-hub-shell],
   html.create-mode-dashboard-restore [data-hub-shell],
   .create-mode-screen-enter,
   .create-mode-screen-exit,
   .create-mode-heading-stagger,
-  .create-mode-competition-swap {
+  .create-mode-competition-swap,
+  .create-pool-modal-enter {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

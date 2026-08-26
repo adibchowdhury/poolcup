@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
+import { useCreatePoolModalOptional } from '@/components/create/create-pool-modal'
 import { DashboardAppShell } from '@/components/dashboard/dashboard-app-shell'
 import { PoolAvatarImage } from '@/components/pool/pool-avatar-image'
 import { Button } from '@/components/ui/button'
@@ -48,6 +49,7 @@ import {
   type DiscoverSportId,
 } from '@/src/lib/fetch-discover'
 import { capturePostHog } from '@/src/lib/posthog-client'
+import { beginCreatePoolEntry } from '@/src/lib/create-pool-transition'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import { sportIconPng } from '@/src/lib/sport-display'
 import { supabase } from '@/src/lib/supabase'
@@ -467,6 +469,7 @@ export function DiscoverPageView({
   customAvatarUrl,
 }: DiscoverPageViewProps) {
   const router = useRouter()
+  const createModal = useCreatePoolModalOptional()
 
   const [sections, setSections] = useState<DiscoverSectionsPayload>(emptySections)
   const [loading, setLoading] = useState(true)
@@ -1081,8 +1084,18 @@ export function DiscoverPageView({
               can still create your own invite-only pool.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <Button asChild className={FOCUS_VISIBLE_RING}>
-                <Link href="/create">Create a pool</Link>
+              <Button
+                type="button"
+                className={FOCUS_VISIBLE_RING}
+                onClick={() => {
+                  beginCreatePoolEntry(router, {
+                    openModal: createModal
+                      ? () => createModal.openCreatePoolModal()
+                      : undefined,
+                  })
+                }}
+              >
+                Create a pool
               </Button>
               <Button asChild variant="outline" className={FOCUS_VISIBLE_RING}>
                 <Link href="/dashboard">Back to home</Link>
