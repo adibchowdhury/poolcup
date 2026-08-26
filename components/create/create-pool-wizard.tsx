@@ -77,6 +77,7 @@ import {
   readPrefersReducedMotion,
 } from '@/src/lib/create-pool-transition'
 import { CreateCompetitionStep } from '@/components/create/create-competition-step'
+import { CreatePoolPlanFireOverlay } from '@/components/create/create-pool-plan-fire-overlay'
 import { DiscordMarkIcon } from '@/components/discord-mark-icon'
 import { cn } from '@/lib/utils'
 import {
@@ -687,6 +688,8 @@ export function CreatePoolWizard({
 
   const inviteQrCanvasRef = useRef<HTMLCanvasElement>(null)
   const goToPoolRef = useRef<HTMLAnchorElement>(null)
+  const modalShellRef = useRef<HTMLDivElement>(null)
+  const planFireOverlayLayerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
@@ -2135,21 +2138,14 @@ export function CreatePoolWizard({
                   <span className="create-pool-plan-card__badge">
                     Best for commissioners
                   </span>
-                  {isModal ? (
-                    <img
-                      src="/fire_streak.png"
-                      alt=""
-                      className="create-pool-plan-card__fire-streak"
-                      aria-hidden
-                    />
-                  ) : (
+                  {!isModal ? (
                     <span
                       className="create-pool-plan-card__crown"
                       aria-hidden
                     >
                       <Crown strokeWidth={1.75} />
                     </span>
-                  )}
+                  ) : null}
                   <p className="create-pool-plan-card__title">Custom Pool</p>
                   <p className="create-pool-plan-card__price-line">
                     <span className="create-pool-plan-card__price create-pool-plan-card__price--custom">
@@ -2569,6 +2565,7 @@ export function CreatePoolWizard({
       >
         <div className={cn(isModal ? 'contents' : 'flex min-h-0 w-full flex-col')}>
           <div
+            ref={isModal ? modalShellRef : undefined}
             className={
               isModal ? CREATE_POOL_CARD_MODAL_CLASS : CREATE_POOL_CARD_PAGE_CLASS
             }
@@ -2675,12 +2672,21 @@ export function CreatePoolWizard({
               </div>
             </header>
 
+          {isModal ? (
+            <div
+              ref={planFireOverlayLayerRef}
+              className="create-pool-plan-fire-overlay-layer"
+              aria-hidden
+            />
+          ) : null}
+
           <div
             ref={slideViewportRef}
             className={cn(
               // overflow-hidden clips the dual-pane translateX slide.
               // Modal: mt-8 — balanced rhythm under instructional title; flex-1 body absorbs it.
               'flex min-h-0 flex-col overflow-hidden',
+              isModal && 'relative z-[2]',
               isModal ? 'mt-8' : 'mt-4',
               isModal
                 ? 'min-h-0 flex-1 basis-0'
@@ -2735,6 +2741,7 @@ export function CreatePoolWizard({
               }}
             >
               <div
+                data-create-pool-pane="left"
                 className={cn(
                   'flex w-1/2 shrink-0 flex-col overflow-x-hidden px-1.5',
                   isModal
@@ -2762,6 +2769,7 @@ export function CreatePoolWizard({
                 </div>
               </div>
               <div
+                data-create-pool-pane="right"
                 className={cn(
                   'pointer-events-none flex w-1/2 shrink-0 flex-col overflow-x-hidden px-1.5',
                   isModal
@@ -2899,6 +2907,24 @@ export function CreatePoolWizard({
               </Button>
             ) : null}
           </footer>
+
+          {isModal ? (
+            <CreatePoolPlanFireOverlay
+              modalRef={modalShellRef}
+              layerRef={planFireOverlayLayerRef}
+              active={
+                checkoutPhase === 'idle' &&
+                ((leftPanelStep === PLAN_STEP && leftOpacity > 0.01) ||
+                  (rightPanelStep === PLAN_STEP && (rightOpacity ?? 0) > 0.01))
+              }
+              leftPanelStep={leftPanelStep}
+              rightPanelStep={rightPanelStep}
+              leftOpacity={leftOpacity}
+              rightOpacity={rightOpacity}
+              planStep={PLAN_STEP}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          ) : null}
         </div>
       </div>
       </div>

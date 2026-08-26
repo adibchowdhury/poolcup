@@ -1,0 +1,104 @@
+{
+  "680": {
+    "withFlame": {
+      "gridPaddingTop": "52px",
+      "gridRect": {
+        "x": -132,
+        "y": 228,
+        "w": 688,
+        "h": 444
+      },
+      "basicRect": {
+        "x": -132,
+        "y": 280,
+        "w": 330,
+        "h": 368
+      },
+      "customRect": {
+        "x": 226,
+        "y": 280,
+        "w": 330,
+        "h": 392
+      },
+      "badgeRect": {
+        "x": 300,
+        "y": 269,
+        "w": 183,
+        "h": 21
+      },
+      "titleRect": {
+        "x": 241,
+        "y": 306,
+        "w": 300,
+        "h": 22
+      },
+      "flameInScrollPane": false,
+      "flameInOverlayLayer": true,
+      "emblemGone": true,
+      "flameSize": {
+        "x": 328,
+        "y": 152,
+        "w": 130,
+        "h": 130
+      },
+      "anchorBottomDeltaPx": 2,
+      "flameTipsAboveBadgePx": 117.7,
+      "flameClippedByScroll": true,
+      "badgeZ": "2",
+      "overlayParentClass": "create-pool-plan-fire-overlay-layer"
+    },
+    "layoutFrozen": true,
+    "screenshot": "C:\\dev\\pool-cup-prediction-app\\.verify-flame\\step4-680-flame.png"
+  },
+  "800": {
+    "withFlame": {
+      "gridPaddingTop": "52px",
+      "gridRect": {
+        "x": -132,
+        "y": 234,
+        "w": 688,
+        "h": 444
+      },
+      "basicRect": {
+        "x": -132,
+        "y": 286,
+        "w": 330,
+        "h": 368
+      },
+      "customRect": {
+        "x": 226,
+        "y": 286,
+        "w": 330,
+        "h": 392
+      },
+      "badgeRect": {
+        "x": 300,
+        "y": 275,
+        "w": 183,
+        "h": 21
+      },
+      "titleRect": {
+        "x": 241,
+        "y": 312,
+        "w": 300,
+        "h": 22
+      },
+      "flameInScrollPane": false,
+      "flameInOverlayLayer": true,
+      "emblemGone": true,
+      "flameSize": {
+        "x": 328,
+        "y": 158,
+        "w": 130,
+        "h": 130
+      },
+      "anchorBottomDeltaPx": 2,
+      "flameTipsAboveBadgePx": 117.7,
+      "flameClippedByScroll": true,
+      "badgeZ": "2",
+      "overlayParentClass": "create-pool-plan-fire-overlay-layer"
+    },
+    "layoutFrozen": true,
+    "screenshot": "C:\\dev\\pool-cup-prediction-app\\.verify-flame\\step4-800-flame.png"
+  }
+}

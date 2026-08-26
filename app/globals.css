@@ -1601,6 +1601,8 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   column-gap: 1.75rem;
   row-gap: 0.75rem;
   padding-inline: 0;
+  /* Badge + 80px flame emblem: tips rise ~40px above card top — was 0.875rem (14px). */
+  padding-top: 3.25rem;
 }
 
 .create-pool-wizard--modal .create-pool-plan-card__body {
@@ -1636,16 +1638,59 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   padding-left: 5px;
 }
 
-/* Desktop modal — fire streak accent (Custom card; no circular container). */
-.create-pool-wizard--modal .create-pool-plan-card__fire-streak {
+/* Desktop modal — flame overlay layer (outside scroll panes; zero layout footprint). */
+.create-pool-wizard--modal .create-pool-plan-fire-overlay-layer {
+  --create-pool-plan-fire-size: 130px;
+  /*
+   * fireflame.lottie visible artwork insets within the player canvas (alpha > 12 @ 130px).
+   * Asset property — NOT layout: re-measure with scripts/measure-fireflame-bounds.mjs if re-exported.
+   * Canvas 130×130 → visible px [39–90]×[38–104]; bottom gap to card top was 25px before compensation.
+   */
+  --create-pool-plan-fire-artwork-inset-top: 0.2923076923; /* 38/130 */
+  --create-pool-plan-fire-artwork-inset-bottom: 0.1923076923; /* 25/130 */
+  --create-pool-plan-fire-artwork-inset-left: 0.3; /* 39/130 */
+  --create-pool-plan-fire-artwork-inset-right: 0.3; /* 39/130 */
   position: absolute;
-  top: 1rem;
-  right: 0.875rem;
+  inset: 0;
   z-index: 1;
-  height: 46px;
-  width: auto;
-  object-fit: contain;
+  overflow: visible;
   pointer-events: none;
+}
+
+/* Zero-size anchor at layer origin; translate places it at card top-center. */
+.create-pool-wizard--modal .create-pool-plan-fire-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.create-pool-wizard--modal .create-pool-plan-fire-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 0;
+  width: var(--create-pool-plan-fire-size);
+  height: var(--create-pool-plan-fire-size);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.create-pool-wizard--modal .create-pool-plan-fire-overlay .create-pool-plan-card__fire-streak__media,
+.create-pool-wizard--modal .create-pool-plan-fire-overlay .create-pool-plan-card__fire-streak__media canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+/* Shift artwork down by its internal bottom transparent margin so visible base meets card top. */
+.create-pool-wizard--modal .create-pool-plan-fire-overlay .create-pool-plan-card__fire-streak__media {
+  transform: translateY(
+    calc(var(--create-pool-plan-fire-size) * var(--create-pool-plan-fire-artwork-inset-bottom))
+  );
 }
 
 /* Desktop modal — all card copy white; icons keep accent colors. */
