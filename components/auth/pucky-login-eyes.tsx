@@ -12,7 +12,7 @@ import {
 import {
   PUCKY_EYES,
   PUCKY_EYE_TRACKING,
-  PUCKY_GAZE_REF,
+  sharedGazeOffsets,
   type PuckyEyeCalibration,
 } from '@/src/lib/pucky-eye-calibration'
 
@@ -24,48 +24,6 @@ type FrameBox = {
 }
 
 type Offset = { x: number; y: number }
-
-/** Ellipse clamp with independent +X/−X and +Y/−Y radii (for beak-side padding). */
-function clampEllipseAsym(
-  dx: number,
-  dy: number,
-  rxPos: number,
-  rxNeg: number,
-  ryPos: number,
-  ryNeg: number,
-): Offset {
-  const rx = dx >= 0 ? rxPos : rxNeg
-  const ry = dy >= 0 ? ryPos : ryNeg
-  if (rx <= 0 || ry <= 0) return { x: 0, y: 0 }
-  const v = (dx / rx) ** 2 + (dy / ry) ** 2
-  if (v <= 1 || !Number.isFinite(v)) return { x: dx, y: dy }
-  const s = 1 / Math.sqrt(v)
-  return { x: dx * s, y: dy * s }
-}
-
-/**
- * Shared gaze: one vector from face midpoint → cursor, capped by maxRadius,
- * then clamped per-eye (own ellipse + beak-facing inward pad).
- */
-function sharedGazeOffset(
-  gazeX: number,
-  gazeY: number,
-  maxRadius: number,
-  rxPos: number,
-  rxNeg: number,
-  ryPos: number,
-  ryNeg: number,
-): Offset {
-  let dx = gazeX
-  let dy = gazeY
-  const dist = Math.hypot(dx, dy)
-  if (dist > maxRadius && dist > 0) {
-    const scale = maxRadius / dist
-    dx *= scale
-    dy *= scale
-  }
-  return clampEllipseAsym(dx, dy, rxPos, rxNeg, ryPos, ryNeg)
-}
 
 function IrisAssembly({
   eye,
@@ -137,40 +95,36 @@ type PuckyLoginEyesProps = {
 
 /**
  * DOM iris/pupil assemblies over the eyeless Pucky frame.
- * Layout of the frame/card is unchanged — this layer is measure-driven only.
+ * ONE shared atan2(cursor − imageCenter); per-eye LUT magnitude; near-face dead-zone.
  */
 export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
   const [box, setBox] = useState<FrameBox | null>(null)
   const [enabled, setEnabled] = useState(false)
   const [staticOnly, setStaticOnly] = useState(true)
 
-  const offsetsRef = useRef<Offset[]>([
+  const offsetRef = useRef<Offset[]>([
     { x: 0, y: 0 },
     { x: 0, y: 0 },
   ])
-  const targetsRef = useRef<Offset[]>([
+  const targetRef = useRef<Offset[]>([
     { x: 0, y: 0 },
     { x: 0, y: 0 },
   ])
   const [, setTick] = useState(0)
   const rafRef = useRef<number | null>(null)
-  const trackingActiveRef = useRef(false)
   const frameBoxRef = useRef<FrameBox | null>(null)
-  const frameClientRef = useRef<DOMRect | null>(null)
 
   const measure = useCallback(() => {
     const frame = frameRef.current
     if (!frame) {
       setBox(null)
       frameBoxRef.current = null
-      frameClientRef.current = null
       return
     }
     const stage = frame.closest('.login-pucky-stage')
     if (!stage) {
       setBox(null)
       frameBoxRef.current = null
-      frameClientRef.current = null
       return
     }
     const fr = frame.getBoundingClientRect()
@@ -178,7 +132,6 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     if (fr.width < 2 || fr.height < 2) {
       setBox(null)
       frameBoxRef.current = null
-      frameClientRef.current = null
       return
     }
     const next: FrameBox = {
@@ -188,7 +141,6 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
       height: fr.height,
     }
     frameBoxRef.current = next
-    frameClientRef.current = fr
     setBox(next)
   }, [frameRef])
 
@@ -227,7 +179,7 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
       const allowTrack = desktop && fineMq.matches && !motionMq.matches
       setStaticOnly(!allowTrack)
       if (!allowTrack) {
-        targetsRef.current = [
+        targetRef.current = [
           { x: 0, y: 0 },
           { x: 0, y: 0 },
         ]
@@ -247,15 +199,14 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
 
   useEffect(() => {
     if (!enabled || staticOnly) {
-      offsetsRef.current = [
+      offsetRef.current = [
         { x: 0, y: 0 },
         { x: 0, y: 0 },
       ]
-      targetsRef.current = [
+      targetRef.current = [
         { x: 0, y: 0 },
         { x: 0, y: 0 },
       ]
-      trackingActiveRef.current = false
       if (rafRef.current != null) {
         cancelAnimationFrame(rafRef.current)
         rafRef.current = null
@@ -264,54 +215,8 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
       return
     }
 
-    const travelLimits = () => {
-      const fr = frameClientRef.current
-      const local = frameBoxRef.current
-      if (!fr || !local) return null
-
-      const gazeRefX = fr.left + PUCKY_GAZE_REF.cx * fr.width
-      const gazeRefY = fr.top + PUCKY_GAZE_REF.cy * fr.height
-
-      // Shared maxRadius from average eye size (same cap for both).
-      const eyeSizes = PUCKY_EYES.map((eye) => ({
-        eyeW: eye.eye.w * local.width,
-        eyeH: eye.eye.h * local.height,
-      }))
-      const minAxis = Math.min(
-        ...eyeSizes.map((e) => Math.min(e.eyeW, e.eyeH)),
-      )
-      const maxRadius = PUCKY_EYE_TRACKING.maxRadiusFactor * minAxis
-
-      return PUCKY_EYES.map((eye, i) => {
-        const eyeW = eye.eye.w * local.width
-        const eyeH = eye.eye.h * local.height
-        const irisW = eye.iris.w * local.width
-        const irisH = eye.iris.h * local.height
-        const baseRx =
-          (eyeW / 2 - (irisW / 2) * PUCKY_EYE_TRACKING.clampIrisInset) *
-          PUCKY_EYE_TRACKING.clampScale
-        const baseRy =
-          (eyeH / 2 - (irisH / 2) * PUCKY_EYE_TRACKING.clampIrisInset) *
-          PUCKY_EYE_TRACKING.clampScale
-        const innerPad = eyeW * PUCKY_EYE_TRACKING.innerEdgePadFactor
-        // Beak-facing: L eye's right (+X), R eye's left (−X)
-        const rxPos = i === 0 ? Math.max(0, baseRx - innerPad) : baseRx
-        const rxNeg = i === 1 ? Math.max(0, baseRx - innerPad) : baseRx
-        return {
-          maxRadius,
-          rxPos,
-          rxNeg,
-          ryPos: baseRy,
-          ryNeg: baseRy,
-          gazeRefX,
-          gazeRefY,
-          innerPad,
-        }
-      })
-    }
-
-    const setNeutralTargets = () => {
-      targetsRef.current = [
+    const setNeutralTarget = () => {
+      targetRef.current = [
         { x: 0, y: 0 },
         { x: 0, y: 0 },
       ]
@@ -320,37 +225,29 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     const onPointerMove = (event: PointerEvent) => {
       if (document.visibilityState === 'hidden') return
       const frame = frameRef.current
-      if (frame) frameClientRef.current = frame.getBoundingClientRect()
-      const live = travelLimits()
-      if (!live) return
-
-      const gazeX = event.clientX - live[0].gazeRefX
-      const gazeY = event.clientY - live[0].gazeRefY
-
-      targetsRef.current = live.map((lim) =>
-        sharedGazeOffset(
-          gazeX,
-          gazeY,
-          lim.maxRadius,
-          lim.rxPos,
-          lim.rxNeg,
-          lim.ryPos,
-          lim.ryNeg,
-        ),
+      if (!frame) return
+      const fr = frame.getBoundingClientRect()
+      // Shared direction; per-eye magnitude from each eye's own LUT.
+      const cx = fr.left + fr.width / 2
+      const cy = fr.top + fr.height / 2
+      targetRef.current = sharedGazeOffsets(
+        event.clientX,
+        event.clientY,
+        cx,
+        cy,
+        fr.width,
       )
     }
 
-    const onLeaveOrBlur = () => setNeutralTargets()
+    const onLeaveOrBlur = () => setNeutralTarget()
 
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        trackingActiveRef.current = false
         if (rafRef.current != null) {
           cancelAnimationFrame(rafRef.current)
           rafRef.current = null
         }
       } else if (!rafRef.current) {
-        trackingActiveRef.current = true
         rafRef.current = requestAnimationFrame(tick)
       }
     }
@@ -358,26 +255,24 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     const tick = () => {
       if (document.visibilityState === 'hidden') {
         rafRef.current = null
-        trackingActiveRef.current = false
         return
       }
       const alpha = PUCKY_EYE_TRACKING.lerpAlpha
       let moved = false
       for (let i = 0; i < 2; i++) {
-        const cur = offsetsRef.current[i]
-        const tgt = targetsRef.current[i]
+        const cur = offsetRef.current[i]
+        const tgt = targetRef.current[i]
         const nx = cur.x + (tgt.x - cur.x) * alpha
         const ny = cur.y + (tgt.y - cur.y) * alpha
         if (Math.abs(nx - cur.x) > 0.01 || Math.abs(ny - cur.y) > 0.01) moved = true
-        offsetsRef.current[i] = { x: nx, y: ny }
+        offsetRef.current[i] = { x: nx, y: ny }
       }
-      if (moved || Math.hypot(targetsRef.current[0].x, targetsRef.current[0].y) > 0.01) {
+      if (moved || Math.hypot(targetRef.current[0].x, targetRef.current[0].y) > 0.01) {
         setTick((t) => t + 1)
       }
       rafRef.current = requestAnimationFrame(tick)
     }
 
-    trackingActiveRef.current = true
     window.addEventListener('pointermove', onPointerMove, { passive: true })
     window.addEventListener('blur', onLeaveOrBlur)
     document.documentElement.addEventListener('mouseleave', onLeaveOrBlur)
@@ -385,7 +280,6 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     rafRef.current = requestAnimationFrame(tick)
 
     return () => {
-      trackingActiveRef.current = false
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('blur', onLeaveOrBlur)
       document.documentElement.removeEventListener('mouseleave', onLeaveOrBlur)
@@ -410,6 +304,8 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     overflow: 'visible',
   }
 
+  const zero = { x: 0, y: 0 }
+
   return (
     <div className="login-pucky-eyes" style={layerStyle} aria-hidden="true">
       {PUCKY_EYES.map((eye, i) => (
@@ -417,7 +313,7 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
           key={i}
           eye={eye}
           box={box}
-          offset={staticOnly ? { x: 0, y: 0 } : offsetsRef.current[i]}
+          offset={staticOnly ? zero : offsetRef.current[i]}
         />
       ))}
     </div>

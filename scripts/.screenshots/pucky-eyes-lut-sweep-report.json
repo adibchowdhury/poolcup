@@ -1,0 +1,179 @@
+{
+  "diagnosis": {
+    "note": "Pre-fix live mid-screen showed parallel +Y offsets (not per-eye direction). Perceived cross-eye near face was center singularity / looking-at-cursor-below; dead-zone restores straight-ahead.",
+    "runtimeAtan2Sites": [
+      "sharedGazeOffsets only — single atan2(cursor−imageCenter)"
+    ],
+    "perEyeAngleRemoved": "none found in runtime (never present after last fix)"
+  },
+  "deadZone": {
+    "eyeSpanPx": 58.1,
+    "mul": 1.2,
+    "radiusPx": 69.8,
+    "easing": "smoothstep(0, radius, faceDist) × magnitude"
+  },
+  "cardinalTravelPx368": {
+    "right": {
+      "L": 2.02,
+      "R": 3.48
+    },
+    "up": {
+      "L": 3.12,
+      "R": 2.59
+    },
+    "left": {
+      "L": 3.33,
+      "R": 1.8
+    },
+    "down": {
+      "L": 3.19,
+      "R": 3.5
+    }
+  },
+  "containment": {
+    "violations": 0,
+    "verdict": "PASS"
+  },
+  "parallelVectors": {
+    "violations": 0,
+    "maxCrossProduct": 0,
+    "verdict": "PASS"
+  },
+  "live": {
+    "samples": [
+      {
+        "label": "mid-screen",
+        "cursor": {
+          "x": 640,
+          "y": 400
+        },
+        "toCenter": {
+          "dx": 0,
+          "dy": 200.2
+        },
+        "L": {
+          "x": -0.0006,
+          "y": 3.1222
+        },
+        "R": {
+          "x": -0.0127,
+          "y": 2.58
+        },
+        "angL": 90.01,
+        "angR": 90.28,
+        "magL": 3.122,
+        "magR": 2.58,
+        "cross": 0.038104,
+        "parallel": true,
+        "convergingTowardBeak": false
+      },
+      {
+        "label": "midline-face",
+        "cursor": {
+          "x": 640,
+          "y": 199.75440216064453
+        },
+        "toCenter": {
+          "dx": 0,
+          "dy": 0
+        },
+        "L": {
+          "x": -0.0006,
+          "y": 0.044
+        },
+        "R": {
+          "x": -0.0127,
+          "y": 0.0331
+        },
+        "angL": null,
+        "angR": null,
+        "magL": 0.044,
+        "magR": 0.035,
+        "cross": 0.000539,
+        "parallel": true,
+        "convergingTowardBeak": false
+      },
+      {
+        "label": "midline-below",
+        "cursor": {
+          "x": 640,
+          "y": 239.75440216064453
+        },
+        "toCenter": {
+          "dx": 0,
+          "dy": 40
+        },
+        "L": {
+          "x": -0.0006,
+          "y": 1.9034
+        },
+        "R": {
+          "x": -0.0127,
+          "y": 1.58
+        },
+        "angL": 90.02,
+        "angR": 90.46,
+        "magL": 1.903,
+        "magR": 1.58,
+        "cross": 0.023225,
+        "parallel": true,
+        "convergingTowardBeak": false
+      },
+      {
+        "label": "left-far",
+        "cursor": {
+          "x": 440,
+          "y": 199.75440216064453
+        },
+        "toCenter": {
+          "dx": -200,
+          "dy": 0
+        },
+        "L": {
+          "x": -3.3443,
+          "y": -0.0028
+        },
+        "R": {
+          "x": -1.8096,
+          "y": 0.0018
+        },
+        "angL": -179.95,
+        "angR": 179.94,
+        "magL": 3.344,
+        "magR": 1.81,
+        "cross": -0.011087,
+        "parallel": true,
+        "convergingTowardBeak": false
+      },
+      {
+        "label": "right-far",
+        "cursor": {
+          "x": 840,
+          "y": 199.75440216064453
+        },
+        "toCenter": {
+          "dx": 200,
+          "dy": 0
+        },
+        "L": {
+          "x": 2.015,
+          "y": -0.0028
+        },
+        "R": {
+          "x": 3.4717,
+          "y": 0.0018
+        },
+        "angL": -0.08,
+        "angR": 0.03,
+        "magL": 2.015,
+        "magR": 3.472,
+        "cross": 0.013348,
+        "parallel": true,
+        "convergingTowardBeak": false
+      }
+    ],
+    "parallelVerdict": "PASS",
+    "deadZoneNeutralAtFace": "PASS"
+  },
+  "failSamples": []
+}

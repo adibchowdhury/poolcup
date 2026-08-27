@@ -1,4 +1,15 @@
 /**
+ * Regenerates src/lib/pucky-eye-calibration.ts from the LUT embed JSON.
+ * Run after: node scripts/measure-pucky-eye-lut.mjs
+ *
+ * Runtime: shared atan2 + dist(angle)=min(L,R,maxGaze) from LUT.
+ */
+import fs from 'fs'
+
+const e = JSON.parse(fs.readFileSync('scripts/.screenshots/pucky-eye-lut-embed.json', 'utf8'))
+const arr = (a) => a.map((v) => Number(v).toFixed(6)).join(', ')
+
+const ts = `/**
  * Asset-derived eye calibration for Pucky login tracking.
  *
  * Runtime: one shared atan2 from image center; offset = dir × dist(angle)
@@ -17,7 +28,7 @@ export const PUCKY_EYE_ASSET = {
   referenceSrc: '/login_assets/pucky-login-frame.png',
 } as const
 
-export const PUCKY_EYE_LUT_ANGLE_COUNT = 64 as const
+export const PUCKY_EYE_LUT_ANGLE_COUNT = ${e.angleCount} as const
 
 export type PuckyEyeCalibration = {
   iris: {
@@ -48,12 +59,12 @@ export type PuckyEyeCalibration = {
 
 export const PUCKY_EYE_TRACKING = {
   /** Safety gap iris-edge → outline (@368px). Art abuts boundary; reduced from 3px. */
-  safetyWidthFraction: 0.001358695652173913,
-  safetyAt368Px: 0.5,
+  safetyWidthFraction: ${e.safetyWidthFraction},
+  safetyAt368Px: ${e.safetyAt368Px},
   /** Outward (away-from-beak) neutral shift @368px render. */
-  neutralBiasPx368: 2,
+  neutralBiasPx368: ${e.neutralBiasPx368},
   /** Cap on shared gaze travel @368px. */
-  maxGazePx368: 4,
+  maxGazePx368: ${e.maxGazePx368},
   /**
    * Near-face dead-zone: radius = this × eye-span ( |R.cx−L.cx| × frameW ).
    * Inside: smoothstep-blend gaze magnitude toward 0 (looking straight ahead).
@@ -64,14 +75,14 @@ export const PUCKY_EYE_TRACKING = {
 } as const
 
 /** Shared travel table: min(legalL, legalR, maxGaze) as width fractions. */
-export const PUCKY_SHARED_LEGAL_WIDTH_FRACTIONS = [0.005490, 0.005453, 0.005236, 0.005000, 0.004989, 0.005056, 0.005167, 0.005209, 0.005244, 0.005354, 0.005596, 0.005711, 0.005878, 0.006102, 0.007322, 0.007723, 0.007041, 0.006499, 0.006068, 0.005767, 0.005618, 0.005520, 0.005468, 0.005254, 0.005154, 0.005047, 0.004898, 0.004795, 0.004733, 0.004713, 0.004883, 0.004876, 0.004893, 0.004913, 0.004974, 0.005078, 0.005230, 0.005434, 0.005699, 0.006215, 0.006630, 0.006955, 0.007354, 0.007853, 0.007967, 0.008201, 0.008543, 0.008627, 0.008680, 0.008940, 0.009289, 0.009369, 0.009406, 0.009349, 0.009151, 0.008643, 0.007780, 0.007054, 0.006476, 0.006081, 0.005859, 0.005694, 0.005581, 0.005514] as const
+export const PUCKY_SHARED_LEGAL_WIDTH_FRACTIONS = [${arr(e.sharedLegal)}] as const
 
 export const PUCKY_LEFT_EYE: PuckyEyeCalibration = {
   iris: {
-    cx: 0.4161,
-    cy: 0.4385,
-    w: 0.0529,
-    h: 0.0877,
+    cx: ${e.neutrals.L.cx},
+    cy: ${e.neutrals.L.cy},
+    w: ${e.irisSize.L.w},
+    h: ${e.irisSize.L.h},
     color: '#0b0604',
   },
   pupil: { relW: 0.72, relH: 0.72, relX: 0, relY: 0.02, color: '#010101' },
@@ -81,16 +92,16 @@ export const PUCKY_LEFT_EYE: PuckyEyeCalibration = {
     sizeVsIris: 0.14,
     color: 'rgba(255,255,255,0.95)',
   },
-  legalRadiusWidthFractions: [0.005490, 0.005453, 0.005236, 0.005000, 0.004989, 0.005056, 0.005167, 0.005209, 0.005244, 0.005354, 0.005596, 0.005711, 0.005878, 0.006102, 0.007322, 0.007843, 0.008490, 0.011125, 0.015113, 0.013441, 0.012910, 0.011722, 0.011523, 0.011405, 0.011069, 0.011211, 0.011418, 0.010977, 0.010368, 0.010011, 0.009737, 0.009541, 0.009060, 0.008907, 0.008820, 0.008578, 0.008389, 0.008549, 0.008476, 0.008464, 0.008307, 0.008318, 0.008392, 0.008484, 0.008622, 0.008713, 0.008637, 0.008627, 0.008680, 0.008940, 0.009289, 0.009369, 0.009406, 0.009349, 0.009151, 0.008643, 0.007780, 0.007054, 0.006476, 0.006081, 0.005859, 0.005694, 0.005581, 0.005514],
-  boundaryWidthFractions: [0.033203, 0.033203, 0.033203, 0.033854, 0.033854, 0.033203, 0.033854, 0.033854, 0.034505, 0.034505, 0.043620, 0.043620, 0.044271, 0.044922, 0.045573, 0.048177, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.040365, 0.040365, 0.040365, 0.040365, 0.039714, 0.039714, 0.039063, 0.037760, 0.037760, 0.037109, 0.037109, 0.037109, 0.037109, 0.036458, 0.037109, 0.037109, 0.037109, 0.037760, 0.037760, 0.037760, 0.038411, 0.039063, 0.039063, 0.039063, 0.039063, 0.039714, 0.039714, 0.039714, 0.039714, 0.039714, 0.039063, 0.039063, 0.039063, 0.037760, 0.037109, 0.036458, 0.035807, 0.035156, 0.034505, 0.033854, 0.033203],
+  legalRadiusWidthFractions: [${arr(e.legalL)}],
+  boundaryWidthFractions: [${arr(e.boundaryL)}],
 }
 
 export const PUCKY_RIGHT_EYE: PuckyEyeCalibration = {
   iris: {
-    cx: 0.5741,
-    cy: 0.439,
-    w: 0.0554,
-    h: 0.0867,
+    cx: ${e.neutrals.R.cx},
+    cy: ${e.neutrals.R.cy},
+    w: ${e.irisSize.R.w},
+    h: ${e.irisSize.R.h},
     color: '#070706',
   },
   pupil: { relW: 0.72, relH: 0.72, relX: 0, relY: 0.02, color: '#030303' },
@@ -100,8 +111,8 @@ export const PUCKY_RIGHT_EYE: PuckyEyeCalibration = {
     sizeVsIris: 0.14,
     color: 'rgba(255,255,255,0.95)',
   },
-  legalRadiusWidthFractions: [0.009450, 0.009484, 0.009587, 0.009762, 0.010052, 0.010605, 0.010735, 0.010860, 0.010733, 0.010860, 0.010975, 0.011169, 0.012128, 0.010316, 0.008911, 0.007723, 0.007041, 0.006499, 0.006068, 0.005767, 0.005618, 0.005520, 0.005468, 0.005254, 0.005154, 0.005047, 0.004898, 0.004795, 0.004733, 0.004713, 0.004883, 0.004876, 0.004893, 0.004913, 0.004974, 0.005078, 0.005230, 0.005434, 0.005699, 0.006215, 0.006630, 0.006955, 0.007354, 0.007853, 0.007967, 0.008201, 0.008543, 0.008977, 0.009518, 0.009740, 0.009918, 0.009941, 0.009738, 0.009941, 0.010224, 0.010050, 0.009742, 0.009678, 0.009690, 0.009771, 0.009691, 0.009526, 0.009446, 0.009435],
-  boundaryWidthFractions: [0.038411, 0.038411, 0.039063, 0.039714, 0.039714, 0.039714, 0.040365, 0.040365, 0.040365, 0.040365, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.052083, 0.049479, 0.035807, 0.035156, 0.035156, 0.035156, 0.034505, 0.034505, 0.033854, 0.034505, 0.034505, 0.033854, 0.033854, 0.033854, 0.033854, 0.034505, 0.034505, 0.035156, 0.035807, 0.035807, 0.036458, 0.037109, 0.037760, 0.037760, 0.037760, 0.038411, 0.039063, 0.039714, 0.039714, 0.040365, 0.039714, 0.040365, 0.040365, 0.039714, 0.040365, 0.040365, 0.040365, 0.039714, 0.039063, 0.039063, 0.039063, 0.039063, 0.039063, 0.038411, 0.038411],
+  legalRadiusWidthFractions: [${arr(e.legalR)}],
+  boundaryWidthFractions: [${arr(e.boundaryR)}],
 }
 
 export const PUCKY_EYES = [PUCKY_LEFT_EYE, PUCKY_RIGHT_EYE] as const
@@ -126,7 +137,6 @@ export function radiusAtAngle(
  * Shared-direction, per-eye magnitude gaze.
  * ONE atan2(cursor − imageCenter) — never per-eye angles.
  * Each eye: offset = thatDir × min(legal_thisEye(θ), maxGaze) × deadZoneScale.
- * Dead-zone: within ~1.2× eye-span of face center, smoothstep magnitude → 0.
  */
 export function sharedGazeOffsets(
   cursorX: number,
@@ -142,7 +152,6 @@ export function sharedGazeOffsets(
   const eyeSpan =
     Math.abs(PUCKY_RIGHT_EYE.iris.cx - PUCKY_LEFT_EYE.iris.cx) * frameWidth
   const deadR = eyeSpan * PUCKY_EYE_TRACKING.faceDeadZoneEyeSpanMul
-  // smoothstep(0, deadR, faceDist): 0 at center → 1 at/beyond boundary
   let magScale = 1
   if (deadR > 1e-6) {
     const t = Math.min(1, Math.max(0, faceDist / deadR))
@@ -155,7 +164,6 @@ export function sharedGazeOffsets(
     ]
   }
 
-  // Single shared direction — computed once.
   const angle = Math.atan2(dy, dx)
   const dirX = Math.cos(angle)
   const dirY = Math.sin(angle)
@@ -170,3 +178,11 @@ export function sharedGazeOffsets(
     return { x: dirX * dist, y: dirY * dist }
   }) as [{ x: number; y: number }, { x: number; y: number }]
 }
+`
+
+fs.writeFileSync('src/lib/pucky-eye-calibration.ts', ts)
+console.log('wrote src/lib/pucky-eye-calibration.ts', {
+  bias: e.neutralBiasPx368,
+  safety: e.safetyAt368Px,
+  shared: e.stats.shared,
+})

@@ -1,0 +1,46 @@
+{
+  "mechanism": "Confirmed: prior ~22px CENTER travel used an inflated investigation eye ellipse as socketR in (socketR−irisR−margin), so the iris disc crossed the true outline. Corrected with measured iris-center→outline chord.",
+  "formula": "rxOuter = outerHalfExtent − irisRadius − safetyMargin (~3px at 368-wide frame)",
+  "safetyMarginPx": 3,
+  "final": {
+    "rxOuterL": 3.08,
+    "rxOuterR": 3.1,
+    "rxInnerL": 7.82,
+    "rxInnerR": 7.56,
+    "gapAtMaxL": 3.04,
+    "gapAtMaxR": 3.03,
+    "liveDx": {
+      "left_L": -3.04,
+      "right_R": 3.07
+    }
+  },
+  "sweeps": {
+    "dLeft": {
+      "L": {
+        "dx": -3.04,
+        "dy": 0.01
+      },
+      "R": {
+        "dx": -7.46,
+        "dy": 0.01
+      }
+    },
+    "dRight": {
+      "L": {
+        "dx": 7.76,
+        "dy": 0.01
+      },
+      "R": {
+        "dx": 3.07,
+        "dy": 0.01
+      }
+    },
+    "leftOk": true,
+    "rightOk": true,
+    "beakOk": true
+  },
+  "shots": [
+    "scripts/.screenshots/pucky-eyes-max-left-1280x800.png",
+    "scripts/.screenshots/pucky-eyes-max-right-1280x800.png"
+  ]
+}
