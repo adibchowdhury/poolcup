@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        #2a4a7a 0 12px,
+        #1a3058 12px 24px
+      );
+  }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .create-pool-wizard--modal {
+    position: relative;
+    display: flex;
+    width: min(48rem, calc(100vw - 3rem));
+    height: min(760px, 90vh, calc(100dvh - 3rem));
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 2px solid #292929;
+    background: #111111;
+    padding: 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  }
+  .body-fill {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(240, 244, 248, 0.35);
+    font: 600 0.875rem/1.4 system-ui, sans-serif;
+  }
+  .footer {
+    flex-shrink: 0;
+    padding-top: 1rem;
+  }
+  .nav {
+    display: flex;
+    gap: 0.75rem;
+    padding-bottom: 0.375rem;
+  }
+  .btn {
+    flex: 1;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #888;
+    font: 600 0.875rem system-ui, sans-serif;
+  }
+  .btn--primary {
+    background: #00e676;
+    color: #04120a;
+    border-color: transparent;
+  }
+  .create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell {
+  /*
+   * Stub tear line = top edge of footer CTA region (single anchor for mask + dashed line):
+   * p-8 bottom (2rem) + footer pt-4 (1rem) + nav pb-1.5 (0.375rem) + Button lg h-10 (2.5rem)
+   */
+  --create-pool-modal-stub-footer-region: calc(2rem + 1rem + 0.375rem + 2.5rem);
+  --stub-y: calc(100% - var(--create-pool-modal-stub-footer-region));
+  --ticket-notch-radius: 15px;
+  --ticket-shell-perforation-color: #33332f;
+  -webkit-mask-mode: alpha, alpha;
+  -webkit-mask-image:
+    radial-gradient(
+      circle var(--ticket-notch-radius) at 0 var(--stub-y),
+      transparent 98%,
+      #000 100%
+    ),
+    radial-gradient(
+      circle var(--ticket-notch-radius) at 100% var(--stub-y),
+      transparent 98%,
+      #000 100%
+    );
+  -webkit-mask-composite: source-in;
+  -webkit-mask-repeat: no-repeat;
+  mask-mode: alpha, alpha;
+  mask-image:
+    radial-gradient(
+      circle var(--ticket-notch-radius) at 0 var(--stub-y),
+      transparent 98%,
+      #000 100%
+    ),
+    radial-gradient(
+      circle var(--ticket-notch-radius) at 100% var(--stub-y),
+      transparent 98%,
+      #000 100%
+    );
+  mask-composite: intersect;
+  mask-repeat: no-repeat;
+}
+
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell::before {
+  content: '';
+  position: absolute;
+  top: var(--stub-y);
+  left: var(--ticket-notch-radius);
+  right: var(--ticket-notch-radius);
+  z-index: 30;
+  transform: translateY(-50%);
+  border-top: 1px dashed var(--ticket-shell-perforation-color);
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+  <div class="overlay">
+    <div id="shell" class="create-pool-wizard--modal create-pool-wizard--modal-ticket-shell">
+      <div class="body-fill">Review ticket body (fixture)</div>
+      <footer class="footer">
+        <nav class="nav">
+          <button type="button" class="btn">Back</button>
+          <button type="button" class="btn btn--primary">Create Pool</button>
+        </nav>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

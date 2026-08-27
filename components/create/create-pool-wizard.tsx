@@ -9,15 +9,17 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from 'react'
 import { flushSync } from 'react-dom'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Check,
   ArrowLeft,
+  Check,
   Crown,
   Download,
+  Flame,
   Globe,
   Handshake,
   Loader2,
@@ -59,6 +61,10 @@ import {
   validatePoolDescription,
   validatePoolName,
 } from '@/src/lib/pool-name'
+import {
+  getCompetitionLogoBacking,
+  shouldPreferSportBallFallback,
+} from '@/src/lib/competition-logo-backing'
 import { normalizeSportKey } from '@/src/lib/sport-display'
 import { normalizeTeamLogoUrl } from '@/src/lib/team-logos'
 import { startDraftCustomPoolCheckout } from '@/src/lib/draft-custom-pool-checkout-client'
@@ -78,6 +84,7 @@ import {
 } from '@/src/lib/create-pool-transition'
 import { CreateCompetitionStep } from '@/components/create/create-competition-step'
 import { CreatePoolPlanFireOverlay } from '@/components/create/create-pool-plan-fire-overlay'
+import { useCreatePoolTicketSilhouetteMask } from '@/components/create/use-create-pool-ticket-silhouette-mask'
 import { DiscordMarkIcon } from '@/components/discord-mark-icon'
 import { cn } from '@/lib/utils'
 import {
@@ -254,6 +261,8 @@ function CreatePoolNavFooter({
   continueType = 'button',
   continueForm,
   backDisabled = false,
+  /** Step-5 review CTA: wider + soft green elevation. */
+  emphasizeContinue = false,
 }: {
   showBack: boolean
   isModal?: boolean
@@ -264,6 +273,7 @@ function CreatePoolNavFooter({
   continueType?: 'button' | 'submit'
   continueForm?: string
   backDisabled?: boolean
+  emphasizeContinue?: boolean
 }) {
   const showBackButton = showBack && !isModal
   return (
@@ -301,7 +311,9 @@ function CreatePoolNavFooter({
           className={cn(
             CREATE_POOL_BTN_PRIMARY_CLASS,
             !showBackButton && !isModal && 'lg:w-auto lg:min-w-[16rem]',
-            (isModal || !showBackButton) && 'w-full max-w-[20rem]',
+            (isModal || !showBackButton) &&
+              (emphasizeContinue ? 'w-full max-w-[22.5rem]' : 'w-full max-w-[20rem]'),
+            emphasizeContinue && 'create-pool-review-cta',
           )}
           disabled={continueDisabled}
           onClick={continueType === 'button' ? onContinue : undefined}
@@ -575,6 +587,88 @@ function formatSportLabel(sport: SportId | null): string {
   return SPORTS.find((row) => row.id === sport)?.label ?? sport
 }
 
+const REVIEW_SPORT_LABEL: Record<SportId, string> = {
+  soccer: 'Soccer',
+  basketball: 'Basketball',
+  baseball: 'Baseball',
+  football: 'Football',
+  hockey: 'Hockey',
+}
+
+function formatReviewSportLabel(sport: SportId | null): string {
+  if (!sport) return '—'
+  return REVIEW_SPORT_LABEL[sport]
+}
+
+function CreatePoolReviewCompetitionLogo({
+  logoUrl,
+  ballSrc,
+  provider,
+  providerLeagueId,
+}: {
+  logoUrl: string | null
+  ballSrc: string
+  provider: string | null
+  providerLeagueId: string | null
+}) {
+  const [loadFailed, setLoadFailed] = useState(false)
+  const forceBall = shouldPreferSportBallFallback(provider, providerLeagueId)
+  const backing = getCompetitionLogoBacking(provider, providerLeagueId)
+  const useLeagueLogo = Boolean(logoUrl) && !loadFailed && !forceBall
+  const src = useLeagueLogo ? logoUrl! : ballSrc
+
+  useEffect(() => {
+    setLoadFailed(false)
+  }, [logoUrl, provider, providerLeagueId])
+
+  const img = (
+    /* eslint-disable-next-line @next/next/no-img-element -- api-sports CDN + /public fallback */
+    <img
+      src={src}
+      alt=""
+      width={22}
+      height={22}
+      className={cn(
+        'create-pool-review-crest-img',
+        useLeagueLogo
+          ? 'create-pool-review-crest-img--league'
+          : 'create-pool-review-crest-img--fallback',
+      )}
+      style={
+        useLeagueLogo && backing?.logoFilter
+          ? { filter: backing.logoFilter }
+          : undefined
+      }
+      draggable={false}
+      onError={() => setLoadFailed(true)}
+      onLoad={(event) => {
+        const el = event.currentTarget
+        if (el.naturalWidth === 0 || el.naturalHeight === 0) {
+          setLoadFailed(true)
+        }
+      }}
+    />
+  )
+
+  return (
+    <span className="create-pool-review-crest" aria-hidden>
+      {backing && useLeagueLogo ? (
+        <span
+          className="create-pool-review-crest-backing"
+          style={{
+            backgroundColor: backing.circleColor,
+            border: backing.circleBorder,
+          }}
+        >
+          {img}
+        </span>
+      ) : (
+        img
+      )}
+    </span>
+  )
+}
+
 function selectionTileClass(selected: boolean) {
   return cn(
     CREATE_POOL_SELECTION_TILE_CLASS,
@@ -761,6 +855,8 @@ export function CreatePoolWizard({
       return false
     }
   })
+
+  useCreatePoolTicketSilhouetteMask(modalShellRef, isModal)
 
   const selectedEvent = useMemo((): SportingEvent | null => {
     if (!selectedEventId) return null
@@ -1523,7 +1619,228 @@ export function CreatePoolWizard({
     copyInviteLink()
   }
 
-  function renderCreatePoolReviewSummary(compact = false) {
+  function renderCreatePoolReviewSummary(
+    compact = false,
+    embedScoringRules = false,
+  ) {
+    /** Review-card color trio — labels muted, values bright neutral. */
+    const labelClass = 'text-[#8b98a9]'
+    const valueClass = 'text-right font-medium text-[#e8edf3]'
+
+    if (embedScoringRules) {
+      const competitionPrimary = selectedEvent
+        ? (() => {
+            const { leagueName, seasonLabel } =
+              formatCreateFlowCompetitionDisplay(selectedEvent)
+            return seasonLabel ? `${leagueName} · ${seasonLabel}` : leagueName
+          })()
+        : '—'
+      const ballSrc =
+        (selectedSport &&
+          SPORTS.find((row) => row.id === selectedSport)?.imageSrc) ??
+        '/sports/soccer.png'
+      const normalizedDescription = normalizePoolDescription(poolDescription)
+      const poolNameDisplay = normalizePoolName(poolName) || '—'
+
+      const renderCompetitionLogo = () =>
+        selectedEvent ? (
+          <CreatePoolReviewCompetitionLogo
+            logoUrl={normalizeTeamLogoUrl(selectedEvent.logo_url)}
+            ballSrc={ballSrc}
+            provider={selectedEvent.provider}
+            providerLeagueId={selectedEvent.provider_league_id}
+          />
+        ) : (
+          <span className="create-pool-review-crest" aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ballSrc}
+              alt=""
+              width={22}
+              height={22}
+              className="create-pool-review-crest-img create-pool-review-crest-img--fallback"
+              draggable={false}
+            />
+          </span>
+        )
+
+      const renderSportBall = () => (
+        <span className="create-pool-review-crest" aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={ballSrc}
+            alt=""
+            width={22}
+            height={22}
+            className="create-pool-review-crest-img create-pool-review-crest-img--fallback"
+            draggable={false}
+          />
+        </span>
+      )
+
+      const fieldRow = (label: string, value: ReactNode) => (
+        <div className="create-pool-review-summary__row">
+          <dt className="create-pool-review-summary__label">{label}</dt>
+          <dd className="create-pool-review-summary__value">{value}</dd>
+        </div>
+      )
+
+      const renderScoringRulesValue = () =>
+        selectedScoring ? (
+          <ul
+            className="create-pool-review-summary__scoring"
+            aria-label="Scoring rules"
+          >
+            {selectedScoring.scoringRows.map((row) => (
+              <li key={row.id}>
+                <span aria-hidden>
+                  {row.id === 'exact'
+                    ? '🎯'
+                    : row.id === 'winner'
+                      ? '✓'
+                      : '🤝'}
+                </span>
+                <span className="create-pool-review-summary__scoring-label">
+                  {row.id === 'exact'
+                    ? 'Exact'
+                    : row.id === 'winner'
+                      ? 'Winner'
+                      : 'Draw'}
+                </span>
+                <span className="create-pool-review-summary__scoring-points">
+                  {row.points.replace(/\s*pts$/i, '')}
+                </span>
+              </li>
+            ))}
+            <li>
+              <span aria-hidden>×</span>
+              <span className="create-pool-review-summary__scoring-label">
+                Miss
+              </span>
+              <span className="create-pool-review-summary__scoring-points">
+                +0
+              </span>
+            </li>
+          </ul>
+        ) : (
+          <span className="create-pool-review-summary__value--placeholder">
+            —
+          </span>
+        )
+
+      return (
+        <div
+          data-testid="create-pool-review-summary"
+          className={cn(
+            'create-pool-review-summary--modal mx-auto w-full shrink-0 rounded-xl border border-[#2a2a2a]',
+            compact && !embedScoringRules ? 'mt-4' : isModal ? 'mt-0' : 'mt-6',
+          )}
+        >
+          <section className="create-pool-review-summary__section">
+            <dl className="create-pool-review-summary__fields">
+              {fieldRow(
+                'Sport',
+                <span className="create-pool-review-summary__value-inline">
+                  {renderSportBall()}
+                  <span>{formatReviewSportLabel(selectedSport)}</span>
+                </span>,
+              )}
+              {fieldRow(
+                'Competition / Event',
+                <span className="create-pool-review-summary__value-inline">
+                  {renderCompetitionLogo()}
+                  <span className="min-w-0">
+                    {competitionPrimary}
+                  </span>
+                </span>,
+              )}
+            </dl>
+          </section>
+
+          <section className="create-pool-review-summary__section">
+            <dl className="create-pool-review-summary__fields">
+              {fieldRow(
+                'Pool Type',
+                <span>{selectedScoring?.label ?? scoringStyle}</span>,
+              )}
+              {fieldRow('Scoring Rules', renderScoringRulesValue())}
+            </dl>
+          </section>
+
+          <section className="create-pool-review-summary__section">
+            <dl className="create-pool-review-summary__fields">
+              {fieldRow(
+                'Pool Name',
+                <span>{poolNameDisplay}</span>,
+              )}
+              {fieldRow(
+                'Description',
+                <span
+                  className={
+                    normalizedDescription
+                      ? undefined
+                      : 'create-pool-review-summary__value--placeholder'
+                  }
+                >
+                  {normalizedDescription || 'No description'}
+                </span>,
+              )}
+              {fieldRow(
+                'Visibility',
+                <span className="create-pool-review-summary__value-inline">
+                  {isPublic ? (
+                    <Globe
+                      className="h-3.5 w-3.5 shrink-0 text-[#22d3ee]"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  ) : (
+                    <Lock
+                      className="h-3.5 w-3.5 shrink-0 text-[#a78bfa]"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  )}
+                  <span>{isPublic ? 'Public' : 'Private'}</span>
+                </span>,
+              )}
+            </dl>
+          </section>
+
+          <section className="create-pool-review-summary__section">
+            <dl className="create-pool-review-summary__fields">
+              {fieldRow(
+                'Plan',
+                selectedPlan == null ? (
+                  <span className="create-pool-review-summary__value--placeholder">
+                    Not selected
+                  </span>
+                ) : (
+                  <span>
+                    {selectedPlan === 'custom' ? 'Custom Pool' : 'Basic Pool'}
+                  </span>
+                ),
+              )}
+              {fieldRow(
+                'Price',
+                selectedPlan === 'custom' ? (
+                  <span className="create-pool-review-summary__value--gold">
+                    $9.99 one-time
+                  </span>
+                ) : selectedPlan === 'basic' ? (
+                  <span>Free</span>
+                ) : (
+                  <span className="create-pool-review-summary__value--placeholder">
+                    —
+                  </span>
+                ),
+              )}
+            </dl>
+          </section>
+        </div>
+      )
+    }
+
     return (
       <div
         className={cn(
@@ -1531,19 +1848,22 @@ export function CreatePoolWizard({
           compact ? 'mt-4' : 'mt-6',
         )}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#5a7080]">
+        <p
+          className={cn(
+            'text-[10px] font-semibold uppercase tracking-wider',
+            labelClass,
+          )}
+        >
           Your pool
         </p>
         <dl className="mt-2 space-y-1.5 text-sm">
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Sport</dt>
-            <dd className="text-right font-medium text-[#f0f4f8]">
-              {formatSportLabel(selectedSport)}
-            </dd>
+            <dt className={labelClass}>Sport</dt>
+            <dd className={valueClass}>{formatSportLabel(selectedSport)}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Event</dt>
-            <dd className="text-right font-medium text-[#f0f4f8]">
+            <dt className={labelClass}>Event</dt>
+            <dd className={cn(valueClass, 'min-w-0 break-words')}>
               {selectedEvent
                 ? (() => {
                     const { leagueName, seasonLabel } =
@@ -1556,11 +1876,12 @@ export function CreatePoolWizard({
             </dd>
           </div>
           {selectedEvent &&
-          formatCreateFlowCompetitionDisplay(selectedEvent).seasonLabel == null &&
+          formatCreateFlowCompetitionDisplay(selectedEvent).seasonLabel ==
+            null &&
           (selectedEvent.start_date || selectedEvent.end_date) ? (
             <div className="flex justify-between gap-3">
-              <dt className="text-[#5a7080]">Season</dt>
-              <dd className="text-right font-medium text-[#f0f4f8]">
+              <dt className={labelClass}>Season</dt>
+              <dd className={valueClass}>
                 {formatSportingEventDateRange(
                   selectedEvent.start_date,
                   selectedEvent.end_date,
@@ -1569,34 +1890,32 @@ export function CreatePoolWizard({
             </div>
           ) : null}
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Pool type</dt>
-            <dd className="text-right font-medium text-[#f0f4f8]">
+            <dt className={labelClass}>Pool type</dt>
+            <dd className={valueClass}>
               {selectedScoring?.label ?? scoringStyle}
             </dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-[#1e2d3d] pt-1.5">
-            <dt className="text-[#5a7080]">Pool name</dt>
-            <dd className="text-right font-medium text-primary">
+            <dt className={labelClass}>Pool name</dt>
+            <dd className={cn(valueClass, 'min-w-0 break-words')}>
               {normalizePoolName(poolName) || '—'}
             </dd>
           </div>
           {normalizePoolDescription(poolDescription) ? (
             <div className="flex justify-between gap-3">
-              <dt className="text-[#5a7080]">Description</dt>
-              <dd className="max-w-[60%] text-right font-medium text-[#f0f4f8]">
+              <dt className={labelClass}>Description</dt>
+              <dd className={cn(valueClass, 'max-w-[60%] min-w-0 break-words')}>
                 {normalizePoolDescription(poolDescription)}
               </dd>
             </div>
           ) : null}
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Visibility</dt>
-            <dd className="text-right font-medium text-[#f0f4f8]">
-              {isPublic ? 'Public' : 'Private'}
-            </dd>
+            <dt className={labelClass}>Visibility</dt>
+            <dd className={valueClass}>{isPublic ? 'Public' : 'Private'}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-[#5a7080]">Plan</dt>
-            <dd className="text-right font-medium text-[#f0f4f8]">
+            <dt className={labelClass}>Plan</dt>
+            <dd className={valueClass}>
               {selectedPlan === 'custom'
                 ? 'Custom Pool ($9.99 one-time)'
                 : 'Basic (Free)'}
@@ -1606,7 +1925,6 @@ export function CreatePoolWizard({
       </div>
     )
   }
-
   function renderStepScrollContent(panelStep: number) {
   return (
       <>
@@ -1629,13 +1947,15 @@ export function CreatePoolWizard({
             <div
               className={cn(
                 // Modal: animated pane owns [scrollable cards | pinned disclaimer].
-                isModal && 'flex h-full min-h-0 flex-col',
+                isModal && 'create-pool-step2-layout flex min-h-0 flex-col',
               )}
             >
               <div
                 className={cn(
-                  'mt-2 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-stretch lg:gap-4',
-                  isModal && 'min-h-0 flex-1 overflow-y-auto scrollbar-none',
+                  'mt-2 flex flex-col gap-3 lg:mt-0 lg:flex-row lg:gap-4',
+                  isModal
+                    ? 'shrink-0 items-start overflow-y-auto scrollbar-none'
+                    : 'lg:items-stretch',
                 )}
               >
                 {POOL_SCORING_STYLE_OPTIONS.map((style) => {
@@ -1650,7 +1970,7 @@ export function CreatePoolWizard({
                       className={cn(
                         'relative flex flex-1 flex-col rounded-xl',
                         isModal
-                          ? 'items-center px-4 py-4 text-center'
+                          ? 'create-pool-scoring-style-card items-center px-4 pt-3 text-center'
                           : 'items-start p-5 text-left',
                         selectionTileClass(selected),
                         selected && 'hover:bg-transparent',
@@ -1658,10 +1978,8 @@ export function CreatePoolWizard({
                     >
                       <span
                         className={cn(
-                          'flex items-center justify-center',
-                          isModal
-                            ? 'mb-2.5 h-[10.75rem] w-[10.75rem]'
-                            : 'mb-4 h-12 w-12',
+                          'create-pool-scoring-mascot flex items-center justify-center',
+                          !isModal && 'mb-4 h-12 w-12',
                         )}
                       >
                         {isModal ? (
@@ -1675,7 +1993,7 @@ export function CreatePoolWizard({
                             alt=""
                             width={172}
                             height={172}
-                            className="h-[10.75rem] w-[10.75rem] object-contain"
+                            className="object-contain"
                             draggable={false}
                           />
                         ) : isClassic ? (
@@ -1774,7 +2092,7 @@ export function CreatePoolWizard({
           {panelStep === 3 && (
             <div
               className={cn(
-                isModal ? 'flex h-full min-h-0 gap-5' : 'flex flex-col',
+                isModal ? 'create-pool-step3-layout flex h-full min-h-0 gap-5' : 'flex flex-col',
               )}
             >
               {isModal ? (
@@ -1814,7 +2132,7 @@ export function CreatePoolWizard({
 
               {isModal ? (
                 <div
-                  className="w-px shrink-0 self-stretch bg-white/[0.06]"
+                  className="create-pool-step3-divider w-px shrink-0 bg-white/[0.06]"
                   aria-hidden
                 />
               ) : null}
@@ -1834,13 +2152,18 @@ export function CreatePoolWizard({
 
                 <div
                   className={cn(
-                    isModal ? 'flex w-full flex-col' : 'mt-8 max-w-xl space-y-5',
+                    isModal ? 'create-pool-step3-form flex w-full flex-col' : 'mt-8 max-w-xl space-y-5',
                   )}
                 >
-                  <div>
+                  <div className={cn(isModal && 'create-pool-step3-field')}>
                     <label
                       htmlFor="pool-name"
-                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]"
+                      className={cn(
+                        'block font-medium uppercase tracking-wider text-[#E5E7EB]',
+                        isModal
+                          ? 'create-pool-step3-field-label'
+                          : 'mb-2 text-xs',
+                      )}
                     >
                       Pool name
                     </label>
@@ -1871,7 +2194,8 @@ export function CreatePoolWizard({
                       <span
                         id="pool-name-count"
                         className={cn(
-                          'pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[11px] tabular-nums text-[#5a7080]',
+                          'create-pool-step3-char-count pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 tabular-nums text-[#5a7080]',
+                          isModal ? '' : 'text-[11px]',
                           !(
                             poolNameFocused ||
                             poolName.length >= POOL_NAME_MAX_LENGTH - 10
@@ -1893,10 +2217,15 @@ export function CreatePoolWizard({
                     ) : null}
                   </div>
 
-                  <div className={cn(isModal && 'mt-7')}>
+                  <div className={cn(isModal && 'create-pool-step3-field', !isModal && 'mt-7')}>
                     <label
                       htmlFor="pool-description"
-                      className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]"
+                      className={cn(
+                        'block font-medium uppercase tracking-wider text-[#E5E7EB]',
+                        isModal
+                          ? 'create-pool-step3-field-label'
+                          : 'mb-2 text-xs',
+                      )}
                     >
                       Description (optional)
                     </label>
@@ -1952,8 +2281,15 @@ export function CreatePoolWizard({
                     ) : null}
                   </div>
 
-                  <div className={cn(isModal && 'mt-9')}>
-                    <p className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#E5E7EB]">
+                  <div className={cn(isModal && 'create-pool-step3-field', !isModal && 'mt-9')}>
+                    <p
+                      className={cn(
+                        'block font-medium uppercase tracking-wider text-[#E5E7EB]',
+                        isModal
+                          ? 'create-pool-step3-field-label'
+                          : 'mb-2 text-xs',
+                      )}
+                    >
                       Visibility
                     </p>
                     <div
@@ -2207,41 +2543,47 @@ export function CreatePoolWizard({
           )}
 
           {panelStep === REVIEW_STEP && (
-            <>
-              <p className="text-sm text-[#5a7080]">
-                One last look before you go live.
-              </p>
+            <div className={cn(isModal && 'create-pool-step5-layout shrink-0')}>
+              {!isModal ? (
+                <p className="text-sm text-[#5a7080]">
+                  One last look before you go live.
+                </p>
+              ) : null}
 
-              {renderCreatePoolReviewSummary(true)}
+              {renderCreatePoolReviewSummary(true, isModal)}
 
-              {selectedScoring ? (
+              {selectedScoring && !isModal ? (
                 <div className="mt-6 space-y-3">
                   <span className="block text-xs font-medium uppercase tracking-wider text-[#5a7080]">
                     Scoring rules
                   </span>
                   <div className="rounded-lg border border-[#1e2d3d] bg-[var(--dashboard-card-bg)]/60 px-4 py-3">
-                        <ul className="space-y-1.5 text-sm text-[#5a7080]">
+                    <ul className="space-y-1.5 text-sm text-[#5a7080]">
                       {selectedScoring.rules.map((rule) => (
-                            <li key={rule}>{rule}</li>
-                          ))}
-                        </ul>
+                        <li key={rule}>{rule}</li>
+                      ))}
+                    </ul>
                     <p className="mt-2 text-xs font-medium text-primary">
                       {selectedScoring.tagline}
-                        </p>
-                      </div>
+                    </p>
+                  </div>
                 </div>
               ) : null}
 
-              <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[var(--dashboard-card-bg)]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
-                Predictions lock when each match kicks off. Advanced scoring and
-                commissioner tools live in pool settings after creation
-                {selectedPlan === 'custom' ? ' (included with Custom Pool)' : ''}.
-              </p>
+              {!isModal ? (
+                <p className="mt-6 rounded-lg border border-[#1e2d3d]/80 bg-[var(--dashboard-card-bg)]/40 px-3 py-2.5 text-xs leading-relaxed text-[#5a7080]">
+                  Predictions lock when each match kicks off. Advanced scoring and
+                  commissioner tools live in pool settings after creation
+                  {selectedPlan === 'custom' ? ' (included with Custom Pool)' : ''}.
+                </p>
+              ) : null}
 
               <form
                 id="create-pool-form"
                 onSubmit={(e) => void handleSubmit(e)}
-                className="mt-6"
+                className={cn(
+                  isModal ? (error ? 'mt-3 shrink-0' : 'sr-only') : 'mt-6',
+                )}
               >
                 {error ? (
                   <div
@@ -2249,9 +2591,9 @@ export function CreatePoolWizard({
                     role="alert"
                   >
                     <p>{error}</p>
-                <button
+                    <button
                       type="button"
-                  disabled={submitting}
+                      disabled={submitting}
                       onClick={() => void createPool()}
                       className={cn(
                         'mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline',
@@ -2260,11 +2602,11 @@ export function CreatePoolWizard({
                       )}
                     >
                       Try again
-                </button>
+                    </button>
                   </div>
                 ) : null}
               </form>
-            </>
+            </div>
           )}
 
           {panelStep === SUCCESS_STEP && createdPool && (
@@ -2566,9 +2908,10 @@ export function CreatePoolWizard({
         <div className={cn(isModal ? 'contents' : 'flex min-h-0 w-full flex-col')}>
           <div
             ref={isModal ? modalShellRef : undefined}
-            className={
-              isModal ? CREATE_POOL_CARD_MODAL_CLASS : CREATE_POOL_CARD_PAGE_CLASS
-            }
+            className={cn(
+              isModal ? CREATE_POOL_CARD_MODAL_CLASS : CREATE_POOL_CARD_PAGE_CLASS,
+              isModal && 'create-pool-wizard--modal-ticket-shell',
+            )}
           >
             <button
               type="button"
@@ -2682,6 +3025,7 @@ export function CreatePoolWizard({
 
           <div
             ref={slideViewportRef}
+            data-create-pool-slide-viewport
             className={cn(
               // overflow-hidden clips the dual-pane translateX slide.
               // Modal: mt-8 — balanced rhythm under instructional title; flex-1 body absorbs it.
@@ -2759,8 +3103,8 @@ export function CreatePoolWizard({
                 <div
                   className={cn(
                     'flex min-h-0 flex-1 flex-col',
-                    // Step 2 modal scrolls inside its own column; other steps scroll here.
-                    !(isModal && leftPanelStep === 2) &&
+                    // Step 2 + step 5 modal scroll inside their own regions; others scroll here.
+                    !(isModal && (leftPanelStep === 2 || leftPanelStep === REVIEW_STEP)) &&
                       isModal &&
                       'overflow-y-auto scrollbar-none',
                   )}
@@ -2789,7 +3133,7 @@ export function CreatePoolWizard({
                   <div
                     className={cn(
                       'flex min-h-0 flex-1 flex-col',
-                      !(isModal && rightPanelStep === 2) &&
+                      !(isModal && (rightPanelStep === 2 || rightPanelStep === REVIEW_STEP)) &&
                         isModal &&
                         'overflow-y-auto scrollbar-none',
                     )}
@@ -2872,7 +3216,9 @@ export function CreatePoolWizard({
                 continueLabel={
                   submitting
                     ? (loadingMessage ?? 'Creating pool…')
-                    : 'Create Pool'
+                    : selectedPlan === 'custom'
+                      ? 'Upgrade & Create · $9.99'
+                      : 'Create My Pool →'
                 }
                 continueDisabled={
                   navLocked ||
@@ -2882,6 +3228,7 @@ export function CreatePoolWizard({
                 }
                 continueType="submit"
                 continueForm="create-pool-form"
+                emphasizeContinue={isModal}
               />
             ) : null}
 

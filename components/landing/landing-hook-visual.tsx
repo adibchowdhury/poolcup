@@ -86,6 +86,7 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
             alt=""
             width={96}
             height={96}
+            style={{ width: 'auto', height: 'auto' }}
             className={cn(
               'landing-hook-ball pointer-events-none absolute z-[2] object-contain opacity-80 drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]',
               ball.className,

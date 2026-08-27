@@ -101,6 +101,7 @@ export function PoolAvatarImage({
           alt=""
           width={px}
           height={px}
+          style={{ width: 'auto', height: 'auto' }}
           className={cn('size-full object-contain', imgClassName)}
           onError={() => setEmblemFailed(true)}
         />

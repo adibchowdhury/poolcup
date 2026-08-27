@@ -150,6 +150,7 @@ function PoolCardLogoMark({ pool }: { pool: DashboardPoolCardData }) {
         alt=""
         width={120}
         height={120}
+        style={{ width: 'auto', height: 'auto' }}
         className={markClassName}
         sizes="(min-width: 1024px) 320px"
         onError={() => setEmblemFailed(true)}
@@ -167,6 +168,7 @@ function PoolCardLogoMark({ pool }: { pool: DashboardPoolCardData }) {
           alt=""
           width={120}
           height={120}
+          style={{ width: 'auto', height: 'auto' }}
           className={markClassName}
           sizes="(min-width: 1024px) 320px"
         />

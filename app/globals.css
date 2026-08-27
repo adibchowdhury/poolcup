@@ -1562,6 +1562,116 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   text-align: left;
 }
 
+/* Step 2 modal — breathing room below Points System inset. */
+.create-pool-wizard--modal .create-pool-scoring-style-card {
+  padding-bottom: 0.75rem; /* 12px below inset — was 0 */
+}
+
+.create-pool-wizard--modal .create-pool-scoring-style-card .create-pool-inset-panel {
+  margin-top: 0.75rem; /* was 1rem (mt-4) */
+  margin-bottom: 0;
+  padding-bottom: 0.25rem; /* was 0.5rem — trim insets only */
+}
+
+.create-pool-wizard--modal .create-pool-scoring-mascot {
+  height: clamp(6rem, 15vh, 10.75rem);
+  width: clamp(6rem, 15vh, 10.75rem);
+  margin-bottom: 0.5rem; /* was 0.625rem (mb-2.5) */
+}
+
+.create-pool-wizard--modal .create-pool-scoring-mascot img {
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-height: 720px) {
+  .create-pool-wizard--modal .create-pool-scoring-mascot {
+    height: clamp(5.25rem, 14vh, 10.75rem);
+    width: clamp(5.25rem, 14vh, 10.75rem);
+  }
+
+  .create-pool-wizard--modal .create-pool-step2-layout {
+    margin-top: -0.375rem; /* −6px — short viewport nudge */
+  }
+}
+
+/* Step 3 modal — lift split content; shorten divider above stub line. */
+.create-pool-wizard--modal .create-pool-step3-layout {
+  margin-top: -1.5rem; /* −24px — title/stepper unchanged */
+}
+
+.create-pool-wizard--modal .create-pool-step3-divider {
+  align-self: flex-start;
+  /* ~14px comfort above dashed line (stub region ≈130px from shell bottom). */
+  height: calc(100% - 4rem);
+}
+
+/* Step 3 modal — de-jumbo form column (labels, fields, visibility). */
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-step3-field-label {
+  margin-bottom: 0.375rem; /* 6px — was 8px (mb-2) */
+  font-size: 0.625rem; /* 10px — was 12px (text-xs) */
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-step3-field + .create-pool-step3-field {
+  margin-top: 1.25rem; /* 20px — was 28px (mt-7) / 36px (mt-9) */
+}
+
+.create-pool-wizard--modal .create-pool-step3-form #pool-name {
+  border-radius: 0.5rem; /* lg — was xl (0.75rem) */
+  padding: 0.625rem 0.75rem; /* 10×12px — was 14×16px (py-3.5 pl-4) */
+  padding-right: 3.25rem;
+  font-size: 0.875rem; /* 14px — was 17px */
+  line-height: 1.375;
+}
+
+.create-pool-wizard--modal .create-pool-step3-form #pool-name + span,
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-step3-char-count {
+  font-size: 0.625rem; /* 10px — was 11px */
+}
+
+.create-pool-wizard--modal .create-pool-step3-form #pool-description {
+  padding: 0.5rem 0.75rem 1.375rem; /* — was 10×14px + pb-7 */
+  font-size: 0.75rem; /* 12px — was 14px (text-sm) */
+  line-height: 1.375;
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-toggle {
+  padding: 3px; /* — was 4px */
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-toggle__thumb {
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-toggle__segment {
+  gap: 0.375rem; /* — was 0.5rem */
+  padding: 0.5rem 0.625rem; /* 8×10px — was 10×12px */
+  font-size: 0.75rem; /* 12px — was 14px */
+  line-height: 1.25;
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-toggle__segment svg {
+  width: 0.75rem; /* 12px — was 14px (h-3.5) */
+  height: 0.75rem;
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-hint {
+  margin-top: 0.625rem; /* 10px — was 12px (mt-3) */
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-hint p {
+  font-size: 0.6875rem; /* 11px — was 12px (text-xs) */
+  line-height: 1.35;
+}
+
+.create-pool-wizard--modal .create-pool-step3-form .create-pool-visibility-hint svg {
+  width: 0.625rem; /* 10px — was 12px (h-3) */
+  height: 0.625rem;
+}
+
 /* Badge straddles card top border — reserve headroom inside scroll containers. */
 .create-pool-plan-grid {
   display: grid;
@@ -1615,7 +1725,18 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   row-gap: 0.75rem;
   padding-inline: 0;
   /* Badge + 80px flame emblem: tips rise ~40px above card top — was 0.875rem (14px). */
-  padding-top: 3.25rem;
+  padding-top: 3.75rem; /* 60px — +8px badge/flame headroom @800 */
+  margin-top: -3.25rem; /* −52px — lowered +20px from −72px; pairs with padding */
+}
+
+@media (max-height: 720px) {
+  .create-pool-wizard--modal .create-pool-plan-grid {
+    margin-top: -4.25rem; /* −68px @680 */
+  }
+
+  .create-pool-wizard--modal .create-pool-scoring-style-card {
+    padding-bottom: 0.625rem; /* 10px — short viewport; 12px default */
+  }
 }
 
 .create-pool-wizard--modal .create-pool-plan-card__body {
@@ -1837,6 +1958,255 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   font-weight: 500;
   line-height: 1;
   color: rgba(242, 201, 76, 0.65);
+}
+
+/* Desktop modal — ticket silhouette shell (all steps + finalizing/congrats).
+ * Cutouts: runtime CSS-gradient mask (useCreatePoolTicketSilhouetteMask).
+ * Stub tear line = top edge of footer CTA region:
+ * p-8 bottom (2rem) + footer pt-4 (1rem) + nav pb-1.5 (0.375rem) + Button lg h-10 (2.5rem)
+ * + reclaimed reassurance band (0.75rem + 0.75rem + 0.5rem)
+ */
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell {
+  --create-pool-modal-stub-footer-region: calc(
+    2rem + 1rem + 0.375rem + 2.5rem + 2.25rem
+  );
+  --stub-y: calc(100% - var(--create-pool-modal-stub-footer-region));
+  --ticket-notch-radius: 12px;
+  --ticket-shell-perforation-color: #454542;
+  --ticket-stub-bg: #0f0f0f;
+  /* Outer border cannot trace masked cutouts — silhouette alone defines the edge. */
+  border-color: transparent;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  /* JS owns mask-image; keep CSS clear so the gradient silhouette is the only path. */
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell::before {
+  content: '';
+  position: absolute;
+  top: var(--stub-y);
+  left: var(--ticket-notch-radius);
+  right: var(--ticket-notch-radius);
+  z-index: 30;
+  transform: translateY(-50%);
+  height: 1px;
+  border: none;
+  background: repeating-linear-gradient(
+    to right,
+    var(--ticket-shell-perforation-color) 0,
+    var(--ticket-shell-perforation-color) 4px,
+    transparent 4px,
+    transparent 9px
+  );
+  pointer-events: none;
+}
+
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell::after {
+  content: '';
+  position: absolute;
+  top: var(--stub-y);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  border-radius: 0 0 1rem 1rem;
+  background: var(--ticket-stub-bg);
+  pointer-events: none;
+}
+
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell > footer {
+  position: relative;
+  z-index: 2;
+}
+
+.create-pool-wizard--modal.create-pool-wizard--modal-ticket-shell > footer::before {
+  content: 'POOLCUP';
+  position: absolute;
+  bottom: -1.625rem;
+  left: 0;
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(240, 244, 248, 0.09);
+  pointer-events: none;
+}
+
+/* Step 5 modal — equal whitespace: title→card = card→tear line. */
+.create-pool-wizard--modal .create-pool-step5-layout {
+  flex: 0 0 auto;
+  margin-top: auto;
+  margin-bottom: auto;
+  /* Measured @1280×800: 94px above / 61px below → shift up 16.5px (−27.5px total). */
+  transform: translateY(-1.71875rem);
+}
+
+/* Step-5 modal review card — static summary; lighter than ticket body #111. */
+.create-pool-wizard--modal .create-pool-review-summary--modal {
+  --create-pool-review-label-size: 0.8125rem; /* 13px */
+  --create-pool-review-label-weight: 400;
+  --create-pool-review-label-color: #b8bcc2; /* neutral grey ~76% of value brightness; was #8b98a9 */
+  --create-pool-review-value-size: 0.8125rem; /* 13px */
+  --create-pool-review-value-weight: 500;
+  --create-pool-review-value-color: #f4f7fa;
+  --create-pool-review-line-height: 1.35;
+  --create-pool-review-section-py: 0.625rem; /* 10px — was 8px */
+  --create-pool-review-section-px: 0.875rem; /* 14px */
+  --create-pool-review-row-gap: 0.3125rem; /* 5px — was 4px */
+  --create-pool-review-col-gap: 0.625rem; /* 10px — label ↔ value */
+  --create-pool-review-scoring-line-gap: 0.1875rem; /* 3px — was 5px */
+  --create-pool-review-points-color: rgba(0, 230, 118, 0.72);
+  --create-pool-review-gold-color: #f2c94c;
+  max-width: 28.75rem; /* 460px */
+  background: #1c1c1c;
+  overflow: visible;
+}
+
+.create-pool-review-summary__section {
+  padding: var(--create-pool-review-section-py)
+    var(--create-pool-review-section-px);
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.create-pool-review-summary__section:last-child {
+  border-bottom: 0;
+}
+
+.create-pool-review-summary__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--create-pool-review-row-gap);
+  margin: 0;
+}
+
+.create-pool-review-summary__row {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--create-pool-review-col-gap);
+}
+
+.create-pool-review-summary__label {
+  margin: 0;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--create-pool-review-label-size);
+  font-weight: var(--create-pool-review-label-weight);
+  line-height: var(--create-pool-review-line-height);
+  color: var(--create-pool-review-label-color);
+}
+
+.create-pool-review-summary__value {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--create-pool-review-value-size);
+  font-weight: var(--create-pool-review-value-weight);
+  line-height: var(--create-pool-review-line-height);
+  color: var(--create-pool-review-value-color);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.create-pool-review-summary__value--placeholder {
+  font-size: var(--create-pool-review-label-size);
+  font-weight: var(--create-pool-review-label-weight);
+  font-style: italic;
+  line-height: var(--create-pool-review-line-height);
+  color: var(--create-pool-review-label-color);
+}
+
+.create-pool-review-summary__value--gold {
+  color: var(--create-pool-review-gold-color);
+}
+
+.create-pool-review-summary__value-inline {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  text-align: right;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.create-pool-review-summary__scoring {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--create-pool-review-scoring-line-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-pool-review-summary__scoring li {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.create-pool-review-summary__scoring-label {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--create-pool-review-label-size);
+  font-weight: var(--create-pool-review-label-weight);
+  line-height: var(--create-pool-review-line-height);
+  color: var(--create-pool-review-label-color);
+}
+
+.create-pool-review-summary__scoring-points {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--create-pool-review-value-size);
+  font-weight: var(--create-pool-review-value-weight);
+  line-height: var(--create-pool-review-line-height);
+  color: var(--create-pool-review-points-color);
+}
+
+.create-pool-review-crest {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-pool-review-crest-img {
+  display: block;
+  object-fit: contain;
+}
+
+.create-pool-review-crest-img--league,
+.create-pool-review-crest-img--fallback {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.create-pool-review-crest-backing {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 999px;
+}
+
+/* Step-5 modal CTA — soft green elevation layered on tactile edge (restrained). */
+.create-pool-wizard--modal button.ui-tactile-btn.create-pool-review-cta {
+  --tactile-btn-shadow-rest:
+    var(--tactile-btn-raise) var(--tactile-btn-raise) 0 0 var(--tactile-btn-edge),
+    0 0 0 1px rgba(0, 230, 118, 0.16),
+    0 6px 18px -4px rgba(0, 230, 118, 0.32);
+  --tactile-btn-shadow-hover:
+    var(--tactile-btn-hover-sink) var(--tactile-btn-hover-sink) 0 0 var(--tactile-btn-edge),
+    0 0 0 1px rgba(0, 230, 118, 0.22),
+    0 8px 22px -4px rgba(0, 230, 118, 0.4);
 }
 
 .create-pool-plan-card__tagline {

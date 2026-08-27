@@ -267,6 +267,7 @@ function SportBallsOrbit({ priority = false }: { priority?: boolean }) {
                     width={96}
                     height={96}
                     sizes="48px"
+                    style={{ width: 'auto', height: 'auto' }}
                     unoptimized
                     priority={priority}
                     className="h-full w-full object-contain drop-shadow-sm"
@@ -1551,6 +1552,7 @@ export function OnboardingFlow({
                             alt=""
                             width={24}
                             height={24}
+                            style={{ width: 'auto', height: 'auto' }}
                             className="h-6 w-6 shrink-0 object-contain"
                           />
                           <span className="min-w-0 flex-1 truncate text-left">

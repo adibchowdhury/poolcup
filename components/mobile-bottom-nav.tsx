@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
@@ -127,6 +127,11 @@ function MobileBottomNavContent({ authReady }: { authReady: boolean }) {
   const inputFocused = useMobileInputFocused()
   const { activeNavId, switchDashboardTab } = useDashboardTab()
   usePrefetchHubRoutes()
+  const [visibilityReady, setVisibilityReady] = useState(false)
+
+  useEffect(() => {
+    setVisibilityReady(true)
+  }, [])
 
   const tabParam = searchParams.get('tab')
   const isOnDashboard = pathname === '/dashboard'
@@ -137,28 +142,32 @@ function MobileBottomNavContent({ authReady }: { authReady: boolean }) {
   // useSearchParams (not window.location) so SSR + hydration see the same ?pool=
   const inPoolMatchContext =
     pathname.startsWith('/match/') && Boolean(searchParams.get('pool'))
-  const visible =
+  const wouldShow =
     authReady &&
     isAuthenticatedAppPath(pathname) &&
     !mobileChatActive &&
     !onPredictPage &&
     !inPoolMatchContext &&
     !inputFocused
+  const visible = visibilityReady && wouldShow
 
-  if (!visible) {
-    return null
-  }
-
+  // Always mount <nav> on authenticated paths — authReady and other flags only
+  // toggle CSS visibility so SSR + hydration produce the same DOM tree.
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 overflow-visible lg:hidden"
+      className={cn(
+        'pointer-events-none fixed inset-x-0 bottom-0 z-50 overflow-visible lg:hidden',
+        !visible && 'invisible translate-y-full opacity-0',
+      )}
       aria-label="Main navigation"
+      aria-hidden={!visible}
     >
       <div
         className={cn(
-          'mobile-bottom-nav-bar pointer-events-auto relative flex h-[calc(4.25rem+env(safe-area-inset-bottom,0px))] w-full items-center justify-between gap-0.5',
+          'mobile-bottom-nav-bar relative flex h-[calc(4.25rem+env(safe-area-inset-bottom,0px))] w-full items-center justify-between gap-0.5',
           'rounded-t-3xl border-t px-2.5',
           'pb-[env(safe-area-inset-bottom,0px)]',
+          visible ? 'pointer-events-auto' : 'pointer-events-none',
         )}
       >
         {NAV_ITEMS.map((item) => {

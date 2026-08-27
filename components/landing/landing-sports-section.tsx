@@ -198,6 +198,7 @@ export function LandingSportsSection() {
                         alt=""
                         width={72}
                         height={72}
+                        style={{ width: 'auto', height: 'auto' }}
                         className="pointer-events-none absolute top-2.5 right-2.5 h-10 w-10 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)] sm:top-3 sm:right-3 sm:h-11 sm:w-11"
                         aria-hidden
                       />

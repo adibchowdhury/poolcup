@@ -374,6 +374,7 @@ export function GlobalMatchDetailView({
                         alt=""
                         width={14}
                         height={14}
+                        style={{ width: 'auto', height: 'auto' }}
                         className="h-3.5 w-3.5 object-contain"
                       />
                     ) : (

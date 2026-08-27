@@ -60,7 +60,7 @@ function CreatePoolModalLayer({
       aria-label="Create a pool"
     >
       {/* Full-viewport dim — covers sidebar + top bar; clicks ignored. */}
-      <div className="absolute inset-0 bg-black/70" aria-hidden />
+      <div className="absolute inset-0 bg-black/90" aria-hidden />
       <div className="relative z-10 w-full max-w-3xl">
         <Suspense
           fallback={

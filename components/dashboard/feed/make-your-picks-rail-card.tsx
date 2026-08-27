@@ -70,6 +70,7 @@ function RailSportIcon({ sport }: { sport: string | null }) {
       alt=""
       width={RAIL_SPORT_ICON_PX}
       height={RAIL_SPORT_ICON_PX}
+      style={{ width: 'auto', height: 'auto' }}
       className="shrink-0 object-contain"
       aria-hidden
     />
