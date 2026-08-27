@@ -1,0 +1,367 @@
+{
+  "viewports": {
+    "1280x800": {
+      "metrics": {
+        "src": "/login_assets/pucky-login-frame-eyeless.png",
+        "frame": {
+          "w": 368,
+          "h": 245.33,
+          "left": 456,
+          "top": 77.09
+        },
+        "card": {
+          "w": 400,
+          "h": 466,
+          "left": 440,
+          "top": 255
+        },
+        "assemblies": [
+          {
+            "w": 22.25,
+            "h": 24.58,
+            "left": 599.97,
+            "top": 172.38
+          },
+          {
+            "w": 23.28,
+            "h": 24.3,
+            "left": 653.63,
+            "top": 172.63
+          }
+        ],
+        "eyesPointerEvents": "none"
+      },
+      "clicks": {
+        "emailFocused": true,
+        "linkHit": false,
+        "forgotHit": true
+      },
+      "idle": {
+        "region": {
+          "x": 574,
+          "y": 156,
+          "w": 132,
+          "h": 74,
+          "frameW": 368,
+          "frameH": 245.32810974121094
+        },
+        "avgDr": 48.07,
+        "maxDr": 764,
+        "over40Rate": 0.2341,
+        "livePath": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-idle-live-face.png",
+        "refFace": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-idle-ref-face.png",
+        "verdict": "visible-mismatch"
+      },
+      "sweep": {
+        "frame": {
+          "left": 456,
+          "top": 77.09034729003906,
+          "width": 368,
+          "height": 245.32810974121094
+        },
+        "samples": [
+          {
+            "label": "tl",
+            "x": 8,
+            "y": 8,
+            "offs": [
+              {
+                "left": 139.397,
+                "top": 93.9428,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 192.987,
+                "top": 94.293,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "tr",
+            "x": 1270,
+            "y": 8,
+            "offs": [
+              {
+                "left": 147.973,
+                "top": 93.9249,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 201.627,
+                "top": 94.0818,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "bl",
+            "x": 8,
+            "y": 790,
+            "offs": [
+              {
+                "left": 140.996,
+                "top": 98.543,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 194.481,
+                "top": 98.6676,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "br",
+            "x": 1270,
+            "y": 790,
+            "offs": [
+              {
+                "left": 147.221,
+                "top": 98.8177,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 200.745,
+                "top": 99.2363,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "card",
+            "x": 640,
+            "y": 442.41845703125,
+            "offs": [
+              {
+                "left": 144.812,
+                "top": 100.358,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 197.452,
+                "top": 100.674,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "center",
+            "x": 640,
+            "y": 175.22159118652343,
+            "offs": [
+              {
+                "left": 148.596,
+                "top": 94.27,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 193.116,
+                "top": 94.3138,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          }
+        ],
+        "afterLeave": [
+          {
+            "left": 144.01,
+            "top": 95.2739
+          },
+          {
+            "left": 197.586,
+            "top": 95.5299
+          }
+        ],
+        "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-eyes-sweep-1280x800.png"
+      },
+      "idleShot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-eyes-idle-1280x800.png"
+    },
+    "1440x900": {
+      "metrics": {
+        "src": "/login_assets/pucky-login-frame-eyeless.png",
+        "frame": {
+          "w": 368,
+          "h": 245.33,
+          "left": 536,
+          "top": 127.09
+        },
+        "card": {
+          "w": 400,
+          "h": 466,
+          "left": 520,
+          "top": 305
+        },
+        "assemblies": [
+          {
+            "w": 22.25,
+            "h": 24.58,
+            "left": 679.97,
+            "top": 222.38
+          },
+          {
+            "w": 23.28,
+            "h": 24.3,
+            "left": 733.63,
+            "top": 222.63
+          }
+        ],
+        "eyesPointerEvents": "none"
+      },
+      "clicks": {
+        "emailFocused": true,
+        "linkHit": false,
+        "forgotHit": true
+      },
+      "idle": null,
+      "sweep": {
+        "frame": {
+          "left": 536,
+          "top": 127.09034729003906,
+          "width": 368,
+          "height": 245.32810974121094
+        },
+        "samples": [
+          {
+            "label": "tl",
+            "x": 8,
+            "y": 8,
+            "offs": [
+              {
+                "left": 139.447,
+                "top": 93.7813,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 193.034,
+                "top": 94.128,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "tr",
+            "x": 1430,
+            "y": 8,
+            "offs": [
+              {
+                "left": 148.127,
+                "top": 93.7457,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 201.778,
+                "top": 93.899,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "bl",
+            "x": 8,
+            "y": 890,
+            "offs": [
+              {
+                "left": 140.917,
+                "top": 98.4495,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 194.42,
+                "top": 98.5881,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "br",
+            "x": 1430,
+            "y": 890,
+            "offs": [
+              {
+                "left": 147.27,
+                "top": 98.747,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 200.815,
+                "top": 99.1519,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "card",
+            "x": 720,
+            "y": 492.41845703125,
+            "offs": [
+              {
+                "left": 144.816,
+                "top": 100.352,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 197.458,
+                "top": 100.666,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          },
+          {
+            "label": "center",
+            "x": 720,
+            "y": 225.22159118652343,
+            "offs": [
+              {
+                "left": 148.597,
+                "top": 94.2694,
+                "w": 22.264,
+                "h": 24.5819
+              },
+              {
+                "left": 193.117,
+                "top": 94.313,
+                "w": 23.2944,
+                "h": 24.312
+              }
+            ]
+          }
+        ],
+        "afterLeave": [
+          {
+            "left": 144.01,
+            "top": 95.2736
+          },
+          {
+            "left": 197.586,
+            "top": 95.5295
+          }
+        ],
+        "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-eyes-sweep-1440x900.png"
+      },
+      "idleShot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pucky-eyes-idle-1440x900.png"
+    }
+  }
+}

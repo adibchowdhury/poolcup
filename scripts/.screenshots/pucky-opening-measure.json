@@ -1,0 +1,24 @@
+{
+  "canvas": {
+    "w": 1224,
+    "h": 1285
+  },
+  "gripEdges": {
+    "L": 280,
+    "R": 942
+  },
+  "continuousOpening": {
+    "top": 790,
+    "bottom": 1069,
+    "height": 280
+  },
+  "fractions": {
+    "left": 0.2288,
+    "right": 0.7696,
+    "top": 0.6148,
+    "bottom": 0.8319,
+    "width": 0.5417,
+    "height": 0.2179
+  },
+  "aspect": 2.3679
+}

@@ -2372,6 +2372,83 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   }
 }
 
+/*
+ * Login page shell — LOCKED gradient + approved footprint wallpaper
+ * (public/login_assets/poolcup_penguin_footprint.svg). Shape from asset only;
+ * data-URI fill forced to #fff @ 0.085 (asset uses currentColor).
+ * Spacing: pitch 106×81 (+~40% vs 76×58); stamp scale unchanged.
+ */
+.login-page-shell {
+  background-color: #0b1014;
+  background-image:
+    url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDYiIGhlaWdodD0iMTYyIiB2aWV3Qm94PSIwIDAgMTA2IDE2MiI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTMgNDAuNSkgc2NhbGUoMC4xNTcxNDMpIHRyYW5zbGF0ZSgtNTAgLTcwKSIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjA4NSI+PHBhdGggZD0iTTUwIDcgQzU2IDcsIDYwIDE0LCA2MyAyMiBDNjYgMzEsIDY5IDM5LCA3NCA0NSBDNzggNDksIDgyIDQ5LCA4NiA0NSBDOTEgNDAsIDk1IDM2LCA5OCAzOCBDMTAxIDQwLCAxMDAgNDcsIDk5IDU1IEM5NyA3MywgOTIgOTEsIDg0IDEwNiBDNzUgMTI0LCA2MyAxMzMsIDUwIDEzNSBDMzcgMTMzLCAyNSAxMjQsIDE2IDEwNiBDOCA5MSwgMyA3MywgMSA1NSBDMCA0NywgLTEgNDAsIDIgMzggQzUgMzYsIDkgNDAsIDE0IDQ1IEMxOCA0OSwgMjIgNDksIDI2IDQ1IEMzMSAzOSwgMzQgMzEsIDM3IDIyIEM0MCAxNCwgNDQgNywgNTAgNyBaIi8+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTIxLjUpIHNjYWxlKDAuMTU3MTQzKSB0cmFuc2xhdGUoLTUwIC03MCkiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wODUiPjxwYXRoIGQ9Ik01MCA3IEM1NiA3LCA2MCAxNCwgNjMgMjIgQzY2IDMxLCA2OSAzOSwgNzQgNDUgQzc4IDQ5LCA4MiA0OSwgODYgNDUgQzkxIDQwLCA5NSAzNiwgOTggMzggQzEwMSA0MCwgMTAwIDQ3LCA5OSA1NSBDOTcgNzMsIDkyIDkxLCA4NCAxMDYgQzc1IDEyNCwgNjMgMTMzLCA1MCAxMzUgQzM3IDEzMywgMjUgMTI0LCAxNiAxMDYgQzggOTEsIDMgNzMsIDEgNTUgQzAgNDcsIC0xIDQwLCAyIDM4IEM1IDM2LCA5IDQwLCAxNCA0NSBDMTggNDksIDIyIDQ5LCAyNiA0NSBDMzEgMzksIDM0IDMxLCAzNyAyMiBDNDAgMTQsIDQ0IDcsIDUwIDcgWiIvPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDYgMTIxLjUpIHNjYWxlKDAuMTU3MTQzKSB0cmFuc2xhdGUoLTUwIC03MCkiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wODUiPjxwYXRoIGQ9Ik01MCA3IEM1NiA3LCA2MCAxNCwgNjMgMjIgQzY2IDMxLCA2OSAzOSwgNzQgNDUgQzc4IDQ5LCA4MiA0OSwgODYgNDUgQzkxIDQwLCA5NSAzNiwgOTggMzggQzEwMSA0MCwgMTAwIDQ3LCA5OSA1NSBDOTcgNzMsIDkyIDkxLCA4NCAxMDYgQzc1IDEyNCwgNjMgMTMzLCA1MCAxMzUgQzM3IDEzMywgMjUgMTI0LCAxNiAxMDYgQzggOTEsIDMgNzMsIDEgNTUgQzAgNDcsIC0xIDQwLCAyIDM4IEM1IDM2LCA5IDQwLCAxNCA0NSBDMTggNDksIDIyIDQ5LCAyNiA0NSBDMzEgMzksIDM0IDMxLCAzNyAyMiBDNDAgMTQsIDQ0IDcsIDUwIDcgWiIvPjwvZz48L3N2Zz4="),
+    radial-gradient(circle at 50% 45%, rgba(0, 230, 118, 0.10) 0%, rgba(0, 230, 118, 0.025) 28%, transparent 52%),
+    linear-gradient(125deg, #0a1f16 0%, #0a1411 32%, #0b1014 67%, #0d1522 100%);
+  background-repeat: repeat, no-repeat, no-repeat;
+  background-position: 0 0, center, center;
+  background-size: 106px 162px, auto, auto;
+}
+
+@media (max-width: 480px) {
+  .login-page-shell {
+    background-size: 91px 139px, auto, auto;
+  }
+}
+
+/*
+ * Pucky login composition (desktop): TOP-OF-CARD OVERLAY.
+ * Asset public/login_assets/pucky-login-frame.png (1536×1024) — peeking
+ * bust (head + cape + hands). Hands sit on the card top edge, layer in
+ * front of the card. Form stays fully interactive (pointer-events: none).
+ *
+ * --pucky-hand-y: fraction from asset top to hand contact line (measured).
+ * --pucky-hand-overlap: how far hands sit onto the card top (px).
+ * --pucky-scale: width vs card (unchanged this pass).
+ */
+.login-pucky-stage {
+  /* Was 1.3 (520px); ~29% down → narrower than the 400px card */
+  --pucky-scale: 0.92;
+  /* Hand underside / ledge contact ≈ y=776 / 1024 */
+  --pucky-hand-y: 0.7578;
+  --pucky-hand-overlap: 8px;
+}
+
+.login-pucky-frame {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .login-page-shell {
+    /* Room for overlay head above the card (~255px at scale 1.3) */
+    padding-top: 14rem;
+    padding-bottom: 3rem;
+  }
+
+  .login-pucky-frame {
+    display: block;
+    position: absolute;
+    z-index: 20; /* in front of .login-pucky-card (z-10) */
+    pointer-events: none;
+    user-select: none;
+    width: calc(var(--pucky-scale) * 100%);
+    height: auto;
+    max-width: none;
+    left: 50%;
+    top: 0; /* stage top = card top */
+    /* Align hand line to card top, then nudge down by overlap onto the border */
+    transform: translate(
+      -50%,
+      calc(-1 * var(--pucky-hand-y) * 100% + var(--pucky-hand-overlap))
+    );
+  }
+
+  .login-pucky-card {
+    position: relative;
+    z-index: 10;
+    overflow: hidden;
+  }
+}
+
 /* Commissioner printable export — clean paper output */
 @media print {
   body {

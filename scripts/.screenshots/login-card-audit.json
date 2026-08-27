@@ -1,0 +1,766 @@
+{
+  "d1280x800": {
+    "viewport": {
+      "w": 1280,
+      "h": 800
+    },
+    "ok": true,
+    "card": {
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 124,
+        "left": 416
+      },
+      "aspect": 0.8116,
+      "computed": {
+        "width": "448px",
+        "height": "552px",
+        "maxWidth": "none",
+        "minWidth": "0px",
+        "maxHeight": "none",
+        "minHeight": "0px",
+        "paddingTop": "32px",
+        "paddingRight": "32px",
+        "paddingBottom": "32px",
+        "paddingLeft": "32px",
+        "borderRadius": "16px",
+        "boxSizing": "border-box",
+        "position": "relative",
+        "overflow": "hidden",
+        "zIndex": "10"
+      },
+      "className": "login-pucky-card relative z-10 w-full overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl",
+      "heightMode": "CONTENT-DRIVEN",
+      "scrollHeight": 550,
+      "clientHeight": 550,
+      "contentHeightInsidePadding": 486
+    },
+    "stage": {
+      "className": "login-pucky-stage relative w-full max-w-md",
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 124
+      },
+      "computed": {
+        "width": "448px",
+        "maxWidth": "448px",
+        "height": "552px",
+        "position": "relative"
+      },
+      "vars": {
+        "scale": "1.3",
+        "offsetY": ".06"
+      }
+    },
+    "main": {
+      "className": "login-page-shell relative flex min-h-dvh items-center justify-center px-4",
+      "computed": {
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "paddingTop": "48px",
+        "paddingBottom": "48px",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "minHeight": "800px",
+        "position": "relative"
+      }
+    },
+    "pucky": {
+      "present": true,
+      "display": "block",
+      "pointerEvents": "none",
+      "rendered": {
+        "w": 582.4,
+        "h": 611.4,
+        "top": 27.9,
+        "bottom": 639.3
+      },
+      "computed": {
+        "width": "582.391px",
+        "height": "611.406px",
+        "maxWidth": "none",
+        "position": "absolute",
+        "left": "224px",
+        "bottom": "0px",
+        "transform": "matrix(1, 0, 0, 1, -291.195, -36.6844)",
+        "zIndex": "0"
+      },
+      "scaleVsCard": 1.3
+    },
+    "named": {
+      "logoWrap": {
+        "top": 157,
+        "bottom": 205,
+        "height": 48,
+        "width": 382
+      },
+      "subtitle": {
+        "top": 213,
+        "bottom": 233,
+        "height": 20,
+        "width": 382
+      },
+      "google": {
+        "top": 265,
+        "bottom": 311,
+        "height": 46,
+        "width": 382
+      },
+      "googleContainer": {
+        "top": 265,
+        "bottom": 311,
+        "height": 46,
+        "width": 382
+      },
+      "or": null,
+      "orWrap": null,
+      "emailLabel": {
+        "top": 375,
+        "bottom": 395,
+        "height": 20,
+        "width": 382
+      },
+      "emailInput": {
+        "top": 403,
+        "bottom": 453,
+        "height": 50,
+        "width": 382
+      },
+      "passwordLabel": {
+        "top": 469,
+        "bottom": 489,
+        "height": 20,
+        "width": 65.6
+      },
+      "forgot": {
+        "top": 469,
+        "bottom": 489,
+        "height": 20,
+        "width": 118.4
+      },
+      "passwordInput": {
+        "top": 497,
+        "bottom": 547,
+        "height": 50,
+        "width": 382
+      },
+      "submit": {
+        "top": 563,
+        "bottom": 607,
+        "height": 44,
+        "width": 382
+      },
+      "createRow": {
+        "top": 623,
+        "bottom": 643,
+        "height": 20,
+        "width": 382
+      },
+      "createLink": {
+        "top": 624,
+        "bottom": 641,
+        "height": 17,
+        "width": 102.5
+      }
+    },
+    "gaps": {
+      "logo_to_subtitle": 8,
+      "subtitle_to_google": 32,
+      "google_to_OR": null,
+      "OR_to_emailLabel": null,
+      "emailLabel_to_emailInput": 8,
+      "emailInput_to_passwordLabel": 16,
+      "passwordLabel_to_passwordInput": 8,
+      "passwordInput_to_submit": 16,
+      "submit_to_createAccount": 16
+    },
+    "formSpacing": {
+      "display": "block",
+      "gap": "normal",
+      "rowGap": "normal",
+      "marginTop": "0px"
+    },
+    "utilityMargins": {
+      "subtitle_mt": "8px",
+      "googleContainer_mt": "32px",
+      "createRow_mt": "0px",
+      "emailLabel_mb": "8px"
+    }
+  },
+  "d1440x900": {
+    "viewport": {
+      "w": 1440,
+      "h": 900
+    },
+    "ok": true,
+    "card": {
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 174,
+        "left": 496
+      },
+      "aspect": 0.8116,
+      "computed": {
+        "width": "448px",
+        "height": "552px",
+        "maxWidth": "none",
+        "minWidth": "0px",
+        "maxHeight": "none",
+        "minHeight": "0px",
+        "paddingTop": "32px",
+        "paddingRight": "32px",
+        "paddingBottom": "32px",
+        "paddingLeft": "32px",
+        "borderRadius": "16px",
+        "boxSizing": "border-box",
+        "position": "relative",
+        "overflow": "hidden",
+        "zIndex": "10"
+      },
+      "className": "login-pucky-card relative z-10 w-full overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl",
+      "heightMode": "CONTENT-DRIVEN",
+      "scrollHeight": 550,
+      "clientHeight": 550,
+      "contentHeightInsidePadding": 486
+    },
+    "stage": {
+      "className": "login-pucky-stage relative w-full max-w-md",
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 174
+      },
+      "computed": {
+        "width": "448px",
+        "maxWidth": "448px",
+        "height": "552px",
+        "position": "relative"
+      },
+      "vars": {
+        "scale": "1.3",
+        "offsetY": ".06"
+      }
+    },
+    "main": {
+      "className": "login-page-shell relative flex min-h-dvh items-center justify-center px-4",
+      "computed": {
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "paddingTop": "48px",
+        "paddingBottom": "48px",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "minHeight": "900px",
+        "position": "relative"
+      }
+    },
+    "pucky": {
+      "present": true,
+      "display": "block",
+      "pointerEvents": "none",
+      "rendered": {
+        "w": 582.4,
+        "h": 611.4,
+        "top": 77.9,
+        "bottom": 689.3
+      },
+      "computed": {
+        "width": "582.391px",
+        "height": "611.406px",
+        "maxWidth": "none",
+        "position": "absolute",
+        "left": "224px",
+        "bottom": "0px",
+        "transform": "matrix(1, 0, 0, 1, -291.195, -36.6844)",
+        "zIndex": "0"
+      },
+      "scaleVsCard": 1.3
+    },
+    "named": {
+      "logoWrap": {
+        "top": 207,
+        "bottom": 255,
+        "height": 48,
+        "width": 382
+      },
+      "subtitle": {
+        "top": 263,
+        "bottom": 283,
+        "height": 20,
+        "width": 382
+      },
+      "google": {
+        "top": 315,
+        "bottom": 361,
+        "height": 46,
+        "width": 382
+      },
+      "googleContainer": {
+        "top": 315,
+        "bottom": 361,
+        "height": 46,
+        "width": 382
+      },
+      "or": null,
+      "orWrap": null,
+      "emailLabel": {
+        "top": 425,
+        "bottom": 445,
+        "height": 20,
+        "width": 382
+      },
+      "emailInput": {
+        "top": 453,
+        "bottom": 503,
+        "height": 50,
+        "width": 382
+      },
+      "passwordLabel": {
+        "top": 519,
+        "bottom": 539,
+        "height": 20,
+        "width": 65.6
+      },
+      "forgot": {
+        "top": 519,
+        "bottom": 539,
+        "height": 20,
+        "width": 118.4
+      },
+      "passwordInput": {
+        "top": 547,
+        "bottom": 597,
+        "height": 50,
+        "width": 382
+      },
+      "submit": {
+        "top": 613,
+        "bottom": 657,
+        "height": 44,
+        "width": 382
+      },
+      "createRow": {
+        "top": 673,
+        "bottom": 693,
+        "height": 20,
+        "width": 382
+      },
+      "createLink": {
+        "top": 674,
+        "bottom": 691,
+        "height": 17,
+        "width": 102.5
+      }
+    },
+    "gaps": {
+      "logo_to_subtitle": 8,
+      "subtitle_to_google": 32,
+      "google_to_OR": null,
+      "OR_to_emailLabel": null,
+      "emailLabel_to_emailInput": 8,
+      "emailInput_to_passwordLabel": 16,
+      "passwordLabel_to_passwordInput": 8,
+      "passwordInput_to_submit": 16,
+      "submit_to_createAccount": 16
+    },
+    "formSpacing": {
+      "display": "block",
+      "gap": "normal",
+      "rowGap": "normal",
+      "marginTop": "0px"
+    },
+    "utilityMargins": {
+      "subtitle_mt": "8px",
+      "googleContainer_mt": "32px",
+      "createRow_mt": "0px",
+      "emailLabel_mb": "8px"
+    }
+  },
+  "t768": {
+    "viewport": {
+      "w": 768,
+      "h": 1024
+    },
+    "ok": true,
+    "card": {
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 236,
+        "left": 160
+      },
+      "aspect": 0.8116,
+      "computed": {
+        "width": "448px",
+        "height": "552px",
+        "maxWidth": "none",
+        "minWidth": "0px",
+        "maxHeight": "none",
+        "minHeight": "0px",
+        "paddingTop": "32px",
+        "paddingRight": "32px",
+        "paddingBottom": "32px",
+        "paddingLeft": "32px",
+        "borderRadius": "16px",
+        "boxSizing": "border-box",
+        "position": "relative",
+        "overflow": "hidden",
+        "zIndex": "10"
+      },
+      "className": "login-pucky-card relative z-10 w-full overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl",
+      "heightMode": "CONTENT-DRIVEN",
+      "scrollHeight": 550,
+      "clientHeight": 550,
+      "contentHeightInsidePadding": 486
+    },
+    "stage": {
+      "className": "login-pucky-stage relative w-full max-w-md",
+      "rendered": {
+        "w": 448,
+        "h": 552,
+        "top": 236
+      },
+      "computed": {
+        "width": "448px",
+        "maxWidth": "448px",
+        "height": "552px",
+        "position": "relative"
+      },
+      "vars": {
+        "scale": "1.3",
+        "offsetY": ".06"
+      }
+    },
+    "main": {
+      "className": "login-page-shell relative flex min-h-dvh items-center justify-center px-4",
+      "computed": {
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "minHeight": "1024px",
+        "position": "relative"
+      }
+    },
+    "pucky": {
+      "present": true,
+      "display": "none",
+      "pointerEvents": "auto",
+      "rendered": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0
+      },
+      "computed": {
+        "width": "1224px",
+        "height": "auto",
+        "maxWidth": "100%",
+        "position": "static",
+        "left": "auto",
+        "bottom": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "scaleVsCard": 0
+    },
+    "named": {
+      "logoWrap": {
+        "top": 269,
+        "bottom": 317,
+        "height": 48,
+        "width": 382
+      },
+      "subtitle": {
+        "top": 325,
+        "bottom": 345,
+        "height": 20,
+        "width": 382
+      },
+      "google": {
+        "top": 377,
+        "bottom": 423,
+        "height": 46,
+        "width": 382
+      },
+      "googleContainer": {
+        "top": 377,
+        "bottom": 423,
+        "height": 46,
+        "width": 382
+      },
+      "or": null,
+      "orWrap": null,
+      "emailLabel": {
+        "top": 487,
+        "bottom": 507,
+        "height": 20,
+        "width": 382
+      },
+      "emailInput": {
+        "top": 515,
+        "bottom": 565,
+        "height": 50,
+        "width": 382
+      },
+      "passwordLabel": {
+        "top": 581,
+        "bottom": 601,
+        "height": 20,
+        "width": 65.6
+      },
+      "forgot": {
+        "top": 581,
+        "bottom": 601,
+        "height": 20,
+        "width": 118.4
+      },
+      "passwordInput": {
+        "top": 609,
+        "bottom": 659,
+        "height": 50,
+        "width": 382
+      },
+      "submit": {
+        "top": 675,
+        "bottom": 719,
+        "height": 44,
+        "width": 382
+      },
+      "createRow": {
+        "top": 735,
+        "bottom": 755,
+        "height": 20,
+        "width": 382
+      },
+      "createLink": {
+        "top": 736,
+        "bottom": 753,
+        "height": 17,
+        "width": 102.5
+      }
+    },
+    "gaps": {
+      "logo_to_subtitle": 8,
+      "subtitle_to_google": 32,
+      "google_to_OR": null,
+      "OR_to_emailLabel": null,
+      "emailLabel_to_emailInput": 8,
+      "emailInput_to_passwordLabel": 16,
+      "passwordLabel_to_passwordInput": 8,
+      "passwordInput_to_submit": 16,
+      "submit_to_createAccount": 16
+    },
+    "formSpacing": {
+      "display": "block",
+      "gap": "normal",
+      "rowGap": "normal",
+      "marginTop": "0px"
+    },
+    "utilityMargins": {
+      "subtitle_mt": "8px",
+      "googleContainer_mt": "32px",
+      "createRow_mt": "0px",
+      "emailLabel_mb": "8px"
+    }
+  },
+  "m390": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "ok": true,
+    "card": {
+      "rendered": {
+        "w": 358,
+        "h": 544,
+        "top": 150,
+        "left": 16
+      },
+      "aspect": 0.6581,
+      "computed": {
+        "width": "358px",
+        "height": "544px",
+        "maxWidth": "none",
+        "minWidth": "0px",
+        "maxHeight": "none",
+        "minHeight": "0px",
+        "paddingTop": "32px",
+        "paddingRight": "32px",
+        "paddingBottom": "32px",
+        "paddingLeft": "32px",
+        "borderRadius": "16px",
+        "boxSizing": "border-box",
+        "position": "relative",
+        "overflow": "hidden",
+        "zIndex": "10"
+      },
+      "className": "login-pucky-card relative z-10 w-full overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#111a27] p-8 shadow-xl",
+      "heightMode": "CONTENT-DRIVEN",
+      "scrollHeight": 542,
+      "clientHeight": 542,
+      "contentHeightInsidePadding": 478
+    },
+    "stage": {
+      "className": "login-pucky-stage relative w-full max-w-md",
+      "rendered": {
+        "w": 358,
+        "h": 544,
+        "top": 150
+      },
+      "computed": {
+        "width": "358px",
+        "maxWidth": "448px",
+        "height": "544px",
+        "position": "relative"
+      },
+      "vars": {
+        "scale": "1.3",
+        "offsetY": ".06"
+      }
+    },
+    "main": {
+      "className": "login-page-shell relative flex min-h-dvh items-center justify-center px-4",
+      "computed": {
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "minHeight": "844px",
+        "position": "relative"
+      }
+    },
+    "pucky": {
+      "present": true,
+      "display": "none",
+      "pointerEvents": "auto",
+      "rendered": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0
+      },
+      "computed": {
+        "width": "1224px",
+        "height": "auto",
+        "maxWidth": "100%",
+        "position": "static",
+        "left": "auto",
+        "bottom": "auto",
+        "transform": "none",
+        "zIndex": "auto"
+      },
+      "scaleVsCard": 0
+    },
+    "named": {
+      "logoWrap": {
+        "top": 183,
+        "bottom": 223,
+        "height": 40,
+        "width": 292
+      },
+      "subtitle": {
+        "top": 231,
+        "bottom": 251,
+        "height": 20,
+        "width": 292
+      },
+      "google": {
+        "top": 283,
+        "bottom": 329,
+        "height": 46,
+        "width": 292
+      },
+      "googleContainer": {
+        "top": 283,
+        "bottom": 329,
+        "height": 46,
+        "width": 292
+      },
+      "or": null,
+      "orWrap": null,
+      "emailLabel": {
+        "top": 393,
+        "bottom": 413,
+        "height": 20,
+        "width": 292
+      },
+      "emailInput": {
+        "top": 421,
+        "bottom": 471,
+        "height": 50,
+        "width": 292
+      },
+      "passwordLabel": {
+        "top": 487,
+        "bottom": 507,
+        "height": 20,
+        "width": 65.6
+      },
+      "forgot": {
+        "top": 487,
+        "bottom": 507,
+        "height": 20,
+        "width": 118.4
+      },
+      "passwordInput": {
+        "top": 515,
+        "bottom": 565,
+        "height": 50,
+        "width": 292
+      },
+      "submit": {
+        "top": 581,
+        "bottom": 625,
+        "height": 44,
+        "width": 292
+      },
+      "createRow": {
+        "top": 641,
+        "bottom": 661,
+        "height": 20,
+        "width": 292
+      },
+      "createLink": {
+        "top": 642,
+        "bottom": 659,
+        "height": 17,
+        "width": 102.5
+      }
+    },
+    "gaps": {
+      "logo_to_subtitle": 8,
+      "subtitle_to_google": 32,
+      "google_to_OR": null,
+      "OR_to_emailLabel": null,
+      "emailLabel_to_emailInput": 8,
+      "emailInput_to_passwordLabel": 16,
+      "passwordLabel_to_passwordInput": 8,
+      "passwordInput_to_submit": 16,
+      "submit_to_createAccount": 16
+    },
+    "formSpacing": {
+      "display": "block",
+      "gap": "normal",
+      "rowGap": "normal",
+      "marginTop": "0px"
+    },
+    "utilityMargins": {
+      "subtitle_mt": "8px",
+      "googleContainer_mt": "32px",
+      "createRow_mt": "0px",
+      "emailLabel_mb": "8px"
+    }
+  }
+}

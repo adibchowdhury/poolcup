@@ -1,0 +1,243 @@
+{
+  "irisSize": {
+    "old": {
+      "L": {
+        "w": 22.26,
+        "h": 24.58
+      },
+      "R": {
+        "w": 23.29,
+        "h": 24.31
+      }
+    },
+    "new": {
+      "L": {
+        "w": 19.47,
+        "h": 21.52
+      },
+      "R": {
+        "w": 20.39,
+        "h": 21.27
+      }
+    },
+    "shrink": "−12.5%"
+  },
+  "maxTravel": {
+    "oldMaxRPx": 5.26,
+    "newMaxRPx": 3.68,
+    "reduction": "−30%"
+  },
+  "gazeRef": {
+    "cx": 0.4951,
+    "cy": 0.43875,
+    "note": "midpoint of L/R iris neutral centers"
+  },
+  "innerEdgePadPx": 2.87,
+  "innerEdgePadFactor": 0.06,
+  "midlineOk": true,
+  "containOk": true,
+  "samples": [
+    {
+      "label": "midline Δx=-80",
+      "dL": {
+        "dx": -3.22,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": -3.221,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0.001
+    },
+    {
+      "label": "midline Δx=-40",
+      "dL": {
+        "dx": -3.578,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": -3.579,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0.001
+    },
+    {
+      "label": "midline Δx=-20",
+      "dL": {
+        "dx": -3.629,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": -3.629,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=-10",
+      "dL": {
+        "dx": -3.635,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": -3.635,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=0",
+      "dL": {
+        "dx": -0.367,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": -0.367,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=10",
+      "dL": {
+        "dx": 3.27,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": 3.27,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=20",
+      "dL": {
+        "dx": 3.68,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": 3.68,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=40",
+      "dL": {
+        "dx": 3.726,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": 3.726,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    },
+    {
+      "label": "midline Δx=80",
+      "dL": {
+        "dx": 3.731,
+        "dy": 0.014
+      },
+      "dR": {
+        "dx": 3.731,
+        "dy": 0.014
+      },
+      "sameSignX": true,
+      "sameSignY": true,
+      "absDxDiff": 0
+    }
+  ],
+  "extremes": [
+    {
+      "label": "tl",
+      "x": 8,
+      "y": 8,
+      "dL": {
+        "dx": -3.049,
+        "dy": -0.919
+      },
+      "dR": {
+        "dx": -3.05,
+        "dy": -0.919
+      },
+      "magL": 3.184,
+      "magR": 3.185,
+      "withinMaxR": true
+    },
+    {
+      "label": "tr",
+      "x": 1270,
+      "y": 8,
+      "dL": {
+        "dx": 3.178,
+        "dy": -0.975
+      },
+      "dR": {
+        "dx": 3.178,
+        "dy": -0.975
+      },
+      "magL": 3.324,
+      "magR": 3.324,
+      "withinMaxR": true
+    },
+    {
+      "label": "bl",
+      "x": 8,
+      "y": 790,
+      "dL": {
+        "dx": -2.244,
+        "dy": 2.346
+      },
+      "dR": {
+        "dx": -2.245,
+        "dy": 2.346
+      },
+      "magL": 3.246,
+      "magR": 3.247,
+      "withinMaxR": true
+    },
+    {
+      "label": "br",
+      "x": 1270,
+      "y": 790,
+      "dL": {
+        "dx": 2.401,
+        "dy": 2.549
+      },
+      "dR": {
+        "dx": 2.4,
+        "dy": 2.549
+      },
+      "magL": 3.502,
+      "magR": 3.501,
+      "withinMaxR": true
+    }
+  ],
+  "assemblies": [
+    {
+      "w": 19.45,
+      "h": 21.5
+    },
+    {
+      "w": 20.38,
+      "h": 21.27
+    }
+  ]
+}

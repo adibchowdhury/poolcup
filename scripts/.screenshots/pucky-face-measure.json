@@ -1,0 +1,29 @@
+{
+  "pupils": {
+    "n": 13692,
+    "yMin": 276,
+    "yMax": 449,
+    "fracMin": 0.2148,
+    "fracMax": 0.3494
+  },
+  "eyeBottom": {
+    "px": 548,
+    "frac": 0.4265,
+    "L": 548,
+    "R": 548
+  },
+  "beakTop": {
+    "px": 508,
+    "frac": 0.3953
+  },
+  "beakBottom": {
+    "px": 547,
+    "frac": 0.4257
+  },
+  "cutBand": {
+    "eyeBottomFrac": 0.4265,
+    "beakTopFrac": 0.3953,
+    "midFrac": 0.4109,
+    "valid": false
+  }
+}

@@ -1,0 +1,144 @@
+[
+  {
+    "viewport": "1280x800",
+    "metrics": {
+      "ok": true,
+      "frameDisplay": "block",
+      "framePE": "none",
+      "stage": {
+        "w": 528,
+        "h": 554.3,
+        "top": 122.8,
+        "bottom": 677.2
+      },
+      "frame": {
+        "w": 528,
+        "h": 554.3
+      },
+      "card": {
+        "w": 286,
+        "h": 198,
+        "left": 496.8,
+        "top": 386.4,
+        "aspect": 1.445
+      },
+      "expectedOpening": {
+        "w": 286,
+        "h": 198,
+        "left": 496.8,
+        "top": 386.4
+      },
+      "seatError": {
+        "dx": -0.01,
+        "dy": -0.01,
+        "dw": 0,
+        "dh": 0
+      },
+      "grip": {
+        "leftDelta": -0.01,
+        "rightDelta": -0.01,
+        "topDelta": -0.01,
+        "bottomDelta": -0.01
+      },
+      "cramping": {
+        "cardClientH": 196,
+        "cardScrollH": 538,
+        "contentBottom": 925.4,
+        "cardBottom": 584.4,
+        "scrollOverflow": true,
+        "contentOverflowsCard": true,
+        "overflowPx": 341
+      },
+      "breathing": {
+        "top": 122.8,
+        "bottom": 122.8,
+        "left": 376,
+        "right": 376
+      },
+      "openVars": {
+        "left": 0.2288,
+        "top": 0.4755,
+        "width": 0.5417,
+        "height": 0.3572
+      }
+    },
+    "clicks": {
+      "email": "ok",
+      "password": "ok",
+      "submit": "miss",
+      "google": "ok"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-pucky-opening-fit-1280x800.png"
+  },
+  {
+    "viewport": "1440x900",
+    "metrics": {
+      "ok": true,
+      "frameDisplay": "block",
+      "framePE": "none",
+      "stage": {
+        "w": 528,
+        "h": 554.3,
+        "top": 172.8,
+        "bottom": 727.2
+      },
+      "frame": {
+        "w": 528,
+        "h": 554.3
+      },
+      "card": {
+        "w": 286,
+        "h": 198,
+        "left": 576.8,
+        "top": 436.4,
+        "aspect": 1.445
+      },
+      "expectedOpening": {
+        "w": 286,
+        "h": 198,
+        "left": 576.8,
+        "top": 436.4
+      },
+      "seatError": {
+        "dx": -0.01,
+        "dy": -0.01,
+        "dw": 0,
+        "dh": 0
+      },
+      "grip": {
+        "leftDelta": -0.01,
+        "rightDelta": -0.01,
+        "topDelta": -0.01,
+        "bottomDelta": -0.01
+      },
+      "cramping": {
+        "cardClientH": 196,
+        "cardScrollH": 538,
+        "contentBottom": 975.4,
+        "cardBottom": 634.4,
+        "scrollOverflow": true,
+        "contentOverflowsCard": true,
+        "overflowPx": 341
+      },
+      "breathing": {
+        "top": 172.8,
+        "bottom": 172.8,
+        "left": 456,
+        "right": 456
+      },
+      "openVars": {
+        "left": 0.2288,
+        "top": 0.4755,
+        "width": 0.5417,
+        "height": 0.3572
+      }
+    },
+    "clicks": {
+      "email": "ok",
+      "password": "ok",
+      "submit": "ok",
+      "google": "ok"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-pucky-opening-fit-1440x900.png"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "asset": {
+    "file": "public/login_assets/pucky-login-frame.png",
+    "w": 1224,
+    "h": 1285,
+    "bytes": 616043
+  },
+  "windowPx": {
+    "left": 280,
+    "top": 579,
+    "right": 942,
+    "bottom": 1107,
+    "width": 663,
+    "height": 529
+  },
+  "fractions": {
+    "left": 0.2288,
+    "top": 0.4506,
+    "width": 0.5417,
+    "height": 0.4117,
+    "centerX": 0.4992,
+    "centerY": 0.656,
+    "offsetX": -0.0008,
+    "offsetY": 0.156
+  },
+  "scaleWindowWidthEqCard": 1.846,
+  "imageAspect": 1.0498
+}
