@@ -34,8 +34,7 @@ export function PoolCupLogo({
         alt="PoolCup"
         width={140}
         height={48}
-        style={{ width: 'auto', height: 'auto' }}
-        className={cn('h-10 w-auto object-contain sm:h-12', className)}
+        className={cn('h-10 w-[116.67px] object-contain sm:h-12 sm:w-[140px]', className)}
         priority
       />
     </Link>

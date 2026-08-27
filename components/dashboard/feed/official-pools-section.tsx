@@ -334,8 +334,7 @@ function DiscoverPoolLogo({
         alt=""
         width={size}
         height={size}
-        style={{ width: 'auto', height: 'auto' }}
-        className={markClassName}
+        className={cn(markClassName, 'size-full')}
       />,
     )
   }
@@ -348,8 +347,7 @@ function DiscoverPoolLogo({
         alt=""
         width={size}
         height={size}
-        style={{ width: 'auto', height: 'auto' }}
-        className={markClassName}
+        className={cn(markClassName, 'size-full')}
       />,
     )
   }

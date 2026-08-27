@@ -155,7 +155,7 @@ export default function LandingPage() {
                     "h-20 w-20 object-contain md:h-28 md:w-28 lg:h-32 lg:w-32",
                     index > 0 && "-ml-10 md:-ml-14 lg:-ml-16",
                   )}
-                  style={{ zIndex: index, width: 'auto', height: 'auto' }}
+                  style={{ zIndex: index }}
                   aria-hidden
                 />
               ))}

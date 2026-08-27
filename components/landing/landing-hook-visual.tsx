@@ -8,37 +8,37 @@ const FLOATING_SPORT_BALLS = [
   {
     src: '/sports/soccer.png',
     className:
-      'left-[-2%] top-[6%] w-9 sm:w-11 md:left-[-6%] md:top-[4%] md:w-12',
+      'left-[-2%] top-[6%] h-9 w-9 sm:h-11 sm:w-11 md:left-[-6%] md:top-[4%] md:h-12 md:w-12',
     delayClass: 'landing-hook-ball--a',
   },
   {
     src: '/sports/basketball.png',
     className:
-      'right-[-1%] top-[12%] w-10 sm:w-12 md:right-[-5%] md:top-[10%] md:w-12',
+      'right-[-1%] top-[12%] h-10 w-10 sm:h-12 sm:w-12 md:right-[-5%] md:top-[10%] md:h-12 md:w-12',
     delayClass: 'landing-hook-ball--b',
   },
   {
     src: '/sports/football.png',
     className:
-      'left-[-4%] top-[48%] w-10 sm:w-12 md:left-[-10%] md:top-[46%] md:w-14',
+      'left-[-4%] top-[48%] h-10 w-10 sm:h-12 sm:w-12 md:left-[-10%] md:top-[46%] md:h-14 md:w-14',
     delayClass: 'landing-hook-ball--c',
   },
   {
     src: '/sports/hockey.png',
     className:
-      'right-[-3%] top-[42%] w-8 sm:w-10 md:right-[-8%] md:top-[40%] md:w-11',
+      'right-[-3%] top-[42%] h-8 w-8 sm:h-10 sm:w-10 md:right-[-8%] md:top-[40%] md:h-11 md:w-11',
     delayClass: 'landing-hook-ball--d',
   },
   {
     src: '/sports/baseball.png',
     className:
-      'left-[2%] bottom-[8%] w-8 sm:w-9 md:left-[-2%] md:bottom-[6%] md:w-10',
+      'left-[2%] bottom-[8%] h-8 w-8 sm:h-9 sm:w-9 md:left-[-2%] md:bottom-[6%] md:h-10 md:w-10',
     delayClass: 'landing-hook-ball--e',
   },
   {
     src: '/sports/cricket.png',
     className:
-      'right-[0%] bottom-[14%] w-9 sm:w-10 md:right-[-4%] md:bottom-[12%] md:w-11',
+      'right-[0%] bottom-[14%] h-9 w-9 sm:h-10 sm:w-10 md:right-[-4%] md:bottom-[12%] md:h-11 md:w-11',
     delayClass: 'landing-hook-ball--f',
   },
 ] as const
@@ -86,7 +86,6 @@ export function LandingHookVisual({ className }: LandingHookVisualProps) {
             alt=""
             width={96}
             height={96}
-            style={{ width: 'auto', height: 'auto' }}
             className={cn(
               'landing-hook-ball pointer-events-none absolute z-[2] object-contain opacity-80 drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]',
               ball.className,

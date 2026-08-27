@@ -186,7 +186,6 @@ function SportIconThumb({
           alt=""
           width={size}
           height={size}
-          style={{ width: 'auto', height: 'auto' }}
           className="size-full object-contain"
         />
       ) : (
@@ -247,8 +246,7 @@ function SportFilterRow({
                   alt=""
                   width={36}
                   height={36}
-                  style={{ width: 'auto', height: 'auto' }}
-                  className="object-contain p-0.5"
+                  className="size-full object-contain p-0.5"
                 />
               </span>
               <span
