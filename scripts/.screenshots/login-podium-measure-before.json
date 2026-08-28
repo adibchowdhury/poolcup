@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "panel": {
+    "h": 499.79998779296875,
+    "w": 418.949951171875,
+    "top": 238.1000213623047,
+    "bottom": 737.9000091552734
+  },
+  "podiumWrap": {
+    "h": 248.85000610351562,
+    "w": 377.0484619140625,
+    "top": 259.1000061035156,
+    "bottom": 507.95001220703125,
+    "className": "relative z-10 mx-auto mt-5 w-[90%] max-w-[22.5rem] shrink-0"
+  },
+  "podiumSection": {
+    "w": 377.0484619140625,
+    "top": 259.1000061035156,
+    "bottom": 507.95001220703125
+  },
+  "testimonial": {
+    "top": 575.1500244140625,
+    "bottom": 708.7952880859375
+  },
+  "gapAbove": 21,
+  "gapBelow": 67,
+  "canvases": [
+    {
+      "canvasW": 359,
+      "canvasH": 237,
+      "cssW": 419,
+      "cssH": 500,
+      "hostH": 500,
+      "hostW": 419,
+      "hostClass": "login-pucky-panel-aside relative hidden min-h-0 overflow-hidden bg-[#20221F] lg:block"
+    },
+    {
+      "canvasW": 359,
+      "canvasH": 237,
+      "cssW": 377,
+      "cssH": 249,
+      "hostH": 249,
+      "hostW": 377,
+      "hostClass": "pointer-events-none absolute inset-0 z-20 overflow-hidden"
+    }
+  ]
+}

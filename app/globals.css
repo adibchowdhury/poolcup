@@ -2373,44 +2373,127 @@ html.create-mode-dashboard-restore [data-hub-shell] {
 }
 
 /*
- * Login page shell — LOCKED gradient + approved footprint wallpaper
+ * Login page shell — gradient + approved footprint wallpaper
  * (public/login_assets/poolcup_penguin_footprint.svg). Shape from asset only;
  * data-URI fill forced to #fff @ 0.085 (asset uses currentColor).
  * Spacing: pitch 106×81 (+~40% vs 76×58); stamp scale unchanged.
+ *
+ * Gradient (125deg): deep forest emerald owns left+center → charcoal-teal right;
+ * dark + green first; teal only a whisper on the trailing edge.
+ * Footprint layer values are locked this pass (opacity/size/spacing).
  */
 .login-page-shell {
-  background-color: #0b1014;
+  background-color: #0a2f2a;
   background-image:
     url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDYiIGhlaWdodD0iMTYyIiB2aWV3Qm94PSIwIDAgMTA2IDE2MiI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTMgNDAuNSkgc2NhbGUoMC4xNTcxNDMpIHRyYW5zbGF0ZSgtNTAgLTcwKSIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjA4NSI+PHBhdGggZD0iTTUwIDcgQzU2IDcsIDYwIDE0LCA2MyAyMiBDNjYgMzEsIDY5IDM5LCA3NCA0NSBDNzggNDksIDgyIDQ5LCA4NiA0NSBDOTEgNDAsIDk1IDM2LCA5OCAzOCBDMTAxIDQwLCAxMDAgNDcsIDk5IDU1IEM5NyA3MywgOTIgOTEsIDg0IDEwNiBDNzUgMTI0LCA2MyAxMzMsIDUwIDEzNSBDMzcgMTMzLCAyNSAxMjQsIDE2IDEwNiBDOCA5MSwgMyA3MywgMSA1NSBDMCA0NywgLTEgNDAsIDIgMzggQzUgMzYsIDkgNDAsIDE0IDQ1IEMxOCA0OSwgMjIgNDksIDI2IDQ1IEMzMSAzOSwgMzQgMzEsIDM3IDIyIEM0MCAxNCwgNDQgNywgNTAgNyBaIi8+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTIxLjUpIHNjYWxlKDAuMTU3MTQzKSB0cmFuc2xhdGUoLTUwIC03MCkiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wODUiPjxwYXRoIGQ9Ik01MCA3IEM1NiA3LCA2MCAxNCwgNjMgMjIgQzY2IDMxLCA2OSAzOSwgNzQgNDUgQzc4IDQ5LCA4MiA0OSwgODYgNDUgQzkxIDQwLCA5NSAzNiwgOTggMzggQzEwMSA0MCwgMTAwIDQ3LCA5OSA1NSBDOTcgNzMsIDkyIDkxLCA4NCAxMDYgQzc1IDEyNCwgNjMgMTMzLCA1MCAxMzUgQzM3IDEzMywgMjUgMTI0LCAxNiAxMDYgQzggOTEsIDMgNzMsIDEgNTUgQzAgNDcsIC0xIDQwLCAyIDM4IEM1IDM2LCA5IDQwLCAxNCA0NSBDMTggNDksIDIyIDQ5LCAyNiA0NSBDMzEgMzksIDM0IDMxLCAzNyAyMiBDNDAgMTQsIDQ0IDcsIDUwIDcgWiIvPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDYgMTIxLjUpIHNjYWxlKDAuMTU3MTQzKSB0cmFuc2xhdGUoLTUwIC03MCkiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wODUiPjxwYXRoIGQ9Ik01MCA3IEM1NiA3LCA2MCAxNCwgNjMgMjIgQzY2IDMxLCA2OSAzOSwgNzQgNDUgQzc4IDQ5LCA4MiA0OSwgODYgNDUgQzkxIDQwLCA5NSAzNiwgOTggMzggQzEwMSA0MCwgMTAwIDQ3LCA5OSA1NSBDOTcgNzMsIDkyIDkxLCA4NCAxMDYgQzc1IDEyNCwgNjMgMTMzLCA1MCAxMzUgQzM3IDEzMywgMjUgMTI0LCAxNiAxMDYgQzggOTEsIDMgNzMsIDEgNTUgQzAgNDcsIC0xIDQwLCAyIDM4IEM1IDM2LCA5IDQwLCAxNCA0NSBDMTggNDksIDIyIDQ5LCAyNiA0NSBDMzEgMzksIDM0IDMxLCAzNyAyMiBDNDAgMTQsIDQ0IDcsIDUwIDcgWiIvPjwvZz48L3N2Zz4="),
-    radial-gradient(circle at 50% 45%, rgba(0, 230, 118, 0.10) 0%, rgba(0, 230, 118, 0.025) 28%, transparent 52%),
-    linear-gradient(125deg, #0a1f16 0%, #0a1411 32%, #0b1014 67%, #0d1522 100%);
+    radial-gradient(circle at 50% 45%, rgba(0, 230, 118, 0.07) 0%, rgba(0, 230, 118, 0.018) 28%, transparent 52%),
+    linear-gradient(125deg, #073527 0%, #0a2f2a 65%, #0e222a 100%);
   background-repeat: repeat, no-repeat, no-repeat;
   background-position: 0 0, center, center;
   background-size: 106px 162px, auto, auto;
 }
 
+/* Stadium raster background — gated via .login-page-shell--image (LOGIN_BACKGROUND).
+   Gradient/footprint rules above stay intact (dormant while image mode is on).
+   Atmosphere tuning is CSS layers + vars only — image file untouched; UI untouched. */
+.login-page-shell.login-page-shell--image {
+  /* Global pass ≈ mid of requested bands; stacked overlays push perceived ~30–40%. */
+  --login-bg-brightness: 0.55;
+  --login-bg-saturate: 0.58;
+  --login-bg-blur: 0px; /* skip blur — confetti/eyes rAF + full-bleed filter GPU cost */
+  --login-bg-overlay: rgba(0, 0, 0, 0.34);
+  /* Floodlights still competed after global pass — top-weighted tame kept (lighter than v1). */
+  --login-bg-flood: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.16) 26%,
+    rgba(0, 0, 0, 0.04) 46%,
+    transparent 60%
+  );
+  /* Inverted vignette — darkest under the card; outer stadium keeps slightly more life.
+     Y tracks the flex-centered card (mobile geometric center; lg accounts for Pucky pad). */
+  --login-bg-focus-y: 50%;
+  --login-bg-focus: radial-gradient(
+    ellipse 70% 66% at 50% var(--login-bg-focus-y),
+    rgba(0, 0, 0, 0.48) 0%,
+    rgba(0, 0, 0, 0.3) 40%,
+    rgba(0, 0, 0, 0.12) 64%,
+    transparent 80%
+  );
+
+  isolation: isolate;
+  background-color: #070b10;
+  background-image: none; /* image lives on ::before so filter never hits UI */
+}
+
+.login-page-shell.login-page-shell--image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #070b10;
+  background-image: url('/background_01.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  filter: brightness(var(--login-bg-brightness)) saturate(var(--login-bg-saturate))
+    blur(var(--login-bg-blur));
+  transform: translateZ(0); /* own layer; keep blur/filter off the UI subtree */
+}
+
+.login-page-shell.login-page-shell--image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--login-bg-focus), var(--login-bg-flood),
+    linear-gradient(var(--login-bg-overlay), var(--login-bg-overlay));
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+/* Keep stage/card/Pucky above atmosphere layers */
+.login-page-shell.login-page-shell--image > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 1024px) {
+  .login-page-shell.login-page-shell--image {
+    /* Card sits below geometric center because of padding-top: 14rem for Pucky
+       (~61% @1280, ~60% @1440, ~58% @1920) — 60% tracks the cluster. */
+    --login-bg-focus-y: 60%;
+  }
+}
+
 @media (max-width: 480px) {
-  .login-page-shell {
+  .login-page-shell:not(.login-page-shell--image) {
     background-size: 91px 139px, auto, auto;
   }
 }
 
 /*
- * Pucky login composition (desktop): TOP-OF-CARD OVERLAY.
+ * Pucky login composition (desktop): TOP-OF-LEFT-PANEL OVERLAY.
  * Asset public/login_assets/pucky-login-frame.png (1536×1024) — peeking
- * bust (head + cape + hands). Hands sit on the card top edge, layer in
+ * bust (head + cape + hands). Hands sit on the LEFT panel top edge, layer in
  * front of the card. Form stays fully interactive (pointer-events: none).
  *
  * --pucky-hand-y: fraction from asset top to hand contact line (measured).
- * --pucky-hand-overlap: how far hands sit onto the card top (px).
- * --pucky-scale: width vs card (unchanged this pass).
+ * --pucky-hand-overlap: how far hands sit onto the panel top (px).
+ * --pucky-scale: width vs LEFT panel (.login-pucky-panel-form), not full card.
  */
 .login-pucky-stage {
-  /* Was 1.3 (520px); ~29% down → narrower than the 400px card */
+  /* Was 1.3 (520px); ~29% down → narrower than the 400px form column */
   --pucky-scale: 0.92;
   /* Hand underside / ledge contact ≈ y=776 / 1024 */
   --pucky-hand-y: 0.7578;
   --pucky-hand-overlap: 8px;
+  /* Uniform 105% of original layout (was 0.92; top bar gone → scale full unit up). */
+  transform: scale(1.05);
+  transform-origin: center center;
 }
 
 .login-pucky-frame {
@@ -2430,12 +2513,14 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     z-index: 20; /* in front of .login-pucky-card (z-10) */
     pointer-events: none;
     user-select: none;
-    width: calc(var(--pucky-scale) * 100%);
+    /* Width vs left panel = 50% of stage (two-column card). */
+    width: calc(var(--pucky-scale) * 50%);
     height: auto;
     max-width: none;
-    left: 50%;
+    /* Center of left half (panel-form), not full-card center. */
+    left: 25%;
     top: 0; /* stage top = card top */
-    /* Align hand line to card top, then nudge down by overlap onto the border */
+    /* Align hand line to left-panel top, then nudge down by overlap */
     transform: translate(
       -50%,
       calc(-1 * var(--pucky-hand-y) * 100% + var(--pucky-hand-overlap))
@@ -2446,6 +2531,125 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     position: relative;
     z-index: 10;
     overflow: hidden;
+  }
+}
+
+/* ===== Login podium winner crown — warm gold shimmer (anti-loop dual timers) =====
+   Keyframes reused from the prior trophy shimmer (3.1s + 4.7s non-harmonic). */
+.login-crown-wrap {
+  isolation: isolate;
+}
+
+.login-crown-glow-layer {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(242, 201, 76, 0.42) 0%,
+    rgba(255, 214, 100, 0.18) 42%,
+    transparent 72%
+  );
+  animation: login-trophy-glow-spread 4.7s ease-in-out infinite alternate;
+}
+
+.login-crown-icon {
+  /* Same dual-cycle shimmer as the retired trophy treatment */
+  filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.55))
+    drop-shadow(0 0 4px rgba(242, 201, 76, 0.35));
+  animation: login-trophy-glow-bright 3.1s ease-in-out infinite alternate;
+}
+
+.login-trophy-wrap {
+  isolation: isolate;
+}
+
+.login-trophy-wrap--duo .login-trophy-glow-layer {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.login-trophy-glow-layer {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  z-index: 0;
+  width: 4.25rem;
+  height: 4.25rem;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(242, 201, 76, 0.42) 0%,
+    rgba(255, 214, 100, 0.18) 42%,
+    transparent 72%
+  );
+  /* Spread/intensity drift — 4.7s; no scale grow-shrink */
+  animation: login-trophy-glow-spread 4.7s ease-in-out infinite alternate;
+}
+
+.login-trophy-img {
+  /* Brightness/opacity drift — 3.1s; non-harmonic with spread → no pulse loop */
+  filter: drop-shadow(0 0 12px rgba(242, 201, 76, 0.45))
+    drop-shadow(0 0 4px rgba(255, 214, 100, 0.3));
+  animation: login-trophy-glow-bright 3.1s ease-in-out infinite alternate;
+}
+
+@keyframes login-trophy-glow-bright {
+  from {
+    filter: drop-shadow(0 0 9px rgba(242, 201, 76, 0.32))
+      drop-shadow(0 0 3px rgba(255, 200, 80, 0.22));
+    opacity: 0.92;
+  }
+  to {
+    filter: drop-shadow(0 0 18px rgba(255, 214, 100, 0.62))
+      drop-shadow(0 0 7px rgba(242, 201, 76, 0.4));
+    opacity: 1;
+  }
+}
+
+@keyframes login-trophy-glow-spread {
+  from {
+    opacity: 0.4;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 0.78;
+    filter: blur(11px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-trophy-glow-layer,
+  .login-trophy-img,
+  .login-crown-glow-layer,
+  .login-crown-icon {
+    animation: none !important;
+  }
+
+  .login-trophy-glow-layer,
+  .login-crown-glow-layer {
+    opacity: 0.55;
+    filter: blur(8px);
+  }
+
+  .login-trophy-img {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(242, 201, 76, 0.45))
+      drop-shadow(0 0 4px rgba(255, 214, 100, 0.3));
+  }
+
+  .login-crown-icon {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.55))
+      drop-shadow(0 0 4px rgba(242, 201, 76, 0.35));
   }
 }
 

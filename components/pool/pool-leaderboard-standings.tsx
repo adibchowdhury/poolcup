@@ -134,6 +134,7 @@ function PodiumPedestal({
   disableProfileLinks,
   firstPlaceFigureSrc,
   omitCrownSpacer = false,
+  compact = false,
 }: {
   place: 1 | 2 | 3
   member: LeaderboardMember
@@ -142,17 +143,29 @@ function PodiumPedestal({
   firstPlaceFigureSrc?: string
   /** Landing mascot podium: drop 2nd/3rd crown-alignment spacer so winners sit higher. */
   omitCrownSpacer?: boolean
+  /** Login / tight preview — same DNA, smaller chrome. */
+  compact?: boolean
 }) {
   const isFirst = place === 1
   const useMascotFigure = isFirst && Boolean(firstPlaceFigureSrc)
-  const avatarSize = isFirst
-    ? 'h-[5.5rem] w-[5.5rem] sm:h-24 sm:w-24'
-    : 'h-[4.25rem] w-[4.25rem] sm:h-[4.75rem] sm:w-[4.75rem]'
+  const avatarSize = compact
+    ? isFirst
+      ? 'h-16 w-16'
+      : 'h-14 w-14'
+    : isFirst
+      ? 'h-[5.5rem] w-[5.5rem] sm:h-24 sm:w-24'
+      : 'h-[4.25rem] w-[4.25rem] sm:h-[4.75rem] sm:w-[4.75rem]'
 
   // Classic tier heights — 1st tallest, 2nd medium, 3rd shortest.
   // Landing Pucky podium: extra-tall 1st pedestal for more elevation.
-  const pedestalH =
-    place === 1
+  // Compact (login): ~1.37× homepage base (4.75/3.25/2.25) → taller substantial pillars.
+  const pedestalH = compact
+    ? place === 1
+      ? 'h-[6.5rem]'
+      : place === 2
+        ? 'h-[4.5rem]'
+        : 'h-[3.25rem]'
+    : place === 1
       ? useMascotFigure
         ? 'h-[6.75rem] sm:h-[8.25rem]'
         : 'h-[4.75rem] sm:h-[5.75rem]'
@@ -162,27 +175,63 @@ function PodiumPedestal({
 
   const placeLabel = place === 1 ? '1ST' : place === 2 ? '2ND' : '3RD'
 
-  // 1st green (+ glow), 2nd silver, 3rd bronze.
+  // Avatar rings: 1st green (+ glow), 2nd silver, 3rd bronze.
   const ringColor =
-    place === 1 ? ACCENT_GREEN : place === 2 ? RING_SILVER : RING_BRONZE
-  const ringShadow =
-    place === 1
+    place === 1 ? ACCENT_GREEN : place === 2 ? RING_SILVER : place === 3 ? RING_BRONZE : ACCENT_GREEN
+  const ringShadow = compact
+    ? place === 1
+      ? `0 0 12px color-mix(in srgb, var(--primary) 55%, transparent)`
+      : place === 2
+        ? `0 0 8px rgba(192,198,208,0.28)`
+        : `0 0 8px rgba(196,122,61,0.28)`
+    : place === 1
       ? `0 0 22px color-mix(in srgb, var(--primary) 65%, transparent), 0 0 6px color-mix(in srgb, var(--primary) 90%, transparent)`
       : place === 2
         ? `0 0 10px rgba(192,198,208,0.3)`
         : `0 0 10px rgba(196,122,61,0.3)`
 
+  // Compact login pillars: muted premium metallics (not bright/cartoony).
+  const pedestalMetal =
+    place === 1
+      ? {
+          fill: 'linear-gradient(180deg, #a3822f 0%, #8a6d2a 42%, #6e5620 100%)',
+          edge: '#F2C94C',
+          label: 'text-[#f7f0d8]',
+        }
+      : place === 2
+        ? {
+            fill: 'linear-gradient(180deg, #9aa2ad 0%, #7e868f 45%, #636a73 100%)',
+            edge: '#d0d5dc',
+            label: 'text-[#f0f2f5]',
+          }
+        : {
+            fill: 'linear-gradient(180deg, #a06b42 0%, #8a5a34 45%, #6f4829 100%)',
+            edge: '#d4a574',
+            label: 'text-[#f5ebe0]',
+          }
+
   return (
     <div
       className={cn(
-        'flex flex-col items-center px-1 sm:px-1.5',
+        'flex flex-col items-center',
+        compact ? 'px-0.5' : 'px-1 sm:px-1.5',
         isFirst
           ? useMascotFigure
             ? 'order-2 w-[42%] max-w-[14rem] sm:max-w-[16rem]'
-            : 'order-2 w-[36%] max-w-[10.5rem] sm:max-w-[12rem]'
+            : compact
+              ? 'order-2 w-[36%] max-w-[9rem]'
+              : 'order-2 w-[36%] max-w-[10.5rem] sm:max-w-[12rem]'
           : null,
-        place === 2 ? 'order-1 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]' : null,
-        place === 3 ? 'order-3 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]' : null,
+        place === 2
+          ? compact
+            ? 'order-1 w-[32%] max-w-[7.75rem]'
+            : 'order-1 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]'
+          : null,
+        place === 3
+          ? compact
+            ? 'order-3 w-[32%] max-w-[7.75rem]'
+            : 'order-3 w-[32%] max-w-[9.5rem] sm:max-w-[10.5rem]'
+          : null,
       )}
     >
       {useMascotFigure ? (
@@ -242,13 +291,21 @@ function PodiumPedestal({
         </>
       ) : (
         <>
-          <div className="relative mb-2.5 flex w-full flex-col items-center sm:mb-3">
+          <div
+            className={cn(
+              'relative flex w-full flex-col items-center',
+              compact ? 'mb-1' : 'mb-2.5 sm:mb-3',
+            )}
+          >
             {isFirst ? (
               <Crown
-                className="mb-1 h-6 w-6 text-[#ffb300] drop-shadow-[0_0_8px_rgba(255,179,0,0.55)] sm:h-7 sm:w-7"
+                className={cn(
+                  'text-[#ffb300] drop-shadow-[0_0_8px_rgba(255,179,0,0.55)]',
+                  compact ? 'mb-0.5 h-5 w-5' : 'mb-1 h-6 w-6 sm:h-7 sm:w-7',
+                )}
                 aria-hidden
               />
-            ) : omitCrownSpacer ? null : (
+            ) : omitCrownSpacer || compact ? null : (
               <div className="mb-1 h-6 sm:h-7" aria-hidden />
             )}
             <MemberIdentity
@@ -259,7 +316,8 @@ function PodiumPedestal({
             >
               <div
                 className={cn(
-                  'rounded-full p-[2px]',
+                  'rounded-full',
+                  compact ? 'p-[1.5px]' : 'p-[2px]',
                   !disableProfileLinks &&
                     'transition-transform hover:scale-[1.03]',
                 )}
@@ -277,13 +335,19 @@ function PodiumPedestal({
             </MemberIdentity>
           </div>
 
-          <div className="mb-2.5 w-full px-0.5 text-center sm:mb-3">
+          <div
+            className={cn(
+              'w-full px-0.5 text-center',
+              compact ? 'mb-1' : 'mb-2.5 sm:mb-3',
+            )}
+          >
             <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
               <MemberIdentity
                 userId={member.userId}
                 disableLinks={disableProfileLinks}
                 className={cn(
-                  'max-w-full text-center text-[13px] font-semibold leading-snug break-words text-white sm:text-sm',
+                  'max-w-full text-center font-semibold leading-snug break-words text-white',
+                  compact ? 'text-xs' : 'text-[13px] sm:text-sm',
                   !disableProfileLinks && 'hover:underline',
                 )}
               >
@@ -291,20 +355,35 @@ function PodiumPedestal({
               </MemberIdentity>
             </div>
             {member.isYou ? (
-              <span className="mt-1 inline-block rounded-full bg-primary/20 px-2 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">
+              <span
+                className={cn(
+                  'inline-block rounded-full bg-primary/20 font-semibold uppercase tracking-wide text-primary',
+                  compact
+                    ? 'mt-0.5 px-1.5 py-px text-[8px]'
+                    : 'mt-1 px-2 py-px text-[10px]',
+                )}
+              >
                 You
               </span>
             ) : null}
             <p
-              className="mt-1.5 font-mono text-xl tabular-nums tracking-wide sm:text-2xl"
+              className={cn(
+                'font-mono tabular-nums tracking-wide',
+                compact ? 'mt-0.5 text-base' : 'mt-1.5 text-xl sm:text-2xl',
+              )}
               style={{ color: ACCENT_GREEN }}
             >
               {member.points}
-              <span className="ml-1 text-[11px] font-sans font-normal text-muted-foreground">
+              <span
+                className={cn(
+                  'ml-1 font-sans font-normal text-muted-foreground',
+                  compact ? 'text-[9px]' : 'text-[11px]',
+                )}
+              >
                 pts
               </span>
             </p>
-            {member.exactScores > 0 ? (
+            {!compact && member.exactScores > 0 ? (
               <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
                 {member.exactScores} exact
               </p>
@@ -313,31 +392,44 @@ function PodiumPedestal({
         </>
       )}
 
-      {/* Tiered podium base — sits on app canvas; slightly lighter face + thin green top edge */}
+      {/* Tiered podium base — compact login uses muted metallic fills. */}
       <div
         className={cn(
           'relative flex w-full flex-col items-center overflow-hidden rounded-t-md',
           pedestalH,
         )}
-        style={{
-          background:
-            'linear-gradient(180deg, #15201c 0%, #101616 45%, #0d1212 100%)',
-          boxShadow:
-            'inset 0 1px 0 color-mix(in srgb, var(--primary) 35%, transparent)',
-        }}
+        style={
+          compact
+            ? {
+                background: pedestalMetal.fill,
+                boxShadow: `inset 0 1px 0 ${pedestalMetal.edge}`,
+              }
+            : {
+                background:
+                  'linear-gradient(180deg, #15201c 0%, #101616 45%, #0d1212 100%)',
+                boxShadow:
+                  'inset 0 1px 0 color-mix(in srgb, var(--primary) 35%, transparent)',
+              }
+        }
         aria-hidden
       >
         <div
           className="h-[2px] w-full shrink-0"
           style={{
-            background: `linear-gradient(90deg, transparent 0%, ${ACCENT_GREEN} 20%, ${ACCENT_GREEN} 80%, transparent 100%)`,
-            opacity: isFirst ? 0.95 : 0.7,
+            background: compact
+              ? `linear-gradient(90deg, transparent 0%, ${pedestalMetal.edge} 18%, ${pedestalMetal.edge} 82%, transparent 100%)`
+              : `linear-gradient(90deg, transparent 0%, ${ACCENT_GREEN} 20%, ${ACCENT_GREEN} 80%, transparent 100%)`,
+            opacity: isFirst ? 0.95 : 0.75,
           }}
         />
         <span
           className={cn(
-            'mt-2 font-display tracking-[0.14em] text-white/90',
-            isFirst ? 'text-[11px] sm:text-xs' : 'text-[10px] sm:text-[11px]',
+            'font-display tracking-[0.14em]',
+            compact
+              ? cn('mt-1.5 text-[10px]', pedestalMetal.label)
+              : isFirst
+                ? 'mt-2 text-[11px] text-white/90 sm:text-xs'
+                : 'mt-2 text-[10px] text-white/90 sm:text-[11px]',
           )}
         >
           {placeLabel}
@@ -351,15 +443,18 @@ function StandingListRow({
   place,
   member,
   disableProfileLinks,
+  compact = false,
 }: {
   place: number
   member: LeaderboardMember
   disableProfileLinks?: boolean
+  compact?: boolean
 }) {
   return (
     <li
       className={cn(
-        'relative flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
+        'relative flex items-center',
+        compact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
         member.isYou
           ? 'bg-[color-mix(in_srgb,var(--primary)_18%,var(--app-background))]'
           : !disableProfileLinks && 'hover:bg-white/[0.04]',
@@ -374,7 +469,10 @@ function StandingListRow({
       ) : null}
 
       <span
-        className="w-7 shrink-0 text-center font-mono text-sm tabular-nums text-muted-foreground"
+        className={cn(
+          'shrink-0 text-center font-mono tabular-nums text-muted-foreground',
+          compact ? 'w-5 text-[11px]' : 'w-7 text-sm',
+        )}
         aria-label={`${ordinalPlace(place)} place`}
       >
         {place}
@@ -390,7 +488,7 @@ function StandingListRow({
           avatar={member.avatar}
           customAvatarUrl={member.customAvatarUrl}
           className={cn(
-            'h-9 w-9',
+            compact ? 'h-6 w-6' : 'h-9 w-9',
             member.isYou && 'ring-2 ring-primary/60',
           )}
         />
@@ -402,37 +500,49 @@ function StandingListRow({
             userId={member.userId}
             disableLinks={disableProfileLinks}
             className={cn(
-              'text-sm font-medium leading-snug break-words text-white',
+              'font-medium leading-snug break-words text-white',
+              compact ? 'text-[11px]' : 'text-sm',
               !disableProfileLinks && 'hover:underline',
             )}
           >
             {member.name}
           </MemberIdentity>
           {member.isYou ? (
-            <span className="shrink-0 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <span
+              className={cn(
+                'shrink-0 rounded-full bg-primary/20 font-semibold uppercase tracking-wide text-primary',
+                compact
+                  ? 'px-1 py-px text-[8px]'
+                  : 'px-1.5 py-0.5 text-[10px]',
+              )}
+            >
               You
             </span>
           ) : null}
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1">
         <RankMovementBadge
           movement={member.movement}
           rankDelta={member.rankDelta}
+          className={compact ? 'min-w-[1.25rem] text-[10px]' : undefined}
         />
         <ClimbFireBadge climbStreak={member.climbStreak} />
       </div>
 
-      <div className="w-14 shrink-0 text-right sm:w-16">
+      <div className={cn('shrink-0 text-right', compact ? 'w-12' : 'w-14 sm:w-16')}>
         <span
-          className="font-mono text-lg tabular-nums sm:text-xl"
+          className={cn(
+            'font-mono tabular-nums',
+            compact ? 'text-sm' : 'text-lg sm:text-xl',
+          )}
           style={{ color: ACCENT_GREEN }}
         >
           {member.points}
         </span>
         <span className="ml-0.5 text-[10px] text-muted-foreground">pts</span>
-        {member.exactScores > 0 ? (
+        {!compact && member.exactScores > 0 ? (
           <p className="text-[10px] tabular-nums text-muted-foreground">
             {member.exactScores} exact
           </p>
@@ -462,6 +572,13 @@ export type PoolLeaderboardStandingsProps = {
    * free-standing figure (e.g. `/mascot/pucky_trophy.png`). In-app unused.
    */
   firstPlaceFigureSrc?: string
+  /**
+   * Tight miniature (login panel, etc.) — same podium DNA + YOU row treatment,
+   * smaller avatars/pedestals; hides exact/fire/movement chrome.
+   */
+  compact?: boolean
+  /** Cap list rows below the podium (default: all). Login uses 2. */
+  maxListRows?: number
 }
 
 /**
@@ -479,6 +596,8 @@ export function PoolLeaderboardStandings({
   inviteCode,
   disableProfileLinks = false,
   firstPlaceFigureSrc,
+  compact = false,
+  maxListRows,
 }: PoolLeaderboardStandingsProps) {
   if (members.length === 0) {
     return (
@@ -514,7 +633,9 @@ export function PoolLeaderboardStandings({
 
   const ordered = flattenStandings(members)
   const podiumSlots = ordered.slice(0, Math.min(3, ordered.length))
-  const rest = ordered.slice(3)
+  const restAll = ordered.slice(3)
+  const rest =
+    typeof maxListRows === 'number' ? restAll.slice(0, maxListRows) : restAll
   const youStanding = ordered.find((row) => row.member.isYou) ?? null
 
   const first = podiumSlots[0] ?? null
@@ -528,15 +649,17 @@ export function PoolLeaderboardStandings({
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-1 flex-col bg-app-background',
+        'flex min-h-0 flex-1 flex-col',
+        compact ? 'bg-transparent' : 'bg-app-background',
         className,
       )}
     >
       <section
         aria-label="Top standings podium"
         className={cn(
-          'mx-auto w-full max-w-4xl shrink-0 px-4',
-          firstPlaceFigureSrc ? 'pt-3' : 'pt-2',
+          'mx-auto w-full max-w-4xl shrink-0',
+          compact ? 'px-1 pt-0' : 'px-4',
+          !compact && (firstPlaceFigureSrc ? 'pt-3' : 'pt-2'),
         )}
       >
         <div className="flex items-end justify-center">
@@ -545,7 +668,8 @@ export function PoolLeaderboardStandings({
               place={2}
               member={second.member}
               disableProfileLinks={disableProfileLinks}
-              omitCrownSpacer={Boolean(firstPlaceFigureSrc)}
+              omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
+              compact={compact}
             />
           ) : null}
           {first ? (
@@ -554,6 +678,7 @@ export function PoolLeaderboardStandings({
               member={first.member}
               disableProfileLinks={disableProfileLinks}
               firstPlaceFigureSrc={firstPlaceFigureSrc}
+              compact={compact}
             />
           ) : null}
           {third ? (
@@ -561,7 +686,8 @@ export function PoolLeaderboardStandings({
               place={3}
               member={third.member}
               disableProfileLinks={disableProfileLinks}
-              omitCrownSpacer={Boolean(firstPlaceFigureSrc)}
+              omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
+              compact={compact}
             />
           ) : null}
         </div>
@@ -583,8 +709,10 @@ export function PoolLeaderboardStandings({
         <section
           aria-label="Full standings"
           className={cn(
-            'mt-5 flex min-h-0 w-full flex-1 flex-col',
-            'rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
+            'flex min-h-0 w-full flex-1 flex-col',
+            compact
+              ? 'mt-2 overflow-hidden rounded-lg bg-black/25'
+              : 'mt-5 rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
           )}
         >
           <ul className="w-full shrink-0 divide-y divide-white/[0.06]">
@@ -594,11 +722,14 @@ export function PoolLeaderboardStandings({
                 place={place}
                 member={member}
                 disableProfileLinks={disableProfileLinks}
+                compact={compact}
               />
             ))}
           </ul>
           {/* Fills leftover viewport below the last row with the same list color */}
-          <div className="min-h-0 flex-1 bg-app-background" aria-hidden />
+          {!compact ? (
+            <div className="min-h-0 flex-1 bg-app-background" aria-hidden />
+          ) : null}
 
           {showPreMatchNote ? (
             <p className="shrink-0 px-4 pb-2 text-center text-sm text-muted-foreground">

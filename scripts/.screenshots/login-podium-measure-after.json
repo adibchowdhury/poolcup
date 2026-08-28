@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "panelH": 500,
+  "gapAbove": 62,
+  "gapBelow": 62,
+  "podiumWidth": 294,
+  "wrapWidth": 294,
+  "trophy": {
+    "src": "/mascot/pucky_trophy.png",
+    "w": 101,
+    "h": 67
+  },
+  "pillars": [
+    {
+      "h": 97,
+      "w": 85,
+      "bg": "linear-gradient(color(srgb 0.344941 0.344941 0.344941) 0%, rgb(23, 23, 23) 55%, rgb(20, 20, 20) 100%)",
+      "shadow": "color(srgb 0.0378824 0.0378824 0.0378824) 3px 3px 0px 0px",
+      "radius": "10px"
+    },
+    {
+      "h": 134,
+      "w": 123,
+      "bg": "linear-gradient(color(srgb 0.344941 0.344941 0.344941) 0%, rgb(23, 23, 23) 55%, rgb(20, 20, 20) 100%)",
+      "shadow": "color(srgb 0.0378824 0.0378824 0.0378824) 3px 3px 0px 0px",
+      "radius": "10px"
+    },
+    {
+      "h": 71,
+      "w": 85,
+      "bg": "linear-gradient(color(srgb 0.344941 0.344941 0.344941) 0%, rgb(23, 23, 23) 55%, rgb(20, 20, 20) 100%)",
+      "shadow": "color(srgb 0.0378824 0.0378824 0.0378824) 3px 3px 0px 0px",
+      "radius": "10px"
+    }
+  ],
+  "canvases": [
+    {
+      "buffer": "399x476",
+      "css": "419x500",
+      "host": "419x500",
+      "matchHost": false
+    },
+    {
+      "buffer": "280x235",
+      "css": "294x247",
+      "host": "294x247",
+      "matchHost": false
+    }
+  ],
+  "pageErrors": []
+}

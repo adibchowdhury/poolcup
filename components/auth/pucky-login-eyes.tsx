@@ -122,23 +122,27 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
       return
     }
     const stage = frame.closest('.login-pucky-stage')
-    if (!stage) {
+    if (!(stage instanceof HTMLElement)) {
       setBox(null)
       frameBoxRef.current = null
       return
     }
-    const fr = frame.getBoundingClientRect()
+    // Layout (pre-transform) size — CSS left/top/width for iris overlays.
+    // getBoundingClientRect is post-transform and would desync under stage scale().
     const sr = stage.getBoundingClientRect()
-    if (fr.width < 2 || fr.height < 2) {
+    const fr = frame.getBoundingClientRect()
+    const scaleX = stage.offsetWidth > 0 ? sr.width / stage.offsetWidth : 1
+    const scaleY = stage.offsetHeight > 0 ? sr.height / stage.offsetHeight : 1
+    if (scaleX < 1e-6 || scaleY < 1e-6 || fr.width < 2 || fr.height < 2) {
       setBox(null)
       frameBoxRef.current = null
       return
     }
     const next: FrameBox = {
-      left: fr.left - sr.left,
-      top: fr.top - sr.top,
-      width: fr.width,
-      height: fr.height,
+      left: (fr.left - sr.left) / scaleX,
+      top: (fr.top - sr.top) / scaleY,
+      width: fr.width / scaleX,
+      height: fr.height / scaleY,
     }
     frameBoxRef.current = next
     setBox(next)
@@ -225,9 +229,10 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
     const onPointerMove = (event: PointerEvent) => {
       if (document.visibilityState === 'hidden') return
       const frame = frameRef.current
-      if (!frame) return
+      const local = frameBoxRef.current
+      if (!frame || !local) return
+      // Screen-space center for shared atan2; layout width for LUT magnitudes (CSS px).
       const fr = frame.getBoundingClientRect()
-      // Shared direction; per-eye magnitude from each eye's own LUT.
       const cx = fr.left + fr.width / 2
       const cy = fr.top + fr.height / 2
       targetRef.current = sharedGazeOffsets(
@@ -235,7 +240,7 @@ export function PuckyLoginEyes({ frameRef }: PuckyLoginEyesProps) {
         event.clientY,
         cx,
         cy,
-        fr.width,
+        local.width,
       )
     }
 

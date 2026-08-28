@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -9,11 +9,17 @@ export const authInputClassName =
 
 type PasswordInputProps = Omit<React.ComponentProps<'input'>, 'type'> & {
   wrapperClassName?: string
+  /** Optional leading icon (e.g. lock); indents input text via pl-11. */
+  leadingIcon?: ReactNode
+  /** Color/class for the leading icon slot (default muted grey). */
+  leadingIconClassName?: string
 }
 
 export function PasswordInput({
   className,
   wrapperClassName,
+  leadingIcon,
+  leadingIconClassName = 'text-[#5a7080]',
   id: idProp,
   disabled,
   ...props
@@ -24,11 +30,27 @@ export function PasswordInput({
 
   return (
     <div className={cn('relative', wrapperClassName)}>
+      {leadingIcon ? (
+        <span
+          className={cn(
+            'pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2',
+            leadingIconClassName,
+          )}
+          aria-hidden
+        >
+          {leadingIcon}
+        </span>
+      ) : null}
       <input
         id={id}
         type={visible ? 'text' : 'password'}
         disabled={disabled}
-        className={cn(authInputClassName, 'pr-11', className)}
+        className={cn(
+          authInputClassName,
+          'pr-11',
+          leadingIcon && 'pl-11',
+          className,
+        )}
         {...props}
       />
       <button
