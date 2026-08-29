@@ -1,0 +1,161 @@
+{
+  "390x844": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "hasHScroll": false,
+    "shellPadding": {
+      "left": "16px",
+      "right": "16px",
+      "top": "0px",
+      "bottom": "0px"
+    },
+    "stage": {
+      "w": 376,
+      "h": 502,
+      "scale": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+      "puckyScale": ".575",
+      "handY": ".7578",
+      "handOverlap": "5px"
+    },
+    "card": {
+      "w": 376,
+      "h": 502,
+      "left": 7,
+      "right": 7,
+      "widthPct": 96.4
+    },
+    "formPad": {
+      "padding": "40px 32px 20px",
+      "pt": "40px",
+      "px": "32px"
+    },
+    "h1Size": "36px",
+    "asideDisplay": "none",
+    "frames": [
+      {
+        "src": "/login_assets/pucky-login-frame-eyeless.png",
+        "display": "none",
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "left": 0,
+        "visible": false
+      }
+    ],
+    "logo": {
+      "present": false
+    },
+    "formTop": 172,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-mobile-before-390x844.png"
+  },
+  "430x932": {
+    "viewport": {
+      "w": 430,
+      "h": 932
+    },
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "hasHScroll": false,
+    "shellPadding": {
+      "left": "16px",
+      "right": "16px",
+      "top": "0px",
+      "bottom": "0px"
+    },
+    "stage": {
+      "w": 418,
+      "h": 502,
+      "scale": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+      "puckyScale": ".575",
+      "handY": ".7578",
+      "handOverlap": "5px"
+    },
+    "card": {
+      "w": 418,
+      "h": 502,
+      "left": 6,
+      "right": 6,
+      "widthPct": 97.2
+    },
+    "formPad": {
+      "padding": "40px 32px 20px",
+      "pt": "40px",
+      "px": "32px"
+    },
+    "h1Size": "36px",
+    "asideDisplay": "none",
+    "frames": [
+      {
+        "src": "/login_assets/pucky-login-frame-eyeless.png",
+        "display": "none",
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "left": 0,
+        "visible": false
+      }
+    ],
+    "logo": {
+      "present": false
+    },
+    "formTop": 216,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-mobile-before-430x932.png"
+  },
+  "1280x800": {
+    "viewport": {
+      "w": 1280,
+      "h": 800
+    },
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "hasHScroll": false,
+    "shellPadding": {
+      "left": "16px",
+      "right": "16px",
+      "top": "192px",
+      "bottom": "80px"
+    },
+    "stage": {
+      "w": 840,
+      "h": 502,
+      "scale": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+      "puckyScale": ".575",
+      "handY": ".7578",
+      "handOverlap": "5px"
+    },
+    "card": {
+      "w": 840,
+      "h": 502,
+      "left": 220,
+      "right": 220,
+      "widthPct": 65.6
+    },
+    "formPad": {
+      "padding": "40px 32px 20px",
+      "pt": "40px",
+      "px": "32px"
+    },
+    "h1Size": "36px",
+    "asideDisplay": "block",
+    "frames": [
+      {
+        "src": "/login_assets/pucky-login-frame-eyeless.png",
+        "display": "block",
+        "width": 241,
+        "height": 161,
+        "top": 88,
+        "left": 309,
+        "visible": true
+      }
+    ],
+    "logo": {
+      "present": false
+    },
+    "formTop": 206,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-mobile-before-1280x800.png"
+  }
+}

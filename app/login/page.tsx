@@ -11,6 +11,7 @@ import { LoginPanelTestimonial } from '@/components/auth/login-panel-testimonial
 import { PuckyLoginEyes } from '@/components/auth/pucky-login-eyes'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
+import { PoolCupLogo } from '@/components/poolcup-logo'
 import { sendPasswordResetEmail, signInWithPassword } from '@/src/lib/auth'
 import {
   AUTH_FOCUS_VISIBLE_CLASS,
@@ -157,19 +158,40 @@ function LoginPageContent() {
   return (
     <main
       className={cn(
-        'login-page-shell relative flex min-h-dvh items-center justify-center px-4',
+        /* Flex column: 2:3 free-space spacers optically lift the combined unit
+           (40% above / 60% below). Spacers shrink on short viewports → scroll, no clip. */
+        'login-page-shell relative flex min-h-dvh flex-col items-center overflow-y-auto px-5 lg:px-4',
         LOGIN_BACKGROUND === 'image' && 'login-page-shell--image',
       )}
     >
+      <div className="login-vcenter-before" aria-hidden="true" />
       {/*
-        Stage: 400px form column; lg+ doubles to 800px for 50/50 panel.
-        Pucky anchors to .login-pucky-panel-form (left), not the wide card center.
+        Mobile: ~90% width form-only card. Desktop: 800px 50/50 stage.
+        Pucky anchors to .login-pucky-panel-form (full width mobile / left half desktop).
+        Stage box includes Pucky overhang spacer → true combined unit for v-centering.
       */}
-      <div className="login-pucky-stage relative w-full max-w-[400px] lg:max-w-[800px]">
-        {/* Desktop: Pucky overlays the LEFT panel top (hands on edge, in front). */}
+      <div className="login-pucky-stage relative mx-auto w-full max-w-[24rem] lg:max-w-[800px]">
+        {/*
+          Flow spacer = Pucky overhang (handY × frameH − overlap), derived from
+          stage width + scale vars — so the stage box is the true composition
+          (head→card bottom) for the 40/60 optical lift.
+        */}
+        <div className="login-pucky-overhang" aria-hidden="true" />
+        <div className="login-pucky-body relative">
+        {/* Mobile: original frame with eyes baked in — no tracking. */}
+        <img
+          className="login-pucky-frame login-pucky-frame--mobile"
+          src={PUCKY_EYE_ASSET.referenceSrc}
+          alt=""
+          width={PUCKY_EYE_ASSET.width}
+          height={PUCKY_EYE_ASSET.height}
+          decoding="async"
+          aria-hidden="true"
+        />
+        {/* Desktop: eyeless frame + tracked eyes over LEFT panel top. */}
         <img
           ref={puckyFrameRef}
-          className="login-pucky-frame"
+          className="login-pucky-frame login-pucky-frame--desktop"
           src={PUCKY_EYE_ASSET.eyelessSrc}
           alt=""
           width={PUCKY_EYE_ASSET.width}
@@ -184,13 +206,21 @@ function LoginPageContent() {
             loginCardElevationClassName,
           )}
         >
-          {/* Left = form column centered; z-20 keeps fields above seam bleed. */}
-          <div className="login-pucky-panel-form relative z-20 flex flex-col items-center px-8 pb-5 pt-10">
+          {/* Left = form column centered; z-20 keeps fields above seam bleed.
+              Mobile: slightly tighter vertical rhythm (~5–10% shorter card). */}
+          <div className="login-pucky-panel-form relative z-20 flex flex-col items-center px-5 pb-3 pt-7 lg:px-8 lg:pb-5 lg:pt-10">
             <div className="w-full max-w-[17rem]">
+            {/* Mobile-only brand mark → homepage; desktop card stays logo-less. */}
+            <div className="login-mobile-logo mb-3.5 lg:hidden">
+              <PoolCupLogo
+                href="/"
+                className="!h-9 !w-[105px] sm:!h-9 sm:!w-[105px]"
+              />
+            </div>
             {mode === 'signin' ? (
               <>
-                {/* Teko display — text-2xl → text-4xl for heading presence. */}
-                <h1 className="font-display text-center text-4xl tracking-wide text-[#e8f0ec]">
+                {/* Teko display — slightly smaller on mobile; text-4xl desktop. */}
+                <h1 className="font-display text-center text-3xl tracking-wide text-[#e8f0ec] lg:text-4xl">
                   Welcome back
                 </h1>
                 <p className="mt-1 text-center text-sm text-[#96A29D]">
@@ -200,14 +230,18 @@ function LoginPageContent() {
                 </p>
               </>
             ) : (
-              <h1 className="font-display text-center text-4xl tracking-wide text-[#e8f0ec]">
+              <h1 className="font-display text-center text-3xl tracking-wide text-[#e8f0ec] lg:text-4xl">
                 Reset your password
               </h1>
             )}
 
             {mode === 'signin' && (
               <>
-                <form onSubmit={handleSignIn} className="mt-8 space-y-2.5">
+                {/* Mobile: mt-6 (sub→fields); desktop keeps mt-8. */}
+                <form
+                  onSubmit={handleSignIn}
+                  className="login-signin-form mt-6 space-y-2.5 lg:mt-8"
+                >
                   <div>
                     <div className="relative">
                       <Mail className={loginFieldIconClassName} aria-hidden />
@@ -238,7 +272,7 @@ function LoginPageContent() {
                       leadingIcon={<Lock className="h-4 w-4" aria-hidden />}
                       leadingIconClassName="text-[#91A39D]"
                     />
-                    {/* Right-aligned: sits as a secondary escape under the field, clear of the primary CTA. */}
+                    {/* Attached to password (mt-1.5); Sign in mt below closes the orphan gap. */}
                     <div className="mt-1.5 flex justify-end">
                       <button
                         type="button"
@@ -262,12 +296,14 @@ function LoginPageContent() {
                     </p>
                   )}
 
-                  {/* Breathing room: mt-5 (~20px) above, mb-4 (~16px) below.
-                      Tactile edge is box-shadow (4px raise) — no layout height change. */}
+                  {/* Mobile: mt-2.5 under forgot (was mt-5 orphan); desktop mt-5. */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className={cn(loginSignInClassName, 'mt-5 mb-4')}
+                    className={cn(
+                      loginSignInClassName,
+                      'login-signin-submit mt-2.5 mb-3 lg:mt-5 lg:mb-4',
+                    )}
                     style={
                       {
                         '--tactile-btn-surface': LOGIN_SIGN_IN_SURFACE,
@@ -281,7 +317,7 @@ function LoginPageContent() {
 
                 <AuthFormDivider className="my-0" surfaceClassName="bg-[#171717]" />
 
-                <div className="mt-3">
+                <div className="mt-2.5 lg:mt-3">
                   <GoogleSignInButton
                     next={next ?? undefined}
                     variant="branded"
@@ -289,7 +325,7 @@ function LoginPageContent() {
                   />
                 </div>
 
-                <p className="mt-3 text-center text-xs text-[#5a7080]">
+                <p className="mt-2.5 text-center text-xs text-[#5a7080] lg:mt-3">
                   Don&apos;t have an account?{' '}
                   <Link
                     href={
@@ -391,7 +427,9 @@ function LoginPageContent() {
             </div>
           </div>
         </div>
+        </div>
       </div>
+      <div className="login-vcenter-after" aria-hidden="true" />
     </main>
   )
 }

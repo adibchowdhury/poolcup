@@ -1,0 +1,32 @@
+{
+  "cardH": 472,
+  "stageH": 569.7,
+  "panelPad": "28px 20px 12px",
+  "logo": {
+    "w": 105,
+    "h": 36
+  },
+  "logoMb": "14px",
+  "gaps": {
+    "logoToH1": 14,
+    "h1ToSub": 4,
+    "subToEmail": 24,
+    "emailToPassword": 10,
+    "passwordToForgot": 6,
+    "forgotToSignIn": 14,
+    "passwordToSignIn": 36
+  },
+  "formSpaceY": "normal",
+  "formMt": "24px",
+  "signInMt": "4px",
+  "signInMb": "12px",
+  "forgotWrapMt": "6px",
+  "overhangPx": 97.7,
+  "handLine": 214.6,
+  "cardTop": 210.6,
+  "gapAbove": 112.9,
+  "gapBelow": 161.4,
+  "aboveSharePct": 41.2,
+  "belowSharePct": 58.8,
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-mobile-polish-after-390x844.png"
+}

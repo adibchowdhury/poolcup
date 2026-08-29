@@ -1,0 +1,182 @@
+{
+  "390x844": {
+    "ok": true,
+    "vh": 844,
+    "frame": {
+      "top": 99.3,
+      "bottom": 233.5,
+      "h": 134.2
+    },
+    "card": {
+      "top": 197,
+      "bottom": 703,
+      "h": 506
+    },
+    "stage": {
+      "top": 99.3,
+      "bottom": 703,
+      "h": 603.7,
+      "transform": "none",
+      "padTop": "0px",
+      "handY": ".7578",
+      "handOverlap": "4px",
+      "scale": ".575"
+    },
+    "unit": {
+      "top": 99.3,
+      "bottom": 703,
+      "h": 603.7
+    },
+    "gapAbove": 99.3,
+    "gapBelow": 141,
+    "gapDelta": -41.7,
+    "freeSpace": 240.3,
+    "aboveSharePct": 41.3,
+    "belowSharePct": 58.7,
+    "overhangPx": 97.7,
+    "derivedOverhang": 97.7,
+    "clippedTop": false,
+    "clippedBottom": false,
+    "shellPad": {
+      "top": "16px",
+      "bottom": "16px",
+      "overflowY": "auto"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-vcenter-optical-lift-390x844.png"
+  },
+  "1280x800": {
+    "ok": true,
+    "vh": 800,
+    "frame": {
+      "top": 72.8,
+      "bottom": 233.8,
+      "h": 161
+    },
+    "card": {
+      "top": 189.5,
+      "bottom": 691.4,
+      "h": 501.9
+    },
+    "stage": {
+      "top": 72.8,
+      "bottom": 691.4,
+      "h": 618.6,
+      "transform": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+      "padTop": "0px",
+      "handY": ".7578",
+      "handOverlap": "5px",
+      "scale": ".575"
+    },
+    "unit": {
+      "top": 72.8,
+      "bottom": 691.4,
+      "h": 618.7
+    },
+    "gapAbove": 72.8,
+    "gapBelow": 108.6,
+    "gapDelta": -35.8,
+    "freeSpace": 181.3,
+    "aboveSharePct": 40.1,
+    "belowSharePct": 59.9,
+    "overhangPx": 116.8,
+    "derivedOverhang": 117,
+    "clippedTop": false,
+    "clippedBottom": false,
+    "shellPad": {
+      "top": "16px",
+      "bottom": "16px",
+      "overflowY": "auto"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-vcenter-optical-lift-1280x800.png"
+  },
+  "390x668": {
+    "ok": true,
+    "vh": 668,
+    "frame": {
+      "top": 28.9,
+      "bottom": 163.1,
+      "h": 134.2
+    },
+    "card": {
+      "top": 126.6,
+      "bottom": 632.6,
+      "h": 506
+    },
+    "stage": {
+      "top": 28.9,
+      "bottom": 632.6,
+      "h": 603.7,
+      "transform": "none",
+      "padTop": "0px",
+      "handY": ".7578",
+      "handOverlap": "4px",
+      "scale": ".575"
+    },
+    "unit": {
+      "top": 28.9,
+      "bottom": 632.6,
+      "h": 603.7
+    },
+    "gapAbove": 28.9,
+    "gapBelow": 35.4,
+    "gapDelta": -6.5,
+    "freeSpace": 64.3,
+    "aboveSharePct": 45,
+    "belowSharePct": 55,
+    "overhangPx": 97.7,
+    "derivedOverhang": 97.7,
+    "clippedTop": false,
+    "clippedBottom": false,
+    "shellPad": {
+      "top": "16px",
+      "bottom": "16px",
+      "overflowY": "auto"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-vcenter-optical-lift-390x668.png"
+  },
+  "1280x668": {
+    "ok": true,
+    "vh": 668,
+    "frame": {
+      "top": 20,
+      "bottom": 181,
+      "h": 161
+    },
+    "card": {
+      "top": 136.7,
+      "bottom": 638.6,
+      "h": 501.9
+    },
+    "stage": {
+      "top": 20,
+      "bottom": 638.6,
+      "h": 618.6,
+      "transform": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+      "padTop": "0px",
+      "handY": ".7578",
+      "handOverlap": "5px",
+      "scale": ".575"
+    },
+    "unit": {
+      "top": 20,
+      "bottom": 638.6,
+      "h": 618.7
+    },
+    "gapAbove": 20,
+    "gapBelow": 29.4,
+    "gapDelta": -9.4,
+    "freeSpace": 49.3,
+    "aboveSharePct": 40.5,
+    "belowSharePct": 59.5,
+    "overhangPx": 116.8,
+    "derivedOverhang": 117,
+    "clippedTop": false,
+    "clippedBottom": false,
+    "shellPad": {
+      "top": "16px",
+      "bottom": "16px",
+      "overflowY": "auto"
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-vcenter-optical-lift-1280x668.png"
+  }
+}

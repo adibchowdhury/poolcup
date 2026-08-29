@@ -2476,14 +2476,22 @@ html.create-mode-dashboard-restore [data-hub-shell] {
 }
 
 /*
- * Pucky login composition (desktop): TOP-OF-LEFT-PANEL OVERLAY.
- * Asset public/login_assets/pucky-login-frame.png (1536×1024) — peeking
- * bust (head + cape + hands). Hands sit on the LEFT panel top edge, layer in
- * front of the card. Form stays fully interactive (pointer-events: none).
+ * Pucky login composition: TOP-OF-FORM-PANEL OVERLAY.
+ * Desktop: eyeless frame + tracked eyes (lg+).
+ * Mobile: public/login_assets/pucky-login-frame.png (baked-in eyes, static).
  *
  * --pucky-hand-y: fraction from asset top to hand contact line (measured).
  * --pucky-hand-overlap: how far hands sit onto the panel top (px).
- * --pucky-scale: width vs LEFT panel (.login-pucky-panel-form), not full card.
+ * --pucky-scale: width vs form panel (.login-pucky-panel-form).
+ *   Desktop: panel = 50% of stage → width calc(scale * 50%).
+ *   Mobile: panel = 100% of stage → width calc(scale * 100%).
+ *
+ * Vertical position: .login-pucky-overhang is a flow spacer whose height equals
+ * the rendered overhang
+ *   handY × (scale × panelFrac × stageWidth × assetH/W) − overlap
+ * so the stage box = head→card-bottom. Shell flex spacers
+ * (.login-vcenter-before : .login-vcenter-after = 2 : 3) split free space
+ * 40% above / 60% below (optical lift). Spacers shrink on short viewports.
  */
 .login-pucky-stage {
   /* Was 0.46 (half of 0.92); ×1.25 → 0.575 (~62.5% of original 0.92). */
@@ -2491,24 +2499,118 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   /* Hand underside / ledge contact ≈ y=776 / 1024 */
   --pucky-hand-y: 0.7578;
   --pucky-hand-overlap: 5px;
+  /* Asset 1536×1024 → height/width for overhang math */
+  --pucky-asset-ratio: calc(1024 / 1536);
+  /* Form panel as fraction of stage width (1 mobile / 0.5 desktop) */
+  --pucky-panel-frac: 1;
   /* Uniform 105% of original layout (was 0.92; top bar gone → scale full unit up). */
   transform: scale(1.05);
   transform-origin: center center;
+  flex: 0 0 auto;
+}
+
+/* Optical lift — free-space split 40% above / 60% below the combined unit. */
+.login-vcenter-before {
+  flex: 2 1 0;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.login-vcenter-after {
+  flex: 3 1 0;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Flow spacer — padding-% resolves against stage WIDTH (not a magic px). */
+.login-pucky-overhang {
+  display: block;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  /* overhang = handY × frameH − overlap; frameW = scale × panelFrac × stageW */
+  padding-top: calc(
+    var(--pucky-hand-y) * var(--pucky-scale) * var(--pucky-panel-frac) *
+      var(--pucky-asset-ratio) * 100% - var(--pucky-hand-overlap)
+  );
 }
 
 .login-pucky-frame {
   display: none;
 }
 
-@media (min-width: 1024px) {
-  .login-page-shell {
-    /* Room for overlay head above the card; asymmetric pad shifts composition UP ~32px
-       vs prior 14rem/3rem (items-center: centerY = (vh + padTop − padBottom) / 2). */
-    padding-top: 12rem;
-    padding-bottom: 5rem;
+/* Shared shell floor — both breakpoints; flex spacers own the optical lift. */
+.login-page-shell {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile ≤1023: form-only card, static Pucky. */
+@media (max-width: 1023px) {
+  .login-pucky-stage {
+    /* Kill desktop 1.05 scale — was the main "card too large" culprit (~96% vw). */
+    transform: none;
+    --pucky-scale: 0.575;
+    --pucky-hand-y: 0.7578;
+    --pucky-hand-overlap: 4px;
+    --pucky-panel-frac: 1;
   }
 
-  .login-pucky-frame {
+  .login-pucky-frame--mobile {
+    display: block;
+    position: absolute;
+    z-index: 20; /* in front of .login-pucky-card (z-10) */
+    pointer-events: none;
+    user-select: none;
+    /* Form panel = full stage width below lg. */
+    width: calc(var(--pucky-scale) * 100%);
+    height: auto;
+    max-width: none;
+    left: 50%;
+    /* Body top = card top (spacer is a sibling above body). */
+    top: 0;
+    transform: translate(
+      -50%,
+      calc(-1 * var(--pucky-hand-y) * 100% + var(--pucky-hand-overlap))
+    );
+  }
+
+  .login-pucky-card {
+    position: relative;
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  /* Mobile-only logo above Welcome back — desktop stays logo-less. */
+  .login-mobile-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.875rem; /* 14px — proportion with taller mark */
+  }
+
+  .login-mobile-logo img {
+    height: 2.25rem; /* 36px; was 2rem / 32px */
+    width: auto;
+  }
+
+  /* space-y beats utility mt on the submit — pin forgot→Sign in gap on mobile.
+     Computed mt alone under-reports vs painted gap (~+10px from field stack);
+     4px mt → ~14px painted under forgot (was ~30). */
+  .login-pucky-panel-form .login-signin-form > .login-signin-submit {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .login-pucky-stage {
+    --pucky-panel-frac: 0.5;
+  }
+
+  .login-pucky-frame--desktop {
     display: block;
     position: absolute;
     z-index: 20; /* in front of .login-pucky-card (z-10) */
@@ -2520,7 +2622,7 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     max-width: none;
     /* Center of left half (panel-form), not full-card center. */
     left: 25%;
-    top: 0; /* stage top = card top */
+    top: 0; /* body top = card top */
     /* Align hand line to left-panel top, then nudge down by overlap */
     transform: translate(
       -50%,
@@ -2532,6 +2634,10 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     position: relative;
     z-index: 10;
     overflow: hidden;
+  }
+
+  .login-mobile-logo {
+    display: none;
   }
 }
 
