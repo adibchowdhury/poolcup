@@ -1,0 +1,22 @@
+{
+  "phase": "after",
+  "metrics": {
+    "className": "items-center justify-center disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive ui-tactile-btn ui-tactile-btn--destructive text-white focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 rounded-md gap-1.5 has-[>svg]:px-2.5 hidden h-8 shrink-0 whitespace-nowrap px-2.5 text-xs font-medium lg:inline-flex",
+    "surface": "#f44",
+    "edgeVar": "#8a2424",
+    "destructiveToken": "#f44",
+    "primaryToken": "#00e676",
+    "boxShadow": "rgb(138, 36, 36) 0px 4px 0px 0px",
+    "shadowColorParsed": "rgb(138, 36, 36)",
+    "backgroundImage": "linear-gradient(color(srgb 0.865294 0.229608 0.229608), color(srgb 0.72 0.192 0.192))",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "color": "rgb(240, 244, 248)"
+  },
+  "pressedMetrics": {
+    "boxShadow": "rgb(138, 36, 36) 0px 1px 0px 0px",
+    "transform": "matrix(1, 0, 0, 1, 0, 3)",
+    "edgeVar": "#8a2424"
+  },
+  "restShot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\report-issue-edge-after-rest-1440x900.png",
+  "pressedShot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\report-issue-edge-after-pressed-1440x900.png"
+}

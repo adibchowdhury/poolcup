@@ -162,17 +162,17 @@ export function DeletePoolDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
+            <AlertDialogAction
+              variant="destructive"
+              className={cn(
+                (!canDelete || submitting) && 'pointer-events-none opacity-50',
+              )}
+              onClick={(e) => {
               e.preventDefault()
               if (!canDelete || submitting) return
               void handleDelete()
             }}
-            className={cn(
-              'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-              (!canDelete || submitting) && 'pointer-events-none opacity-50',
-            )}
-          >
+            >
             {submitting ? 'Deleting…' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>

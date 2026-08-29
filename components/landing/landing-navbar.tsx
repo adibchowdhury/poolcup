@@ -52,7 +52,7 @@ export function LandingNavbar({ className, style }: LandingNavbarProps) {
         <PoolCupLogo onClick={closeMenu} />
 
         <div className="flex items-center justify-end gap-3">
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="hidden items-center gap-4 pb-1 md:flex">
             <Link
               href={LANDING_SIGN_IN_HREF}
               className={cn(

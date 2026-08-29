@@ -31,7 +31,8 @@ export function LandingLaunchCtas({
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center',
+        // pb reserves room for straight-down tactile edge (4px) inside overflow-hidden heroes
+        'flex w-full flex-col items-stretch gap-3 pb-1.5 sm:flex-row sm:items-center',
         align === 'center' ? 'sm:justify-center' : 'sm:justify-start',
         className,
       )}

@@ -528,10 +528,8 @@ export function AdminReportsDashboard() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busyId != null}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={cn(
-                'bg-destructive text-white hover:bg-destructive/90',
-                FOCUS_VISIBLE_RING,
-              )}
+              variant="destructive"
+              className={FOCUS_VISIBLE_RING}
               disabled={busyId != null || !banReason.trim() || !banTarget}
               onClick={(event) => {
                 event.preventDefault()

@@ -2114,7 +2114,7 @@ export function PoolSettingsSectionContent({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
               disabled={removingMember}
               onClick={(e) => {
                 e.preventDefault()

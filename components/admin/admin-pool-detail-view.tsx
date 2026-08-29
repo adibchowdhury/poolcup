@@ -201,10 +201,8 @@ export function AdminPoolDetailView({ poolId }: { poolId: string }) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={cn(
-                'bg-destructive text-white hover:bg-destructive/90',
-                FOCUS_VISIBLE_RING,
-              )}
+              variant="destructive"
+              className={FOCUS_VISIBLE_RING}
               disabled={busy}
               onClick={(event) => {
                 event.preventDefault()

@@ -164,6 +164,7 @@ const ONBOARDING_BTN_3D_PRIMARY = cn(
 
 const ONBOARDING_BTN_3D_BACK = cn(
   'ui-tactile-btn',
+  '[--tactile-btn-surface:#111a27]',
   'text-foreground',
   '[-webkit-tap-highlight-color:transparent] touch-manipulation select-none',
   'bg-[linear-gradient(180deg,#243044,#111a27)]',

@@ -311,7 +311,8 @@ export function AdminUserDetailView({ userId }: { userId: string }) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={cn(buttonDestructiveClass, FOCUS_VISIBLE_RING)}
+              variant="destructive"
+              className={FOCUS_VISIBLE_RING}
               disabled={busy || !banReason.trim()}
               onClick={(event) => {
                 event.preventDefault()
@@ -350,6 +351,3 @@ export function AdminUserDetailView({ userId }: { userId: string }) {
     </div>
   )
 }
-
-const buttonDestructiveClass =
-  'bg-destructive text-white hover:bg-destructive/90'

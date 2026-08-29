@@ -140,7 +140,7 @@ function ComparisonCell({ value }: { value: boolean | string }) {
 
 function OfferCard({ offer }: { offer: PricingOffer }) {
   const ctaClassName = cn(
-    'mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold',
+    'mt-8 mb-1.5 inline-flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e676] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1620]',
     offer.highlight
       ? landingTactileCommissionerClass

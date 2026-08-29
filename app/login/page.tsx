@@ -54,9 +54,8 @@ const loginCardElevationClassName =
   'shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_8px_16px_rgba(0,0,0,0.35),0_24px_60px_rgba(0,0,0,0.40),0_0_40px_rgba(0,230,118,0.015)]'
 
 /**
- * Pill Sign in — white on #00A85D + sitewide tactile 3D (`.ui-tactile-btn`).
- * Edge via inline `--tactile-btn-edge` (beats `button.ui-tactile-btn` default #080b0f).
- * Recipe matches `.ui-tactile-btn--primary` (42% mix with black) on #00A85D fill.
+ * Pill Sign in — white on #00A85D + shared straight-down tactile (`.ui-tactile-btn`).
+ * Surface token drives edge via color-mix(surface 70%, black) — no local edge hand-pick.
  * Contrast ≈3.11:1 vs white — best in the requested #00B368–#00A85D band;
  * still short of WCAG AA 4.5:1 (would need ~#008F4C / darker).
  */
@@ -65,8 +64,8 @@ const loginSignInClassName = cn(
   AUTH_FOCUS_VISIBLE_CLASS,
 )
 
-/** Darker green tactile edge for login Sign in (#00A85D @ 42% → black). */
-const LOGIN_SIGN_IN_TACTILE_EDGE = 'color-mix(in srgb, #00A85D 42%, #000000)'
+/** Login Sign in fill — edge derives from --tactile-btn-surface at the shared layer. */
+const LOGIN_SIGN_IN_SURFACE = '#00A85D'
 
 type AuthMode = 'signin' | 'forgot'
 
@@ -271,7 +270,7 @@ function LoginPageContent() {
                     className={cn(loginSignInClassName, 'mt-5 mb-4')}
                     style={
                       {
-                        '--tactile-btn-edge': LOGIN_SIGN_IN_TACTILE_EDGE,
+                        '--tactile-btn-surface': LOGIN_SIGN_IN_SURFACE,
                       } as CSSProperties
                     }
                     onPointerDown={(event) => bindTactilePress(event.currentTarget)}

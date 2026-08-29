@@ -9,7 +9,7 @@ export const landingTactilePointerDown: PointerEventHandler<
   bindTactilePress(event.currentTarget)
 }
 
-/** Green primary CTA — landing #00e676; motion via ui-tactile-btn (no scale/glow). */
+/** Green primary CTA — landing #00e676; shared straight-down tactile. */
 export const landingTactilePrimaryClass = cn(
   'ui-tactile-btn ui-tactile-btn--primary',
   'border-none',
@@ -19,18 +19,18 @@ export const landingTactilePrimaryClass = cn(
   'text-[#080b0f]',
 )
 
-/** Free / green outline pricing CTA. */
+/** Free / green outline pricing CTA — flat (outline is out of tactile scope). */
 export const landingTactileOutlineGreenClass = cn(
-  'ui-tactile-btn ui-tactile-btn--outline',
   'border border-[#00e676]/40 bg-transparent text-[#00e676]',
+  'transition-colors duration-150',
   'hover:bg-[#00e676]/10 hover:text-[#00e676]',
   'active:bg-[#00e676]/10',
 )
 
-/** Custom Pool gold pricing CTA. */
+/** Custom Pool gold pricing CTA — solid action; surface drives shared edge mix. */
 export const landingTactileCommissionerClass = cn(
   'ui-tactile-btn',
-  '[--tactile-btn-edge:color-mix(in_srgb,#ffc107_45%,#000000)]',
+  '[--tactile-btn-surface:#ffc107]',
   'border border-[rgba(255,193,7,0.45)] bg-[rgba(255,193,7,0.1)] text-[#ffc107]',
   'hover:bg-[rgba(255,193,7,0.1)]',
   'active:bg-[rgba(255,193,7,0.1)]',

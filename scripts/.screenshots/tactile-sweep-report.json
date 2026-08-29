@@ -1,0 +1,177 @@
+[
+  {
+    "name": "landing",
+    "metrics": {
+      "href": "/",
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "tactileCount": 4,
+      "dropLeftover": 0,
+      "samples": [
+        {
+          "tag": "a",
+          "text": "Get Started",
+          "shadow": "color(srgb 0 0.631373 0.323922) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00e676",
+          "edge": "color-mix(in srgb, #00e676 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "a",
+          "text": "Get Started",
+          "shadow": "color(srgb 0 0.631373 0.323922) 0px 4px 0px 0px",
+          "transform": "none",
+          "surface": "#00e676",
+          "edge": "color-mix(in srgb, #00e676 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "a",
+          "text": "Get Started",
+          "shadow": "color(srgb 0 0.631373 0.323922) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00e676",
+          "edge": "color-mix(in srgb, #00e676 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "a",
+          "text": "Get Started",
+          "shadow": "color(srgb 0 0.631373 0.323922) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00e676",
+          "edge": "color-mix(in srgb, #00e676 70%, #000)",
+          "disabled": false,
+          "flat": false
+        }
+      ]
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-landing-1280x800.png"
+  },
+  {
+    "name": "login",
+    "metrics": {
+      "href": "/login",
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "tactileCount": 2,
+      "dropLeftover": 0,
+      "samples": [
+        {
+          "tag": "button",
+          "text": "Sign in",
+          "shadow": "color(srgb 0 0.461176 0.255294) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00A85D",
+          "edge": "color-mix(in srgb, #00A85D 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "button",
+          "text": "Sign in with Google",
+          "shadow": "color(srgb 0.7 0.7 0.7) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#ffffff",
+          "edge": "color-mix(in srgb, #ffffff 70%, #000)",
+          "disabled": false,
+          "flat": false
+        }
+      ]
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-login-1280x800.png"
+  },
+  {
+    "name": "dashboard",
+    "metrics": {
+      "href": "/login",
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "tactileCount": 2,
+      "dropLeftover": 0,
+      "samples": [
+        {
+          "tag": "button",
+          "text": "Sign in",
+          "shadow": "color(srgb 0 0.461176 0.255294) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00A85D",
+          "edge": "color-mix(in srgb, #00A85D 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "button",
+          "text": "Sign in with Google",
+          "shadow": "color(srgb 0.7 0.7 0.7) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#ffffff",
+          "edge": "color-mix(in srgb, #ffffff 70%, #000)",
+          "disabled": false,
+          "flat": false
+        }
+      ]
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-dashboard-1280x800.png"
+  },
+  {
+    "name": "create",
+    "metrics": {
+      "href": "/login",
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "tactileCount": 2,
+      "dropLeftover": 0,
+      "samples": [
+        {
+          "tag": "button",
+          "text": "Sign in",
+          "shadow": "color(srgb 0 0.461176 0.255294) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00A85D",
+          "edge": "color-mix(in srgb, #00A85D 70%, #000)",
+          "disabled": false,
+          "flat": false
+        },
+        {
+          "tag": "button",
+          "text": "Sign in with Google",
+          "shadow": "color(srgb 0.7 0.7 0.7) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#ffffff",
+          "edge": "color-mix(in srgb, #ffffff 70%, #000)",
+          "disabled": false,
+          "flat": false
+        }
+      ]
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-create-1280x800.png"
+  },
+  {
+    "name": "settings",
+    "metrics": {
+      "href": "/settings",
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "tactileCount": 1,
+      "dropLeftover": 0,
+      "samples": [
+        {
+          "tag": "a",
+          "text": "Go home",
+          "shadow": "color(srgb 0 0.631373 0.323922) 0px 4px 0px 0px",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "surface": "#00e676",
+          "edge": "color-mix(in srgb, #00e676 70%, #000)",
+          "disabled": false,
+          "flat": false
+        }
+      ]
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-settings-1280x800.png"
+  },
+  {
+    "name": "dialog-proxy-login",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\tactile-sweep-dialog-1280x800.png",
+    "note": "login CTAs stand in; AlertDialog uses Button variants"
+  }
+]

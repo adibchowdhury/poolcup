@@ -15,8 +15,8 @@ type GoogleSignInButtonProps = {
   label?: string
 }
 
-/** Neutral tactile edge for white Google surface (~#c8c8c8–#bdbdbd band). */
-const GOOGLE_BRANDED_TACTILE_EDGE = '#c0c0c0'
+/** White Google surface — edge derives from shared --tactile-btn-surface mix. */
+const GOOGLE_BRANDED_SURFACE = '#ffffff'
 
 export function GoogleSignInButton({
   next,
@@ -48,9 +48,9 @@ export function GoogleSignInButton({
         )
       : variant === 'branded'
         ? cn(
-            // Google Identity light theme + sitewide tactile 3D (`.ui-tactile-btn`).
+            // Google Identity light theme + shared straight-down tactile (`.ui-tactile-btn`).
             // Fill #FFF, stroke #747775; multicolor G via GoogleIcon SVG.
-            // Edge via inline style (beats `button.ui-tactile-btn` default #080b0f).
+            // Surface via inline style → edge = color-mix(surface 70%, black).
             'ui-tactile-btn flex w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-4 py-3 text-sm font-medium text-[#3c4043] hover:bg-[#f8f9fa] disabled:cursor-not-allowed disabled:opacity-60',
             AUTH_FOCUS_VISIBLE_CLASS,
           )
@@ -68,7 +68,7 @@ export function GoogleSignInButton({
         className={buttonClassName}
         style={
           isTactile
-            ? ({ '--tactile-btn-edge': GOOGLE_BRANDED_TACTILE_EDGE } as CSSProperties)
+            ? ({ '--tactile-btn-surface': GOOGLE_BRANDED_SURFACE } as CSSProperties)
             : undefined
         }
         onPointerDown={(event) => {

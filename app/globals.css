@@ -759,14 +759,24 @@ html.light .mobile-bottom-nav-home {
 }
 
 /*
-  Unified tactile buttons — sink-on-hover 3D (onboarding-proven model).
-  Plain CSS: translate() only, crisp 0-blur offset shadows, no scale, no glow, no filter.
+  Unified tactile buttons — straight-down game-button depth (login reference).
+  Plain CSS: translateY only, crisp 0-blur offset shadows, no scale, no glow, no filter.
 
-  REST: raised (4px offset shadow). HOVER: partial sink translate(2px,2px) + halved shadow.
-  ACTIVE: deeper sink (3px) + 1px shadow sliver. RELEASE: spring overshoot on transform.
+  REST: raised (0 Npx solid edge below). HOVER: partial sink translateY + thinner edge.
+  ACTIVE: deeper sink onto a 1px sliver. DISABLED: flat (no edge, no press).
 
-  Consumers: shared Button (.ui-tactile-btn), onboarding (.ui-tactile-btn + variant),
-  pool-card anchors (a.ui-tactile-btn). Legacy .onboarding-3d-btn aliases the base class.
+  Edge color: --tactile-btn-surface (button fill) →
+    color-mix(in srgb, var(--tactile-btn-surface) 70%, #000) — works for green/gold/white/etc.
+  Variant surface tokens MUST use button/a-qualified selectors so they beat the
+  base `button.ui-tactile-btn { --tactile-btn-surface: var(--primary) }` fallback
+  (otherwise destructive/secondary keep a green edge). Custom-colored one-offs:
+  set --tactile-btn-surface explicitly (see button.tsx rule).
+
+  Scope: primary / destructive / secondary CTAs + one-off solid actions.
+  Not for: outline, ghost, link, icon-only, chips, tabs, badges.
+
+  Consumers: shared Button (.ui-tactile-btn), onboarding, pool-card anchors,
+  login Sign in / Google, landing primary/gold CTAs. Legacy .onboarding-3d-btn aliases base.
 */
 button.ui-tactile-btn,
 a.ui-tactile-btn,
@@ -774,15 +784,14 @@ button.onboarding-3d-btn {
   --tactile-btn-raise: 4px;
   --tactile-btn-hover-sink: 2px;
   --tactile-btn-press-sink: 3px;
-  --tactile-btn-edge: #080b0f;
+  --tactile-btn-surface: var(--primary);
+  --tactile-btn-edge: color-mix(in srgb, var(--tactile-btn-surface) 70%, #000000);
   --tactile-btn-hover-in-ms: var(--onboarding-btn-hover-in-ms, 290ms);
   --tactile-btn-hover-out-ms: var(--onboarding-btn-hover-out-ms, 270ms);
   --tactile-btn-press-ms: var(--onboarding-btn-press-ms, 150ms);
-  --tactile-btn-shadow-rest: var(--tactile-btn-raise) var(--tactile-btn-raise) 0 0
-    var(--tactile-btn-edge);
-  --tactile-btn-shadow-hover: var(--tactile-btn-hover-sink) var(--tactile-btn-hover-sink) 0 0
-    var(--tactile-btn-edge);
-  --tactile-btn-shadow-active: 1px 1px 0 0 var(--tactile-btn-edge);
+  --tactile-btn-shadow-rest: 0 var(--tactile-btn-raise) 0 0 var(--tactile-btn-edge);
+  --tactile-btn-shadow-hover: 0 var(--tactile-btn-hover-sink) 0 0 var(--tactile-btn-edge);
+  --tactile-btn-shadow-active: 0 1px 0 0 var(--tactile-btn-edge);
 
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -806,7 +815,7 @@ button.onboarding-3d-btn[data-pressed]:not(:disabled) {
   transition-duration: var(--tactile-btn-press-ms), var(--tactile-btn-press-ms), 150ms, 150ms,
     150ms, 150ms;
   transition-timing-function: ease-out, ease-out, ease-out, ease-out, ease-out, ease-out;
-  transform: translate(var(--tactile-btn-press-sink), var(--tactile-btn-press-sink));
+  transform: translate(0, var(--tactile-btn-press-sink));
   box-shadow: var(--tactile-btn-shadow-active);
 }
 
@@ -824,11 +833,14 @@ button.onboarding-3d-btn[data-pressed]:not(:disabled) {
   }
 }
 
+/* Disabled — flattened inert (no depth edge, no press) */
 button.ui-tactile-btn:disabled,
 a.ui-tactile-btn:disabled,
-button.onboarding-3d-btn:disabled {
+button.onboarding-3d-btn:disabled,
+button.ui-tactile-btn[aria-disabled='true'],
+a.ui-tactile-btn[aria-disabled='true'] {
   transform: translate(0, 0);
-  box-shadow: var(--tactile-btn-shadow-rest);
+  box-shadow: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -839,15 +851,36 @@ button.onboarding-3d-btn:disabled {
       180ms, 180ms, 180ms;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease-out, ease-out, ease-out,
       ease-out, ease-out;
-    transform: translate(var(--tactile-btn-hover-sink), var(--tactile-btn-hover-sink));
+    transform: translate(0, var(--tactile-btn-hover-sink));
     box-shadow: var(--tactile-btn-shadow-hover);
   }
 }
 
-/* Primary (default / green) */
-.ui-tactile-btn--primary,
-.onboarding-3d-btn--primary {
-  --tactile-btn-edge: color-mix(in srgb, var(--primary) 42%, #000000);
+/* Icon-only — keep fill colors from variant; no depth / no press motion */
+button.ui-tactile-btn.ui-tactile-btn--flat,
+a.ui-tactile-btn.ui-tactile-btn--flat {
+  --tactile-btn-raise: 0px;
+  --tactile-btn-hover-sink: 0px;
+  --tactile-btn-press-sink: 0px;
+  box-shadow: none;
+  transform: none;
+}
+
+button.ui-tactile-btn.ui-tactile-btn--flat:hover,
+button.ui-tactile-btn.ui-tactile-btn--flat:active,
+button.ui-tactile-btn.ui-tactile-btn--flat[data-pressed],
+a.ui-tactile-btn.ui-tactile-btn--flat:hover,
+a.ui-tactile-btn.ui-tactile-btn--flat:active,
+a.ui-tactile-btn.ui-tactile-btn--flat[data-pressed] {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Primary (default / green) — match button/a specificity so surface beats base fallback */
+button.ui-tactile-btn.ui-tactile-btn--primary,
+a.ui-tactile-btn.ui-tactile-btn--primary,
+button.onboarding-3d-btn.onboarding-3d-btn--primary {
+  --tactile-btn-surface: var(--primary);
   border: none;
   background: linear-gradient(
     180deg,
@@ -857,9 +890,13 @@ button.onboarding-3d-btn:disabled {
   color: var(--primary-foreground);
 }
 
-/* Destructive */
-.ui-tactile-btn--destructive {
-  --tactile-btn-edge: color-mix(in srgb, var(--destructive) 45%, #000000);
+/* Destructive — face uses --destructive; edge is a FIXED deep red (not color-mix).
+   Dark-mode face bottoms at mix(destructive 72%, black) ≈ #b73131; a 70% mix edge
+   matched that almost exactly and read as "same red". Token: #8a2424. */
+button.ui-tactile-btn.ui-tactile-btn--destructive,
+a.ui-tactile-btn.ui-tactile-btn--destructive {
+  --tactile-btn-surface: var(--destructive);
+  --tactile-btn-edge: #8a2424;
   border: none;
   background: linear-gradient(
     180deg,
@@ -869,7 +906,8 @@ button.onboarding-3d-btn:disabled {
   color: var(--destructive-foreground);
 }
 
-.dark .ui-tactile-btn--destructive {
+.dark button.ui-tactile-btn.ui-tactile-btn--destructive,
+.dark a.ui-tactile-btn.ui-tactile-btn--destructive {
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--destructive) 85%, #1a0505),
@@ -878,8 +916,9 @@ button.onboarding-3d-btn:disabled {
 }
 
 /* Secondary */
-.ui-tactile-btn--secondary {
-  --tactile-btn-edge: color-mix(in srgb, var(--secondary) 38%, #000000);
+button.ui-tactile-btn.ui-tactile-btn--secondary,
+a.ui-tactile-btn.ui-tactile-btn--secondary {
+  --tactile-btn-surface: var(--secondary);
   border: none;
   background: linear-gradient(
     180deg,
@@ -887,47 +926,6 @@ button.onboarding-3d-btn:disabled {
     var(--secondary)
   );
   color: var(--secondary-foreground);
-}
-
-/* Outline — neutral depth */
-.ui-tactile-btn--outline {
-  --tactile-btn-edge: color-mix(in srgb, var(--foreground) 18%, #000000);
-  --tactile-btn-raise: 3px;
-  --tactile-btn-hover-sink: 2px;
-  --tactile-btn-press-sink: 3px;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .ui-tactile-btn--outline:hover:not(:active):not([data-pressed]):not(:disabled),
-  a.ui-tactile-btn--outline:hover:not(:active):not([data-pressed]) {
-    background-color: color-mix(in srgb, var(--accent) 8%, var(--background));
-  }
-}
-
-.dark .ui-tactile-btn--outline:hover:not(:active):not([data-pressed]):not(:disabled) {
-  background-color: color-mix(in srgb, var(--foreground) 6%, var(--background));
-}
-
-/* Ghost — subtler depth */
-.ui-tactile-btn--ghost {
-  --tactile-btn-edge: color-mix(in srgb, var(--foreground) 14%, transparent);
-  --tactile-btn-raise: 2px;
-  --tactile-btn-hover-sink: 1px;
-  --tactile-btn-press-sink: 2px;
-  border: none;
-  background: transparent;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled),
-  a.ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]) {
-    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
-    color: var(--accent-foreground);
-  }
-}
-
-.dark .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled) {
-  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -955,11 +953,6 @@ button.onboarding-3d-btn:disabled {
     button.ui-tactile-btn:hover:not(:active):not([data-pressed]):not(:disabled),
     a.ui-tactile-btn:hover:not(:active):not([data-pressed]),
     button.onboarding-3d-btn:hover:not(:active):not([data-pressed]):not(:disabled) {
-      box-shadow: var(--tactile-btn-shadow-rest);
-    }
-
-    .ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]):not(:disabled),
-    a.ui-tactile-btn--ghost:hover:not(:active):not([data-pressed]) {
       box-shadow: var(--tactile-btn-shadow-rest);
     }
   }
@@ -2204,14 +2197,14 @@ html.create-mode-dashboard-restore [data-hub-shell] {
   border-radius: 999px;
 }
 
-/* Step-5 modal CTA — soft green elevation layered on tactile edge (restrained). */
+/* Step-5 modal CTA — soft green elevation layered on straight-down tactile edge. */
 .create-pool-wizard--modal button.ui-tactile-btn.create-pool-review-cta {
   --tactile-btn-shadow-rest:
-    var(--tactile-btn-raise) var(--tactile-btn-raise) 0 0 var(--tactile-btn-edge),
+    0 var(--tactile-btn-raise) 0 0 var(--tactile-btn-edge),
     0 0 0 1px rgba(0, 230, 118, 0.16),
     0 6px 18px -4px rgba(0, 230, 118, 0.32);
   --tactile-btn-shadow-hover:
-    var(--tactile-btn-hover-sink) var(--tactile-btn-hover-sink) 0 0 var(--tactile-btn-edge),
+    0 var(--tactile-btn-hover-sink) 0 0 var(--tactile-btn-edge),
     0 0 0 1px rgba(0, 230, 118, 0.22),
     0 8px 22px -4px rgba(0, 230, 118, 0.4);
 }
