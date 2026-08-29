@@ -162,10 +162,12 @@ html.light {
 }
 
 @theme inline {
-  /* Inter / Teko / Space Mono via next/font CSS variables on <html> */
+  /* Inter / Teko / Space Mono / Caveat via next/font CSS variables on <html> */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-space-mono), ui-monospace, monospace;
   --font-display: var(--font-teko), "Arial Narrow", "Helvetica Neue Condensed Bold", ui-sans-serif, system-ui, sans-serif;
+  /* Caveat — login testimonial quote only (5th webfont; flag for typography reference) */
+  --font-quote: var(--font-caveat), ui-cursive, cursive;
   /* VT323 via @fontsource on Coming Soon only */
   --font-vt323: "VT323", var(--font-mono);
   --color-app-background: var(--app-background);
@@ -218,6 +220,11 @@ html.light {
   font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+/* Caveat — login testimonial quote body (+ marks); not a global UI token */
+.font-quote {
+  font-family: var(--font-quote);
 }
 
 /* Footer column titles — Inter caps (UI token), not display Teko */
@@ -2486,11 +2493,11 @@ html.create-mode-dashboard-restore [data-hub-shell] {
  * --pucky-scale: width vs LEFT panel (.login-pucky-panel-form), not full card.
  */
 .login-pucky-stage {
-  /* Was 1.3 (520px); ~29% down → narrower than the 400px form column */
-  --pucky-scale: 0.92;
+  /* Was 0.46 (half of 0.92); ×1.25 → 0.575 (~62.5% of original 0.92). */
+  --pucky-scale: 0.575;
   /* Hand underside / ledge contact ≈ y=776 / 1024 */
   --pucky-hand-y: 0.7578;
-  --pucky-hand-overlap: 8px;
+  --pucky-hand-overlap: 5px;
   /* Uniform 105% of original layout (was 0.92; top bar gone → scale full unit up). */
   transform: scale(1.05);
   transform-origin: center center;
@@ -2502,9 +2509,10 @@ html.create-mode-dashboard-restore [data-hub-shell] {
 
 @media (min-width: 1024px) {
   .login-page-shell {
-    /* Room for overlay head above the card (~255px at scale 1.3) */
-    padding-top: 14rem;
-    padding-bottom: 3rem;
+    /* Room for overlay head above the card; asymmetric pad shifts composition UP ~32px
+       vs prior 14rem/3rem (items-center: centerY = (vh + padTop − padBottom) / 2). */
+    padding-top: 12rem;
+    padding-bottom: 5rem;
   }
 
   .login-pucky-frame {

@@ -1,0 +1,118 @@
+{
+  "metrics": {
+    "puckyScale": ".575",
+    "handY": ".7578",
+    "handOverlap": "5px",
+    "stageTransform": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+    "frame": {
+      "w": 241.5,
+      "h": 160.99,
+      "top": 88.3
+    },
+    "panel": {
+      "centerX": 430.53
+    },
+    "frameCenterX": 430,
+    "centerDeltaPx": -0.52,
+    "handLineY": 210.3,
+    "cardTopY": 205.05,
+    "handToCardGapPx": 5.25,
+    "assemblies": [
+      {
+        "w": 12.76,
+        "h": 14.11
+      },
+      {
+        "w": 13.37,
+        "h": 13.95
+      }
+    ],
+    "maxGazePxAtFrame": 2.62
+  },
+  "idle": {
+    "frameW": 241,
+    "frameH": 161,
+    "avgDr": 49.94,
+    "maxDr": 762,
+    "verdict": "close-acceptable"
+  },
+  "sweep": [
+    {
+      "point": "idle",
+      "offsets": [
+        {
+          "dx": -0.02,
+          "dy": -0.01,
+          "mag": 0.02
+        },
+        {
+          "dx": 38.15,
+          "dy": 0.07,
+          "mag": 38.15
+        }
+      ]
+    },
+    {
+      "point": "far-right",
+      "offsets": [
+        {
+          "dx": 1.16,
+          "dy": -0.01,
+          "mag": 1.17
+        },
+        {
+          "dx": 40.17,
+          "dy": 0.07,
+          "mag": 40.17
+        }
+      ]
+    },
+    {
+      "point": "far-left",
+      "offsets": [
+        {
+          "dx": -1.82,
+          "dy": -0.01,
+          "mag": 1.82
+        },
+        {
+          "dx": 37.33,
+          "dy": 0.07,
+          "mag": 37.33
+        }
+      ]
+    },
+    {
+      "point": "far-up",
+      "offsets": [
+        {
+          "dx": -0.21,
+          "dy": -1.87,
+          "mag": 1.88
+        },
+        {
+          "dx": 38.05,
+          "dy": -1.96,
+          "mag": 38.11
+        }
+      ]
+    },
+    {
+      "point": "far-down",
+      "offsets": [
+        {
+          "dx": -0.03,
+          "dy": 1.6,
+          "mag": 1.6
+        },
+        {
+          "dx": 38.14,
+          "dy": 1.35,
+          "mag": 38.16
+        }
+      ]
+    }
+  ],
+  "maxSweepMag": 40.17,
+  "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-pucky-grow-up-1280x800.png"
+}

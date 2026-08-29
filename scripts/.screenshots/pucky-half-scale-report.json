@@ -1,0 +1,118 @@
+{
+  "metrics": {
+    "puckyScale": ".46",
+    "handY": ".7578",
+    "handOverlap": "4px",
+    "stageTransform": "matrix(1.05, 0, 0, 1.05, 0, 0)",
+    "frame": {
+      "w": 193.2,
+      "h": 128.79,
+      "top": 143.65
+    },
+    "panel": {
+      "centerX": 430.53
+    },
+    "frameCenterX": 430,
+    "centerDeltaPx": -0.53,
+    "handLineY": 241.25,
+    "cardTopY": 237.05,
+    "handToCardGapPx": 4.2,
+    "assemblies": [
+      {
+        "w": 10.2,
+        "h": 11.29
+      },
+      {
+        "w": 10.7,
+        "h": 11.16
+      }
+    ],
+    "maxGazePxAtFrame": 2.1
+  },
+  "idle": {
+    "frameW": 193,
+    "frameH": 129,
+    "avgDr": null,
+    "maxDr": null,
+    "verdict": "visible-mismatch"
+  },
+  "sweep": [
+    {
+      "point": "idle",
+      "offsets": [
+        {
+          "dx": -0.03,
+          "dy": 0.01,
+          "mag": 0.03
+        },
+        {
+          "dx": 30.5,
+          "dy": 0.06,
+          "mag": 30.5
+        }
+      ]
+    },
+    {
+      "point": "far-right",
+      "offsets": [
+        {
+          "dx": 0.95,
+          "dy": 0.01,
+          "mag": 0.95
+        },
+        {
+          "dx": 32.19,
+          "dy": 0.06,
+          "mag": 32.19
+        }
+      ]
+    },
+    {
+      "point": "far-left",
+      "offsets": [
+        {
+          "dx": -1.61,
+          "dy": 0.01,
+          "mag": 1.61
+        },
+        {
+          "dx": 29.71,
+          "dy": 0.06,
+          "mag": 29.71
+        }
+      ]
+    },
+    {
+      "point": "far-up",
+      "offsets": [
+        {
+          "dx": -0.1,
+          "dy": -1.6,
+          "mag": 1.6
+        },
+        {
+          "dx": 30.47,
+          "dy": -1.7,
+          "mag": 30.51
+        }
+      ]
+    },
+    {
+      "point": "far-down",
+      "offsets": [
+        {
+          "dx": -0.03,
+          "dy": 1.47,
+          "mag": 1.47
+        },
+        {
+          "dx": 30.5,
+          "dy": 1.27,
+          "mag": 30.53
+        }
+      ]
+    }
+  ],
+  "maxSweepMag": 32.19,
+  "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\login-pucky-half-scale-1280x800.png"
+}

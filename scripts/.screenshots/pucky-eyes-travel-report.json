@@ -15,60 +15,60 @@
   },
   "outwardMarginPx": {
     "target": 2.63,
-    "liveAtFarLeft_L": 3.06,
-    "liveAtFarRight_R": 2.91
+    "liveAtFarLeft_L": 11.63,
+    "liveAtFarRight_R": 10.87
   },
   "saturation": {
     "oldMaxRPx": 3.68,
     "newMaxRPx": 22.96,
     "raised": true,
     "reason": "Old maxRadius 3.68px capped shared gaze before rxOuter (~22px); raised to ≥ rxOuter so far-edge saturates outer ellipse",
-    "farRightReachedOuter": true,
-    "farLeftReachedOuter": true
+    "farRightReachedOuter": false,
+    "farLeftReachedOuter": false
   },
   "sweeps": {
     "dRight": {
       "L": {
-        "dx": 7.76,
-        "dy": 0.01
+        "dx": 1.03,
+        "dy": 0.02
       },
       "R": {
-        "dx": 21.05,
+        "dx": 1.71,
         "dy": 0
       }
     },
     "dLeft": {
       "L": {
-        "dx": -21.98,
-        "dy": 0.01
+        "dx": -1.52,
+        "dy": -0.01
       },
       "R": {
-        "dx": -7.18,
+        "dx": -0.78,
         "dy": 0
       }
     },
     "dInR": {
       "L": {
-        "dx": 7.3,
-        "dy": 0.01
+        "dx": 0.95,
+        "dy": -0.04
       },
       "R": {
-        "dx": 20.78,
-        "dy": 0
+        "dx": 1.66,
+        "dy": -0.09
       }
     },
     "dInL": {
       "L": {
-        "dx": -21.68,
-        "dy": 0.01
+        "dx": -1.51,
+        "dy": -0.08
       },
       "R": {
-        "dx": -6.89,
-        "dy": 0
+        "dx": -0.78,
+        "dy": -0.04
       }
     },
-    "rightOk": true,
-    "leftOk": true,
+    "rightOk": false,
+    "leftOk": false,
     "beakOk": true
   }
 }

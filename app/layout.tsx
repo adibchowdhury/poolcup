@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Space_Mono, Teko } from 'next/font/google'
+import { Caveat, Inter, Space_Mono, Teko } from 'next/font/google'
 import { headers } from 'next/headers'
 import { Suspense } from 'react'
 import './globals.css'
@@ -39,6 +39,17 @@ const spaceMono = Space_Mono({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-space-mono',
+  display: 'swap',
+})
+
+/**
+ * Handwritten quote face — login testimonial only (Caveat stands in for Little Quotes).
+ * Fifth webfont in the system; scoped usage — flag for typography reference doc.
+ */
+const caveat = Caveat({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-caveat',
   display: 'swap',
 })
 
@@ -95,7 +106,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${teko.variable} ${spaceMono.variable} bg-background`}
+      className={`${inter.variable} ${teko.variable} ${spaceMono.variable} ${caveat.variable} bg-background`}
       suppressHydrationWarning
     >
       <body
