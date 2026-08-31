@@ -1,10 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import type { ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { Check, Copy, Crown, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { LeaderboardMember } from '@/components/pool/leaderboard-row'
+import type {
+  LeaderboardLastPick,
+  LeaderboardMember,
+} from '@/components/pool/leaderboard-row'
 import {
   buildLeaderboardPlaceGroups,
   ordinalPlace,
@@ -12,14 +15,101 @@ import {
 import { Button } from '@/components/ui/button'
 import { UserAvatarImage } from '@/components/user-avatar-image'
 import { UserProfileLink } from '@/components/user-profile-link'
-import { SignedShareButton } from '@/components/share/signed-share-button'
+import { LoginPanelConfetti, LEADERBOARD_PODIUM_CONFETTI_X_RANGE } from '@/components/auth/login-panel-confetti'
+import { TeamFlagImage } from '@/components/predict/team-flag-image'
+import { POOL_LEADERBOARD_DESKTOP_CONTENT_RAIL_CLASS } from '@/components/pool/pool-desktop-top-bar'
 
 const CLIMB_STREAK_FIRE_MIN = 3
 
-/** Active primary accent (follows Pro theme / pool scope). */
 const ACCENT_GREEN = 'var(--primary)'
 const RING_SILVER = '#c0c6d0'
 const RING_BRONZE = '#c47a3d'
+
+/**
+ * Desktop table column template —
+ * Rank · Member · Points · Trend · Last Pick
+ * gap-x-6 for breathing room between Points / Trend / Last Pick.
+ */
+const DESKTOP_TABLE_COLS =
+  'lg:grid lg:grid-cols-[3.5rem_minmax(0,1.5fr)_5.5rem_5.75rem_minmax(9.5rem,1.15fr)] lg:items-center lg:gap-x-6'
+
+const LAST_PICK_FLAG_IMG =
+  'h-[17px] w-[17px] shrink-0 rounded-[2px] object-cover'
+
+function LastPickCrest({
+  name,
+  logoUrl,
+  flag,
+}: {
+  name: string
+  logoUrl: string | null
+  flag: string | null
+}) {
+  return (
+    <TeamFlagImage
+      countryName={name}
+      dbFlag={flag}
+      logoUrl={logoUrl}
+      imgClassName={LAST_PICK_FLAG_IMG}
+      emojiClassName="text-[11px] leading-none"
+    />
+  )
+}
+
+function LastPickScoreline({
+  team1Name,
+  team2Name,
+  predTeam1,
+  predTeam2,
+  team1Logo = null,
+  team2Logo = null,
+  team1Flag = null,
+  team2Flag = null,
+}: {
+  team1Name: string
+  team2Name: string
+  predTeam1: number
+  predTeam2: number
+  team1Logo?: string | null
+  team2Logo?: string | null
+  team1Flag?: string | null
+  team2Flag?: string | null
+}) {
+  return (
+    <span
+      className="inline-flex min-w-0 items-center gap-1.5"
+      title={`${team1Name} ${predTeam1}–${predTeam2} ${team2Name}`}
+    >
+      <LastPickCrest name={team1Name} logoUrl={team1Logo} flag={team1Flag} />
+      <span className="font-mono text-xs tabular-nums text-foreground/90">
+        {predTeam1}–{predTeam2}
+      </span>
+      <LastPickCrest name={team2Name} logoUrl={team2Logo} flag={team2Flag} />
+    </span>
+  )
+}
+
+function LastPickCell({ pick }: { pick: LeaderboardLastPick | null | undefined }) {
+  if (!pick) {
+    return (
+      <span className="text-sm text-muted-foreground/60" aria-label="No predictions">
+        —
+      </span>
+    )
+  }
+  return (
+    <LastPickScoreline
+      team1Name={pick.team1Name}
+      team2Name={pick.team2Name}
+      predTeam1={pick.predTeam1}
+      predTeam2={pick.predTeam2}
+      team1Logo={pick.team1Logo}
+      team2Logo={pick.team2Logo}
+      team1Flag={pick.team1Flag}
+      team2Flag={pick.team2Flag}
+    />
+  )
+}
 
 type OrderedStanding = {
   place: number
@@ -329,6 +419,8 @@ function PodiumPedestal({
                 <UserAvatarImage
                   avatar={member.avatar}
                   customAvatarUrl={member.customAvatarUrl}
+                  fallbackInitials={member.userId ? null : member.name}
+                  fallbackColorKey={member.userId || member.name}
                   className={avatarSize}
                 />
               </div>
@@ -450,11 +542,55 @@ function StandingListRow({
   disableProfileLinks?: boolean
   compact?: boolean
 }) {
+  const trend = (
+    <div className="flex shrink-0 items-center gap-1">
+      <RankMovementBadge
+        movement={member.movement}
+        rankDelta={member.rankDelta}
+        className={compact ? 'min-w-[1.25rem] text-[10px]' : undefined}
+      />
+      <ClimbFireBadge climbStreak={member.climbStreak} />
+    </div>
+  )
+
+  const pointsBlock = (
+    <div
+      className={cn(
+        'shrink-0 text-right',
+        compact ? 'w-12' : 'w-14 sm:w-16 lg:w-auto',
+      )}
+    >
+      <span
+        className={cn(
+          'font-mono tabular-nums',
+          compact ? 'text-sm' : 'text-lg sm:text-xl',
+        )}
+        style={{ color: ACCENT_GREEN }}
+      >
+        {member.points}
+      </span>
+      <span className="ml-0.5 text-[10px] text-muted-foreground lg:hidden">
+        pts
+      </span>
+      {!compact && member.exactScores > 0 ? (
+        <p className="text-[10px] tabular-nums text-muted-foreground lg:hidden">
+          {member.exactScores} exact
+        </p>
+      ) : null}
+    </div>
+  )
+
   return (
     <li
       className={cn(
-        'relative flex items-center',
-        compact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
+        'relative',
+        compact
+          ? 'flex items-center gap-2 px-2.5 py-1.5'
+          : cn(
+              'flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-3.5',
+              DESKTOP_TABLE_COLS,
+              'lg:min-h-14 lg:px-5 lg:py-0',
+            ),
         member.isYou
           ? 'bg-[color-mix(in_srgb,var(--primary)_18%,var(--app-background))]'
           : !disableProfileLinks && 'hover:bg-white/[0.04]',
@@ -462,7 +598,7 @@ function StandingListRow({
     >
       {member.isYou ? (
         <span
-          className="absolute inset-y-0 left-0 w-1 rounded-r-sm"
+          className="pointer-events-none absolute inset-y-0 left-0 w-1 rounded-r-sm lg:col-span-full lg:row-start-1"
           style={{ backgroundColor: ACCENT_GREEN }}
           aria-hidden
         />
@@ -470,84 +606,85 @@ function StandingListRow({
 
       <span
         className={cn(
-          'shrink-0 text-center font-mono tabular-nums text-muted-foreground',
-          compact ? 'w-5 text-[11px]' : 'w-7 text-sm',
+          'shrink-0 text-center font-mono tabular-nums text-muted-foreground lg:col-start-1',
+          compact ? 'w-5 text-[11px]' : 'w-7 text-sm lg:w-auto',
         )}
         aria-label={`${ordinalPlace(place)} place`}
       >
         {place}
       </span>
 
-      <MemberIdentity
-        userId={member.userId}
-        disableLinks={disableProfileLinks}
-        ariaLabel={`${member.name}'s profile`}
-        className="shrink-0"
-      >
-        <UserAvatarImage
-          avatar={member.avatar}
-          customAvatarUrl={member.customAvatarUrl}
-          className={cn(
-            compact ? 'h-6 w-6' : 'h-9 w-9',
-            member.isYou && 'ring-2 ring-primary/60',
-          )}
-        />
-      </MemberIdentity>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <MemberIdentity
-            userId={member.userId}
-            disableLinks={disableProfileLinks}
+      <div className="flex min-w-0 flex-1 items-center gap-3 lg:col-start-2">
+        <MemberIdentity
+          userId={member.userId}
+          disableLinks={disableProfileLinks}
+          ariaLabel={`${member.name}'s profile`}
+          className="shrink-0"
+        >
+          <UserAvatarImage
+            avatar={member.avatar}
+            customAvatarUrl={member.customAvatarUrl}
+            fallbackInitials={member.userId ? null : member.name}
+            fallbackColorKey={member.userId || member.name}
             className={cn(
-              'font-medium leading-snug break-words text-white',
-              compact ? 'text-[11px]' : 'text-sm',
-              !disableProfileLinks && 'hover:underline',
+              compact ? 'h-6 w-6' : 'h-9 w-9',
+              member.isYou && 'ring-2 ring-primary/60',
             )}
-          >
-            {member.name}
-          </MemberIdentity>
-          {member.isYou ? (
-            <span
+          />
+        </MemberIdentity>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <MemberIdentity
+              userId={member.userId}
+              disableLinks={disableProfileLinks}
               className={cn(
-                'shrink-0 rounded-full bg-primary/20 font-semibold uppercase tracking-wide text-primary',
-                compact
-                  ? 'px-1 py-px text-[8px]'
-                  : 'px-1.5 py-0.5 text-[10px]',
+                'font-medium leading-snug break-words text-white',
+                compact ? 'text-[11px]' : 'text-sm',
+                !disableProfileLinks && 'hover:underline',
               )}
             >
-              You
-            </span>
-          ) : null}
+              {member.name}
+            </MemberIdentity>
+            {member.isYou ? (
+              <span
+                className={cn(
+                  'shrink-0 rounded-full bg-primary/20 font-semibold uppercase tracking-wide text-primary',
+                  compact
+                    ? 'px-1 py-px text-[8px]'
+                    : 'px-1.5 py-0.5 text-[10px]',
+                )}
+              >
+                You
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        <RankMovementBadge
-          movement={member.movement}
-          rankDelta={member.rankDelta}
-          className={compact ? 'min-w-[1.25rem] text-[10px]' : undefined}
-        />
-        <ClimbFireBadge climbStreak={member.climbStreak} />
-      </div>
-
-      <div className={cn('shrink-0 text-right', compact ? 'w-12' : 'w-14 sm:w-16')}>
-        <span
-          className={cn(
-            'font-mono tabular-nums',
-            compact ? 'text-sm' : 'text-lg sm:text-xl',
-          )}
-          style={{ color: ACCENT_GREEN }}
-        >
-          {member.points}
-        </span>
-        <span className="ml-0.5 text-[10px] text-muted-foreground">pts</span>
-        {!compact && member.exactScores > 0 ? (
-          <p className="text-[10px] tabular-nums text-muted-foreground">
-            {member.exactScores} exact
-          </p>
-        ) : null}
-      </div>
+      {compact ? (
+        <>
+          {trend}
+          {pointsBlock}
+        </>
+      ) : (
+        <>
+          {/* Mobile trailing cluster (flex); desktop cells via lg:contents → grid. */}
+          <div className="flex shrink-0 items-center gap-3 lg:contents">
+            <div className="lg:hidden">{trend}</div>
+            <div className="lg:hidden">{pointsBlock}</div>
+            <div className="hidden lg:col-start-3 lg:block lg:justify-self-end">
+              {pointsBlock}
+            </div>
+            <div className="hidden min-w-0 lg:col-start-4 lg:block">
+              {trend}
+            </div>
+            <div className="hidden min-w-0 lg:col-start-5 lg:block">
+              <LastPickCell pick={member.lastPick} />
+            </div>
+          </div>
+        </>
+      )}
     </li>
   )
 }
@@ -592,13 +729,17 @@ export function PoolLeaderboardStandings({
   onInvite,
   showPreMatchNote = false,
   className,
-  poolId,
-  inviteCode,
+  poolId: _poolId,
+  inviteCode: _inviteCode,
   disableProfileLinks = false,
   firstPlaceFigureSrc,
   compact = false,
   maxListRows,
 }: PoolLeaderboardStandingsProps) {
+  // poolId / inviteCode retained for callers; Share-my-rank control removed.
+  void _poolId
+  void _inviteCode
+
   if (members.length === 0) {
     return (
       <div className={cn('px-4 py-12 text-center', className)}>
@@ -636,15 +777,42 @@ export function PoolLeaderboardStandings({
   const restAll = ordered.slice(3)
   const rest =
     typeof maxListRows === 'number' ? restAll.slice(0, maxListRows) : restAll
-  const youStanding = ordered.find((row) => row.member.isYou) ?? null
 
   const first = podiumSlots[0] ?? null
   const second = podiumSlots[1] ?? null
   const third = podiumSlots[2] ?? null
 
-  const shareRankDestination = inviteCode
-    ? `/pool/${encodeURIComponent(inviteCode)}?tab=leaderboard`
-    : '/dashboard'
+  const podiumInner = (
+    <div className="flex items-end justify-center">
+      {second ? (
+        <PodiumPedestal
+          place={2}
+          member={second.member}
+          disableProfileLinks={disableProfileLinks}
+          omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
+          compact={compact}
+        />
+      ) : null}
+      {first ? (
+        <PodiumPedestal
+          place={1}
+          member={first.member}
+          disableProfileLinks={disableProfileLinks}
+          firstPlaceFigureSrc={firstPlaceFigureSrc}
+          compact={compact}
+        />
+      ) : null}
+      {third ? (
+        <PodiumPedestal
+          place={3}
+          member={third.member}
+          disableProfileLinks={disableProfileLinks}
+          omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
+          compact={compact}
+        />
+      ) : null}
+    </div>
+  )
 
   return (
     <div
@@ -654,55 +822,47 @@ export function PoolLeaderboardStandings({
         className,
       )}
     >
+      {/* Mobile / compact / landing: podium unchanged (no stadium card). */}
       <section
         aria-label="Top standings podium"
         className={cn(
           'mx-auto w-full max-w-4xl shrink-0',
-          compact ? 'px-1 pt-0' : 'px-4',
-          !compact && (firstPlaceFigureSrc ? 'pt-3' : 'pt-2'),
+          compact
+            ? 'px-1 pt-0'
+            : firstPlaceFigureSrc
+              ? 'px-4 pt-3'
+              : 'px-4 pt-2 lg:hidden',
         )}
       >
-        <div className="flex items-end justify-center">
-          {second ? (
-            <PodiumPedestal
-              place={2}
-              member={second.member}
-              disableProfileLinks={disableProfileLinks}
-              omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
-              compact={compact}
-            />
-          ) : null}
-          {first ? (
-            <PodiumPedestal
-              place={1}
-              member={first.member}
-              disableProfileLinks={disableProfileLinks}
-              firstPlaceFigureSrc={firstPlaceFigureSrc}
-              compact={compact}
-            />
-          ) : null}
-          {third ? (
-            <PodiumPedestal
-              place={3}
-              member={third.member}
-              disableProfileLinks={disableProfileLinks}
-              omitCrownSpacer={Boolean(firstPlaceFigureSrc) || compact}
-              compact={compact}
-            />
-          ) : null}
-        </div>
+        {podiumInner}
       </section>
 
-      {youStanding && poolId ? (
-        <div className="mx-auto flex w-full max-w-4xl justify-center px-4 pt-3">
-          <SignedShareButton
-            type="leaderboard"
-            poolId={poolId}
-            destinationUrl={shareRankDestination}
-            title={`I'm #${youStanding.place} on PoolCup`}
-            text={`${youStanding.member.points} pts · ${ordinalPlace(youStanding.place)} in the pool`}
-          />
-        </div>
+      {/* Desktop in-app: stadium podium card — edges match top bar via shared rail. */}
+      {!compact && !firstPlaceFigureSrc ? (
+        <section
+          aria-label="Top standings podium"
+          className={cn(
+            'mx-auto hidden w-full shrink-0 pt-1 lg:block',
+            POOL_LEADERBOARD_DESKTOP_CONTENT_RAIL_CLASS,
+          )}
+        >
+          <div className="leaderboard-podium-stadium relative overflow-hidden rounded-2xl border border-[#292929]">
+            <div className="leaderboard-podium-stadium__bg" aria-hidden />
+            <div className="leaderboard-podium-stadium__overlay" aria-hidden />
+            <div className="leaderboard-podium-stadium__confetti" aria-hidden>
+              {/* Ambient full-card drift (normal rate). */}
+              <LoginPanelConfetti density="normal" />
+              {/* Concentrated stream over the three pedestals (~2.5× ambient). */}
+              <LoginPanelConfetti
+                density="dense"
+                originXRange={LEADERBOARD_PODIUM_CONFETTI_X_RANGE}
+              />
+            </div>
+            <div className="leaderboard-podium-stadium__content px-4 pb-5 pt-6 sm:px-6 sm:pb-6 sm:pt-7">
+              {podiumInner}
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {rest.length > 0 ? (
@@ -712,9 +872,51 @@ export function PoolLeaderboardStandings({
             'flex min-h-0 w-full flex-1 flex-col',
             compact
               ? 'mt-2 overflow-hidden rounded-lg bg-black/25'
-              : 'mt-5 rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
+              : cn(
+                  'mt-5 rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
+                  // Desktop: shared rail so card edges match top bar + podium
+                  'lg:mt-5 lg:rounded-none lg:bg-transparent',
+                  POOL_LEADERBOARD_DESKTOP_CONTENT_RAIL_CLASS,
+                ),
           )}
         >
+          <div
+            className={cn(
+              !compact &&
+                'lg:overflow-hidden lg:rounded-2xl lg:border lg:border-[#292929] lg:bg-[#141414] lg:pb-2',
+            )}
+          >
+          {/* Desktop column header */}
+          {!compact ? (
+            <div
+              className={cn(
+                'hidden border-b border-white/[0.06] bg-white/[0.03] px-5 py-2.5 lg:grid',
+                'lg:grid-cols-[3.5rem_minmax(0,1.5fr)_5.5rem_5.75rem_minmax(9.5rem,1.15fr)] lg:items-center lg:gap-x-6',
+              )}
+              role="row"
+            >
+              {(
+                [
+                  ['Position', 'lg:col-start-1'],
+                  ['Member', 'lg:col-start-2'],
+                  ['Points', 'lg:col-start-3 lg:justify-self-end lg:text-right'],
+                  ['Trend', 'lg:col-start-4'],
+                  ['Last Pick', 'lg:col-start-5'],
+                ] as const
+              ).map(([label, col]) => (
+                <span
+                  key={label}
+                  className={cn(
+                    'text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70',
+                    col,
+                  )}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           <ul className="w-full shrink-0 divide-y divide-white/[0.06]">
             {rest.map(({ place, member }) => (
               <StandingListRow
@@ -726,9 +928,11 @@ export function PoolLeaderboardStandings({
               />
             ))}
           </ul>
-          {/* Fills leftover viewport below the last row with the same list color */}
           {!compact ? (
-            <div className="min-h-0 flex-1 bg-app-background" aria-hidden />
+            <div
+              className="min-h-0 flex-1 bg-app-background lg:hidden"
+              aria-hidden
+            />
           ) : null}
 
           {showPreMatchNote ? (
@@ -738,7 +942,7 @@ export function PoolLeaderboardStandings({
           ) : null}
 
           {acceptingMembers ? (
-            <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-6 pt-2">
+            <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-6 pt-2 lg:max-w-none">
               <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-primary/25 bg-primary/5 px-4 py-5 text-center sm:flex-row sm:justify-between sm:text-left">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
@@ -770,6 +974,7 @@ export function PoolLeaderboardStandings({
               </div>
             </div>
           ) : null}
+          </div>
         </section>
       ) : (
         <>

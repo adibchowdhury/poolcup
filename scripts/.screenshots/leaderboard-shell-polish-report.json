@@ -1,0 +1,51 @@
+{
+  "1280x800": {
+    "overflow": "hidden/hidden",
+    "scrollHeight": 800,
+    "clientHeight": 800,
+    "canScroll": false,
+    "activityItems": 2,
+    "logo": {
+      "w": 191,
+      "h": 53,
+      "pctOfSidebar": 76.5
+    },
+    "nameFontSize": "16px",
+    "activityFontSize": "12px",
+    "activityAvatarH": 32,
+    "poolInfoHasCard": false,
+    "membersRowJustify": "space-between",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-polish-after-1280x800.png",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  "1440x900": {
+    "overflow": "hidden/hidden",
+    "scrollHeight": 900,
+    "clientHeight": 900,
+    "canScroll": false,
+    "activityItems": 3,
+    "logo": {
+      "w": 191,
+      "h": 53,
+      "pctOfSidebar": 76.5
+    },
+    "nameFontSize": "16px",
+    "activityFontSize": "12px",
+    "activityAvatarH": 32,
+    "poolInfoHasCard": false,
+    "membersRowJustify": "space-between",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-polish-after-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "mobileDiff": {
+    "mismatched": 97,
+    "total": 329160,
+    "percent": 0.0295
+  }
+}

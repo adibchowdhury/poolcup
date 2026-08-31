@@ -46,11 +46,14 @@ import { buildStripeDonateUrl } from '@/src/lib/stripe-donate-url'
 import {
   HUB_DESKTOP_SIDEBAR_CLASS,
   HUB_DESKTOP_SIDEBAR_HOVER_CLASS,
+  HUB_DESKTOP_SIDEBAR_NAV_ACTIVE_CLASS,
+  HUB_DESKTOP_SIDEBAR_NAV_ITEM_CLASS,
   HUB_DESKTOP_SIDEBAR_WIDTH_CLASS,
 } from '@/components/dashboard/hub-desktop-nav-frame'
 
 const navItemClassName = cn(
-  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+  HUB_DESKTOP_SIDEBAR_NAV_ITEM_CLASS,
+  'flex w-full items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
   FOCUS_VISIBLE_RING,
 )
 
@@ -59,21 +62,21 @@ const navItemIdleClassName = cn(
   HUB_DESKTOP_SIDEBAR_HOVER_CLASS,
 )
 
-const navItemActiveClassName =
-  'bg-primary/12 text-primary shadow-[inset_3px_0_0_0_var(--primary)]'
+const navItemActiveClassName = HUB_DESKTOP_SIDEBAR_NAV_ACTIVE_CLASS
 
 const sidebarAccordionClass =
   'grid transition-[grid-template-rows] duration-[200ms] ease-out motion-reduce:transition-none'
 
 const sidebarGroupHeaderClassName = cn(
-  'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+  HUB_DESKTOP_SIDEBAR_NAV_ITEM_CLASS,
+  'flex w-full items-center justify-between gap-2 rounded-lg py-2.5 text-sm font-medium transition-colors',
   navItemIdleClassName,
   FOCUS_VISIBLE_RING,
 )
 
 const nestedNavItemClassName = cn(
   navItemClassName,
-  'py-2 pl-2.5 text-[13px]',
+  'py-2 text-[13px]',
 )
 
 type HubDesktopSidebarProps = {

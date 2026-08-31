@@ -1,0 +1,27 @@
+{
+  "1440x900": {
+    "stadiumVisible": true,
+    "stadiumHasBg": true,
+    "confettiCanvas": true,
+    "tableHeaderVisible": true,
+    "headerText": "PositionMemberPointsTrendLast Pick",
+    "lastPickDashRows": 11,
+    "tableCardBorder": "1px",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-phase2-after-1440x900.png"
+  },
+  "1920x1080": {
+    "stadiumVisible": true,
+    "stadiumHasBg": true,
+    "confettiCanvas": true,
+    "tableHeaderVisible": true,
+    "headerText": "PositionMemberPointsTrendLast Pick",
+    "lastPickDashRows": 11,
+    "tableCardBorder": "1px",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-phase2-after-1920x1080.png"
+  },
+  "mobileDiff": {
+    "mismatched": 197,
+    "total": 329160,
+    "percent": 0.0598
+  }
+}

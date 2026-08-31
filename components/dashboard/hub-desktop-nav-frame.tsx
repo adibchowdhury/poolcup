@@ -21,6 +21,18 @@ export const HUB_DESKTOP_SIDEBAR_CLASS =
 export const HUB_DESKTOP_SIDEBAR_HOVER_CLASS = 'hover:bg-[#1d1d1d]'
 
 /**
+ * Shared active desktop sidebar nav marker — styles live in globals.css
+ * (`.desktop-sidebar-nav-item` layout + `.desktop-sidebar-nav-active` /
+ * `[data-state=active]` / `[aria-current=page]` active recipe).
+ * Hub Links: item class always + active class when selected.
+ * Pool TabsTriggers: item class always; active via data-state.
+ */
+export const HUB_DESKTOP_SIDEBAR_NAV_ACTIVE_CLASS = 'desktop-sidebar-nav-active'
+
+/** Shared nav-item marker — padding + active bar clearance live in globals.css. */
+export const HUB_DESKTOP_SIDEBAR_NAV_ITEM_CLASS = 'desktop-sidebar-nav-item'
+
+/**
  * @deprecated Horizontal nav strip removed at lg+; kept for reference during migration.
  */
 export const HUB_DESKTOP_NAV_STRIP_CLASS =

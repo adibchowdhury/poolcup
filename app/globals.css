@@ -237,6 +237,60 @@ html.light {
   text-transform: uppercase;
 }
 
+/**
+ * Desktop sidebar nav items — ONE shared layout + active recipe (hub + pool).
+ *
+ * Layout (all items): pl-4 (16px) so the icon sits clear of the active bar.
+ * Active: fill #0d2018 · 3px primary bar inset 2px from left · primary icon · white label.
+ *
+ * Removed vs prior: bg-primary/12 wash, text-primary row, TabsTrigger outline,
+ * and divergent local padding (pool `px-0` overlapped the bar; hub `px-3` only).
+ */
+.desktop-sidebar-nav-item {
+  position: relative;
+  box-sizing: border-box;
+  /* 16px: bar ends ~5px from edge → ≥10px clear before icon */
+  padding-left: 1rem !important;
+  padding-right: 0.75rem;
+}
+
+.desktop-sidebar-nav-active,
+.desktop-sidebar-nav-item[aria-current='page'],
+.desktop-sidebar-nav-item[data-state='active'] {
+  overflow: hidden;
+  background-color: #0d2018 !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.desktop-sidebar-nav-active::before,
+.desktop-sidebar-nav-item[aria-current='page']::before,
+.desktop-sidebar-nav-item[data-state='active']::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--primary);
+  pointer-events: none;
+}
+
+.desktop-sidebar-nav-active svg,
+.desktop-sidebar-nav-item[aria-current='page'] svg,
+.desktop-sidebar-nav-item[data-state='active'] svg {
+  color: var(--primary) !important;
+  opacity: 1 !important;
+}
+
+.desktop-sidebar-nav-active:hover,
+.desktop-sidebar-nav-item[aria-current='page']:hover,
+.desktop-sidebar-nav-item[data-state='active']:hover {
+  background-color: #102a1e !important;
+  color: #fff !important;
+}
+
 /* Space Mono for scores and timers */
 .font-mono {
   font-family: var(--font-mono);
@@ -2757,6 +2811,93 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     opacity: 1;
     filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.55))
       drop-shadow(0 0 4px rgba(242, 201, 76, 0.35));
+  }
+}
+
+/* Leaderboard podium stadium card — login stadium recipe (vars + layers).
+   Image on own layer so filter never hits podium UI; overlays darken for readability. */
+.leaderboard-podium-stadium {
+  --login-bg-brightness: 0.55;
+  --login-bg-saturate: 0.58;
+  --login-bg-blur: 0px;
+  --login-bg-overlay: rgba(0, 0, 0, 0.34);
+  --login-bg-flood: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.16) 26%,
+    rgba(0, 0, 0, 0.04) 46%,
+    transparent 60%
+  );
+  --login-bg-focus-y: 42%;
+  --login-bg-focus: radial-gradient(
+    ellipse 70% 66% at 50% var(--login-bg-focus-y),
+    rgba(0, 0, 0, 0.48) 0%,
+    rgba(0, 0, 0, 0.3) 40%,
+    rgba(0, 0, 0, 0.12) 64%,
+    transparent 80%
+  );
+
+  isolation: isolate;
+  background-color: #070b10;
+}
+
+.leaderboard-podium-stadium__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #070b10;
+  background-image: url('/background_01.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  filter: brightness(var(--login-bg-brightness)) saturate(var(--login-bg-saturate))
+    blur(var(--login-bg-blur));
+  transform: translateZ(0);
+}
+
+.leaderboard-podium-stadium__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--login-bg-focus), var(--login-bg-flood),
+    linear-gradient(var(--login-bg-overlay), var(--login-bg-overlay));
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+.leaderboard-podium-stadium__content {
+  position: relative;
+  z-index: 1;
+}
+
+.leaderboard-podium-stadium__confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/**
+ * Desktop predictions match grid (lg+ mount only).
+ * 3 cols by default; 4 cols when viewport ≥1350px (sidebar 250px → ~1100px content).
+ * 1280×800 stays on 3 so cards aren’t crushed.
+ *
+ * Gap: was gap-3 (0.75rem all sides) → gap-x-5 / gap-y-4 (1.25rem / 1rem)
+ * so cards read slightly narrower with more breathing room between columns.
+ */
+.pool-predictions-desktop-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 1.25rem;
+  row-gap: 1rem;
+}
+
+@media (min-width: 1350px) {
+  .pool-predictions-desktop-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

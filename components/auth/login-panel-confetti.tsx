@@ -8,12 +8,22 @@ import { cn } from '@/lib/utils'
  * Continuous slow rain via canvas-confetti (same library as pool-creation).
  *
  * density:
- * - normal (back layer): full host height; optional left bleed past the seam
+ * - normal (ambient): full-width drift; login back layer / leaderboard periphery
+ * - dense (podium zone): ~2.5× ambient cadence — pair with originXRange over winners
  * - sparse (front layer): podium overlay only
  *
  * useWorker: false — OffscreenCanvas blocked ResizeObserver canvas resizes.
  */
-const EMIT_INTERVAL_MS = { normal: 220, sparse: 520 } as const
+export const EMIT_INTERVAL_MS = { normal: 220, dense: 88, sparse: 520 } as const
+
+/**
+ * Horizontal band (0–1) covering the three podium pedestals on the stadium card.
+ * Used by the dense second emitter so celebration centers on the winners.
+ */
+export const LEADERBOARD_PODIUM_CONFETTI_X_RANGE = {
+  min: 0.22,
+  max: 0.78,
+} as const
 
 /** Login-only festive palette. */
 const LOGIN_CONFETTI_COLORS = [
@@ -48,15 +58,23 @@ type LoginPanelConfettiProps = {
    * Emit origin is biased so only a thin reduced-density band uses the bleed.
    */
   bleedLeftPx?: number
+  /**
+   * When set, every emit's origin.x is uniform in [min, max] (0–1).
+   * Used for a second podium-zone emitter; ignored bleed horizontal bias.
+   */
+  originXRange?: { min: number; max: number }
 }
 
 export function LoginPanelConfetti({
   density = 'normal',
   className,
   bleedLeftPx = 0,
+  originXRange,
 }: LoginPanelConfettiProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sparse = density === 'sparse'
+  const originMin = originXRange?.min
+  const originMax = originXRange?.max
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -74,6 +92,10 @@ export function LoginPanelConfetti({
 
     let intervalId: number | null = null
     const intervalMs = EMIT_INTERVAL_MS[density]
+    const useOriginBand =
+      typeof originMin === 'number' &&
+      typeof originMax === 'number' &&
+      originMax > originMin
 
     const emit = () => {
       if (document.visibilityState === 'hidden') return
@@ -85,16 +107,23 @@ export function LoginPanelConfetti({
         ? Math.max(280, Math.ceil(canvas.height * 1.4))
         : Math.max(520, Math.ceil(canvas.height * 1.5))
 
-      const bleedFrac =
-        !sparse && bleedLeftPx > 0 && canvas.width > 0
-          ? Math.min(0.35, bleedLeftPx / canvas.width)
-          : 0
-      // ~14% of back-layer emits land in the narrow bleed band; bulk stays right.
-      const originX =
-        bleedFrac > 0 && Math.random() < 0.14
-          ? Math.random() * bleedFrac
-          : bleedFrac + Math.random() * (1 - bleedFrac)
-      const isBleedParticle = bleedFrac > 0 && originX < bleedFrac
+      let originX: number
+      let isBleedParticle = false
+
+      if (useOriginBand) {
+        originX = randomInRange(originMin, originMax)
+      } else {
+        const bleedFrac =
+          !sparse && bleedLeftPx > 0 && canvas.width > 0
+            ? Math.min(0.35, bleedLeftPx / canvas.width)
+            : 0
+        // ~14% of back-layer emits land in the narrow bleed band; bulk stays right.
+        originX =
+          bleedFrac > 0 && Math.random() < 0.14
+            ? Math.random() * bleedFrac
+            : bleedFrac + Math.random() * (1 - bleedFrac)
+        isBleedParticle = bleedFrac > 0 && originX < bleedFrac
+      }
 
       void fire({
         particleCount: sparse
@@ -154,7 +183,7 @@ export function LoginPanelConfetti({
       ro.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [density, sparse, bleedLeftPx])
+  }, [density, sparse, bleedLeftPx, originMin, originMax])
 
   return (
     <canvas

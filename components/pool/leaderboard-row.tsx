@@ -23,6 +23,17 @@ export type LeaderboardPointBreakdownItem = {
   lineId?: string
 }
 
+export type LeaderboardLastPick = {
+  predTeam1: number
+  predTeam2: number
+  team1Name: string
+  team2Name: string
+  team1Logo: string | null
+  team2Logo: string | null
+  team1Flag: string | null
+  team2Flag: string | null
+}
+
 export type LeaderboardMember = {
   id: string
   userId: string
@@ -45,6 +56,10 @@ export type LeaderboardMember = {
   climbStreak: number
   /** @deprecated Prefer climbStreak; kept for older UI that keyed off streak. */
   streak: number
+  /** pool_members.joined_at when available (ISO). */
+  joinedAt?: string | null
+  /** Most recent prediction for Last Pick column; null/absent → muted '—'. */
+  lastPick?: LeaderboardLastPick | null
   /** Classic + winner pools: per-line points when expandable breakdown is enabled. */
   pointBreakdown?: LeaderboardPointBreakdownItem[]
 }
@@ -71,6 +86,8 @@ export function LeaderboardRow({ member, rank }: LeaderboardRowProps) {
       <UserAvatarImage
         avatar={member.avatar}
         customAvatarUrl={member.customAvatarUrl}
+        fallbackInitials={member.userId ? null : member.name}
+        fallbackColorKey={member.userId || member.name}
         className={cn(
           'h-10 w-10',
           member.isYou && 'ring-2 ring-primary/40',

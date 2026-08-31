@@ -1,4 +1,5 @@
 import type {
+  LeaderboardLastPick,
   LeaderboardMember,
   LeaderboardPointBreakdownItem,
 } from '@/components/pool/leaderboard-row'
@@ -41,7 +42,7 @@ export function normalizeMemberAvatarRecord(
 
 export type PoolLeaderboardMember = {
   id: string
-  user_id: string
+  user_id: string | null
   display_name: string
   joined_at: string
 }
@@ -68,6 +69,8 @@ type BuildPoolLeaderboardParams = {
     get(key: string): MemberAvatarMapValue | undefined
   }
   breakdownByMember?: Map<string, LeaderboardPointBreakdownItem[]>
+  /** Latest scored prediction per member_id (Last Pick column). */
+  lastPicksByMemberId?: Map<string, LeaderboardLastPick>
 }
 
 type PredictionBreakdownQueryRow = {
@@ -427,6 +430,93 @@ export function verifyLeaderboardBreakdownPointDerivation(
   return { ok: divergences.length === 0, divergences }
 }
 
+type LastPickQueryRow = {
+  member_id: string
+  pred_team1: number | null
+  pred_team2: number | null
+  submitted_at: string | null
+  matches:
+    | {
+        team1_name: string | null
+        team2_name: string | null
+        team1_flag: string | null
+        team2_flag: string | null
+        team1_logo: string | null
+        team2_logo: string | null
+      }
+    | {
+        team1_name: string | null
+        team2_name: string | null
+        team1_flag: string | null
+        team2_flag: string | null
+        team1_logo: string | null
+        team2_logo: string | null
+      }[]
+    | null
+}
+
+/**
+ * One query: all pool predictions newest-first, then first row per member_id.
+ * Cost: O(predictions in pool) — fine for typical pools; no per-member round-trips.
+ * Members with no scored prediction are absent from the map (UI shows '—').
+ */
+export async function fetchPoolMembersLastPicks(
+  supabase: SupabaseClient,
+  poolId: string,
+): Promise<{ lastPicksByMemberId: Map<string, LeaderboardLastPick>; error: string | null }> {
+  const lastPicksByMemberId = new Map<string, LeaderboardLastPick>()
+
+  const { data, error } = await supabase
+    .from('predictions')
+    .select(
+      `
+      member_id,
+      pred_team1,
+      pred_team2,
+      submitted_at,
+      matches (
+        team1_name,
+        team2_name,
+        team1_flag,
+        team2_flag,
+        team1_logo,
+        team2_logo
+      )
+    `,
+    )
+    .eq('pool_id', poolId)
+    .not('pred_team1', 'is', null)
+    .not('pred_team2', 'is', null)
+    .order('submitted_at', { ascending: false })
+
+  if (error) {
+    return { lastPicksByMemberId, error: error.message }
+  }
+
+  for (const raw of (data ?? []) as LastPickQueryRow[]) {
+    if (lastPicksByMemberId.has(raw.member_id)) continue
+    if (typeof raw.pred_team1 !== 'number' || typeof raw.pred_team2 !== 'number') {
+      continue
+    }
+    const matchRaw = raw.matches
+    const match = Array.isArray(matchRaw) ? matchRaw[0] : matchRaw
+    if (!match) continue
+
+    lastPicksByMemberId.set(raw.member_id, {
+      predTeam1: raw.pred_team1,
+      predTeam2: raw.pred_team2,
+      team1Name: (match.team1_name ?? '').trim() || 'Team 1',
+      team2Name: (match.team2_name ?? '').trim() || 'Team 2',
+      team1Logo: match.team1_logo ?? null,
+      team2Logo: match.team2_logo ?? null,
+      team1Flag: match.team1_flag ?? null,
+      team2Flag: match.team2_flag ?? null,
+    })
+  }
+
+  return { lastPicksByMemberId, error: null }
+}
+
 export function buildPoolLeaderboardMembers({
   poolMembers,
   creatorUserId,
@@ -437,6 +527,7 @@ export function buildPoolLeaderboardMembers({
   isWinnerPool,
   avatarsByMemberId,
   breakdownByMember,
+  lastPicksByMemberId,
 }: BuildPoolLeaderboardParams): LeaderboardMember[] {
   const cacheByMember = new Map(
     (cacheRows ?? []).map((row) => [row.member_id, row]),
@@ -447,8 +538,9 @@ export function buildPoolLeaderboardMembers({
 
   let entries: Array<{
     member_id: string
-    user_id: string
+    user_id: string | null
     display_name: string
+    joined_at: string
     points: number
     correct_predictions: number
     exact_scores: number
@@ -465,6 +557,7 @@ export function buildPoolLeaderboardMembers({
       member_id: member.id,
       user_id: member.user_id,
       display_name: member.display_name,
+      joined_at: member.joined_at,
       points: 0,
       correct_predictions: 0,
       exact_scores: 0,
@@ -480,6 +573,7 @@ export function buildPoolLeaderboardMembers({
         member_id: member.id,
         user_id: member.user_id,
         display_name: member.display_name,
+        joined_at: member.joined_at,
         points: row?.total_points ?? 0,
         correct_predictions: isWinnerPool ? 0 : (row?.correct_winners ?? 0),
         exact_scores: isWinnerPool
@@ -498,6 +592,7 @@ export function buildPoolLeaderboardMembers({
       member_id: member.id,
       user_id: member.user_id,
       display_name: member.display_name,
+      joined_at: member.joined_at,
       points: 0,
       correct_predictions: 0,
       exact_scores: 0,
@@ -513,9 +608,10 @@ export function buildPoolLeaderboardMembers({
     const rankDelta = getRankDelta(entry.rank, entry.prev_rank)
     return {
       id: entry.member_id,
-      userId: entry.user_id,
+      // Empty string when pool_members.user_id is null (unlinked / guest row).
+      userId: entry.user_id ?? '',
       name: entry.display_name,
-      isYou: currentUserId === entry.user_id,
+      isYou: Boolean(entry.user_id) && currentUserId === entry.user_id,
       avatar: avatarFields.avatar,
       customAvatarUrl: avatarFields.customAvatarUrl,
       points: entry.points,
@@ -528,6 +624,8 @@ export function buildPoolLeaderboardMembers({
       movement,
       climbStreak: entry.climb_streak,
       streak: entry.climb_streak,
+      joinedAt: entry.joined_at ?? null,
+      lastPick: lastPicksByMemberId?.get(entry.member_id) ?? null,
       pointBreakdown: breakdownByMember?.get(entry.member_id) ?? [],
     }
   })

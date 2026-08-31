@@ -1,0 +1,55 @@
+{
+  "leaderboard": {
+    "headerVisible": true,
+    "asideWidth": 250,
+    "headerHeight": 80,
+    "actions": [
+      "Report issue",
+      "Settings",
+      "Invite"
+    ],
+    "sidebarLabels": [
+      "Pool",
+      "Pool info",
+      "Office World Cup Pick'em 2026",
+      "Recent activity",
+      "Jake Thompson moved up to 9th",
+      "Pucky moved up to 2nd"
+    ],
+    "hasStatusFilters": false,
+    "hasCommissionerCta": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-parity-leaderboard-1440x900.png"
+  },
+  "predictions": {
+    "headerVisible": true,
+    "asideWidth": 250,
+    "headerHeight": 80,
+    "actions": [
+      "Report issue",
+      "Settings",
+      "Invite"
+    ],
+    "sidebarLabels": [
+      "Pool",
+      "Status",
+      "Your Predictions",
+      "Sort",
+      "Make your pool standout",
+      "Customize branding, scoring & more as Commissioner"
+    ],
+    "hasStatusFilters": true,
+    "hasCommissionerCta": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-parity-predictions-1440x900.png"
+  },
+  "fit1280x800": {
+    "asideScrollDelta": 0,
+    "asideOverflow": "hidden",
+    "ctaCompact": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-predictions-fit-1280x800.png"
+  },
+  "parity": {
+    "asideWidthMatch": true,
+    "headerHeightMatch": true,
+    "actionsMatch": true
+  }
+}

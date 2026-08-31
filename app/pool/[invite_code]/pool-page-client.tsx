@@ -29,6 +29,7 @@ import { eventHasLiveOrRecentFinalMatch } from '@/src/lib/featured-match'
 import {
   buildPoolLeaderboardMembers,
   fetchPoolLeaderboardPointBreakdown,
+  fetchPoolMembersLastPicks,
   fetchWinnerPoolLeaderboardPointBreakdown,
   verifyLeaderboardBreakdownPointDerivation,
   verifyLeaderboardBreakdownTotals,
@@ -77,13 +78,16 @@ type Pool = {
   score_winner_points: number | null
   score_draw_points: number | null
   scoring_locked_at: string | null
+  created_at: string | null
 }
 
 type PoolMember = {
   id: string
-  user_id: string
+  user_id: string | null
   display_name: string
   joined_at: string
+  /** Guest/synthetic members: image URL when user_id is null. */
+  avatar_url: string | null
 }
 
 type MatchForPrediction = ClassicMatchRow
@@ -407,7 +411,7 @@ export function PoolPageClient() {
     const { data: poolData, error: poolError } = await supabase
       .from('pools')
       .select(
-        'id, name, description, invite_code, creator_id, scoring_style, accepting_members, is_public, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
+        'id, name, description, invite_code, creator_id, scoring_style, accepting_members, is_public, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at, created_at',
       )
       .eq('invite_code', inviteCode)
       .maybeSingle()
@@ -469,7 +473,7 @@ export function PoolPageClient() {
 
     const { data: membersData, error: membersError } = await supabase
       .from('pool_members')
-      .select('id, user_id, display_name, joined_at')
+      .select('id, user_id, display_name, joined_at, avatar_url')
       .eq('pool_id', pool.id)
       .order('joined_at', { ascending: true })
 
@@ -497,10 +501,27 @@ export function PoolPageClient() {
       }
     }
 
+    // Synthetic / guest rows (user_id null): pool_members.avatar_url is the
+    // image source until/unless a real user avatar exists via the RPC.
+    for (const member of poolMembers) {
+      if (member.user_id) continue
+      const guestUrl = member.avatar_url?.trim()
+      if (!guestUrl) continue
+      const existing = avatarByMemberId.get(member.id)
+      avatarByMemberId.set(member.id, {
+        avatar: existing?.avatar ?? null,
+        customAvatarUrl: existing?.customAvatarUrl?.trim()
+          ? existing.customAvatarUrl
+          : guestUrl,
+      })
+    }
+
     setAvatarByMemberId(avatarByMemberId)
 
     const profilesByUserId = new Map<string, PoolChatMemberProfile>()
     for (const member of poolMembers) {
+      // Skip null/empty user_id rows (guest / unlinked members) — Map key must be a real user.
+      if (!member.user_id) continue
       const avatarFields = avatarByMemberId.get(member.id)
       profilesByUserId.set(member.user_id, {
         displayName: member.display_name,
@@ -671,6 +692,7 @@ export function PoolPageClient() {
       isPublic: pool.is_public === true,
       avatar: pool.avatar ?? null,
       emblemUrl: pool.emblem_url ?? null,
+      createdAt: pool.created_at ?? null,
       themeColor: pool.theme_color ?? null,
       eventId: pool.event_id,
       scoreExactPoints: pool.score_exact_points ?? null,
@@ -717,6 +739,8 @@ export function PoolPageClient() {
       legacyWinnerOnly,
     )
 
+    const lastPicksPromise = fetchPoolMembersLastPicks(supabase, pool.id)
+
     if (useLegacyWinnerLeaderboard) {
       const { breakdownByMember: loadedBreakdown, error: breakdownError } =
         await fetchWinnerPoolLeaderboardPointBreakdown(pool.id)
@@ -740,6 +764,11 @@ export function PoolPageClient() {
       breakdownByMember = loadedBreakdown
     }
 
+    const { lastPicksByMemberId, error: lastPicksError } = await lastPicksPromise
+    if (lastPicksError) {
+      console.error('Failed to load last picks:', lastPicksError)
+    }
+
     const leaderboardMembers = buildPoolLeaderboardMembers({
       poolMembers: activePoolMembers,
       creatorUserId: pool.creator_id,
@@ -750,6 +779,7 @@ export function PoolPageClient() {
       isWinnerPool: useLegacyWinnerLeaderboard,
       avatarsByMemberId: avatarByMemberId,
       breakdownByMember,
+      lastPicksByMemberId,
     })
 
     const verification = verifyLeaderboardBreakdownTotals(leaderboardMembers)
@@ -869,6 +899,12 @@ export function PoolPageClient() {
         breakdownByMember = loadedBreakdown
       }
 
+      const { lastPicksByMemberId, error: lastPicksError } =
+        await fetchPoolMembersLastPicks(supabase, ctx.poolId)
+      if (lastPicksError) {
+        console.error('Failed to soft-refresh last picks:', lastPicksError)
+      }
+
       const bannedUserIds = new Set(ctx.bannedUserIds)
       const {
         poolMembers: activePoolMembers,
@@ -889,6 +925,7 @@ export function PoolPageClient() {
         isWinnerPool: useLegacyWinnerLeaderboard,
         avatarsByMemberId: avatarByMemberIdRef.current,
         breakdownByMember,
+        lastPicksByMemberId,
       })
 
       setMembers(leaderboardMembers)

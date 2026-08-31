@@ -31,6 +31,8 @@ import { PoolThemeScope } from '@/components/pool/pool-theme-scope'
 import type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
 import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
+import { PoolDesktopTopBar, POOL_DESKTOP_CONTENT_RAIL_CLASS } from '@/components/pool/pool-desktop-top-bar'
+import { PoolDesktopSidebar } from '@/components/pool/pool-desktop-sidebar'
 import { PoolSettingsDialog } from '@/components/pool/pool-settings-dialog'
 import { PoolSettingsMobileTab } from '@/components/pool/pool-settings-mobile-tab'
 import {
@@ -39,8 +41,6 @@ import {
 } from '@/components/pool/mock-leaderboard-preview'
 import {
   PoolPredictionStatusFilterProvider,
-  PredictionStatusFilterTabs,
-  PredictionSortControl,
 } from '@/src/lib/pool-prediction-status-filter-context'
 import {
   PoolChatTab,
@@ -79,6 +79,8 @@ export type PoolHomeMeta = {
   avatar: string | null
   /** Custom uploaded emblem URL (nullable). */
   emblemUrl: string | null
+  /** pools.created_at — ISO; used as sidebar “Kickoff” display. */
+  createdAt?: string | null
   /** Hex accent; null = default primary. */
   themeColor: string | null
   eventId: string | null
@@ -382,6 +384,25 @@ export function PoolHomeView({
   const isClassicPredictionsTab =
     (!isWinnerPool || !isLegacyWinnerPool) && activeTab === 'predictions'
   const isLeaderboardTab = activeTab === 'leaderboard'
+  const isPredictionsTab = activeTab === 'predictions'
+  /** Desktop shell (sidebar + shared top bar) — predictions + leaderboard, lg+ only. */
+  const usePoolDesktopShell =
+    !isChatView && (isLeaderboardTab || isPredictionsTab)
+
+  /** Creator display name from profiles / members; skip null/empty user_ids. */
+  const creatorDisplayName = (() => {
+    if (!poolCreatorUserId) return null
+    const fromProfile = memberProfilesByUserId
+      ?.get(poolCreatorUserId)
+      ?.displayName?.trim()
+    if (fromProfile) return fromProfile
+    const fromMember = members.find(
+      (member) =>
+        Boolean(member.userId) && member.userId === poolCreatorUserId,
+    )?.name?.trim()
+    return fromMember || null
+  })()
+  const canInvite = pool.acceptingMembers
 
   const handleBackClick = () => {
     console.log('back clicked', DASHBOARD_TAB_HREFS.dashboard)
@@ -393,7 +414,7 @@ export function PoolHomeView({
       themeColor={pool.themeColor}
       className={cn(
         'min-h-screen bg-app-background',
-        isLeaderboardTab && 'flex flex-col',
+        usePoolDesktopShell && 'flex flex-col',
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
       )}
@@ -401,7 +422,7 @@ export function PoolHomeView({
       <div
         className={cn(
           'relative',
-          isLeaderboardTab && 'flex min-h-0 flex-1 flex-col',
+          usePoolDesktopShell && 'flex min-h-0 flex-1 flex-col',
           isMobileChatShell &&
             'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
         )}
@@ -412,7 +433,9 @@ export function PoolHomeView({
             isChatView
               ? 'border-white/[0.08] bg-app-background'
               : 'border-border bg-app-background/80 backdrop-blur-xl',
-            isLeaderboardTab && 'shrink-0',
+            usePoolDesktopShell && 'shrink-0',
+            // Desktop shell: top bar moves into the main column — hide this on lg+.
+            usePoolDesktopShell && 'lg:hidden',
             isMobileChatShell && 'max-sm:shrink-0',
           )}
         >
@@ -423,7 +446,9 @@ export function PoolHomeView({
               isClassicPredictionsTab
                 ? 'max-w-4xl lg:max-w-[82rem]'
                 : 'max-w-4xl',
-              isChatView ? 'py-2.5 sm:py-3' : 'py-4 max-sm:py-2.5',
+              isChatView
+                ? 'py-2.5 sm:py-3'
+                : 'py-4 max-sm:py-2.5',
             )}
           >
             <div
@@ -505,6 +530,7 @@ export function PoolHomeView({
                       className="shrink-0 rounded-xl"
                     />
                     <div className="min-w-0 flex-1">
+                      {/* Desktop sticky title (non-leaderboard shell). */}
                       <div className="hidden lg:block">
                         <div className="flex flex-wrap items-center gap-2">
                           <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
@@ -513,6 +539,7 @@ export function PoolHomeView({
                           <ScoringModeBadge scoringStyle={pool.scoringStyle} />
                         </div>
                       </div>
+                      {/* Mobile header — unchanged (incl. leaderboard). */}
                       <div className="lg:hidden">
                         <h1 className="w-full min-w-0 max-w-none truncate font-display text-lg tracking-wide text-foreground">
                           {pool.name}
@@ -532,6 +559,7 @@ export function PoolHomeView({
                       </div>
                     </div>
                   </div>
+                  {/* Desktop sticky actions — legacy (non-leaderboard shell). */}
                   <div className="hidden shrink-0 items-center gap-3 lg:flex">
                     <ReportIssueButton />
                     <Button
@@ -566,9 +594,12 @@ export function PoolHomeView({
             // Own the top inset for all non-chat pool content (banners + tabs)
             // so first child never hugs the sticky header. Matches mb-4 rhythm.
             'max-sm:pt-4 max-sm:pb-8',
-            // Leaderboard list is full-bleed; drop max-width + side padding on this tab only.
-            isLeaderboardTab
-              ? 'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0'
+            // Pool shell tabs: full-bleed main; top bar owns the top edge on lg+.
+            usePoolDesktopShell
+              ? cn(
+                  'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0',
+                  'lg:min-h-screen lg:py-0',
+                )
               : isClassicPredictionsTab
                 ? 'max-w-[82rem] bg-app-background px-4'
                 : 'max-w-4xl bg-app-background px-4',
@@ -581,6 +612,8 @@ export function PoolHomeView({
               className={cn(
                 'mb-4',
                 isLeaderboardTab && 'mx-auto max-w-4xl px-4',
+                // Desktop shell: announcement lives in the main column (below).
+                usePoolDesktopShell && 'lg:hidden',
                 isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4 max-sm:pt-3',
               )}
             >
@@ -625,13 +658,25 @@ export function PoolHomeView({
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
               'lg:flex lg:flex-row lg:items-start lg:gap-4',
-              isLeaderboardTab && 'mb-0 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row',
+              usePoolDesktopShell &&
+                'mb-0 flex min-h-0 flex-1 flex-col gap-4 lg:min-h-screen lg:flex-row lg:items-stretch lg:gap-0',
               isMobileChatShell &&
                 'max-sm:mb-0 max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
               isMobileChatShell && isChatView && 'max-sm:gap-0',
             )}
           >
-            {!isChatView ? (
+            {!isChatView && usePoolDesktopShell ? (
+              <PoolDesktopSidebar
+                pool={pool}
+                creatorName={creatorDisplayName}
+                canInvite={canInvite}
+                onInvite={copyInviteLink}
+                members={leaderboardMembers}
+                poolId={poolId}
+              />
+            ) : null}
+
+            {!isChatView && !usePoolDesktopShell ? (
               <nav
                 className={cn(
                   // Prefer 12rem; high shrink so the predictions workspace wins width first.
@@ -657,47 +702,70 @@ export function PoolHomeView({
                       <span className="min-w-0 truncate">Leaderboard</span>
                     </TabsTrigger>
                   </TabsList>
-                  {isClassicPredictionsTab ? (
-                    <>
-                      <PredictionStatusFilterTabs className="mt-1" />
-                      <PredictionSortControl />
-                    </>
-                  ) : null}
-                  {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
-                    <span className="mt-2 block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-                      Mock preview
-                    </span>
-                  ) : null}
-                  {isLeaderboardTab &&
-                  !USE_MOCK_LEADERBOARD &&
-                  leaderboardRefreshing ? (
-                    <span
-                      className="mt-2 block animate-pulse text-center text-[11px] font-medium tracking-wide text-muted-foreground"
-                      aria-live="polite"
-                    >
-                      Updating…
-                    </span>
-                  ) : null}
-                  {isLeaderboardTab &&
-                  !USE_MOCK_LEADERBOARD &&
-                  !leaderboardRefreshing &&
-                  leaderboardLiveSync ? (
-                    <span
-                      className="mt-2 inline-flex w-full items-center justify-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
-                      aria-label="Live standings sync on"
-                    >
-                      <span
-                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
-                        aria-hidden
-                      />
-                      Live
-                    </span>
-                  ) : null}
                 </div>
               </nav>
             ) : null}
 
-            <div className="min-w-0 flex-1 basis-[70rem] shrink lg:min-h-0">
+            <div
+              className={cn(
+                'min-w-0 flex-1 shrink lg:min-h-0',
+                usePoolDesktopShell
+                  ? 'basis-0 lg:flex lg:min-h-screen lg:flex-col'
+                  : 'basis-[70rem]',
+              )}
+            >
+            {usePoolDesktopShell ? (
+              <PoolDesktopTopBar
+                poolName={pool.name}
+                scoringStyle={pool.scoringStyle}
+                memberCount={pool.memberCount}
+                isPublic={pool.isPublic}
+                avatar={pool.avatar}
+                emblemUrl={pool.emblemUrl}
+                canInvite={canInvite}
+                onInvite={copyInviteLink}
+                onSettings={() => openSettingsFromNav()}
+              />
+            ) : null}
+            {usePoolDesktopShell && !isChatView && activeAnnouncement ? (
+              <div className="mb-4 hidden px-4 pt-4 lg:block lg:px-6 xl:px-8">
+                <PoolAnnouncementBanner
+                  announcement={activeAnnouncement}
+                  onDismissed={(id) => onAnnouncementDismissed?.(id)}
+                />
+              </div>
+            ) : null}
+            {usePoolDesktopShell && isLeaderboardTab ? (
+              <div className="mx-auto hidden w-full px-6 pt-2 xl:px-8 lg:block">
+                {USE_MOCK_LEADERBOARD ? (
+                  <span className="mb-3 inline-block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                    Mock preview
+                  </span>
+                ) : null}
+                {!USE_MOCK_LEADERBOARD && leaderboardRefreshing ? (
+                  <span
+                    className="mb-3 block animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
+                    aria-live="polite"
+                  >
+                    Updating…
+                  </span>
+                ) : null}
+                {!USE_MOCK_LEADERBOARD &&
+                !leaderboardRefreshing &&
+                leaderboardLiveSync ? (
+                  <span
+                    className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
+                    aria-label="Live standings sync on"
+                  >
+                    <span
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
+                      aria-hidden
+                    />
+                    Live
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             <div
               className={cn(
                 'lg:hidden',
@@ -774,6 +842,9 @@ export function PoolHomeView({
                 'mt-0 w-full min-w-0',
                 isWinnerPredictionsTab && 'overflow-x-visible',
                 isClassicPredictionsTab && 'overflow-x-hidden',
+                // Desktop shell: same content rail as leaderboard (match cards reflow).
+                usePoolDesktopShell &&
+                  cn(POOL_DESKTOP_CONTENT_RAIL_CLASS, 'lg:pb-8 lg:pt-2'),
               )}
             >
               <PoolPredictionsTab
@@ -795,6 +866,8 @@ export function PoolHomeView({
                   )?.rank ?? null
                 }
                 acceptingMembers={pool.acceptingMembers}
+                /** Shell owns desktop chrome — hide overview column on lg+. */
+                hideDesktopOverviewSidebar
                 winnerPool={
                   isLegacyWinnerPool && poolId
                     ? {

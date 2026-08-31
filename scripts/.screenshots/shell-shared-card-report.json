@@ -1,0 +1,106 @@
+{
+  "1280x800": {
+    "leaderboard": {
+      "tab": "leaderboard",
+      "asideWidth": 250,
+      "actions": [
+        "Report issue",
+        "Settings",
+        "Invite"
+      ],
+      "sidebarSectionLabels": [
+        "Pool",
+        "Pool info",
+        "Recent activity"
+      ],
+      "gridTemplateColumns": null,
+      "gridColCount": null,
+      "vsLabelsVisible": 0,
+      "statusFilterInMain": false,
+      "hasPoolInfo": true,
+      "hasFiltersInAside": false,
+      "asideScrollDelta": 0,
+      "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-shared-1280x800-leaderboard.png"
+    },
+    "predictions": {
+      "tab": "predictions",
+      "asideWidth": 250,
+      "actions": [
+        "Report issue",
+        "Settings",
+        "Invite"
+      ],
+      "sidebarSectionLabels": [
+        "Pool",
+        "Pool info",
+        "Recent activity"
+      ],
+      "gridTemplateColumns": "314px 314px 314px",
+      "gridColCount": 3,
+      "vsLabelsVisible": 72,
+      "statusFilterInMain": true,
+      "hasPoolInfo": true,
+      "hasFiltersInAside": false,
+      "asideScrollDelta": 0,
+      "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-shared-1280x800-predictions.png"
+    },
+    "parity": {
+      "asideWidth": true,
+      "actions": true,
+      "bothHavePoolInfo": true,
+      "filtersNotInAside": true
+    }
+  },
+  "1440x900": {
+    "leaderboard": {
+      "tab": "leaderboard",
+      "asideWidth": 250,
+      "actions": [
+        "Report issue",
+        "Settings",
+        "Invite"
+      ],
+      "sidebarSectionLabels": [
+        "Pool",
+        "Pool info",
+        "Recent activity"
+      ],
+      "gridTemplateColumns": null,
+      "gridColCount": null,
+      "vsLabelsVisible": 0,
+      "statusFilterInMain": false,
+      "hasPoolInfo": true,
+      "hasFiltersInAside": false,
+      "asideScrollDelta": 0,
+      "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-shared-1440x900-leaderboard.png"
+    },
+    "predictions": {
+      "tab": "predictions",
+      "asideWidth": 250,
+      "actions": [
+        "Report issue",
+        "Settings",
+        "Invite"
+      ],
+      "sidebarSectionLabels": [
+        "Pool",
+        "Pool info",
+        "Recent activity"
+      ],
+      "gridTemplateColumns": "272.5px 272.5px 272.5px 272.5px",
+      "gridColCount": 4,
+      "vsLabelsVisible": 72,
+      "statusFilterInMain": true,
+      "hasPoolInfo": true,
+      "hasFiltersInAside": false,
+      "asideScrollDelta": 0,
+      "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\shell-shared-1440x900-predictions.png"
+    },
+    "parity": {
+      "asideWidth": true,
+      "actions": true,
+      "bothHavePoolInfo": true,
+      "filtersNotInAside": true
+    }
+  }
+}

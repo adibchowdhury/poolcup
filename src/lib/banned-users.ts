@@ -101,7 +101,7 @@ export function excludeBannedFromPoolLeaderboardInputs(
   }
 
   const activeMembers = poolMembers.filter(
-    (member) => !bannedUserIds.has(member.user_id),
+    (member) => !member.user_id || !bannedUserIds.has(member.user_id),
   )
   const activeMemberIds = new Set(activeMembers.map((member) => member.id))
 

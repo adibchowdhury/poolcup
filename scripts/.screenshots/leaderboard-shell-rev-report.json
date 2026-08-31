@@ -1,0 +1,77 @@
+{
+  "390x844": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "sidebar": {
+      "display": "none",
+      "width": 0,
+      "visible": false,
+      "hasPool": true,
+      "hasPoolInfo": true,
+      "hasActivity": true,
+      "hasKickoff": false,
+      "hasInvite": false,
+      "hasUpsell": false,
+      "memberCountMatch": true,
+      "snippet": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyRecent activityJake Thompson moved up to 9thPucky moved up to 2ndSofia R. moved up to 4thBig Mike dropped to 5th"
+    },
+    "topBarTitle": "Office World Cup Pick'em 2026",
+    "separatePageHeaderPresent": false,
+    "upsellVisible": false,
+    "mobileTabsVisible": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-rev-after-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "1440x900": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "sidebar": {
+      "display": "flex",
+      "width": 240,
+      "visible": true,
+      "hasPool": true,
+      "hasPoolInfo": true,
+      "hasActivity": true,
+      "hasKickoff": false,
+      "hasInvite": false,
+      "hasUpsell": false,
+      "memberCountMatch": true,
+      "snippet": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyRecent activityJake Thompson moved up to 9thPucky moved up to 2ndSofia R. moved up to 4thBig Mike dropped to 5th"
+    },
+    "topBarTitle": "Office World Cup Pick'em 2026",
+    "separatePageHeaderPresent": false,
+    "upsellVisible": false,
+    "mobileTabsVisible": false,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-rev-after-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "1920x1080": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "sidebar": {
+      "display": "flex",
+      "width": 240,
+      "visible": true,
+      "hasPool": true,
+      "hasPoolInfo": true,
+      "hasActivity": true,
+      "hasKickoff": false,
+      "hasInvite": false,
+      "hasUpsell": false,
+      "memberCountMatch": true,
+      "snippet": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyRecent activityJake Thompson moved up to 9thPucky moved up to 2ndSofia R. moved up to 4thBig Mike dropped to 5th"
+    },
+    "topBarTitle": "Office World Cup Pick'em 2026",
+    "separatePageHeaderPresent": false,
+    "upsellVisible": false,
+    "mobileTabsVisible": false,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-rev-after-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+}

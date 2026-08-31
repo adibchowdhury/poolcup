@@ -1,0 +1,24 @@
+{
+  "dashboardTopBarHeight": 57,
+  "leaderboard": {
+    "height": 57,
+    "hasBackArrow": false,
+    "title": "Office World Cup Pick'em 2026",
+    "titleFontSize": "20px",
+    "metaText": "Score Predictor·15 members·Private pool",
+    "metaFontSize": "11px",
+    "metaColor": "rgb(90, 112, 128)",
+    "avatarPx": 36,
+    "hasScorePredictor": true,
+    "hasMembers": true,
+    "hasVisibility": true,
+    "snippet": "Office World Cup Pick'em 2026Score Predictor·15 members·Private poolSettingsReport issueInvites closed"
+  },
+  "heightParity": true,
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-topbar-after-1440x900.png",
+  "mobileDiff": {
+    "mismatched": 0,
+    "total": 329160,
+    "percent": 0
+  }
+}

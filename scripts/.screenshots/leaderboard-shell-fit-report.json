@@ -1,0 +1,45 @@
+{
+  "1280x800": {
+    "overflow": "hidden/hidden",
+    "scrollHeight": 800,
+    "clientHeight": 800,
+    "canScroll": false,
+    "activityItems": 2,
+    "pucky": {
+      "w": 80,
+      "h": 80
+    },
+    "ctaButtonFullWidth": true,
+    "upgradeWidth": 207,
+    "cardWidth": 229,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-fit-after-1280x800.png",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  "1440x900": {
+    "overflow": "hidden/hidden",
+    "scrollHeight": 900,
+    "clientHeight": 900,
+    "canScroll": false,
+    "activityItems": 3,
+    "pucky": {
+      "w": 80,
+      "h": 80
+    },
+    "ctaButtonFullWidth": true,
+    "upgradeWidth": 207,
+    "cardWidth": 229,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-fit-after-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "mobileDiff": {
+    "mismatched": 0,
+    "total": 329160,
+    "percent": 0
+  }
+}

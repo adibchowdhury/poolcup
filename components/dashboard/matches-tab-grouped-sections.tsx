@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useEffect, useState, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   DashboardPeekCarouselNav,
@@ -26,17 +27,28 @@ export function MatchesTabGroupHeader({
   showLiveDot = false,
   trailing,
   className,
+  showCount = true,
+  expanded,
+  onToggle,
 }: {
   label: string
   count: number
   showLiveDot?: boolean
   trailing?: ReactNode
   className?: string
+  /** When false, hides the “N matches” count (e.g. predictions desktop). Default true. */
+  showCount?: boolean
+  /** Controlled expand state when `onToggle` is provided. */
+  expanded?: boolean
+  /** Makes the header a toggle control with chevron (app convention). */
+  onToggle?: () => void
 }) {
   const countLabel = count === 1 ? '1 match' : `${count} matches`
+  const collapsible = typeof onToggle === 'function'
+  const isExpanded = expanded ?? true
 
-  return (
-    <div className={cn('mb-2.5', className)}>
+  const inner = (
+    <>
       <div className="flex items-end justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {showLiveDot ? (
@@ -50,9 +62,20 @@ export function MatchesTabGroupHeader({
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-2 pb-0.5">
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            {countLabel}
-          </span>
+          {showCount ? (
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">
+              {countLabel}
+            </span>
+          ) : null}
+          {collapsible ? (
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                isExpanded && 'rotate-180',
+              )}
+              aria-hidden
+            />
+          ) : null}
           {trailing}
         </div>
       </div>
@@ -60,8 +83,30 @@ export function MatchesTabGroupHeader({
         className="mt-2 h-px w-full bg-gradient-to-r from-border via-border/70 to-transparent"
         aria-hidden
       />
-    </div>
+    </>
   )
+
+  if (collapsible) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        aria-label={
+          isExpanded ? `Collapse ${label} matches` : `Expand ${label} matches`
+        }
+        className={cn(
+          'mb-2.5 w-full cursor-pointer text-left transition-colors',
+          'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          className,
+        )}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return <div className={cn('mb-2.5', className)}>{inner}</div>
 }
 
 const MatchesTabGroupCarouselRow = memo(function MatchesTabGroupCarouselRow({

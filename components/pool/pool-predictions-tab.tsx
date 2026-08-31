@@ -11,6 +11,7 @@ import type { UserPoolPrediction } from '@/components/pool/prediction-match-card
 import { YourPredictionsSection } from '@/components/pool/your-predictions-section'
 import { PoolPredictionsDesktopSidebar } from '@/components/pool/pool-predictions-desktop-sidebar'
 import { isLegacyWinnerOnlyPool } from '@/src/lib/winner-only-mode'
+import { cn } from '@/lib/utils'
 
 export type { UserPoolPrediction } from '@/components/pool/prediction-match-card'
 
@@ -38,6 +39,11 @@ type PoolPredictionsTabProps = {
   /** From existing leaderboard members (isYou / current user). */
   userRank?: number | null
   acceptingMembers?: boolean
+  /**
+   * When true, omit the legacy lg+ overview/invite column — pool shell sidebar
+   * replaces it (filters + Commissioner CTA live there instead).
+   */
+  hideDesktopOverviewSidebar?: boolean
   onPredictionSaved?: (
     matchId: string,
     predTeam1: number,
@@ -62,6 +68,7 @@ export function PoolPredictionsTab({
   memberCount = 0,
   userRank = null,
   acceptingMembers = false,
+  hideDesktopOverviewSidebar = false,
   onPredictionSaved,
   onPredictionRemoved,
 }: PoolPredictionsTabProps) {
@@ -99,9 +106,21 @@ export function PoolPredictionsTab({
   }
 
   return (
-    <div className="w-full min-w-0 lg:flex lg:items-start lg:gap-4">
+    <div
+      className={cn(
+        'w-full min-w-0',
+        !hideDesktopOverviewSidebar && 'lg:flex lg:items-start lg:gap-4',
+      )}
+    >
       {/* Large basis demands width; sidebar shrinks first (shrink-3). */}
-      <div className="min-w-0 flex-1 basis-[55rem] shrink space-y-4">
+      <div
+        className={cn(
+          'min-w-0 space-y-4',
+          hideDesktopOverviewSidebar
+            ? 'w-full'
+            : 'flex-1 basis-[55rem] shrink',
+        )}
+      >
         <ProgressHeader
           current={predictedMatchCount}
           total={classicMatchTotal}
@@ -120,7 +139,7 @@ export function PoolPredictionsTab({
         />
       </div>
 
-      {inviteCode && poolId ? (
+      {!hideDesktopOverviewSidebar && inviteCode && poolId ? (
         <PoolPredictionsDesktopSidebar
           predictedCount={predictedMatchCount}
           totalMatchCount={classicMatchTotal}

@@ -146,6 +146,8 @@ function MemberAvatar({
     <UserAvatarImage
       avatar={member.avatar}
       customAvatarUrl={member.customAvatarUrl}
+      fallbackInitials={member.userId ? null : member.name}
+      fallbackColorKey={member.userId || member.name}
       className={cn(
         'h-9 w-9 sm:h-10 sm:w-10',
         member.isYou && 'ring-2 ring-primary/40',

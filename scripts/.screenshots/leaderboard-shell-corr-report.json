@@ -1,0 +1,102 @@
+{
+  "1440x900": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "viewportW": 1440,
+    "viewportH": 900,
+    "sidebar": {
+      "display": "flex",
+      "position": "fixed",
+      "height": 900,
+      "width": 240,
+      "y": 0,
+      "fullViewportHeight": true,
+      "startsAtTop": true,
+      "hasUpsell": true
+    },
+    "topBar": {
+      "display": "block",
+      "x": 240,
+      "width": 1200,
+      "constrainedToMainColumn": true,
+      "title": "Office World Cup Pick'em 2026",
+      "titleAlign": "left"
+    },
+    "upsellVisible": true,
+    "mobileTabsVisible": false,
+    "mobileHeaderDisplay": "none",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-corr-after-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "1920x1080": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "viewportW": 1920,
+    "viewportH": 1080,
+    "sidebar": {
+      "display": "flex",
+      "position": "fixed",
+      "height": 1080,
+      "width": 240,
+      "y": 0,
+      "fullViewportHeight": true,
+      "startsAtTop": true,
+      "hasUpsell": true
+    },
+    "topBar": {
+      "display": "block",
+      "x": 240,
+      "width": 1680,
+      "constrainedToMainColumn": true,
+      "title": "Office World Cup Pick'em 2026",
+      "titleAlign": "left"
+    },
+    "upsellVisible": true,
+    "mobileTabsVisible": false,
+    "mobileHeaderDisplay": "none",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-corr-after-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "390x844": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "viewportW": 390,
+    "viewportH": 844,
+    "sidebar": {
+      "display": "none",
+      "position": "fixed",
+      "height": 0,
+      "width": 0,
+      "y": 0,
+      "fullViewportHeight": false,
+      "startsAtTop": true,
+      "hasUpsell": true
+    },
+    "topBar": {
+      "display": "none",
+      "x": 0,
+      "width": 0,
+      "constrainedToMainColumn": false,
+      "title": "Office World Cup Pick'em 2026",
+      "titleAlign": "left"
+    },
+    "upsellVisible": false,
+    "mobileTabsVisible": true,
+    "mobileHeaderDisplay": "block",
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-corr-after-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "mobileByteIdentical": false,
+  "mobileHashes": {
+    "before": "2529eccd1409",
+    "after": "82cea0154134"
+  },
+  "mobilePixelExactMismatched": 0,
+  "mobileByteIdenticalNote": "PNG hashes differ (encoder) but exact pixelmatch threshold 0 = 0 mismatched"
+}

@@ -18,6 +18,11 @@ interface SaveBarProps {
    * where the nav is hidden). Set false when the save bar is the only bottom chrome.
    */
   stackAboveMobileNav?: boolean
+  /**
+   * When false, bar slides/fades off-screen (dirty-state chrome).
+   * Save handlers stay wired; only visibility changes. Default true.
+   */
+  visible?: boolean
 }
 
 export function SaveBar({
@@ -29,6 +34,7 @@ export function SaveBar({
   complete = false,
   error = null,
   stackAboveMobileNav = true,
+  visible = true,
 }: SaveBarProps) {
   const hasChanges = unsavedCount > 0
   const showComplete = complete && !hasChanges && !saving && !success && !error
@@ -36,8 +42,13 @@ export function SaveBar({
 
   return (
     <div
+      aria-hidden={!visible}
       className={cn(
         'fixed left-0 right-0 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-md',
+        'transition-[transform,opacity] duration-300 ease-out',
+        visible
+          ? 'translate-y-0 opacity-100'
+          : 'pointer-events-none translate-y-[110%] opacity-0',
         stackAboveMobileNav
           ? cn(
               SAVE_BAR_ABOVE_MOBILE_NAV_BOTTOM_CLASS,

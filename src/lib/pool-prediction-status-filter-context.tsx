@@ -148,8 +148,11 @@ export function usePoolPredictionStatusFilterOptional() {
 
 export function PredictionStatusFilterTabs({
   className,
+  hideHeading = false,
 }: {
   className?: string
+  /** When true, omit the inline “Your Predictions” label (sidebar supplies its own). */
+  hideHeading?: boolean
 }) {
   const { statusFilter, setStatusFilter, counts, showFilters } =
     usePoolPredictionStatusFilter()
@@ -177,9 +180,11 @@ export function PredictionStatusFilterTabs({
 
   return (
     <div className={cn('space-y-2 border-t border-border/70 pt-2.5', className)}>
-      <p className="truncate px-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        Your Predictions
-      </p>
+      {hideHeading ? null : (
+        <p className="truncate px-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Your Predictions
+        </p>
+      )}
       <div
         className="flex flex-col gap-0.5"
         role="tablist"
@@ -215,11 +220,86 @@ export function PredictionStatusFilterTabs({
   )
 }
 
-/** Desktop left-rail sort control (lg+ only mount site). */
-export function PredictionSortControl({
+/** Desktop main-column status filter — segmented control (Matches-scope recipe). */
+export function PredictionStatusFilterSegmented({
   className,
 }: {
   className?: string
+}) {
+  const { statusFilter, setStatusFilter, counts, showFilters } =
+    usePoolPredictionStatusFilter()
+
+  if (!showFilters) return null
+
+  const filterTabs: {
+    id: PredictionStatusFilter
+    label: string
+    count: number
+  }[] = [
+    { id: 'all', label: 'All', count: counts.all },
+    { id: 'unpicked', label: 'Unpicked', count: counts.unpicked },
+    { id: 'predicted', label: 'Predicted', count: counts.predicted },
+    ...(counts.completed > 0
+      ? [
+          {
+            id: 'completed' as const,
+            label: 'Completed',
+            count: counts.completed,
+          },
+        ]
+      : []),
+  ]
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter predictions by status"
+      className={cn(
+        'inline-flex shrink-0 flex-wrap border border-[#292929] bg-[#171717] p-0.5 rounded-lg',
+        className,
+      )}
+    >
+      {filterTabs.map((tab) => {
+        const selected = statusFilter === tab.id
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => setStatusFilter(tab.id)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
+              FOCUS_VISIBLE_RING,
+              selected
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <span>{tab.label}</span>
+            <span
+              className={cn(
+                'font-mono tabular-nums opacity-80',
+                selected ? 'text-primary-foreground/90' : '',
+              )}
+            >
+              {tab.count}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Desktop left-rail / sidebar sort control (lg+ mount sites). */
+export function PredictionSortControl({
+  className,
+  hideLabel = false,
+}: {
+  className?: string
+  /** When true, omit the inline “Sort by” label (toolbar supplies its own). */
+  hideLabel?: boolean
 }) {
   const { showFilters, sortMode, setSortMode, sortOptions } =
     usePoolPredictionStatusFilter()
@@ -228,12 +308,14 @@ export function PredictionSortControl({
 
   return (
     <div className={cn('space-y-1.5 border-t border-border/70 pt-2.5', className)}>
-      <label
-        htmlFor="classic-predictions-sort-rail"
-        className="block truncate px-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
-      >
-        Sort by
-      </label>
+      {hideLabel ? null : (
+        <label
+          htmlFor="classic-predictions-sort-rail"
+          className="block truncate px-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          Sort by
+        </label>
+      )}
       <Select
         value={sortMode}
         onValueChange={(value) =>

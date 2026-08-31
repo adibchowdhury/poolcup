@@ -1,0 +1,17 @@
+{
+  "height": 80,
+  "innerHeight": 80,
+  "borderBottomWidth": "0px",
+  "borderBottomStyle": "solid",
+  "avatarPx": 48,
+  "titleFontSize": "30px",
+  "metaFontSize": "13px",
+  "settingsH": 40,
+  "settingsFont": "14px",
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-topbar-scale-after-1440x900.png",
+  "mobileDiff": {
+    "mismatched": 0,
+    "total": 329160,
+    "percent": 0
+  }
+}

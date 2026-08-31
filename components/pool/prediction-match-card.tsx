@@ -1038,6 +1038,82 @@ export function PredictionMatchCard({
     </div>
   ) : null
 
+  const classicScoreControls = preview ? (
+    <div className="flex items-center gap-1">
+      <PredictScoreInput
+        value=""
+        onChange={() => undefined}
+        label="Home score preview"
+        filled={false}
+        disabled
+        readOnly
+      />
+      <CompactMatchRowScoreSeparator />
+      <PredictScoreInput
+        value=""
+        onChange={() => undefined}
+        label="Away score preview"
+        filled={false}
+        disabled
+        readOnly
+      />
+    </div>
+  ) : isEditable ? (
+    <div className="flex items-center gap-1">
+      <PredictScoreInput
+        value={score1}
+        onChange={(value) => handleScoreChange('score1', value)}
+        onBlur={handleBlur}
+        label={`${prediction.team1Name} score`}
+        filled={score1 !== ''}
+      />
+      <CompactMatchRowScoreSeparator />
+      <PredictScoreInput
+        value={score2}
+        onChange={(value) => handleScoreChange('score2', value)}
+        onBlur={handleBlur}
+        label={`${prediction.team2Name} score`}
+        filled={score2 !== ''}
+      />
+    </div>
+  ) : hasStoredPrediction ? (
+    <CompactMatchRowReadOnlyScores
+      score1={prediction.predTeam1!}
+      score2={prediction.predTeam2!}
+    />
+  ) : hasResult ? (
+    <>
+      <span
+        className={cn(
+          'text-center text-[10px] lg:hidden',
+          pastMetaTextClassName,
+        )}
+      >
+        No prediction
+      </span>
+      <span
+        className={cn(
+          'hidden lg:inline-flex items-center justify-center',
+          'min-h-[1.75rem] min-w-[6.5rem] rounded-md border border-dashed border-white/12',
+          'bg-white/[0.03] px-2.5 py-1',
+          'text-[10px] font-medium uppercase tracking-wider text-muted-foreground/75',
+        )}
+        aria-label="No prediction"
+      >
+        No prediction
+      </span>
+    </>
+  ) : isReadOnly ? (
+    <span
+      className={cn(
+        'rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider',
+        pastMetaTextClassName,
+      )}
+    >
+      Locked
+    </span>
+  ) : null
+
   const winnerPickLayoutProps = {
     team1Name: preview ? 'Team 1' : prediction.team1Name,
     team2Name: preview ? 'Team 2' : prediction.team2Name,
@@ -1064,6 +1140,13 @@ export function PredictionMatchCard({
           'flex-col items-stretch gap-3.5 sm:gap-4',
           // Slightly taller padding for lg stacked crest + name
           'lg:py-5',
+          // Desktop surface: warm charcoal #20221F, border + soft shadow (no green glow)
+          'lg:border lg:border-white/[0.09] lg:bg-[#20221F]',
+          'lg:shadow-[0_2px_14px_rgba(0,0,0,0.28)]',
+          'lg:hover:border-white/[0.12] lg:hover:bg-[#252824]',
+          'lg:hover:shadow-[0_4px_18px_rgba(0,0,0,0.32)]',
+          // Neutralize shared primary/green predicted + hover borders on desktop
+          'lg:!border-white/[0.09] lg:hover:!border-white/[0.12]',
           winnerPickMode &&
             'max-lg:min-h-[10.75rem] max-lg:overflow-hidden max-lg:gap-2.5 lg:min-h-[11.5rem] lg:overflow-hidden lg:gap-2.5',
           preview && 'opacity-95',
@@ -1084,18 +1167,20 @@ export function PredictionMatchCard({
           {earnedPointsLine ? (
             <span
               className={cn(
-                'text-xs font-semibold lg:col-start-3 lg:justify-self-end',
+                'inline-flex max-w-full shrink-0 items-center whitespace-nowrap',
+                'rounded-full px-2.5 py-0.5 text-[10px] font-semibold leading-none tracking-wide',
+                'lg:col-start-3 lg:justify-self-end',
                 earnedPointsLine.kind === 'exact'
-                  ? 'text-primary'
+                  ? 'bg-primary/15 text-primary'
                   : earnedPointsLine.kind === 'winner' ||
                       earnedPointsLine.kind === 'draw' ||
                       earnedPointsLine.kind === 'advance'
-                    ? 'text-[#ffb300]'
+                    ? 'bg-[#ffb300]/15 text-[#ffb300]'
                     : earnedPointsLine.kind === 'wrong'
-                      ? 'text-destructive'
+                      ? 'bg-destructive/15 text-destructive'
                       : earnedPointsLine.kind === 'void'
-                        ? 'text-muted-foreground'
-                        : pastMetaTextClassName,
+                        ? 'bg-muted/60 text-muted-foreground'
+                        : 'bg-muted/40 text-muted-foreground',
               )}
             >
               {earnedPointsLine.kind === 'void'
@@ -1103,97 +1188,160 @@ export function PredictionMatchCard({
                 : `${earnedPointsLine.label} · +${earnedPointsLine.points} pts`}
             </span>
           ) : voidMatchLabel ? (
-            <span className="text-xs font-semibold text-muted-foreground lg:col-start-3 lg:justify-self-end">
+            <span
+              className={cn(
+                'inline-flex max-w-full shrink-0 items-center whitespace-nowrap',
+                'rounded-full bg-muted/60 px-2.5 py-0.5 text-[10px] font-semibold leading-none tracking-wide text-muted-foreground',
+                'lg:col-start-3 lg:justify-self-end',
+              )}
+            >
               {voidMatchLabel}
             </span>
           ) : null}
         </div>
 
         {!winnerPickMode ? (
-          <div className={cn(getCompactMatchRowTeamsRowClassName(), 'py-0.5')}>
-            {preview ? (
-              <PreviewTbdTeamSide />
-            ) : (
-              <CompactMatchRowTeamHome
-                name={prediction.team1Name}
-                dbFlag={prediction.team1Flag}
-                logoUrl={prediction.team1Logo}
-                desktopStacked
-              />
-            )}
-
-            <div className={getCompactMatchRowScoreColumnClassName()}>
+          <>
+            {/* Mobile / <lg — teams with scores in the center (unchanged). */}
+            <div
+              className={cn(
+                getCompactMatchRowTeamsRowClassName(),
+                'py-0.5 lg:hidden',
+              )}
+            >
               {preview ? (
-                <div className="flex items-center gap-1">
-                  <PredictScoreInput
-                    value=""
-                    onChange={() => undefined}
-                    label="Home score preview"
-                    filled={false}
-                    disabled
-                    readOnly
-                  />
-                  <CompactMatchRowScoreSeparator />
-                  <PredictScoreInput
-                    value=""
-                    onChange={() => undefined}
-                    label="Away score preview"
-                    filled={false}
-                    disabled
-                    readOnly
-                  />
-                </div>
-              ) : isEditable ? (
-                <div className="flex items-center gap-1">
-                  <PredictScoreInput
-                    value={score1}
-                    onChange={(value) => handleScoreChange('score1', value)}
-                    onBlur={handleBlur}
-                    label={`${prediction.team1Name} score`}
-                    filled={score1 !== ''}
-                  />
-                  <CompactMatchRowScoreSeparator />
-                  <PredictScoreInput
-                    value={score2}
-                    onChange={(value) => handleScoreChange('score2', value)}
-                    onBlur={handleBlur}
-                    label={`${prediction.team2Name} score`}
-                    filled={score2 !== ''}
-                  />
-                </div>
-              ) : hasStoredPrediction ? (
-                <CompactMatchRowReadOnlyScores
-                  score1={prediction.predTeam1!}
-                  score2={prediction.predTeam2!}
+                <PreviewTbdTeamSide />
+              ) : (
+                <CompactMatchRowTeamHome
+                  name={prediction.team1Name}
+                  dbFlag={prediction.team1Flag}
+                  logoUrl={prediction.team1Logo}
+                  desktopStacked
                 />
-              ) : hasResult ? (
-                <span className={cn('text-center text-[10px]', pastMetaTextClassName)}>
-                  No prediction
-                </span>
-              ) : isReadOnly ? (
-                <span
-                  className={cn(
-                    'rounded bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider',
-                    pastMetaTextClassName,
-                  )}
-                >
-                  Locked
-                </span>
-              ) : null}
-              {!preview ? predictionSaveStatusBlock : null}
+              )}
+
+              <div className={getCompactMatchRowScoreColumnClassName()}>
+                {classicScoreControls}
+                {!preview ? predictionSaveStatusBlock : null}
+              </div>
+
+              {preview ? (
+                <PreviewTbdTeamSide />
+              ) : (
+                <CompactMatchRowTeamAway
+                  name={prediction.team2Name}
+                  dbFlag={prediction.team2Flag}
+                  logoUrl={prediction.team2Logo}
+                  desktopStacked
+                />
+              )}
             </div>
 
-            {preview ? (
-              <PreviewTbdTeamSide />
-            ) : (
-              <CompactMatchRowTeamAway
-                name={prediction.team2Name}
-                dbFlag={prediction.team2Flag}
-                logoUrl={prediction.team2Logo}
-                desktopStacked
-              />
-            )}
-          </div>
+            {/* Desktop lg+ anatomy: teams+vs → your prediction → result → expander */}
+            <div className="hidden w-full min-w-0 flex-col gap-3 lg:flex">
+              <div className={cn(getCompactMatchRowTeamsRowClassName(), 'py-0.5')}>
+                {preview ? (
+                  <PreviewTbdTeamSide />
+                ) : (
+                  <CompactMatchRowTeamHome
+                    name={prediction.team1Name}
+                    dbFlag={prediction.team1Flag}
+                    logoUrl={prediction.team1Logo}
+                    desktopStacked
+                  />
+                )}
+                <span
+                  className="shrink-0 px-1 font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+                  aria-hidden
+                >
+                  vs
+                </span>
+                {preview ? (
+                  <PreviewTbdTeamSide />
+                ) : (
+                  <CompactMatchRowTeamAway
+                    name={prediction.team2Name}
+                    dbFlag={prediction.team2Flag}
+                    logoUrl={prediction.team2Logo}
+                    desktopStacked
+                  />
+                )}
+              </div>
+
+              <div className="flex w-full flex-col items-center gap-1.5">
+                {!preview ? predictionSaveStatusBlock : null}
+                <div className={getCompactMatchRowScoreColumnClassName()}>
+                  {classicScoreControls}
+                </div>
+              </div>
+
+              {showKnockoutAdvance ? (
+                <div className="flex w-full flex-col gap-2">
+                  <KnockoutAdvancePicker
+                    team1Name={prediction.team1Name}
+                    team2Name={prediction.team2Name}
+                    team1Flag={prediction.team1Flag}
+                    team2Flag={prediction.team2Flag}
+                    team1Logo={prediction.team1Logo}
+                    team2Logo={prediction.team2Logo}
+                    predTeam1={inputPredTeam1}
+                    predTeam2={inputPredTeam2}
+                    userAdvancePick={advancePick}
+                    round={prediction.round}
+                    preview={preview}
+                    isLocked={isReadOnly}
+                    onAdvancePick={isEditable ? handleAdvancePick : undefined}
+                  />
+                  {knockoutPointFooter ? (
+                    <p className="text-center text-[10px] text-muted-foreground">
+                      {knockoutPointFooter}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
+                {isVoidMatch && voidMatchLabel ? (
+                  <p className={cn('text-center text-xs', pastMetaTextClassName)}>
+                    {voidMatchLabel}
+                    {hasStoredPrediction ? ' · Prediction voided' : ''}
+                  </p>
+                ) : hasResult ? (
+                  <p className={cn('text-center text-xs', pastBodyTextClassName)}>
+                    Actual: {prediction.resultTeam1} – {prediction.resultTeam2}
+                    {actualAdvancedTeamName
+                      ? ` · Advanced: ${actualAdvancedTeamName}`
+                      : ''}
+                  </p>
+                ) : (
+                  <p className={cn('text-center text-xs', pastMetaTextClassName)}>
+                    Result pending
+                  </p>
+                )}
+
+                {showPicksExpander ? (
+                  <MatchPicksExpander
+                    poolId={poolId!}
+                    matchId={prediction.matchId}
+                    scoringStyle={scoringStyle}
+                    kickoffAt={prediction.kickoffAt}
+                    isFinal={prediction.isFinal}
+                    resultTeam1={prediction.resultTeam1}
+                    resultTeam2={prediction.resultTeam2}
+                    round={prediction.round}
+                    advancingTeam={prediction.advancingTeam}
+                    currentUserId={currentUserId!}
+                    team1Name={prediction.team1Name}
+                    team2Name={prediction.team2Name}
+                    team1Flag={prediction.team1Flag}
+                    team2Flag={prediction.team2Flag}
+                    team1Logo={prediction.team1Logo}
+                    team2Logo={prediction.team2Logo}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div className="flex w-full min-w-0 max-w-full flex-col gap-1.5 lg:hidden">
@@ -1219,7 +1367,33 @@ export function PredictionMatchCard({
           </p>
         ) : null}
 
-        {showKnockoutAdvance ? (
+        {/* Knockout + result footer: mobile only when classic (desktop owns its stack). */}
+        {showKnockoutAdvance && !winnerPickMode ? (
+          <div className="flex w-full flex-col gap-2 lg:hidden">
+            <KnockoutAdvancePicker
+              team1Name={prediction.team1Name}
+              team2Name={prediction.team2Name}
+              team1Flag={prediction.team1Flag}
+              team2Flag={prediction.team2Flag}
+              team1Logo={prediction.team1Logo}
+              team2Logo={prediction.team2Logo}
+              predTeam1={inputPredTeam1}
+              predTeam2={inputPredTeam2}
+              userAdvancePick={advancePick}
+              round={prediction.round}
+              preview={preview}
+              isLocked={isReadOnly}
+              onAdvancePick={isEditable ? handleAdvancePick : undefined}
+            />
+            {knockoutPointFooter ? (
+              <p className="text-center text-[10px] text-muted-foreground">
+                {knockoutPointFooter}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {showKnockoutAdvance && winnerPickMode ? (
           <div className="flex w-full flex-col gap-2">
             <KnockoutAdvancePicker
               team1Name={prediction.team1Name}
@@ -1244,7 +1418,44 @@ export function PredictionMatchCard({
           </div>
         ) : null}
 
-        {showResultFooter ? (
+        {showResultFooter && (!winnerPickMode ? (
+          <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5 lg:hidden">
+            {isVoidMatch && voidMatchLabel ? (
+              <p className={cn('text-center text-xs', pastMetaTextClassName)}>
+                {voidMatchLabel}
+                {hasStoredPrediction ? ' · Prediction voided' : ''}
+              </p>
+            ) : hasResult ? (
+              <p className={cn('text-center text-xs', pastBodyTextClassName)}>
+                Actual: {prediction.resultTeam1} – {prediction.resultTeam2}
+                {actualAdvancedTeamName
+                  ? ` · Advanced: ${actualAdvancedTeamName}`
+                  : ''}
+              </p>
+            ) : null}
+
+            {showPicksExpander ? (
+              <MatchPicksExpander
+                poolId={poolId!}
+                matchId={prediction.matchId}
+                scoringStyle={scoringStyle}
+                kickoffAt={prediction.kickoffAt}
+                isFinal={prediction.isFinal}
+                resultTeam1={prediction.resultTeam1}
+                resultTeam2={prediction.resultTeam2}
+                round={prediction.round}
+                advancingTeam={prediction.advancingTeam}
+                currentUserId={currentUserId!}
+                team1Name={prediction.team1Name}
+                team2Name={prediction.team2Name}
+                team1Flag={prediction.team1Flag}
+                team2Flag={prediction.team2Flag}
+                team1Logo={prediction.team1Logo}
+                team2Logo={prediction.team2Logo}
+              />
+            ) : null}
+          </div>
+        ) : (
           <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2.5">
             {isVoidMatch && voidMatchLabel ? (
               <p className={cn('text-center text-xs', pastMetaTextClassName)}>
@@ -1281,13 +1492,12 @@ export function PredictionMatchCard({
               />
             ) : null}
           </div>
-        ) : null}
+        ))}
 
         {!preview ? (
           <CompactMatchRowPredictedBadge
             isPredicted={savedCardComplete}
             filled={savedCardComplete}
-            isLocked={isReadOnly}
           />
         ) : null}
       </div>

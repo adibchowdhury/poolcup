@@ -1,0 +1,106 @@
+{
+  "1280x800": {
+    "headerText": "PositionMemberPointsTrendLast Pick",
+    "exactHeaderPresent": false,
+    "flagImageCount": 24,
+    "sampleFlagSrcs": [
+      "/flags/netherlands.png",
+      "/flags/uruguay.png",
+      "/flags/france.png",
+      "/flags/germany.png"
+    ],
+    "activityItems": 1,
+    "asideOverflowY": "hidden",
+    "asideScrollDelta": 0,
+    "avatarH": 54,
+    "actions": [
+      {
+        "label": "Report issue",
+        "h": 32
+      },
+      {
+        "label": "Settings",
+        "h": 32
+      },
+      {
+        "label": "Invite",
+        "h": 32
+      }
+    ],
+    "labels": [
+      {
+        "label": "Pool",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      },
+      {
+        "label": "Pool info",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      },
+      {
+        "label": "Recent activity",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      }
+    ],
+    "logoSeparatorLikely": true,
+    "confettiCanvas": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-refine-1280x800.png"
+  },
+  "1440x900": {
+    "headerText": "PositionMemberPointsTrendLast Pick",
+    "exactHeaderPresent": false,
+    "flagImageCount": 24,
+    "sampleFlagSrcs": [
+      "/flags/netherlands.png",
+      "/flags/uruguay.png",
+      "/flags/france.png",
+      "/flags/germany.png"
+    ],
+    "activityItems": 3,
+    "asideOverflowY": "hidden",
+    "asideScrollDelta": 0,
+    "avatarH": 54,
+    "actions": [
+      {
+        "label": "Report issue",
+        "h": 32
+      },
+      {
+        "label": "Settings",
+        "h": 32
+      },
+      {
+        "label": "Invite",
+        "h": 32
+      }
+    ],
+    "labels": [
+      {
+        "label": "Pool",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      },
+      {
+        "label": "Pool info",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      },
+      {
+        "label": "Recent activity",
+        "labelLeft": 12,
+        "contentLeft": 12,
+        "sectionPad": "12px"
+      }
+    ],
+    "logoSeparatorLikely": true,
+    "confettiCanvas": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-refine-1440x900.png"
+  }
+}

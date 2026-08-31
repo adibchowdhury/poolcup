@@ -1,0 +1,114 @@
+{
+  "390x844": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "h1s": [
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026"
+    ],
+    "shellHeaderText": "Office World Cup Pick'em 2026",
+    "bodySnippet": "Skip to content\nOffice World Cup Pick'em 2026\nScore Predictor\nInvites closed\nPredictions\nLeaderboard\nSettings\nPucky\n\n131pts\n\n6 exact\n\n2ND\nMarcus J.\n\n142pts\n\n12 exact\n\n1ST\nDeShawn\n\n126pts\n\n10 exact\n\n3R",
+    "sidebar": {
+      "display": "none",
+      "width": 0,
+      "bg": "rgb(23, 23, 23)",
+      "borderRight": "rgb(41, 41, 41)",
+      "visible": false,
+      "text": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyPrivate"
+    },
+    "floatingNavDisplay": null,
+    "mobileTabsVisible": true,
+    "inviteCount": 0,
+    "quietReport": true,
+    "memberMono": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-phase1-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "1024x768": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "h1s": [
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026"
+    ],
+    "shellHeaderText": "Office World Cup Pick'em 2026",
+    "bodySnippet": "Skip to content\n\nPOOL\n\nPredictions\nLeaderboard\n\nPOOL INFO\n\nOffice World Cup Pick'em 2026\n\nScore Predictor\n15 members\n\nCreated by Pucky\n\nPrivate\n\nOffice World Cup Pick'em 2026\nScore Predictor\n15 member",
+    "sidebar": {
+      "display": "flex",
+      "width": 240,
+      "bg": "rgb(23, 23, 23)",
+      "borderRight": "rgb(41, 41, 41)",
+      "visible": true,
+      "text": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyPrivate"
+    },
+    "floatingNavDisplay": null,
+    "mobileTabsVisible": false,
+    "inviteCount": 0,
+    "quietReport": true,
+    "memberMono": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-phase1-1024x768.png",
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    }
+  },
+  "1440x900": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "h1s": [
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026"
+    ],
+    "shellHeaderText": "Office World Cup Pick'em 2026",
+    "bodySnippet": "Skip to content\n\nPOOL\n\nPredictions\nLeaderboard\n\nPOOL INFO\n\nOffice World Cup Pick'em 2026\n\nScore Predictor\n15 members\n\nCreated by Pucky\n\nPrivate\n\nOffice World Cup Pick'em 2026\nScore Predictor\n15 member",
+    "sidebar": {
+      "display": "flex",
+      "width": 240,
+      "bg": "rgb(23, 23, 23)",
+      "borderRight": "rgb(41, 41, 41)",
+      "visible": true,
+      "text": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyPrivate"
+    },
+    "floatingNavDisplay": null,
+    "mobileTabsVisible": false,
+    "inviteCount": 0,
+    "quietReport": true,
+    "memberMono": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-phase1-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "1920x1080": {
+    "url": "/pool/afcaad5c?tab=leaderboard",
+    "h1s": [
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026",
+      "Office World Cup Pick'em 2026"
+    ],
+    "shellHeaderText": "Office World Cup Pick'em 2026",
+    "bodySnippet": "Skip to content\n\nPOOL\n\nPredictions\nLeaderboard\n\nPOOL INFO\n\nOffice World Cup Pick'em 2026\n\nScore Predictor\n15 members\n\nCreated by Pucky\n\nPrivate\n\nOffice World Cup Pick'em 2026\nScore Predictor\n15 member",
+    "sidebar": {
+      "display": "flex",
+      "width": 240,
+      "bg": "rgb(23, 23, 23)",
+      "borderRight": "rgb(41, 41, 41)",
+      "visible": true,
+      "text": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Score Predictor15 membersCreated by PuckyPrivate"
+    },
+    "floatingNavDisplay": null,
+    "mobileTabsVisible": false,
+    "inviteCount": 0,
+    "quietReport": true,
+    "memberMono": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-phase1-1920x1080.png",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+}

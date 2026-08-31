@@ -1,0 +1,62 @@
+{
+  "1440x900": {
+    "headerText": "PositionMemberPointsExactTrendLast Pick",
+    "shareMyRankPresent": false,
+    "topSharePresent": false,
+    "actionLabels": [
+      "Report issue",
+      "Settings",
+      "Invite"
+    ],
+    "edges": {
+      "headerVsPodium": {
+        "left": 0,
+        "right": 0
+      },
+      "headerVsTable": {
+        "left": 0,
+        "right": 0
+      },
+      "podiumVsTable": {
+        "left": 0,
+        "right": 0
+      }
+    },
+    "sampleLastPick": [
+      "🇳🇱 2–2 🇺🇾",
+      "🇫🇷 1–1 🇩🇪",
+      "🇫🇷 1–1 🇩🇪"
+    ],
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-adjust-1440x900.png"
+  },
+  "1920x1080": {
+    "headerText": "PositionMemberPointsExactTrendLast Pick",
+    "shareMyRankPresent": false,
+    "topSharePresent": false,
+    "actionLabels": [
+      "Report issue",
+      "Settings",
+      "Invite"
+    ],
+    "edges": {
+      "headerVsPodium": {
+        "left": 0,
+        "right": 0
+      },
+      "headerVsTable": {
+        "left": 0,
+        "right": 0
+      },
+      "podiumVsTable": {
+        "left": 0,
+        "right": 0
+      }
+    },
+    "sampleLastPick": [
+      "🇳🇱 2–2 🇺🇾",
+      "🇫🇷 1–1 🇩🇪",
+      "🇫🇷 1–1 🇩🇪"
+    ],
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-adjust-1920x1080.png"
+  }
+}

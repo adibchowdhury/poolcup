@@ -356,9 +356,9 @@ export async function fetchDashboardPools(
       cacheRowsByPool.set(row.pool_id, cacheRows)
     }
 
-    const allMemberUserIds = [...poolMembersByPool.values()].flatMap((members) =>
-      members.map((member) => member.user_id),
-    )
+    const allMemberUserIds = [...poolMembersByPool.values()]
+      .flatMap((members) => members.map((member) => member.user_id))
+      .filter((id): id is string => Boolean(id))
     let bannedUserIds = new Set<string>()
     try {
       bannedUserIds = await fetchBannedUserIdsAmongViaRpc(

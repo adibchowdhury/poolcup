@@ -1,0 +1,49 @@
+{
+  "dashboardMetrics": {
+    "sidebarWidth": 250,
+    "sidebarHeight": 900,
+    "topBarHeight": 57,
+    "hasLogo": true
+  },
+  "leaderboard": {
+    "sidebarWidth": 250,
+    "sidebarHeight": 900,
+    "topBarHeight": 57,
+    "topBarX": 250,
+    "hasLogo": true,
+    "logoHref": "/dashboard?tab=dashboard",
+    "hasMembers": true,
+    "hasCreatedBy": true,
+    "hasPoolType": true,
+    "hasKickoff": true,
+    "hasAvatarInInfo": true,
+    "nameWraps": true,
+    "nameClass": "text-sm font-medium leading-snug text-foreground whitespace-normal break-words",
+    "puckySize": {
+      "w": 112,
+      "h": 112
+    },
+    "upgradeBtn": {
+      "width": 199,
+      "fontSize": "12px",
+      "text": "Upgrade to Commissioner"
+    },
+    "inviteLabel": false,
+    "snippet": "PoolPredictionsLeaderboardPool infoOffice World Cup Pick'em 2026Members15Created byPuckyPool TypeScore PredictorKickoffJun 12, 2026Recent activityJake Thompson moved up to 9thPucky moved up to 2ndSofia R. moved up to 4thBig Mike dropped to 5thMake your pool standoutCustomize branding, scoring & more as CommissionerUpgrade to Commissioner"
+  },
+  "parity": {
+    "sidebarWidthMatch": true,
+    "topBarHeightMatch": true,
+    "sharedTokens": "HUB_DESKTOP_SIDEBAR_WIDTH_CLASS (w-[250px]), HUB_DESKTOP_SIDEBAR_CLASS, HUB_DESKTOP_CONTENT_GUTTER_CLASS, h-14"
+  },
+  "shots": {
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-refine-after-1440x900.png",
+    "shotMobile": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-refine-after-390x844.png",
+    "diffMobile": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\leaderboard-shell-refine-mobile-diff.png"
+  },
+  "mobileDiff": {
+    "mismatched": 0,
+    "total": 329160,
+    "percent": 0
+  }
+}

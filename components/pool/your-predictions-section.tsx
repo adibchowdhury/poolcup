@@ -57,6 +57,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  PredictionSortControl,
+  PredictionStatusFilterSegmented,
   usePoolPredictionStatusFilterOptional,
   type PredictionStatusFilter,
 } from '@/src/lib/pool-prediction-status-filter-context'
@@ -121,11 +123,24 @@ function matchesStatusFilter(
   return !completed && hasPick
 }
 
-function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
+function ClassicStageSaveBar({
+  activeMatchIds,
+  onVisibleChange,
+}: {
+  activeMatchIds: string[]
+  onVisibleChange?: (visible: boolean) => void
+}) {
   const { unsavedCount, saveAll } = usePredictionSaveCoordinator(activeMatchIds)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  const barVisible =
+    unsavedCount > 0 || saving || saveSuccess || Boolean(saveError)
+
+  useEffect(() => {
+    onVisibleChange?.(barVisible)
+  }, [barVisible, onVisibleChange])
 
   useEffect(() => {
     if (unsavedCount > 0) {
@@ -170,6 +185,7 @@ function ClassicStageSaveBar({ activeMatchIds }: { activeMatchIds: string[] }) {
       success={saveSuccess}
       error={saveError}
       disabled={unsavedCount === 0}
+      visible={barVisible}
       onSave={() => void handleSave()}
       stackAboveMobileNav={false}
     />
@@ -397,6 +413,23 @@ export function YourPredictionsSection({
     [statusFilteredPredictions],
   )
 
+  const dateGroupIdsKey = useMemo(
+    () => dateHorizonGroups.map((group) => group.id).join('\0'),
+    [dateHorizonGroups],
+  )
+
+  /** Per-visit defaults: first group expanded, rest collapsed. No persistence. */
+  const [expandedDateGroupIds, setExpandedDateGroupIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+
+  useEffect(() => {
+    const firstId = dateGroupIdsKey ? dateGroupIdsKey.split('\0')[0] : null
+    setExpandedDateGroupIds(firstId ? new Set([firstId]) : new Set())
+  }, [dateGroupIdsKey])
+
+  const [saveBarVisible, setSaveBarVisible] = useState(false)
+
   const activeMatchIds = useMemo(
     () => statusFilteredPredictions.map((prediction) => prediction.matchId),
     [statusFilteredPredictions],
@@ -412,10 +445,6 @@ export function YourPredictionsSection({
 
   const matchListClassName =
     'grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2'
-
-  /** Desktop date-group list (lg+ only mount): fixed 2-col tracks. */
-  const desktopMatchListClassName =
-    'grid min-w-0 grid-cols-2 items-start gap-3 [grid-template-columns:repeat(2,minmax(0,1fr))]'
 
   const renderPredictionCard = (prediction: UserPoolPrediction) => (
     <PredictionMatchCard
@@ -435,22 +464,37 @@ export function YourPredictionsSection({
   const desktopDateGroupedList =
     dateHorizonGroups.length > 0 ? (
       <div className="space-y-6 lg:space-y-8">
-        {dateHorizonGroups.map((group) => (
-          <section key={group.id} aria-label={group.label} className="min-w-0">
-            <MatchesTabGroupHeader
-              label={group.label}
-              count={group.matches.length}
-              showLiveDot={group.showLiveDot}
-            />
-            <div className={desktopMatchListClassName}>
-              {group.matches.map((prediction) => (
-                <div key={prediction.matchId} className="min-w-0">
-                  {renderPredictionCard(prediction)}
+        {dateHorizonGroups.map((group) => {
+          const isExpanded = expandedDateGroupIds.has(group.id)
+          return (
+            <section key={group.id} aria-label={group.label} className="min-w-0">
+              <MatchesTabGroupHeader
+                label={group.label}
+                count={group.matches.length}
+                showLiveDot={group.showLiveDot}
+                showCount={false}
+                expanded={isExpanded}
+                onToggle={() => {
+                  setExpandedDateGroupIds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(group.id)) next.delete(group.id)
+                    else next.add(group.id)
+                    return next
+                  })
+                }}
+              />
+              {isExpanded ? (
+                <div className="pool-predictions-desktop-grid grid min-w-0 items-start">
+                  {group.matches.map((prediction) => (
+                    <div key={prediction.matchId} className="min-w-0">
+                      {renderPredictionCard(prediction)}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
-        ))}
+              ) : null}
+            </section>
+          )
+        })}
       </div>
     ) : null
 
@@ -477,11 +521,14 @@ export function YourPredictionsSection({
       <section
         className={cn(
           'mt-8 w-full min-w-0 border-t border-border/80 pt-8 lg:mt-0 lg:border-t-0 lg:pt-0',
-          hasClassicContent && activeMatchIds.length > 0
+          hasClassicContent &&
+            activeMatchIds.length > 0 &&
+            saveBarVisible
             ? SAVE_BAR_SOLO_SCROLL_PAD_CLASS
             : undefined,
         )}
       >
+      {/* 1. Page title */}
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
         <h3 className="font-display text-xl tracking-wide text-foreground sm:text-2xl">
           Your predictions
@@ -519,6 +566,7 @@ export function YourPredictionsSection({
         ) : null}
       </div>
 
+      {/* 2. Tournament stage (highest-level filter) — above status/sort on desktop */}
       {hasClassicContent && mixedPlayoffMode ? (
         <div className="mb-4 min-w-0">
           <SeasonPlayoffTabs
@@ -533,6 +581,17 @@ export function YourPredictionsSection({
           <ClassicRoundTabs
             activeId={activeRoundTab}
             onChange={setActiveRoundTab}
+          />
+        </div>
+      ) : null}
+
+      {/* 3. Status filters + Sort (desktop) */}
+      {hasClassicContent ? (
+        <div className="mb-4 hidden items-center justify-between gap-3 lg:flex">
+          <PredictionStatusFilterSegmented />
+          <PredictionSortControl
+            hideLabel
+            className="w-[11rem] shrink-0 space-y-0 border-t-0 p-0 pt-0"
           />
         </div>
       ) : null}
@@ -578,7 +637,10 @@ export function YourPredictionsSection({
       )}
 
       {hasClassicContent && activeMatchIds.length > 0 ? (
-        <ClassicStageSaveBar activeMatchIds={activeMatchIds} />
+        <ClassicStageSaveBar
+          activeMatchIds={activeMatchIds}
+          onVisibleChange={setSaveBarVisible}
+        />
       ) : null}
     </section>
     </PredictionSaveProvider>
