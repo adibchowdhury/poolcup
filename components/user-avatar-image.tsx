@@ -25,7 +25,7 @@ type UserAvatarImageProps = UserAvatarFields & {
   fallbackColorKey?: string | null
 }
 
-/** Resolved user avatar (custom → preset → DEFAULT), or initials when opted in. */
+/** Resolved user avatar (custom → preset → DEFAULT), or initials when opted in / on hard fail. */
 export function UserAvatarImage({
   customAvatarUrl,
   avatar,
@@ -42,32 +42,40 @@ export function UserAvatarImage({
 
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const [imgFailed, setImgFailed] = useState(false)
+  /** After preferred + DEFAULT both fail (no initials opt-in), mute to empty muted disc. */
+  const [hardFailed, setHardFailed] = useState(false)
 
   useEffect(() => {
     setFailedSrc(null)
     setImgFailed(false)
+    setHardFailed(false)
   }, [customAvatarUrl, avatar])
 
-  if (useInitialsFallback && ((!hasCustom && !hasPreset) || imgFailed)) {
+  const showInitials =
+    (useInitialsFallback && ((!hasCustom && !hasPreset) || imgFailed)) ||
+    hardFailed
+
+  if (showInitials) {
+    const label = initialsLabel || alt || '?'
     return (
       <div
         className={cn(
           'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full text-[0.65rem] font-semibold uppercase tracking-wide',
-          avatarColorClassForUser(fallbackColorKey?.trim() || initialsLabel!),
+          avatarColorClassForUser(fallbackColorKey?.trim() || label),
+          !useInitialsFallback && 'bg-muted text-muted-foreground',
           className,
         )}
         aria-label={alt || undefined}
       >
-        <span aria-hidden>{initialsFromDisplayName(initialsLabel!)}</span>
+        <span aria-hidden>{initialsFromDisplayName(label)}</span>
       </div>
     )
   }
 
   const preferred = getUserAvatarSrc({ customAvatarUrl, avatar })
+  const defaultSrc = getUserAvatarSrc({ customAvatarUrl: null, avatar: null })
   const src =
-    !useInitialsFallback && failedSrc === preferred
-      ? getUserAvatarSrc({ customAvatarUrl: null, avatar: null })
-      : preferred
+    !useInitialsFallback && failedSrc === preferred ? defaultSrc : preferred
 
   return (
     <div
@@ -84,6 +92,10 @@ export function UserAvatarImage({
         onError={() => {
           if (useInitialsFallback) {
             setImgFailed(true)
+            return
+          }
+          if (failedSrc === preferred || src === defaultSrc) {
+            setHardFailed(true)
             return
           }
           setFailedSrc(preferred)
