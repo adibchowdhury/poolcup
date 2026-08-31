@@ -33,6 +33,11 @@ type LeavePoolDialogProps = {
   /** Optional: sync parent creator id after transfer-before-leave (rare). */
   onOwnershipTransferred?: (newOwnerUserId: string) => void
   triggerClassName?: string
+  /** Controlled confirm dialog (e.g. overflow menu). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** When false, hide the default Leave pool button trigger. */
+  showTrigger?: boolean
 }
 
 export function LeavePoolDialog({
@@ -43,9 +48,15 @@ export function LeavePoolDialog({
   members,
   onOwnershipTransferred,
   triggerClassName,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
 }: LeavePoolDialogProps) {
   const router = useRouter()
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const controlled = typeof openProp === 'boolean'
+  const confirmOpen = controlled ? openProp : uncontrolledOpen
+  const setConfirmOpen = onOpenChange ?? setUncontrolledOpen
   const [transferOpen, setTransferOpen] = useState(false)
   const [onlyMemberOpen, setOnlyMemberOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -108,21 +119,23 @@ export function LeavePoolDialog({
 
   return (
     <>
-      <button
-        type="button"
-        className={cn(
-          'inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive',
-          FOCUS_RING,
-          triggerClassName,
-        )}
-        onClick={() => {
-          setError(null)
-          setConfirmOpen(true)
-        }}
-      >
-        <LogOut className="h-4 w-4" aria-hidden />
-        Leave pool
-      </button>
+      {showTrigger && !controlled ? (
+        <button
+          type="button"
+          className={cn(
+            'inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive',
+            FOCUS_RING,
+            triggerClassName,
+          )}
+          onClick={() => {
+            setError(null)
+            setConfirmOpen(true)
+          }}
+        >
+          <LogOut className="h-4 w-4" aria-hidden />
+          Leave pool
+        </button>
+      ) : null}
 
       <AlertDialog
         open={confirmOpen}

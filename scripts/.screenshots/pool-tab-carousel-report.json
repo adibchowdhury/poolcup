@@ -1,0 +1,239 @@
+{
+  "unifiedTrack": {
+    "sourceOfTruth": "activeTab (via goToSwipeTab for taps + usePoolTabSwipe). carouselIndex mirrors swipe-tab activeTab; PoolMobileTabCarousel translate3d(-index*100%,0,0) + tab underline translate3d(+index*100%,0,0) share POOL_TAB_CAROUSEL_MS (280).",
+    "homeToLeaderboardSkip": "Index 0→2 in one setState; track animates continuously to translateX(-200%) — Predictions pane slides through mid-motion.",
+    "reducedMotion": "usePrefersReducedMotion → transitionDuration 0ms on track + indicator."
+  },
+  "blankCheck": {
+    "allPanesMounted": true,
+    "allHaveContent": false,
+    "midSkipPanesStillFilled": true
+  },
+  "probes": {
+    "atHome": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "false",
+          "textLen": 641,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "true",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "true",
+          "textLen": 0,
+          "sample": ""
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, 0, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 0, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Home"
+    },
+    "midHomeToPred": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "true",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "false",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "true",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -390, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 119.328, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Predictions",
+      "trackTx": -390
+    },
+    "atPred": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "true",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "false",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "true",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -390, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 119.328, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Predictions"
+    },
+    "midPredToHome": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "false",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "true",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "true",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -53.054, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 16.2329, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Home",
+      "trackTx": -53.054
+    },
+    "midHomeToLb": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "true",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "true",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "false",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -640.573, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 195.996, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Leaderboard",
+      "trackTx": -640.573
+    },
+    "atLb": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "true",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "true",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "false",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -780, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 238.656, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Leaderboard"
+    },
+    "afterSwipe": {
+      "hasCarousel": true,
+      "paneCount": 3,
+      "panes": [
+        {
+          "index": "0",
+          "ariaHidden": "true",
+          "textLen": 662,
+          "sample": "Next upYour next pick95h 31mFri, Sep 4, 1:30 PMV"
+        },
+        {
+          "index": "1",
+          "ariaHidden": "true",
+          "textLen": 38822,
+          "sample": "0 / 306 Matches PredictedYour predictionsSort by"
+        },
+        {
+          "index": "2",
+          "ariaHidden": "false",
+          "textLen": 120,
+          "sample": "David M.You0pts1STDavid M.You0pts1STMore players"
+        }
+      ],
+      "trackTransform": "matrix(1, 0, 0, 1, -780, 0)",
+      "trackTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorTransform": "matrix(1, 0, 0, 1, 238.656, 0)",
+      "indicatorTransition": "transform 0.28s cubic-bezier(0, 0, 0.2, 1)",
+      "indicatorOpacity": "1",
+      "activeTab": "Leaderboard"
+    }
+  },
+  "desktop": {
+    "hasCarousel": false,
+    "mobileTablistVisible": false
+  },
+  "shots": {
+    "shotHome": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-home-390.png",
+    "shotMidFwd": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-mid-home-to-pred-390.png",
+    "shotPred": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-predictions-390.png",
+    "shotMidBack": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-mid-pred-to-home-390.png",
+    "shotMidSkip": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-mid-home-to-lb-390.png",
+    "shotLb": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-carousel-leaderboard-390.png"
+  }
+}

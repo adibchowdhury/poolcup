@@ -133,5 +133,10 @@ export function resolveMobileBottomNavActive(
     return 'upcoming'
   }
 
+  // Pool pages: bottom nav present but no hub tab is "active".
+  if (pathname.startsWith('/pool/')) {
+    return null
+  }
+
   return null
 }

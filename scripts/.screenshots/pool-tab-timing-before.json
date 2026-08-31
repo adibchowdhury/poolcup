@@ -1,0 +1,109 @@
+{
+  "phase": "before",
+  "mountBefore": {
+    "carousel": true,
+    "paneCount": 3,
+    "paneTextLens": [
+      662,
+      38822,
+      120
+    ]
+  },
+  "timings": {
+    "cold": {
+      "tabLabel": "Predictions",
+      "beforeTx": "matrix(1, 0, 0, 1, 0, 0)",
+      "afterTx": "matrix(1, 0, 0, 1, -180.716, 0)",
+      "firstVisualMs": 1991.7999999970198,
+      "framesUntilVisual": 4,
+      "marks": {
+        "tab": "predictions",
+        "t0": 14049,
+        "msToAfterState": 0.10000000894069672,
+        "msToAfterUrl": 7.9000000059604645,
+        "urlMode": "replace-shallow",
+        "msToCarouselEffect": 1065.4000000059605,
+        "carouselIndexVia": "useEffect(activeTab)"
+      },
+      "msHandlerState": 0.10000000894069672,
+      "msHandlerUrl": 7.9000000059604645,
+      "msToCarouselEffect": 1065.4000000059605,
+      "carouselIndexVia": "useEffect(activeTab)"
+    },
+    "warmBack": {
+      "tabLabel": "Home",
+      "beforeTx": "matrix(1, 0, 0, 1, -390, 0)",
+      "afterTx": "matrix(1, 0, 0, 1, -209.319, 0)",
+      "firstVisualMs": 880,
+      "framesUntilVisual": 4,
+      "marks": {
+        "tab": "home",
+        "t0": 16457.10000000894,
+        "msToAfterState": 0.09999999403953552,
+        "msToAfterUrl": 5.5,
+        "urlMode": "replace-shallow",
+        "msToCarouselEffect": 504.09999999403954,
+        "carouselIndexVia": "useEffect(activeTab)"
+      },
+      "msHandlerState": 0.09999999403953552,
+      "msHandlerUrl": 5.5,
+      "msToCarouselEffect": 504.09999999403954,
+      "carouselIndexVia": "useEffect(activeTab)"
+    },
+    "skip": {
+      "tabLabel": "Leaderboard",
+      "beforeTx": "matrix(1, 0, 0, 1, 0, 0)",
+      "afterTx": "matrix(1, 0, 0, 1, -436.668, 0)",
+      "firstVisualMs": 983.2999999970198,
+      "framesUntilVisual": 4,
+      "marks": {
+        "tab": "leaderboard",
+        "t0": 17784.30000001192,
+        "msToAfterState": 0.09999999403953552,
+        "msToAfterUrl": 3.8999999910593033,
+        "urlMode": "replace-shallow",
+        "msToCarouselEffect": 489.29999999701977,
+        "carouselIndexVia": "useEffect(activeTab)"
+      },
+      "msHandlerState": 0.09999999403953552,
+      "msHandlerUrl": 3.8999999910593033,
+      "msToCarouselEffect": 489.29999999701977,
+      "carouselIndexVia": "useEffect(activeTab)"
+    },
+    "toPred": {
+      "tabLabel": "Predictions",
+      "beforeTx": "matrix(1, 0, 0, 1, -780, 0)",
+      "afterTx": "matrix(1, 0, 0, 1, -599.502, 0)",
+      "firstVisualMs": 1270.2999999970198,
+      "framesUntilVisual": 4,
+      "marks": {
+        "tab": "predictions",
+        "t0": 19215.70000000298,
+        "msToAfterState": 0,
+        "msToAfterUrl": 4.100000008940697,
+        "urlMode": "replace-shallow",
+        "msToCarouselEffect": 853.7000000029802,
+        "carouselIndexVia": "useEffect(activeTab)"
+      },
+      "msHandlerState": 0,
+      "msHandlerUrl": 4.100000008940697,
+      "msToCarouselEffect": 853.7000000029802,
+      "carouselIndexVia": "useEffect(activeTab)"
+    }
+  },
+  "netAfterTap": [
+    {
+      "url": "http://localhost:3000/pool/617c79ba?tab=predictions",
+      "type": "document"
+    }
+  ],
+  "desktop": {
+    "hasCarousel": false
+  },
+  "diagnosisHint": {
+    "ifMsToCarouselEffectNearFirstVisual": "Slide gated on useEffect(activeTab)→setCarouselIndex (post-paint).",
+    "ifHandlerUrlHuge": "URL sync blocking in tap handler.",
+    "ifFirstVisualHugeButHandlerTiny": "React commit/re-render of heavy panes before transform paint.",
+    "ifPanesEmptyPreTap": "Lazy mount despite keep-mounted claim."
+  }
+}

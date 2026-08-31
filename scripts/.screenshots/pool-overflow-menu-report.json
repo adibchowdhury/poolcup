@@ -1,0 +1,62 @@
+{
+  "beforeOpen": {
+    "nudgePadLeft": "0px",
+    "contentShiftY": 130
+  },
+  "openProbe": {
+    "menuBg": "rgb(23, 23, 23)",
+    "menuBorder": "rgb(41, 41, 41)",
+    "menuWidth": 188,
+    "menuZ": "120",
+    "alignRight": true,
+    "belowTrigger": true,
+    "items": [
+      {
+        "text": "Settings",
+        "color": "rgb(255, 255, 255)",
+        "iconColor": "rgb(90, 112, 128)"
+      },
+      {
+        "text": "Invite members",
+        "color": "rgb(255, 255, 255)",
+        "iconColor": "rgb(90, 112, 128)"
+      },
+      {
+        "text": "Share pool",
+        "color": "rgb(255, 255, 255)",
+        "iconColor": "rgb(90, 112, 128)"
+      },
+      {
+        "text": "Report issue",
+        "color": "rgb(255, 255, 255)",
+        "iconColor": "rgb(90, 112, 128)"
+      },
+      {
+        "text": "Leave pool",
+        "color": "rgb(255, 68, 68)",
+        "iconColor": "rgb(255, 68, 68)"
+      }
+    ],
+    "hasCaret": true,
+    "caretRight": "12px",
+    "mainTop": 130
+  },
+  "noLayoutShift": true,
+  "closedAfterOutside": true,
+  "desktop": {
+    "overflowBtn": true,
+    "hasSidebar": true
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-overflow-menu-open-390.png",
+  "blueBlockCause": "Default DropdownMenuContent used bg-popover token (#111a27) — navy stadium card, reads as a large blue block vs charcoal app surfaces.",
+  "recipe": {
+    "surface": "#171717",
+    "border": "#292929",
+    "shadow": "0 10px 32px rgba(0,0,0,0.55)",
+    "width": "11.75rem (~188px)",
+    "position": "side=bottom align=end sideOffset=8 (Radix under ⋮, right-aligned)",
+    "caret": "absolute -top-1.5 right-3 h-3 w-3 rotate-45 border-l border-t #292929 bg #171717",
+    "hover": "white/8 — no accent/blue",
+    "leave": "text-destructive + icon"
+  }
+}

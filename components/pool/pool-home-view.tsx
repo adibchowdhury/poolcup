@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft,
-  Home,
+  Flag,
+  LogOut,
   MoreVertical,
   Settings,
   Share2,
   Target,
   Trophy,
+  UserPlus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,8 +25,12 @@ import {
 import { type LeaderboardMember } from '@/components/pool/leaderboard-row'
 import { LeaderboardSkeleton } from '@/components/pool/leaderboard-skeleton'
 import { LiveScoreboard } from '@/components/dashboard/live-scoreboard'
+import { LeavePoolDialog } from '@/components/pool/leave-pool-dialog'
 import { ReportPoolControl } from '@/components/pool/report-pool-control'
-import { ReportIssueButton } from '@/components/report-issue-dialog'
+import {
+  ReportIssueButton,
+  useReportIssue,
+} from '@/components/report-issue-dialog'
 import { PoolAnnouncementBanner } from '@/components/pool/pool-announcement-banner'
 import { SoloInviteNudge } from '@/components/pool/solo-invite-nudge'
 import { ScoringModeBadge } from '@/components/pool/scoring-mode-badge'
@@ -37,6 +43,11 @@ import { PoolDesktopTopBar, POOL_DESKTOP_CONTENT_RAIL_CLASS } from '@/components
 import { PoolDesktopSidebar } from '@/components/pool/pool-desktop-sidebar'
 import { PoolSettingsDesktopShell } from '@/components/pool/pool-settings-desktop-shell'
 import { PoolSettingsMobileTab } from '@/components/pool/pool-settings-mobile-tab'
+import {
+  PoolMobileTabCarousel,
+  POOL_TAB_CAROUSEL_MS,
+  type PoolMobileTabCarouselHandle,
+} from '@/components/pool/pool-mobile-tab-carousel'
 import { PoolHomeShell } from '@/components/pool/pool-home-shell'
 import { PoolUpgradeDesktopView } from '@/components/pool/pool-upgrade-desktop-view'
 import { PoolUpgradeMobileSheet } from '@/components/pool/pool-upgrade-mobile-sheet'
@@ -56,13 +67,30 @@ import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   CHAT_INBOX_HREF,
   DASHBOARD_TAB_HREFS,
+  MOBILE_BOTTOM_NAV_PAD_CLASS,
 } from '@/src/lib/mobile-bottom-nav-routes'
+import {
+  POOL_MOBILE_CONTENT_PAD_CLASS,
+  POOL_MOBILE_TAB_INDICATOR_CLASS,
+  POOL_MOBILE_TAB_LIST_CLASS,
+  POOL_MOBILE_TAB_TRIGGER_CLASS,
+  POOL_OVERFLOW_MENU_CONTENT_CLASS,
+  POOL_OVERFLOW_MENU_ITEM_CLASS,
+  POOL_OVERFLOW_MENU_ITEM_DESTRUCTIVE_CLASS,
+} from '@/src/lib/pool-mobile-chrome'
 import { trackEvent } from '@/src/lib/track'
 import { capturePostHog } from '@/src/lib/posthog-client'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { shareOrCopy } from '@/src/lib/share-client'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
 import { usePoolSettingsMobileTab } from '@/hooks/use-pool-settings-mobile-tab'
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion'
+import {
+  isPoolMobileSwipeTab,
+  POOL_MOBILE_SWIPE_TABS,
+  usePoolTabSwipe,
+  type PoolMobileSwipeTab,
+} from '@/hooks/use-pool-tab-swipe'
 import {
   poolHomePath,
   poolPagePath,
@@ -195,10 +223,6 @@ function PoolShareButton({
   )
 }
 
-const POOL_TAB_TRIGGER_CLASS =
-  'h-auto flex-col gap-0.5 whitespace-nowrap px-1.5 py-1.5 text-[10px] leading-none lg:flex-row lg:gap-1.5 lg:px-2 lg:py-2 lg:text-sm lg:leading-normal'
-
-/** Desktop vertical section rail (lg+ only). Yields width before the workspace. */
 const POOL_DESKTOP_NAV_TRIGGER_CLASS = cn(
   'inline-flex h-auto w-full min-w-0 items-center justify-start gap-2 rounded-lg px-2 py-2 text-xs font-medium sm:text-[0.8125rem]',
   'text-muted-foreground transition-[transform,background-color,color] duration-150',
@@ -243,7 +267,12 @@ export function PoolHomeView({
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [reportPoolOpen, setReportPoolOpen] = useState(false)
+  const [leavePoolOpen, setLeavePoolOpen] = useState(false)
+  /** Tab to restore when leaving mobile settings via back. */
+  const [tabBeforeSettings, setTabBeforeSettings] = useState('predictions')
   const searchParams = useSearchParams()
+  const { openReportIssue } = useReportIssue()
+  const swipeRootRef = useRef<HTMLDivElement | null>(null)
 
   const normalizeTab = (tab: string | null) => {
     if (
@@ -317,13 +346,24 @@ export function PoolHomeView({
     preventDefault: () => void
   }) {
     event?.preventDefault()
+    if (activeTab !== 'settings') {
+      setTabBeforeSettings(activeTab)
+    }
     setActiveTab('settings')
-    if (!shouldUsePoolSettingsMobileTab()) {
+    if (shouldUsePoolSettingsMobileTab()) {
+      const params = new URLSearchParams(window.location.search)
+      params.set('tab', 'settings')
+      params.delete('upgrade')
       shallowPoolSettingsUrl(
-        poolSettingsPath(pool.inviteCode, 'details'),
+        `${poolPagePath(pool.inviteCode)}?${params.toString()}`,
         'push',
       )
+      return true
     }
+    shallowPoolSettingsUrl(
+      poolSettingsPath(pool.inviteCode, 'details'),
+      'push',
+    )
     return true
   }
 
@@ -383,6 +423,143 @@ export function PoolHomeView({
       'push',
     )
   }
+
+  const reducedMotion = usePrefersReducedMotion()
+  /**
+   * Carousel + underline share this index. Tap/swipe call goToSwipeTab which
+   * applies the track transform imperatively (same frame), then syncs this state.
+   * Retained when leaving for settings/chat so return does not jump the track.
+   */
+  const [carouselIndex, setCarouselIndex] = useState(() => {
+    const initial = normalizeTab(searchParams.get('tab'))
+    return isPoolMobileSwipeTab(initial)
+      ? POOL_MOBILE_SWIPE_TABS.indexOf(initial)
+      : 0
+  })
+
+  const carouselRef = useRef<PoolMobileTabCarouselHandle | null>(null)
+  const tabIndicatorRef = useRef<HTMLSpanElement | null>(null)
+
+  const applyCarouselVisual = useCallback(
+    (index: number) => {
+      carouselRef.current?.goToIndex(index, { animate: !reducedMotion })
+      const ind = tabIndicatorRef.current
+      if (ind) {
+        ind.style.transform = `translate3d(${index * 100}%, 0, 0)`
+      }
+      // Kick style/layout so the transition is pending before we yield to paint.
+      void tabIndicatorRef.current?.offsetWidth
+    },
+    [reducedMotion],
+  )
+
+  const syncSwipeTabUrl = useCallback(
+    (tab: PoolMobileSwipeTab) => {
+      if (shouldUsePoolSettingsMobileTab()) {
+        const params = new URLSearchParams(window.location.search)
+        params.set('tab', tab)
+        params.delete('upgrade')
+        shallowPoolSettingsUrl(
+          `${poolPagePath(pool.inviteCode)}?${params.toString()}`,
+          'replace',
+        )
+        return
+      }
+      if (tab === 'home') {
+        shallowPoolSettingsUrl(poolHomePath(pool.inviteCode), 'push')
+        return
+      }
+      shallowPoolSettingsUrl(
+        `${poolPagePath(pool.inviteCode)}?tab=${encodeURIComponent(tab)}`,
+        'push',
+      )
+    },
+    [pool.inviteCode],
+  )
+
+  const goToSwipeTab = useCallback(
+    (tab: PoolMobileSwipeTab) => {
+      const t0 =
+        typeof performance !== 'undefined' ? performance.now() : 0
+      const idx = POOL_MOBILE_SWIPE_TABS.indexOf(tab)
+      // SAME FRAME as tap: compositor transform only — no setState here.
+      applyCarouselVisual(idx)
+      const tAfterVisual =
+        typeof performance !== 'undefined' ? performance.now() : 0
+      if (typeof window !== 'undefined') {
+        ;(
+          window as Window & {
+            __poolTabTapMarks?: Record<string, number | string>
+          }
+        ).__poolTabTapMarks = {
+          tab,
+          t0,
+          msToAfterVisual: tAfterVisual - t0,
+          carouselIndexVia: 'imperative-before-paint',
+          urlMode: 'pending',
+        }
+      }
+      // Yield past the next paint: rAF runs before paint; setTimeout(0) runs after.
+      // Sync setActiveTab re-renders the heavy pane tree (~500ms+) and must not
+      // block that first slide frame.
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setCarouselIndex(idx)
+          setActiveTab(tab)
+          setIsUpgradeView(false)
+          const tAfterState =
+            typeof performance !== 'undefined' ? performance.now() : 0
+          syncSwipeTabUrl(tab)
+          const tAfterUrl =
+            typeof performance !== 'undefined' ? performance.now() : 0
+          if (typeof window !== 'undefined') {
+            const marks = (
+              window as Window & {
+                __poolTabTapMarks?: Record<string, number | string>
+              }
+            ).__poolTabTapMarks
+            if (marks) {
+              marks.msToAfterState = tAfterState - t0
+              marks.msToAfterUrl = tAfterUrl - t0
+              marks.urlMode = 'raf-timeout-deferred-shallow'
+              marks.carouselIndexVia = 'imperative-then-post-paint-setState'
+            }
+          }
+        }, 0)
+      })
+    },
+    [applyCarouselVisual, syncSwipeTabUrl],
+  )
+
+  const { onTouchStart, onTouchEnd, onTouchCancel } = usePoolTabSwipe({
+    enabled: isPoolMobile && !isUpgradeView && activeTab !== 'chat',
+    activeTab,
+    onSwipeTab: goToSwipeTab,
+    rootRef: swipeRootRef,
+  })
+
+  // External activeTab changes (popstate / searchParams) — keep index in sync only.
+  useEffect(() => {
+    if (!isPoolMobileSwipeTab(activeTab)) return
+    const idx = POOL_MOBILE_SWIPE_TABS.indexOf(activeTab)
+    setCarouselIndex((prev) => {
+      if (prev === idx) return prev
+      applyCarouselVisual(idx)
+      return idx
+    })
+  }, [activeTab, applyCarouselVisual])
+  const showMobileTabCarousel =
+    isPoolMobile &&
+    !isUpgradeView &&
+    isPoolMobileSwipeTab(activeTab)
+  const tabIndicatorStyle = {
+    transform: `translate3d(${carouselIndex * 100}%, 0, 0)`,
+    transitionDuration: reducedMotion ? '0ms' : `${POOL_TAB_CAROUSEL_MS}ms`,
+    transitionProperty: 'transform',
+    transitionTimingFunction: reducedMotion
+      ? 'linear'
+      : 'cubic-bezier(0, 0, 0.2, 1)',
+  } as const
 
   // TEMPORARY — mock standings for design preview; flip USE_MOCK_LEADERBOARD off to restore.
   const leaderboardMembers = USE_MOCK_LEADERBOARD
@@ -561,7 +738,149 @@ export function PoolHomeView({
   })()
   const canInvite = pool.acceptingMembers
 
+  /** Stable pane trees — deferred setActiveTab must not rebuild Predictions (30k+ nodes). */
+  const mobileCarouselPanes = useMemo(
+    () => [
+      <PoolHomeShell
+        key="home"
+        pool={pool}
+        members={leaderboardMembers}
+        userPredictions={userPredictions}
+        currentUserId={currentUserId}
+        poolId={poolId}
+        memberId={memberId}
+        leaderboardLoading={leaderboardTabLoading}
+        leaderboardError={leaderboardError}
+        onRetryLeaderboard={onRetryLeaderboard}
+        onPredictionSaved={onPredictionSaved}
+        onPredictionRemoved={onPredictionRemoved}
+        onGoToPredictions={() => goToSwipeTab('predictions')}
+        onGoToLeaderboard={() => goToSwipeTab('leaderboard')}
+        onInvite={copyInviteLink}
+      />,
+      <div
+        key="predictions"
+        className={cn(
+          isLegacyWinnerPool && 'overflow-x-visible',
+          (!isWinnerPool || !isLegacyWinnerPool) && 'overflow-x-hidden',
+        )}
+      >
+        <PoolPredictionsTab
+          scoringStyle={pool.scoringStyle}
+          predictions={userPredictions}
+          totalMatchCount={pool.totalMatches}
+          poolId={poolId}
+          memberId={memberId}
+          currentUserId={currentUserId}
+          inviteCode={pool.inviteCode}
+          poolName={pool.name}
+          memberCount={pool.memberCount}
+          legacyWinnerOnly={pool.legacyWinnerOnly ?? false}
+          eventSport={pool.eventSport ?? null}
+          userRank={
+            members.find(
+              (member) =>
+                member.isYou || member.userId === currentUserId,
+            )?.rank ?? null
+          }
+          acceptingMembers={pool.acceptingMembers}
+          hideDesktopOverviewSidebar
+          winnerPool={
+            isLegacyWinnerPool && poolId
+              ? {
+                  id: poolId,
+                  name: pool.name,
+                  invite_code: pool.inviteCode,
+                  scoring_style: pool.scoringStyle,
+                  event_id: pool.eventId,
+                }
+              : undefined
+          }
+          onPredictionSaved={onPredictionSaved}
+          onPredictionRemoved={onPredictionRemoved}
+        />
+      </div>,
+      leaderboardTabLoading ? (
+        <div key="leaderboard" className="mx-auto max-w-4xl">
+          <LeaderboardSkeleton />
+        </div>
+      ) : (
+        <div key="leaderboard" className="flex min-h-0 flex-1 flex-col">
+          {leaderboardError ? (
+            <div
+              className="mx-auto mb-3 w-full max-w-4xl rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center"
+              role="alert"
+            >
+              <p className="text-sm text-destructive">
+                Couldn’t refresh standings.
+              </p>
+              {onRetryLeaderboard ? (
+                <button
+                  type="button"
+                  onClick={onRetryLeaderboard}
+                  className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+                >
+                  Try again
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <PoolLeaderboardStandings
+            members={leaderboardMembers}
+            acceptingMembers={pool.acceptingMembers}
+            copied={copied}
+            onInvite={inviteFromLeaderboard}
+            showPreMatchNote={showPreMatchLeaderboardNote}
+            poolId={poolId}
+            inviteCode={pool.inviteCode}
+            className="min-h-0 flex-1"
+          />
+        </div>
+      ),
+    ],
+    [
+      pool,
+      leaderboardMembers,
+      userPredictions,
+      currentUserId,
+      poolId,
+      memberId,
+      leaderboardTabLoading,
+      leaderboardError,
+      onRetryLeaderboard,
+      onPredictionSaved,
+      onPredictionRemoved,
+      goToSwipeTab,
+      isLegacyWinnerPool,
+      isWinnerPool,
+      members,
+      copied,
+      showPreMatchLeaderboardNote,
+    ],
+  )
+
   const handleBackClick = () => {
+    if (isPoolMobile && activeTab === 'settings') {
+      const restore =
+        tabBeforeSettings === 'settings' ? 'predictions' : tabBeforeSettings
+      setActiveTab(restore)
+      const params = new URLSearchParams(window.location.search)
+      if (restore === 'home') {
+        params.delete('tab')
+      } else {
+        params.set('tab', restore)
+      }
+      params.delete('section')
+      params.delete('upgrade')
+      const qs = params.toString()
+      shallowPoolSettingsUrl(
+        qs
+          ? `${poolPagePath(pool.inviteCode)}?${qs}`
+          : poolPagePath(pool.inviteCode),
+        'replace',
+      )
+      return
+    }
     console.log('back clicked', DASHBOARD_TAB_HREFS.dashboard)
     router.push(isChatView ? CHAT_INBOX_HREF : DASHBOARD_TAB_HREFS.dashboard)
   }
@@ -672,73 +991,221 @@ export function PoolHomeView({
                 </>
               ) : (
                 <>
-                  <div className="flex min-w-0 flex-1 items-center gap-4 max-lg:gap-2">
-                    <button
-                      type="button"
-                      onClick={handleBackClick}
-                      className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
-                      aria-label="Back to dashboard"
-                    >
-                      <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-                    </button>
-                    <PoolAvatarImage
-                      avatar={pool.avatar}
-                      emblemUrl={pool.emblemUrl}
-                      size="sm"
-                      className="shrink-0 rounded-xl"
-                    />
-                    <div className="min-w-0 flex-1">
-                      {/* Desktop sticky title (non-leaderboard shell). */}
-                      <div className="hidden lg:block">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
-                            {pool.name}
-                          </h1>
-                          <ScoringModeBadge scoringStyle={pool.scoringStyle} />
+                  <div className="flex w-full min-w-0 flex-col gap-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-4 max-lg:gap-2">
+                        <button
+                          type="button"
+                          onClick={handleBackClick}
+                          className="group relative z-[51] shrink-0 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 max-sm:p-1.5"
+                          aria-label={
+                            isPoolMobile && activeTab === 'settings'
+                              ? 'Back to pool'
+                              : 'Back to dashboard'
+                          }
+                        >
+                          <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
+                        </button>
+                        <PoolAvatarImage
+                          avatar={pool.avatar}
+                          emblemUrl={pool.emblemUrl}
+                          size="sm"
+                          className="shrink-0 rounded-xl"
+                        />
+                        <div className="min-w-0 flex-1">
+                          {/* Desktop sticky title (non-leaderboard shell). */}
+                          <div className="hidden lg:block">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h1 className="font-display text-2xl tracking-wide text-foreground sm:text-3xl">
+                                {pool.name}
+                              </h1>
+                              <ScoringModeBadge scoringStyle={pool.scoringStyle} />
+                            </div>
+                          </div>
+                          {/* Mobile header identity */}
+                          <div className="lg:hidden">
+                            <h1 className="w-full min-w-0 max-w-none truncate font-display text-lg tracking-wide text-foreground">
+                              {pool.name}
+                            </h1>
+                            <div className="mt-1 flex min-w-0 items-center gap-2">
+                              <ScoringModeBadge
+                                scoringStyle={pool.scoringStyle}
+                                className="shrink-0"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      {/* Mobile header — unchanged (incl. leaderboard). */}
-                      <div className="lg:hidden">
-                        <h1 className="w-full min-w-0 max-w-none truncate font-display text-lg tracking-wide text-foreground">
-                          {pool.name}
-                        </h1>
-                        <div className="mt-1 flex min-w-0 items-center gap-2">
-                          <ScoringModeBadge
-                            scoringStyle={pool.scoringStyle}
-                            className="shrink-0"
-                          />
-                          <PoolShareButton
-                            acceptingMembers={pool.acceptingMembers}
-                            copied={copied}
-                            onClick={copyInviteLink}
-                            className="h-7 gap-1 px-2 text-[11px]"
-                          />
-                        </div>
+                      {/* Mobile overflow — DropdownMenu (app convention). */}
+                      <div className="flex shrink-0 items-center lg:hidden">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={cn(
+                                'inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                                FOCUS_VISIBLE_RING,
+                              )}
+                              aria-label="Pool options"
+                            >
+                              <MoreVertical className="h-5 w-5" aria-hidden />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            side="bottom"
+                            sideOffset={8}
+                            alignOffset={0}
+                            className={POOL_OVERFLOW_MENU_CONTENT_CLASS}
+                          >
+                            {/*
+                              Caret: 45° square sharing #171717 fill + #292929
+                              top/left borders; sits under the ⋮ (align=end → right).
+                            */}
+                            <span
+                              className="pointer-events-none absolute -top-1.5 right-3 z-10 h-3 w-3 rotate-45 border-l border-t border-[#292929] bg-[#171717]"
+                              aria-hidden
+                            />
+                            <DropdownMenuItem
+                              className={POOL_OVERFLOW_MENU_ITEM_CLASS}
+                              onSelect={() => openSettingsFromNav()}
+                            >
+                              <Settings aria-hidden />
+                              Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className={POOL_OVERFLOW_MENU_ITEM_CLASS}
+                              disabled={!pool.acceptingMembers}
+                              onSelect={() => copyInviteLink()}
+                            >
+                              <UserPlus aria-hidden />
+                              Invite members
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className={POOL_OVERFLOW_MENU_ITEM_CLASS}
+                              disabled={!pool.acceptingMembers}
+                              onSelect={() => copyInviteLink()}
+                            >
+                              <Share2 aria-hidden />
+                              Share pool
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className={POOL_OVERFLOW_MENU_ITEM_CLASS}
+                              onSelect={() => openReportIssue()}
+                            >
+                              <Flag aria-hidden />
+                              Report issue
+                            </DropdownMenuItem>
+                            {poolId ? (
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className={POOL_OVERFLOW_MENU_ITEM_DESTRUCTIVE_CLASS}
+                                onSelect={(event) => {
+                                  event.preventDefault()
+                                  setLeavePoolOpen(true)
+                                }}
+                              >
+                                <LogOut aria-hidden />
+                                Leave pool
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {/* Desktop sticky actions — legacy (non-leaderboard shell). */}
+                      <div className="hidden shrink-0 items-center gap-3 lg:flex">
+                        <ReportIssueButton />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openSettingsFromNav()}
+                          aria-label="Pool settings"
+                          className={cn(
+                            'gap-1.5 font-display tracking-wide',
+                            FOCUS_VISIBLE_RING,
+                          )}
+                        >
+                          <Settings className="h-4 w-4" aria-hidden />
+                          Settings
+                        </Button>
+                        <PoolShareButton
+                          acceptingMembers={pool.acceptingMembers}
+                          copied={copied}
+                          onClick={copyInviteLink}
+                        />
                       </div>
                     </div>
-                  </div>
-                  {/* Desktop sticky actions — legacy (non-leaderboard shell). */}
-                  <div className="hidden shrink-0 items-center gap-3 lg:flex">
-                    <ReportIssueButton />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openSettingsFromNav()}
-                      aria-label="Pool settings"
-                      className={cn(
-                        'gap-1.5 font-display tracking-wide',
-                        FOCUS_VISIBLE_RING,
-                      )}
+                    {/* Mobile tab row — text-only Home · Predictions · Leaderboard. */}
+                    <div
+                      className="mt-2 lg:hidden"
+                      role="tablist"
+                      aria-label="Pool sections"
                     >
-                      <Settings className="h-4 w-4" aria-hidden />
-                      Settings
-                    </Button>
-                    <PoolShareButton
-                      acceptingMembers={pool.acceptingMembers}
-                      copied={copied}
-                      onClick={copyInviteLink}
-                    />
+                      <div className={POOL_MOBILE_TAB_LIST_CLASS}>
+                        {(
+                          [
+                            { value: 'home', label: 'Home' },
+                            { value: 'predictions', label: 'Predictions' },
+                            { value: 'leaderboard', label: 'Leaderboard' },
+                          ] as const
+                        ).map(({ value, label }) => {
+                          const isActive = activeTab === value
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              role="tab"
+                              aria-selected={isActive}
+                              data-state={isActive ? 'active' : 'inactive'}
+                              className={POOL_MOBILE_TAB_TRIGGER_CLASS}
+                              onClick={() => goToSwipeTab(value)}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                        <span
+                          ref={tabIndicatorRef}
+                          aria-hidden
+                          className={cn(
+                            POOL_MOBILE_TAB_INDICATOR_CLASS,
+                            !isPoolMobileSwipeTab(activeTab) && 'opacity-0',
+                          )}
+                          style={tabIndicatorStyle}
+                        />
+                      </div>
+                      {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
+                        <span className="mt-2 inline-block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                          Mock preview
+                        </span>
+                      ) : null}
+                      {isLeaderboardTab &&
+                      !USE_MOCK_LEADERBOARD &&
+                      leaderboardRefreshing ? (
+                        <span
+                          className="mt-2 block animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
+                          aria-live="polite"
+                        >
+                          Updating…
+                        </span>
+                      ) : null}
+                      {isLeaderboardTab &&
+                      !USE_MOCK_LEADERBOARD &&
+                      !leaderboardRefreshing &&
+                      leaderboardLiveSync ? (
+                        <span
+                          className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
+                          aria-label="Live standings sync on"
+                        >
+                          <span
+                            className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
+                            aria-hidden
+                          />
+                          Live
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </>
               )}
@@ -747,21 +1214,29 @@ export function PoolHomeView({
         </header>
 
         <main
+          ref={swipeRootRef}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchCancel}
           className={cn(
             'relative z-0 mx-auto w-full min-w-0 py-8',
             // Own the top inset for all non-chat pool content (banners + tabs)
             // so first child never hugs the sticky header. Matches mb-4 rhythm.
-            'max-sm:pt-4 max-sm:pb-8',
-            // Pool shell tabs: full-bleed main; top bar owns the top edge on lg+.
+            'max-sm:pt-4',
+            // Pool shell tabs: full-bleed main on desktop; mobile content pad on home/predictions.
             usePoolDesktopShell
               ? cn(
-                  'flex max-w-none flex-1 flex-col px-0 pb-0',
+                  'flex max-w-none flex-1 flex-col px-0',
                   POOL_DESKTOP_CANVAS_CLASS,
-                  'lg:min-h-screen lg:py-0',
+                  'lg:min-h-screen lg:py-0 lg:pb-0',
                 )
               : isClassicPredictionsTab
                 ? cn('max-w-[82rem] px-4', POOL_DESKTOP_CANVAS_CLASS)
                 : cn('max-w-4xl px-4', POOL_DESKTOP_CANVAS_CLASS),
+            // Bottom nav persists on pool pages — must win over generic pb utilities.
+            !isChatView
+              ? MOBILE_BOTTOM_NAV_PAD_CLASS
+              : 'max-sm:pb-8',
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
@@ -783,12 +1258,12 @@ export function PoolHomeView({
             </div>
           ) : null}
 
-          {!isChatView && poolId ? (
+          {!isChatView && poolId && isHomeTab ? (
             <div
               className={cn(
                 'mb-4 lg:hidden',
-                isLeaderboardTab && 'mx-auto max-w-4xl px-4',
-                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
+                POOL_MOBILE_CONTENT_PAD_CLASS,
+                isMobileChatShell && 'max-sm:shrink-0',
               )}
             >
               <SoloInviteNudge
@@ -942,92 +1417,38 @@ export function PoolHomeView({
             ) : null}
             <div
               className={cn(
-                'lg:hidden',
-                isLeaderboardTab && 'mx-auto w-full max-w-4xl shrink-0 px-4',
-                isMobileChatShell && 'max-sm:shrink-0 max-sm:px-4',
-              )}
-            >
-              {!isChatView ? (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <TabsList
-                    className={cn(
-                      'grid h-auto w-full max-w-2xl grid-cols-4 p-1',
-                      'mx-auto w-[min(100%,26rem)] p-0.5',
-                      isMobileChatShell && 'max-sm:shrink-0',
-                    )}
-                  >
-                    <TabsTrigger
-                      value="home"
-                      className={POOL_TAB_TRIGGER_CLASS}
-                    >
-                      <Home className="h-3.5 w-3.5" aria-hidden />
-                      Home
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="predictions"
-                      className={POOL_TAB_TRIGGER_CLASS}
-                    >
-                      <Target className="h-3.5 w-3.5" aria-hidden />
-                      Predictions
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="leaderboard"
-                      className={POOL_TAB_TRIGGER_CLASS}
-                    >
-                      <Trophy className="h-3.5 w-3.5" aria-hidden />
-                      Leaderboard
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="settings"
-                      className={POOL_TAB_TRIGGER_CLASS}
-                    >
-                      <Settings className="h-3.5 w-3.5" aria-hidden />
-                      Settings
-                    </TabsTrigger>
-                  </TabsList>
-                  {isLeaderboardTab && USE_MOCK_LEADERBOARD ? (
-                    <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-                      Mock preview
-                    </span>
-                  ) : null}
-                  {isLeaderboardTab && !USE_MOCK_LEADERBOARD && leaderboardRefreshing ? (
-                    <span
-                      className="shrink-0 animate-pulse text-[11px] font-medium tracking-wide text-muted-foreground"
-                      aria-live="polite"
-                    >
-                      Updating…
-                    </span>
-                  ) : null}
-                  {isLeaderboardTab &&
-                  !USE_MOCK_LEADERBOARD &&
-                  !leaderboardRefreshing &&
-                  leaderboardLiveSync ? (
-                    <span
-                      className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium tracking-wide text-primary"
-                      aria-label="Live standings sync on"
-                    >
-                      <span
-                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_70%,transparent)]"
-                        aria-hidden
-                      />
-                      Live
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            <div
-              className={cn(
                 usePoolDesktopShell && isUpgradeView && 'lg:hidden',
               )}
             >
+            {/*
+              Mobile: one horizontal track (tap + swipe → activeTab → carouselIndex).
+              Desktop: existing TabsContent panels (forceMount) — untouched.
+              Settings/chat stay as TabsContent on both; carousel hides (stays mounted)
+              while those views are active so adjacent panes never remount blank.
+            */}
+            {isPoolMobile ? (
+              <div
+                className={cn(!showMobileTabCarousel && 'hidden')}
+                aria-hidden={!showMobileTabCarousel}
+              >
+                <PoolMobileTabCarousel
+                  ref={carouselRef}
+                  activeIndex={carouselIndex}
+                  reducedMotion={reducedMotion}
+                >
+                  {mobileCarouselPanes}
+                </PoolMobileTabCarousel>
+              </div>
+            ) : (
+              <>
             <TabsContent
               value="home"
+              forceMount
               className={cn(
                 'mt-0 w-full min-w-0',
+                POOL_MOBILE_CONTENT_PAD_CLASS,
                 usePoolDesktopShell &&
-                  'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
+                  'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:px-0',
               )}
             >
               <PoolHomeShell
@@ -1059,13 +1480,18 @@ export function PoolHomeView({
 
             <TabsContent
               value="predictions"
+              forceMount
               className={cn(
                 'mt-0 w-full min-w-0',
+                POOL_MOBILE_CONTENT_PAD_CLASS,
                 isWinnerPredictionsTab && 'overflow-x-visible',
                 isClassicPredictionsTab && 'overflow-x-hidden',
                 // Desktop shell: same content rail as leaderboard (match cards reflow).
                 usePoolDesktopShell &&
-                  cn(POOL_DESKTOP_CONTENT_RAIL_CLASS, 'lg:pb-8 lg:pt-2'),
+                  cn(
+                    POOL_DESKTOP_CONTENT_RAIL_CLASS,
+                    'lg:px-6 lg:pb-8 lg:pt-2 xl:px-8',
+                  ),
               )}
             >
               <PoolPredictionsTab
@@ -1107,6 +1533,7 @@ export function PoolHomeView({
 
             <TabsContent
               value="leaderboard"
+              forceMount
               className="mt-0 flex min-h-0 w-full min-w-0 flex-1 flex-col"
             >
               {leaderboardTabLoading ? (
@@ -1147,12 +1574,15 @@ export function PoolHomeView({
                 </div>
               )}
             </TabsContent>
+              </>
+            )}
 
             <TabsContent
               value="settings"
               className={cn(
                 'mt-0 w-full min-w-0',
-                'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
+                POOL_MOBILE_CONTENT_PAD_CLASS,
+                'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:px-0',
               )}
             >
               <div className="lg:hidden">
@@ -1280,6 +1710,19 @@ export function PoolHomeView({
           poolId={poolId}
           isOwner={Boolean(isPoolOwner)}
           poolHasCommissionerTools={poolHasCommissionerTools}
+        />
+      ) : null}
+      {poolId && currentUserId ? (
+        <LeavePoolDialog
+          poolId={poolId}
+          poolName={pool.name}
+          currentUserId={currentUserId}
+          isCreator={Boolean(isPoolOwner)}
+          members={leaderboardMembers}
+          open={leavePoolOpen}
+          onOpenChange={setLeavePoolOpen}
+          showTrigger={false}
+          onOwnershipTransferred={onOwnershipTransferred}
         />
       ) : null}
     </PoolThemeScope>

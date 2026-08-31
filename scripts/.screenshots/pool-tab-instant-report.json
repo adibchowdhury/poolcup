@@ -1,0 +1,85 @@
+{
+  "diagnosis": {
+    "before": "Radix Tabs.Content unmounts inactive panels by default (Presence). Each tap remounted PoolHomeShell / PoolPredictionsTab / PoolLeaderboardStandings (React tree + layout + images). Not a Next.js route transition; same-page setActiveTab + shallow history.replace. Swipe used the same setActiveTab but still paid remount cost.",
+    "after": "forceMount on home/predictions/leaderboard TabsContent; inactive uses data-[state=inactive]:hidden. Tap + swipe both call goToSwipeTab → setActiveTab only (visibility swap). First paint mounts all three once."
+  },
+  "mountProbe": {
+    "panelCount": 5,
+    "panels": [
+      {
+        "state": "active",
+        "display": "block",
+        "hiddenAttr": false
+      },
+      {
+        "state": "inactive",
+        "display": "none",
+        "hiddenAttr": false
+      },
+      {
+        "state": "inactive",
+        "display": "none",
+        "hiddenAttr": false
+      },
+      {
+        "state": "inactive",
+        "display": "none",
+        "hiddenAttr": true
+      },
+      {
+        "state": "inactive",
+        "display": "none",
+        "hiddenAttr": true
+      }
+    ]
+  },
+  "timingsMs": {
+    "homeToPredictions": 640,
+    "predictionsToLeaderboard": 317,
+    "leaderboardToHome": 447
+  },
+  "swipeMs": 267,
+  "afterSwipe": [
+    "Leaderboard"
+  ],
+  "afterRapid": {
+    "tabs": [
+      {
+        "label": "Home",
+        "active": true,
+        "color": "rgb(255, 255, 255)",
+        "borderBottom": "rgb(0, 230, 118)",
+        "hasSvg": false
+      },
+      {
+        "label": "Predictions",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottom": "rgba(0, 0, 0, 0)",
+        "hasSvg": false
+      },
+      {
+        "label": "Leaderboard",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottom": "rgba(0, 0, 0, 0)",
+        "hasSvg": false
+      }
+    ],
+    "nudgeOnHome": true
+  },
+  "banner": {
+    "home": true,
+    "predictions": false,
+    "leaderboard": false
+  },
+  "desktop": {
+    "mobileTablist": true,
+    "sidebarHasIcons": true
+  },
+  "shots": {
+    "shotHome": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-instant-home-390.png",
+    "shotPred": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-instant-predictions-390.png",
+    "shotLb": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-tab-instant-leaderboard-390.png"
+  }
+}

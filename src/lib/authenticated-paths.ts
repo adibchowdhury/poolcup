@@ -3,8 +3,9 @@
  * Includes public-but-chrome paths like /join and /match — NOT an auth gate.
  *
  * Full-screen surfaces (no bottom nav): /onboarding, /create (mobile takeover;
- * desktop uses hub shell with bottom nav still omitted), /pool/* —
- * those stay protected via isProtectedAppPath but skip AuthenticatedChrome.
+ * desktop uses hub shell with bottom nav still omitted).
+ * Pool pages (`/pool/*`) mount AuthenticatedChrome so MobileBottomNav persists;
+ * chat-in-pool still hides the nav via mobileChatActive visibility (not unmount).
  */
 export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/dashboard') return true
@@ -19,6 +20,7 @@ export function isAuthenticatedAppPath(pathname: string): boolean {
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return true
   if (pathname.startsWith('/join/')) return true
   if (pathname.startsWith('/match/')) return true
+  if (pathname.startsWith('/pool/')) return true
   return false
 }
 

@@ -1,0 +1,144 @@
+{
+  "homeProbe": {
+    "bottomNavPresent": true,
+    "bottomNavVisible": true,
+    "tabs": [
+      {
+        "label": "Home",
+        "active": true,
+        "color": "rgb(0, 230, 118)",
+        "borderBottomColor": "rgb(0, 230, 118)"
+      },
+      {
+        "label": "Predictions",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "label": "Leaderboard",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "hasOverflow": true,
+    "contentPad": "16px",
+    "mainPb": "32px"
+  },
+  "predictionsProbe": {
+    "bottomNavPresent": true,
+    "bottomNavVisible": true,
+    "tabs": [
+      {
+        "label": "Home",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "label": "Predictions",
+        "active": true,
+        "color": "rgb(0, 230, 118)",
+        "borderBottomColor": "rgb(0, 230, 118)"
+      },
+      {
+        "label": "Leaderboard",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "hasOverflow": true,
+    "contentPad": "16px",
+    "mainPb": "32px"
+  },
+  "leaderboardProbe": {
+    "bottomNavPresent": true,
+    "bottomNavVisible": true,
+    "tabs": [
+      {
+        "label": "Home",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "label": "Predictions",
+        "active": false,
+        "color": "rgb(90, 112, 128)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "label": "Leaderboard",
+        "active": true,
+        "color": "rgb(0, 230, 118)",
+        "borderBottomColor": "rgb(0, 230, 118)"
+      }
+    ],
+    "hasOverflow": true,
+    "contentPad": "16px",
+    "mainPb": "32px"
+  },
+  "menuItems": [
+    "Settings",
+    "Invite members",
+    "Share pool",
+    "Report issue",
+    "Leave pool"
+  ],
+  "settingsProbe": {
+    "tabs": [
+      {
+        "label": "Home",
+        "active": false
+      },
+      {
+        "label": "Predictions",
+        "active": false
+      },
+      {
+        "label": "Leaderboard",
+        "active": false
+      }
+    ],
+    "settingsVisible": true,
+    "url": "http://localhost:3000/pool/617c79ba?tab=settings"
+  },
+  "afterBack": {
+    "url": "http://localhost:3000/pool/617c79ba?tab=leaderboard",
+    "tabs": [
+      {
+        "label": "Home",
+        "active": false
+      },
+      {
+        "label": "Predictions",
+        "active": false
+      },
+      {
+        "label": "Leaderboard",
+        "active": true
+      }
+    ]
+  },
+  "afterSwipeLeft": [
+    "Leaderboard"
+  ],
+  "afterSwipeRight": [
+    "Predictions"
+  ],
+  "desktop": {
+    "bottomNavHidden": true,
+    "mobileTablistHidden": true,
+    "hasDesktopSidebar": true
+  },
+  "shots": {
+    "shotHome": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-home-390.png",
+    "shotMenu": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-menu-390.png",
+    "shotPred": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-predictions-390.png",
+    "shotLb": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-leaderboard-390.png",
+    "shotSettings": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-settings-390.png",
+    "shotDesktop": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-mobile-restructure-desktop-1440.png"
+  }
+}
