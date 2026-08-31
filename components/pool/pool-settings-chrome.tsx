@@ -6,6 +6,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { ReportIssueButton } from '@/components/report-issue-dialog'
 import { cn } from '@/lib/utils'
+import {
+  POOL_DESKTOP_CANVAS_CLASS,
+  POOL_DESKTOP_CHROME_SURFACE_CLASS,
+} from '@/src/lib/dashboard-surfaces'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
 import {
   poolPagePath,
@@ -38,8 +42,8 @@ export function PoolSettingsChrome({
   }, [inviteCode, router])
 
   return (
-    <div className="min-h-screen bg-app-background">
-      <header className="sticky top-0 z-[100] isolate border-b border-border bg-app-background/80 backdrop-blur-xl">
+    <div className={cn('min-h-screen', POOL_DESKTOP_CANVAS_CLASS)}>
+      <header className={cn('sticky top-0 z-[100] isolate border-b border-border backdrop-blur-xl', POOL_DESKTOP_CHROME_SURFACE_CLASS)}>
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <Link
             href={backHref}

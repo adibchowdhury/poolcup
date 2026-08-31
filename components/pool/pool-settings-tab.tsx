@@ -130,6 +130,7 @@ export type PoolSettingsTabProps = {
   onMemberRemoved?: (memberId: string) => void
   onOwnershipTransferred?: (newOwnerUserId: string) => void
   onManagedAnnouncementChange?: (announcement: PoolAnnouncement | null) => void
+  onNavigateUpgrade?: () => void
 }
 
 export type PoolSettingsSectionContentProps = PoolSettingsTabProps & {
@@ -236,6 +237,7 @@ export function PoolSettingsSectionContent({
   onMemberRemoved,
   onOwnershipTransferred,
   onManagedAnnouncementChange,
+  onNavigateUpgrade,
 }: PoolSettingsSectionContentProps) {
   const isOwner =
     typeof isOwnerProp === 'boolean'
@@ -996,6 +998,8 @@ export function PoolSettingsSectionContent({
               description="Theme color and pool logo"
               isOwner={isOwner}
               poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
             />
             </SettingsControlBlock>
           ) : (
@@ -1600,6 +1604,8 @@ export function PoolSettingsSectionContent({
               description="Post, edit, and pin announcements"
               isOwner={isOwner}
               poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
             />
             </SettingsControlBlock>
             <SettingsControlBlock controlId="communication-polls">
@@ -1608,6 +1614,8 @@ export function PoolSettingsSectionContent({
               description="Create and manage pool polls"
               isOwner={isOwner}
               poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
             />
             </SettingsControlBlock>
           </div>
@@ -1816,6 +1824,8 @@ export function PoolSettingsSectionContent({
                   description="Add co-admins to help run the pool"
                   isOwner={isOwner}
                   poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
                 />
                 </SettingsControlBlock>
               ) : null}
@@ -1825,6 +1835,8 @@ export function PoolSettingsSectionContent({
                 description="See who still needs to predict"
                 isOwner={isOwner}
                 poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
               />
               </SettingsControlBlock>
               <SettingsControlBlock controlId="commissioner-moderation-log">
@@ -1833,6 +1845,8 @@ export function PoolSettingsSectionContent({
                 description="Audit trail of commissioner actions"
                 isOwner={isOwner}
                 poolId={poolId}
+              inviteCode={inviteCode}
+              onNavigateUpgrade={onNavigateUpgrade}
               />
               </SettingsControlBlock>
             </div>

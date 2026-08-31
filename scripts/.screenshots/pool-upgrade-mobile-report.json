@@ -1,0 +1,250 @@
+{
+  "mobile": [
+    {
+      "width": 390,
+      "opened": {
+        "sheetOpen": true,
+        "crownMobile": true,
+        "crownMobileW": 176,
+        "desktopCrownOnMobile": true,
+        "sparkleCount": 13,
+        "backLinkVisible": true,
+        "faqPillVisible": true,
+        "closeButton": true,
+        "ctaFullWidth": 0,
+        "sheetClientW": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "stackHeadings": [
+          {
+            "tag": "h1",
+            "text": "Get Unlimited Access of Premium Features"
+          },
+          {
+            "tag": "p",
+            "text": "Custom scoring"
+          },
+          {
+            "tag": "p",
+            "text": "Co-commissioners"
+          },
+          {
+            "tag": "p",
+            "text": "Exports"
+          },
+          {
+            "tag": "p",
+            "text": "Pool branding"
+          },
+          {
+            "tag": "section",
+            "text": "Custom Pool$9.99one-timePay once. Keep all Custo"
+          },
+          {
+            "tag": "p",
+            "text": "Custom Pool"
+          },
+          {
+            "tag": "p",
+            "text": "$9.99"
+          }
+        ],
+        "unlockHeading": true,
+        "trustLine": true
+      },
+      "scrolled": {
+        "sheetOpen": true,
+        "crownMobile": true,
+        "crownMobileW": 176,
+        "desktopCrownOnMobile": true,
+        "sparkleCount": 13,
+        "backLinkVisible": true,
+        "faqPillVisible": true,
+        "closeButton": true,
+        "ctaFullWidth": 0,
+        "sheetClientW": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "stackHeadings": [
+          {
+            "tag": "h1",
+            "text": "Get Unlimited Access of Premium Features"
+          },
+          {
+            "tag": "p",
+            "text": "Custom scoring"
+          },
+          {
+            "tag": "p",
+            "text": "Co-commissioners"
+          },
+          {
+            "tag": "p",
+            "text": "Exports"
+          },
+          {
+            "tag": "p",
+            "text": "Pool branding"
+          },
+          {
+            "tag": "section",
+            "text": "Custom Pool$9.99one-timePay once. Keep all Custo"
+          },
+          {
+            "tag": "p",
+            "text": "Custom Pool"
+          },
+          {
+            "tag": "p",
+            "text": "$9.99"
+          }
+        ],
+        "unlockHeading": true,
+        "trustLine": true
+      },
+      "afterClose": {
+        "sheetOpen": false,
+        "pathname": "/pool/617c79ba",
+        "search": "?tab=settings"
+      },
+      "directUrl": {
+        "pathname": "/pool/617c79ba",
+        "search": "?tab=settings&upgrade=1",
+        "sheetOpen": true
+      },
+      "screenshots": {
+        "shotOpen": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-sheet-390-open.png",
+        "shotScrolled": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-sheet-390-scrolled.png",
+        "shotDirect": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-direct-390.png"
+      }
+    },
+    {
+      "width": 430,
+      "opened": {
+        "sheetOpen": true,
+        "crownMobile": true,
+        "crownMobileW": 176,
+        "desktopCrownOnMobile": true,
+        "sparkleCount": 13,
+        "backLinkVisible": true,
+        "faqPillVisible": true,
+        "closeButton": true,
+        "ctaFullWidth": 0,
+        "sheetClientW": 430,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "stackHeadings": [
+          {
+            "tag": "h1",
+            "text": "Get Unlimited Access of Premium Features"
+          },
+          {
+            "tag": "p",
+            "text": "Custom scoring"
+          },
+          {
+            "tag": "p",
+            "text": "Co-commissioners"
+          },
+          {
+            "tag": "p",
+            "text": "Exports"
+          },
+          {
+            "tag": "p",
+            "text": "Pool branding"
+          },
+          {
+            "tag": "section",
+            "text": "Custom Pool$9.99one-timePay once. Keep all Custo"
+          },
+          {
+            "tag": "p",
+            "text": "Custom Pool"
+          },
+          {
+            "tag": "p",
+            "text": "$9.99"
+          }
+        ],
+        "unlockHeading": true,
+        "trustLine": true
+      },
+      "scrolled": {
+        "sheetOpen": true,
+        "crownMobile": true,
+        "crownMobileW": 176,
+        "desktopCrownOnMobile": true,
+        "sparkleCount": 13,
+        "backLinkVisible": true,
+        "faqPillVisible": true,
+        "closeButton": true,
+        "ctaFullWidth": 0,
+        "sheetClientW": 430,
+        "scrollHeight": 844,
+        "clientHeight": 844,
+        "stackHeadings": [
+          {
+            "tag": "h1",
+            "text": "Get Unlimited Access of Premium Features"
+          },
+          {
+            "tag": "p",
+            "text": "Custom scoring"
+          },
+          {
+            "tag": "p",
+            "text": "Co-commissioners"
+          },
+          {
+            "tag": "p",
+            "text": "Exports"
+          },
+          {
+            "tag": "p",
+            "text": "Pool branding"
+          },
+          {
+            "tag": "section",
+            "text": "Custom Pool$9.99one-timePay once. Keep all Custo"
+          },
+          {
+            "tag": "p",
+            "text": "Custom Pool"
+          },
+          {
+            "tag": "p",
+            "text": "$9.99"
+          }
+        ],
+        "unlockHeading": true,
+        "trustLine": true
+      },
+      "afterClose": {
+        "sheetOpen": false,
+        "pathname": "/pool/617c79ba",
+        "search": "?tab=settings"
+      },
+      "directUrl": {
+        "pathname": "/pool/617c79ba",
+        "search": "?tab=settings&upgrade=1",
+        "sheetOpen": true
+      },
+      "screenshots": {
+        "shotOpen": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-sheet-430-open.png",
+        "shotScrolled": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-sheet-430-scrolled.png",
+        "shotDirect": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-direct-430.png"
+      }
+    }
+  ],
+  "desktop": {
+    "desktop": {
+      "heading": "Upgrade Your Pool",
+      "mobileSheet": false,
+      "desktopCrown": true,
+      "mobileCrown": false,
+      "checkoutCardW": 576
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-desktop-diff-proof-1440.png"
+  }
+}

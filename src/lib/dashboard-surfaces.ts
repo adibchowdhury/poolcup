@@ -9,6 +9,16 @@ import { cn } from '@/lib/utils'
 export const DASHBOARD_CANVAS_BG = '#0D0D0D'
 export const DASHBOARD_CANVAS_CLASS = 'bg-[#0D0D0D]'
 
+/**
+ * Pool desktop shell canvas — same level-0 surface as dashboard routes.
+ * Global `--app-background` (#131313) is unchanged; pool pages use this override.
+ */
+export const POOL_DESKTOP_CANVAS_BG = DASHBOARD_CANVAS_BG
+export const POOL_DESKTOP_CANVAS_CLASS = DASHBOARD_CANVAS_CLASS
+
+/** Sticky pool top bar / mobile header on pool routes. */
+export const POOL_DESKTOP_CHROME_SURFACE_CLASS = 'bg-[#0D0D0D]/95'
+
 /** True for `/dashboard` and nested dashboard paths. */
 export function isDashboardRoutePath(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/'
@@ -22,6 +32,13 @@ export const DASHBOARD_SECTION_BG = '#111111'
 export const DASHBOARD_CARD_BG = '#171717'
 export const DASHBOARD_CARD_BG_HOVER = '#1d1d1d'
 export const DASHBOARD_CARD_BORDER = '#292929'
+
+/**
+ * Desktop sidebar surface — hub (`HUB_DESKTOP_SIDEBAR_CLASS`) and pool shells.
+ * Literal hex in Tailwind classes must match `DASHBOARD_CARD_BG`.
+ */
+export const DESKTOP_SIDEBAR_BG = DASHBOARD_CARD_BG
+export const DESKTOP_SIDEBAR_BORDER = DASHBOARD_CARD_BORDER
 
 /** In-card neutral wells (progress track, badge fill, logo well). */
 export const DASHBOARD_CARD_INNER_SURFACE = '#222222'

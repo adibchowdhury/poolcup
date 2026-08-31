@@ -93,17 +93,116 @@ export function poolPagePath(inviteCode: string): string {
   return `/pool/${encodeURIComponent(inviteCode)}`
 }
 
+export function poolUpgradePath(inviteCode: string): string {
+  return `${poolPagePath(inviteCode)}/upgrade`
+}
+
+export function poolHomePath(inviteCode: string): string {
+  return `${poolPagePath(inviteCode)}/home`
+}
+
+/** Mobile pool page with Home tab active. */
+export function poolHomeTabPath(inviteCode: string): string {
+  return `${poolPagePath(inviteCode)}?tab=home`
+}
+
+export function parsePoolHomeFromPath(pathname: string): boolean {
+  return /\/pool\/[^/]+\/home\/?$/.test(pathname)
+}
+
+/** Mobile pool page with upgrade sheet open (settings tab underneath). */
+export function poolUpgradeTabPath(inviteCode: string): string {
+  return poolUpgradeMobileQueryPath(inviteCode, 'settings')
+}
+
+/** Mobile deep link — opens full-screen upgrade sheet over the pool page. */
+export function poolUpgradeMobileQueryPath(
+  inviteCode: string,
+  tab: string = 'settings',
+): string {
+  const params = new URLSearchParams({ tab, upgrade: '1' })
+  return `${poolPagePath(inviteCode)}?${params.toString()}`
+}
+
+export function parsePoolUpgradeFromPath(pathname: string): boolean {
+  return /\/pool\/[^/]+\/upgrade\/?$/.test(pathname)
+}
+
 export function poolSettingsPath(
   inviteCode: string,
   section?: string | null,
+  controlId?: string | null,
 ): string {
   const base = `${poolPagePath(inviteCode)}/settings`
   const normalized = normalizePoolSettingsSection(section)
-  if (!normalized) return base
-  return `${base}/${encodeURIComponent(normalized)}`
+  const path = normalized ? `${base}/${encodeURIComponent(normalized)}` : base
+  if (!controlId) return path
+  const sub =
+    isPoolSettingsControlId(controlId) ? controlId : null
+  if (!sub) return path
+  const params = new URLSearchParams({ sub })
+  return `${path}?${params.toString()}`
 }
 
-/** Pool page with the Settings tab active (mobile inline; desktop opens the modal). */
+export function normalizePoolSettingsControlId(
+  value: string | null | undefined,
+): PoolSettingsControlId | null {
+  if (!value) return null
+  if (isPoolSettingsControlId(value)) return value
+  return SEARCH_CONTROL_ALIASES[value] ?? null
+}
+
+/** Parse `/pool/{invite}/settings/{section}` from a pathname (client URL sync). */
+export function parsePoolSettingsSectionFromPath(
+  pathname: string,
+): PoolSettingsSectionId | null {
+  const match = pathname.match(/\/pool\/[^/]+\/settings\/([^/?#]+)/)
+  if (!match) return null
+  return normalizePoolSettingsSection(match[1])
+}
+
+/** Parse `?sub=` from a search string (client URL sync). */
+export function parsePoolSettingsSubFromSearch(
+  search: string,
+): PoolSettingsControlId | null {
+  const raw = search.startsWith('?') ? search.slice(1) : search
+  return normalizePoolSettingsControlId(
+    new URLSearchParams(raw).get('sub'),
+  )
+}
+
+/** Read section + subsection from `window.location` (popstate / shallow nav). */
+export function readPoolSettingsClientRoute(): {
+  section: PoolSettingsSectionId | null
+  sub: PoolSettingsControlId | null
+} {
+  if (typeof window === 'undefined') {
+    return { section: null, sub: null }
+  }
+  return {
+    section: parsePoolSettingsSectionFromPath(window.location.pathname),
+    sub: parsePoolSettingsSubFromSearch(window.location.search),
+  }
+}
+
+/**
+ * Update the URL without a Next.js navigation (no RSC refetch).
+ * App Router has no Pages-router shallow routing; History API is the supported pattern.
+ */
+export function shallowPoolSettingsUrl(
+  url: string,
+  mode: 'push' | 'replace' = 'replace',
+): void {
+  if (typeof window === 'undefined') return
+  const state = window.history.state
+  if (mode === 'push') {
+    window.history.pushState(state, '', url)
+  } else {
+    window.history.replaceState(state, '', url)
+  }
+}
+
+/** Pool page with the Settings tab active (mobile inline tab). */
 export function poolSettingsTabPath(
   inviteCode: string,
   section?: string | null,
@@ -118,11 +217,25 @@ export function isPoolSettingsPath(pathname: string): boolean {
   return /\/pool\/[^/]+\/settings(\/|$)/.test(pathname)
 }
 
-/** Tailwind `lg` — desktop settings open in a modal instead of the route. */
-export const POOL_SETTINGS_MODAL_MQ = '(min-width: 1024px)'
+/** Tailwind `lg` — desktop uses `/pool/{invite}/settings/{section}` routes. */
+export const POOL_SETTINGS_DESKTOP_MQ = '(min-width: 1024px)'
 
+/** @deprecated Prefer POOL_SETTINGS_DESKTOP_MQ */
+export const POOL_SETTINGS_MODAL_MQ = POOL_SETTINGS_DESKTOP_MQ
+
+/**
+ * Below `lg` (1024px): mobile pool chrome — settings as `?tab=settings`,
+ * upgrade as full-screen sheet (not `/upgrade` page).
+ * lg+: desktop routes (`/settings/...`, `/upgrade` page).
+ * One-shot check — for React UI prefer `usePoolSettingsMobileTab()`.
+ */
+export function shouldUsePoolSettingsMobileTab(): boolean {
+  return !window.matchMedia(POOL_SETTINGS_DESKTOP_MQ).matches
+}
+
+/** @deprecated Desktop modal removed — use shouldUsePoolSettingsMobileTab or route to poolSettingsPath. */
 export function shouldOpenPoolSettingsModal(): boolean {
-  return window.matchMedia(POOL_SETTINGS_MODAL_MQ).matches
+  return shouldUsePoolSettingsMobileTab()
 }
 
 export type PoolSettingsSearchItem = {

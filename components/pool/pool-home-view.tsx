@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowLeft,
+  Home,
   MoreVertical,
   Settings,
   Share2,
@@ -33,8 +35,11 @@ import { PoolPredictionsTab } from '@/components/pool/pool-predictions-tab'
 import { PoolLeaderboardStandings } from '@/components/pool/pool-leaderboard-standings'
 import { PoolDesktopTopBar, POOL_DESKTOP_CONTENT_RAIL_CLASS } from '@/components/pool/pool-desktop-top-bar'
 import { PoolDesktopSidebar } from '@/components/pool/pool-desktop-sidebar'
-import { PoolSettingsDialog } from '@/components/pool/pool-settings-dialog'
+import { PoolSettingsDesktopShell } from '@/components/pool/pool-settings-desktop-shell'
 import { PoolSettingsMobileTab } from '@/components/pool/pool-settings-mobile-tab'
+import { PoolHomeShell } from '@/components/pool/pool-home-shell'
+import { PoolUpgradeDesktopView } from '@/components/pool/pool-upgrade-desktop-view'
+import { PoolUpgradeMobileSheet } from '@/components/pool/pool-upgrade-mobile-sheet'
 import {
   USE_MOCK_LEADERBOARD,
   buildMockLeaderboardMembers,
@@ -57,11 +62,23 @@ import { capturePostHog } from '@/src/lib/posthog-client'
 import { buildJoinInviteUrl } from '@/src/lib/referral'
 import { shareOrCopy } from '@/src/lib/share-client'
 import { useMobileChatChrome } from '@/src/lib/mobile-chat-chrome-context'
+import { usePoolSettingsMobileTab } from '@/hooks/use-pool-settings-mobile-tab'
 import {
-  POOL_SETTINGS_MODAL_MQ,
-  shouldOpenPoolSettingsModal,
+  poolHomePath,
+  poolPagePath,
+  poolSettingsPath,
+  poolUpgradePath,
+  parsePoolHomeFromPath,
+  parsePoolUpgradeFromPath,
+  readPoolSettingsClientRoute,
+  shallowPoolSettingsUrl,
+  shouldUsePoolSettingsMobileTab,
 } from '@/src/lib/pool-settings-nav'
 import type { PoolAnnouncement } from '@/src/lib/pool-announcements'
+import {
+  POOL_DESKTOP_CANVAS_CLASS,
+  POOL_DESKTOP_CHROME_SURFACE_CLASS,
+} from '@/src/lib/dashboard-surfaces'
 
 export type PoolHomeMeta = {
   inviteCode: string
@@ -226,30 +243,12 @@ export function PoolHomeView({
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [reportPoolOpen, setReportPoolOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const searchParams = useSearchParams()
-
-  useEffect(() => {
-    const media = window.matchMedia(POOL_SETTINGS_MODAL_MQ)
-    const syncDesktopSettings = () => {
-      if (!media.matches) {
-        setSettingsOpen(false)
-        return
-      }
-      setActiveTab((current) => {
-        if (current !== 'settings') return current
-        setSettingsOpen(true)
-        return 'predictions'
-      })
-    }
-    syncDesktopSettings()
-    media.addEventListener('change', syncDesktopSettings)
-    return () => media.removeEventListener('change', syncDesktopSettings)
-  }, [])
 
   const normalizeTab = (tab: string | null) => {
     if (
       tab === 'chat' ||
+      tab === 'home' ||
       tab === 'leaderboard' ||
       tab === 'predictions' ||
       tab === 'settings'
@@ -262,6 +261,9 @@ export function PoolHomeView({
   const [activeTab, setActiveTab] = useState(() =>
     normalizeTab(searchParams.get('tab')),
   )
+  const [isUpgradeView, setIsUpgradeView] = useState(false)
+  /** Single source of truth for upgrade/settings chrome: below lg = mobile. */
+  const isPoolMobile = usePoolSettingsMobileTab()
 
   useEffect(() => {
     if (activeTab !== 'leaderboard') return
@@ -314,13 +316,72 @@ export function PoolHomeView({
   function openSettingsFromNav(event?: {
     preventDefault: () => void
   }) {
-    if (shouldOpenPoolSettingsModal()) {
-      event?.preventDefault()
-      setSettingsOpen(true)
-      return true
-    }
+    event?.preventDefault()
     setActiveTab('settings')
+    if (!shouldUsePoolSettingsMobileTab()) {
+      shallowPoolSettingsUrl(
+        poolSettingsPath(pool.inviteCode, 'details'),
+        'push',
+      )
+    }
     return true
+  }
+
+  function openPoolUpgrade() {
+    // Rule: below lg → popup; lg+ → navigate to /upgrade page (never open sheet).
+    if (shouldUsePoolSettingsMobileTab()) {
+      setIsUpgradeView(true)
+      const params = new URLSearchParams(window.location.search)
+      params.set('upgrade', '1')
+      if (activeTab === 'settings') {
+        params.set('tab', 'settings')
+      } else if (!params.get('tab')) {
+        params.set('tab', activeTab)
+      }
+      shallowPoolSettingsUrl(
+        `${poolPagePath(pool.inviteCode)}?${params.toString()}`,
+        'push',
+      )
+      return
+    }
+    setIsUpgradeView(false)
+    router.push(poolUpgradePath(pool.inviteCode))
+  }
+
+  function closePoolUpgrade() {
+    setIsUpgradeView(false)
+    if (shouldUsePoolSettingsMobileTab()) {
+      const params = new URLSearchParams(window.location.search)
+      params.delete('upgrade')
+      if (params.get('tab') === 'upgrade') {
+        params.set('tab', 'settings')
+      }
+      const qs = params.toString()
+      shallowPoolSettingsUrl(
+        qs
+          ? `${poolPagePath(pool.inviteCode)}?${qs}`
+          : poolPagePath(pool.inviteCode),
+        'replace',
+      )
+      return
+    }
+    router.push(poolSettingsPath(pool.inviteCode, 'details'))
+  }
+
+  function syncDesktopPoolTabUrl(tab: string) {
+    if (shouldUsePoolSettingsMobileTab()) return
+    if (tab === 'home') {
+      shallowPoolSettingsUrl(poolHomePath(pool.inviteCode), 'push')
+      return
+    }
+    if (tab === 'settings') {
+      shallowPoolSettingsUrl(poolSettingsPath(pool.inviteCode, 'details'), 'push')
+      return
+    }
+    shallowPoolSettingsUrl(
+      `${poolPagePath(pool.inviteCode)}?tab=${encodeURIComponent(tab)}`,
+      'push',
+    )
   }
 
   // TEMPORARY — mock standings for design preview; flip USE_MOCK_LEADERBOARD off to restore.
@@ -350,19 +411,108 @@ export function PoolHomeView({
       setActiveTab(showChatTab ? 'chat' : 'predictions')
       return
     }
-    if (tab === 'settings') {
-      if (shouldOpenPoolSettingsModal()) {
-        setSettingsOpen(true)
-        setActiveTab('predictions')
+    if (tab === 'upgrade' || searchParams.get('upgrade') === '1') {
+      // Mobile only: upgrade=1 / tab=upgrade opens the sheet over settings.
+      // Desktop must use the /upgrade route — bounce if this query lands at lg+.
+      if (shouldUsePoolSettingsMobileTab()) {
+        setIsUpgradeView(true)
+        setActiveTab('settings')
         return
       }
+      setIsUpgradeView(false)
+      router.replace(poolUpgradePath(pool.inviteCode))
+      return
+    }
+    if (tab === 'settings') {
       setActiveTab('settings')
+      setIsUpgradeView(false)
+      if (!shouldUsePoolSettingsMobileTab()) {
+        shallowPoolSettingsUrl(
+          poolSettingsPath(pool.inviteCode, 'details'),
+          'replace',
+        )
+      }
+      return
+    }
+    if (tab === 'home') {
+      setActiveTab('home')
+      setIsUpgradeView(false)
+      if (!shouldUsePoolSettingsMobileTab()) {
+        shallowPoolSettingsUrl(poolHomePath(pool.inviteCode), 'replace')
+      }
       return
     }
     if (tab === 'leaderboard' || tab === 'predictions') {
       setActiveTab(normalizeTab(tab))
     }
-  }, [searchParams, showChatTab])
+  }, [searchParams, showChatTab, pool.inviteCode, router])
+
+  /** If viewport crosses to desktop while the sheet is open, close it and go to the page. */
+  useEffect(() => {
+    if (isPoolMobile || !isUpgradeView) return
+    setIsUpgradeView(false)
+    router.replace(poolUpgradePath(pool.inviteCode))
+  }, [isPoolMobile, isUpgradeView, pool.inviteCode, router])
+
+  useEffect(() => {
+    if (searchParams.get('upgraded') !== '1') return
+    toast.success(
+      'Custom Pool unlocked — logo, colors, and commissioner tools are ready.',
+    )
+    setIsUpgradeView(false)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('upgraded')
+    const qs = params.toString()
+    shallowPoolSettingsUrl(
+      qs
+        ? `${poolPagePath(pool.inviteCode)}?${qs}`
+        : poolPagePath(pool.inviteCode),
+      'replace',
+    )
+  }, [searchParams, pool.inviteCode])
+
+  useEffect(() => {
+    if (shouldUsePoolSettingsMobileTab()) return
+    if (parsePoolUpgradeFromPath(window.location.pathname)) {
+      setIsUpgradeView(true)
+      return
+    }
+    if (parsePoolHomeFromPath(window.location.pathname)) {
+      setActiveTab('home')
+      setIsUpgradeView(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (shouldUsePoolSettingsMobileTab()) return
+    const onPopState = () => {
+      if (parsePoolUpgradeFromPath(window.location.pathname)) {
+        setIsUpgradeView(true)
+        return
+      }
+      setIsUpgradeView(false)
+      if (parsePoolHomeFromPath(window.location.pathname)) {
+        setActiveTab('home')
+        return
+      }
+      const route = readPoolSettingsClientRoute()
+      if (route.section && window.location.pathname.includes('/settings/')) {
+        setActiveTab('settings')
+        return
+      }
+      const tab = new URLSearchParams(window.location.search).get('tab')
+      if (
+        tab === 'home' ||
+        tab === 'leaderboard' ||
+        tab === 'predictions' ||
+        tab === 'settings'
+      ) {
+        setActiveTab(normalizeTab(tab))
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 639px)')
@@ -383,11 +533,18 @@ export function PoolHomeView({
   const isWinnerPredictionsTab = isLegacyWinnerPool && activeTab === 'predictions'
   const isClassicPredictionsTab =
     (!isWinnerPool || !isLegacyWinnerPool) && activeTab === 'predictions'
+  const isHomeTab = activeTab === 'home'
   const isLeaderboardTab = activeTab === 'leaderboard'
   const isPredictionsTab = activeTab === 'predictions'
-  /** Desktop shell (sidebar + shared top bar) — predictions + leaderboard, lg+ only. */
+  const isSettingsTab = activeTab === 'settings'
+  /** Desktop shell (sidebar + shared top bar) — home, predictions, leaderboard, settings, upgrade; lg+ only. */
   const usePoolDesktopShell =
-    !isChatView && (isLeaderboardTab || isPredictionsTab)
+    !isChatView &&
+    (isHomeTab ||
+      isLeaderboardTab ||
+      isPredictionsTab ||
+      isSettingsTab ||
+      isUpgradeView)
 
   /** Creator display name from profiles / members; skip null/empty user_ids. */
   const creatorDisplayName = (() => {
@@ -413,7 +570,8 @@ export function PoolHomeView({
     <PoolThemeScope
       themeColor={pool.themeColor}
       className={cn(
-        'min-h-screen bg-app-background',
+        'min-h-screen',
+        POOL_DESKTOP_CANVAS_CLASS,
         usePoolDesktopShell && 'flex flex-col',
         isMobileChatShell &&
           'max-sm:flex max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden',
@@ -431,8 +589,8 @@ export function PoolHomeView({
           className={cn(
             'sticky top-0 z-[100] isolate border-b',
             isChatView
-              ? 'border-white/[0.08] bg-app-background'
-              : 'border-border bg-app-background/80 backdrop-blur-xl',
+              ? cn('border-white/[0.08]', POOL_DESKTOP_CANVAS_CLASS)
+              : cn('border-border backdrop-blur-xl', POOL_DESKTOP_CHROME_SURFACE_CLASS),
             usePoolDesktopShell && 'shrink-0',
             // Desktop shell: top bar moves into the main column — hide this on lg+.
             usePoolDesktopShell && 'lg:hidden',
@@ -597,12 +755,13 @@ export function PoolHomeView({
             // Pool shell tabs: full-bleed main; top bar owns the top edge on lg+.
             usePoolDesktopShell
               ? cn(
-                  'flex max-w-none flex-1 flex-col bg-app-background px-0 pb-0',
+                  'flex max-w-none flex-1 flex-col px-0 pb-0',
+                  POOL_DESKTOP_CANVAS_CLASS,
                   'lg:min-h-screen lg:py-0',
                 )
               : isClassicPredictionsTab
-                ? 'max-w-[82rem] bg-app-background px-4'
-                : 'max-w-4xl bg-app-background px-4',
+                ? cn('max-w-[82rem] px-4', POOL_DESKTOP_CANVAS_CLASS)
+                : cn('max-w-4xl px-4', POOL_DESKTOP_CANVAS_CLASS),
             isMobileChatShell &&
               'max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden max-sm:px-0 max-sm:py-0 max-sm:pb-0',
           )}
@@ -645,15 +804,14 @@ export function PoolHomeView({
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
+              setIsUpgradeView(false)
               if (value === 'settings') {
-                if (shouldOpenPoolSettingsModal()) {
-                  setSettingsOpen(true)
-                  return
-                }
                 setActiveTab('settings')
+                syncDesktopPoolTabUrl('settings')
                 return
               }
               setActiveTab(value)
+              syncDesktopPoolTabUrl(value)
             }}
             className={cn(
               'mb-8 w-full min-w-0 gap-6',
@@ -673,6 +831,9 @@ export function PoolHomeView({
                 onInvite={copyInviteLink}
                 members={leaderboardMembers}
                 poolId={poolId}
+                inviteCode={pool.inviteCode}
+                poolHasCommissionerTools={poolHasCommissionerTools}
+                onNavigateUpgrade={openPoolUpgrade}
               />
             ) : null}
 
@@ -714,8 +875,11 @@ export function PoolHomeView({
                   : 'basis-[70rem]',
               )}
             >
-            {usePoolDesktopShell ? (
+            {usePoolDesktopShell && !isUpgradeView ? (
               <PoolDesktopTopBar
+                context={
+                  isSettingsTab && !isUpgradeView ? 'settings' : 'pool'
+                }
                 poolName={pool.name}
                 scoringStyle={pool.scoringStyle}
                 memberCount={pool.memberCount}
@@ -724,10 +888,20 @@ export function PoolHomeView({
                 emblemUrl={pool.emblemUrl}
                 canInvite={canInvite}
                 onInvite={copyInviteLink}
-                onSettings={() => openSettingsFromNav()}
               />
             ) : null}
-            {usePoolDesktopShell && !isChatView && activeAnnouncement ? (
+            {usePoolDesktopShell && isUpgradeView ? (
+              <PoolUpgradeDesktopView
+                inviteCode={pool.inviteCode}
+                poolId={poolId}
+                poolName={pool.name}
+                isOwner={Boolean(isPoolOwner)}
+                poolHasCommissionerTools={poolHasCommissionerTools}
+                onBackToSettings={closePoolUpgrade}
+                className="hidden min-h-0 flex-1 lg:flex"
+              />
+            ) : null}
+            {usePoolDesktopShell && !isChatView && activeAnnouncement && !isUpgradeView ? (
               <div className="mb-4 hidden px-4 pt-4 lg:block lg:px-6 xl:px-8">
                 <PoolAnnouncementBanner
                   announcement={activeAnnouncement}
@@ -735,7 +909,7 @@ export function PoolHomeView({
                 />
               </div>
             ) : null}
-            {usePoolDesktopShell && isLeaderboardTab ? (
+            {usePoolDesktopShell && isLeaderboardTab && !isUpgradeView ? (
               <div className="mx-auto hidden w-full px-6 pt-2 xl:px-8 lg:block">
                 {USE_MOCK_LEADERBOARD ? (
                   <span className="mb-3 inline-block rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
@@ -777,11 +951,18 @@ export function PoolHomeView({
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <TabsList
                     className={cn(
-                      'grid h-auto w-full max-w-2xl grid-cols-3 p-1',
-                      'mx-auto w-[min(100%,19rem)] p-0.5',
+                      'grid h-auto w-full max-w-2xl grid-cols-4 p-1',
+                      'mx-auto w-[min(100%,26rem)] p-0.5',
                       isMobileChatShell && 'max-sm:shrink-0',
                     )}
                   >
+                    <TabsTrigger
+                      value="home"
+                      className={POOL_TAB_TRIGGER_CLASS}
+                    >
+                      <Home className="h-3.5 w-3.5" aria-hidden />
+                      Home
+                    </TabsTrigger>
                     <TabsTrigger
                       value="predictions"
                       className={POOL_TAB_TRIGGER_CLASS}
@@ -835,6 +1016,46 @@ export function PoolHomeView({
                 </div>
               ) : null}
             </div>
+
+            <div
+              className={cn(
+                usePoolDesktopShell && isUpgradeView && 'lg:hidden',
+              )}
+            >
+            <TabsContent
+              value="home"
+              className={cn(
+                'mt-0 w-full min-w-0',
+                usePoolDesktopShell &&
+                  'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
+              )}
+            >
+              <PoolHomeShell
+                className={cn(
+                  usePoolDesktopShell && 'lg:flex-1',
+                )}
+                pool={pool}
+                members={leaderboardMembers}
+                userPredictions={userPredictions}
+                currentUserId={currentUserId}
+                poolId={poolId}
+                memberId={memberId}
+                leaderboardLoading={leaderboardTabLoading}
+                leaderboardError={leaderboardError}
+                onRetryLeaderboard={onRetryLeaderboard}
+                onPredictionSaved={onPredictionSaved}
+                onPredictionRemoved={onPredictionRemoved}
+                onGoToPredictions={() => {
+                  setActiveTab('predictions')
+                  syncDesktopPoolTabUrl('predictions')
+                }}
+                onGoToLeaderboard={() => {
+                  setActiveTab('leaderboard')
+                  syncDesktopPoolTabUrl('leaderboard')
+                }}
+                onInvite={copyInviteLink}
+              />
+            </TabsContent>
 
             <TabsContent
               value="predictions"
@@ -929,44 +1150,91 @@ export function PoolHomeView({
 
             <TabsContent
               value="settings"
-              className="mt-0 w-full min-w-0 lg:hidden"
+              className={cn(
+                'mt-0 w-full min-w-0',
+                'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
+              )}
             >
-              <PoolSettingsMobileTab
-                initialSection={searchParams.get('section')}
-                tabProps={{
-                  poolId,
-                  poolName: pool.name,
-                  poolDescription: pool.description,
-                  inviteCode: pool.inviteCode,
-                  poolThemeColor: pool.themeColor,
-                  poolAvatar: pool.avatar,
-                  poolEmblemUrl: pool.emblemUrl,
-                  scoringStyle: pool.scoringStyle,
-                  scoreExactPoints: pool.scoreExactPoints,
-                  scoreWinnerPoints: pool.scoreWinnerPoints,
-                  scoreDrawPoints: pool.scoreDrawPoints,
-                  scoringLocked: pool.scoringLocked,
-                  acceptingMembers: pool.acceptingMembers,
-                  isPublic: pool.isPublic,
-                  members,
-                  poolCreatorUserId,
-                  currentUserId,
-                  isOwner: isPoolOwner,
-                  isAdmin: isPoolAdmin,
-                  poolHasCommissionerTools,
-                  coAdminUserIds,
-                  onPoolNameChange,
-                  onPoolDescriptionChange,
-                  onPoolThemeColorChange,
-                  onPoolEmblemUrlChange,
-                  onPoolScoringChange,
-                  onAcceptingMembersChange,
-                  onIsPublicChange,
-                  onMemberRemoved,
-                  onOwnershipTransferred,
-                  onManagedAnnouncementChange,
-                }}
-              />
+              <div className="lg:hidden">
+                <PoolSettingsMobileTab
+                  initialSection={searchParams.get('section')}
+                  tabProps={{
+                    poolId,
+                    poolName: pool.name,
+                    poolDescription: pool.description,
+                    inviteCode: pool.inviteCode,
+                    poolThemeColor: pool.themeColor,
+                    poolAvatar: pool.avatar,
+                    poolEmblemUrl: pool.emblemUrl,
+                    scoringStyle: pool.scoringStyle,
+                    scoreExactPoints: pool.scoreExactPoints,
+                    scoreWinnerPoints: pool.scoreWinnerPoints,
+                    scoreDrawPoints: pool.scoreDrawPoints,
+                    scoringLocked: pool.scoringLocked,
+                    acceptingMembers: pool.acceptingMembers,
+                    isPublic: pool.isPublic,
+                    members,
+                    poolCreatorUserId,
+                    currentUserId,
+                    isOwner: isPoolOwner,
+                    isAdmin: isPoolAdmin,
+                    poolHasCommissionerTools,
+                    coAdminUserIds,
+                    onPoolNameChange,
+                    onPoolDescriptionChange,
+                    onPoolThemeColorChange,
+                    onPoolEmblemUrlChange,
+                    onPoolScoringChange,
+                    onAcceptingMembersChange,
+                    onIsPublicChange,
+                    onMemberRemoved,
+                    onOwnershipTransferred,
+                    onManagedAnnouncementChange,
+                    onNavigateUpgrade: openPoolUpgrade,
+                  }}
+                />
+              </div>
+              {usePoolDesktopShell ? (
+                <div className="hidden min-h-0 min-w-0 flex-1 flex-col lg:flex">
+                  <PoolSettingsDesktopShell
+                  inviteCode={pool.inviteCode}
+                  tabProps={{
+                    poolId,
+                    poolName: pool.name,
+                    poolDescription: pool.description,
+                    inviteCode: pool.inviteCode,
+                    poolThemeColor: pool.themeColor,
+                    poolAvatar: pool.avatar,
+                    poolEmblemUrl: pool.emblemUrl,
+                    scoringStyle: pool.scoringStyle,
+                    scoreExactPoints: pool.scoreExactPoints,
+                    scoreWinnerPoints: pool.scoreWinnerPoints,
+                    scoreDrawPoints: pool.scoreDrawPoints,
+                    scoringLocked: pool.scoringLocked,
+                    acceptingMembers: pool.acceptingMembers,
+                    isPublic: pool.isPublic,
+                    members,
+                    poolCreatorUserId,
+                    currentUserId,
+                    isOwner: isPoolOwner,
+                    isAdmin: isPoolAdmin,
+                    poolHasCommissionerTools,
+                    coAdminUserIds,
+                    onPoolNameChange,
+                    onPoolDescriptionChange,
+                    onPoolThemeColorChange,
+                    onPoolEmblemUrlChange,
+                    onPoolScoringChange,
+                    onAcceptingMembersChange,
+                    onIsPublicChange,
+                    onMemberRemoved,
+                    onOwnershipTransferred,
+                    onManagedAnnouncementChange,
+                    onNavigateUpgrade: openPoolUpgrade,
+                  }}
+                />
+                </div>
+              ) : null}
             </TabsContent>
 
             {showChatTab && poolId && poolCreatorUserId && memberProfilesByUserId ? (
@@ -993,47 +1261,27 @@ export function PoolHomeView({
               </TabsContent>
             ) : null}
             </div>
+            </div>
           </Tabs>
           </PoolPredictionStatusFilterProvider>
         </main>
       </div>
-      <PoolSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        tabProps={{
-          poolId,
-          poolName: pool.name,
-          poolDescription: pool.description,
-          inviteCode: pool.inviteCode,
-          poolThemeColor: pool.themeColor,
-          poolAvatar: pool.avatar,
-          poolEmblemUrl: pool.emblemUrl,
-          scoringStyle: pool.scoringStyle,
-          scoreExactPoints: pool.scoreExactPoints,
-          scoreWinnerPoints: pool.scoreWinnerPoints,
-          scoreDrawPoints: pool.scoreDrawPoints,
-          scoringLocked: pool.scoringLocked,
-          acceptingMembers: pool.acceptingMembers,
-          isPublic: pool.isPublic,
-          members,
-          poolCreatorUserId,
-          currentUserId,
-          isOwner: isPoolOwner,
-          isAdmin: isPoolAdmin,
-          poolHasCommissionerTools,
-          coAdminUserIds,
-          onPoolNameChange,
-          onPoolDescriptionChange,
-          onPoolThemeColorChange,
-          onPoolEmblemUrlChange,
-          onPoolScoringChange,
-          onAcceptingMembersChange,
-          onIsPublicChange,
-          onMemberRemoved,
-          onOwnershipTransferred,
-          onManagedAnnouncementChange,
-        }}
-      />
+      {isPoolMobile ? (
+        <PoolUpgradeMobileSheet
+          open={isUpgradeView && !poolHasCommissionerTools}
+          onOpenChange={(open) => {
+            if (open) {
+              if (!isUpgradeView) openPoolUpgrade()
+              return
+            }
+            closePoolUpgrade()
+          }}
+          inviteCode={pool.inviteCode}
+          poolId={poolId}
+          isOwner={Boolean(isPoolOwner)}
+          poolHasCommissionerTools={poolHasCommissionerTools}
+        />
+      ) : null}
     </PoolThemeScope>
   )
 }

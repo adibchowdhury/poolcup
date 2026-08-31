@@ -21,6 +21,10 @@ type Props = {
   ownerUserId: string
   members: LeaderboardMember[]
   initialCoAdmins?: CoAdmin[]
+  /** Skip fetch; show empty default UI (locked Basic preview). */
+  previewOnly?: boolean
+  /** Omit the section heading (parent LockedFeatureSection owns it). */
+  hideHeading?: boolean
 }
 
 function labelFor(row: CoAdmin) {
@@ -32,9 +36,15 @@ export function CommissionerCoAdminsSection({
   ownerUserId,
   members,
   initialCoAdmins = [],
+  previewOnly = false,
+  hideHeading = false,
 }: Props) {
-  const [rows, setRows] = useState<CoAdmin[]>(initialCoAdmins)
-  const [loading, setLoading] = useState(initialCoAdmins.length === 0)
+  const [rows, setRows] = useState<CoAdmin[]>(
+    previewOnly ? [] : initialCoAdmins,
+  )
+  const [loading, setLoading] = useState(
+    previewOnly ? false : initialCoAdmins.length === 0,
+  )
   const [error, setError] = useState<string | null>(null)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -73,13 +83,18 @@ export function CommissionerCoAdminsSection({
   }, [poolId])
 
   useEffect(() => {
+    if (previewOnly) {
+      setRows([])
+      setLoading(false)
+      return
+    }
     if (initialCoAdmins.length > 0) {
       setRows(initialCoAdmins)
       setLoading(false)
       return
     }
     void load()
-  }, [initialCoAdmins, load])
+  }, [initialCoAdmins, load, previewOnly])
 
   async function addCoAdmin() {
     if (!selectedUserId || busyUserId) return
@@ -156,10 +171,12 @@ export function CommissionerCoAdminsSection({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Crown className="h-4 w-4 text-[#ffb300]" aria-hidden />
-        <h3 className="font-display text-lg tracking-wide">Co-commissioners</h3>
-      </div>
+      {hideHeading ? null : (
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-[#ffb300]" aria-hidden />
+          <h3 className="font-display text-lg tracking-wide">Co-commissioners</h3>
+        </div>
+      )}
       <p className="text-xs leading-relaxed text-muted-foreground">
         Owner-only. Co-commissioners can edit pool settings, manage invites, and
         remove regular members — not delete the pool, transfer ownership, or

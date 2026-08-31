@@ -1140,10 +1140,10 @@ export function PredictionMatchCard({
           'flex-col items-stretch gap-3.5 sm:gap-4',
           // Slightly taller padding for lg stacked crest + name
           'lg:py-5',
-          // Desktop surface: warm charcoal #20221F, border + soft shadow (no green glow)
-          'lg:border lg:border-white/[0.09] lg:bg-[#20221F]',
+          // Desktop surface: neutral charcoal #191C1B (no olive), border + soft shadow
+          'lg:border lg:border-white/[0.09] lg:bg-[#191C1B]',
           'lg:shadow-[0_2px_14px_rgba(0,0,0,0.28)]',
-          'lg:hover:border-white/[0.12] lg:hover:bg-[#252824]',
+          'lg:hover:border-white/[0.12] lg:hover:bg-[#1E2220]',
           'lg:hover:shadow-[0_4px_18px_rgba(0,0,0,0.32)]',
           // Neutralize shared primary/green predicted + hover borders on desktop
           'lg:!border-white/[0.09] lg:hover:!border-white/[0.12]',

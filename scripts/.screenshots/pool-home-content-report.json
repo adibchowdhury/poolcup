@@ -1,0 +1,19 @@
+{
+  "activePool": {
+    "invite": "617c79ba",
+    "path": "/pool/617c79ba/home"
+  },
+  "completedPool": {
+    "invite": "afcaad5c",
+    "name": "Office World Cup Pick'em 2026",
+    "matchesPlayed": 104,
+    "totalMatches": 104,
+    "scoringStyle": "classic"
+  },
+  "screenshots": {
+    "active1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-active-1440.png",
+    "active390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-active-390.png",
+    "completed1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-completed-1440.png",
+    "completed390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-completed-390.png"
+  }
+}

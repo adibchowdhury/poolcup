@@ -14,6 +14,7 @@ import {
   POOL_DESKTOP_SIDEBAR_SECTION_INSET_CLASS,
   poolDesktopSidebarSectionLabelClassName,
   usePoolDesktopSidebarCompactCta,
+  type PoolDesktopSidebarNavSection,
 } from '@/components/pool/pool-desktop-sidebar-shared'
 import { HUB_DESKTOP_SIDEBAR_WIDTH_CLASS } from '@/components/dashboard/hub-desktop-nav-frame'
 import { cn } from '@/lib/utils'
@@ -193,6 +194,14 @@ export type PoolLeaderboardDesktopSidebarProps = {
   members: LeaderboardMember[]
   poolId?: string
   className?: string
+  /** Link-based POOL nav for settings route; default TabsTriggers inside pool Tabs. */
+  poolNavMode?: 'tabs' | 'links'
+  inviteCode?: string
+  activePoolNav?: PoolDesktopSidebarNavSection
+  onPoolNavNavigate?: (href: string) => void
+  showSettings?: boolean
+  poolHasCommissionerTools?: boolean
+  onNavigateUpgrade?: () => void
 }
 
 /**
@@ -207,6 +216,13 @@ export function PoolLeaderboardDesktopSidebar({
   members,
   poolId,
   className,
+  poolNavMode = 'tabs',
+  inviteCode,
+  activePoolNav,
+  onPoolNavNavigate,
+  showSettings = true,
+  poolHasCommissionerTools = false,
+  onNavigateUpgrade,
 }: PoolLeaderboardDesktopSidebarProps) {
   const activityCap = useActivityItemCap()
   const activity = buildPoolLeaderboardActivity(members, activityCap)
@@ -221,7 +237,13 @@ export function PoolLeaderboardDesktopSidebar({
     >
       <PoolDesktopSidebarLogo />
       <PoolDesktopSidebarSeparator />
-      <PoolDesktopSidebarPoolNav />
+      <PoolDesktopSidebarPoolNav
+        mode={poolNavMode}
+        inviteCode={inviteCode}
+        activeNav={activePoolNav}
+        onNavigate={onPoolNavNavigate}
+        showSettings={showSettings}
+      />
       <PoolDesktopSidebarSeparator />
 
       <div
@@ -312,7 +334,12 @@ export function PoolLeaderboardDesktopSidebar({
         )}
       </div>
 
-      <PoolDesktopCommissionerCta poolId={poolId} compact={compactCta} />
+      <PoolDesktopCommissionerCta
+        poolId={poolId}
+        poolHasCommissionerTools={poolHasCommissionerTools}
+        onNavigateUpgrade={onNavigateUpgrade}
+        compact={compactCta}
+      />
     </PoolDesktopSidebarFrame>
   )
 }

@@ -23,6 +23,7 @@ export type MatchesTabFixedDateGroupId =
 export type MatchesTabDateGroupId =
   | MatchesTabFixedDateGroupId
   | `month-${string}`
+  | `day-${string}`
 
 export const MATCHES_TAB_FIXED_DATE_GROUP_ORDER: MatchesTabFixedDateGroupId[] = [
   'live',
@@ -260,6 +261,71 @@ export function buildDateHorizonGroups<T>(
 
   return groups
 }
+
+function formatKickoffDayLabel(kickoff: Date, now: Date): string {
+  const opts: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+  }
+  if (kickoff.getFullYear() !== now.getFullYear()) {
+    opts.year = 'numeric'
+  }
+  return kickoff.toLocaleDateString('en-US', opts)
+}
+
+/**
+ * Calendar-day groups by kickoff (local TZ) for ended Group Stage nesting.
+ * Lifecycle “Completed” dump is skipped so stage → date → cards stays useful.
+ * Newest day first (recap); empty days omitted; kickoff ascending within a day.
+ */
+export function buildKickoffDayGroups<T>(
+  items: T[],
+  options: {
+    getKickoffAt: (item: T) => string
+    nowMs?: number
+    /** Default true — ended-tournament recap. */
+    newestFirst?: boolean
+  },
+): DateHorizonGroup<T>[] {
+  const nowMs = options.nowMs ?? Date.now()
+  const now = new Date(nowMs)
+  const newestFirst = options.newestFirst ?? true
+  const buckets = new Map<string, { sortKey: string; label: string; matches: T[] }>()
+
+  for (const item of items) {
+    const kickoffAt = options.getKickoffAt(item)
+    const kickoff = new Date(kickoffAt)
+    const day = startOfLocalDay(kickoff)
+    const y = day.getFullYear()
+    const m = String(day.getMonth() + 1).padStart(2, '0')
+    const d = String(day.getDate()).padStart(2, '0')
+    const id = `day-${y}-${m}-${d}`
+    const existing = buckets.get(id)
+    if (existing) {
+      existing.matches.push(item)
+    } else {
+      buckets.set(id, {
+        sortKey: `${y}-${m}-${d}`,
+        label: formatKickoffDayLabel(kickoff, now),
+        matches: [item],
+      })
+    }
+  }
+
+  const ordered = [...buckets.entries()].sort((a, b) =>
+    newestFirst
+      ? b[1].sortKey.localeCompare(a[1].sortKey)
+      : a[1].sortKey.localeCompare(b[1].sortKey),
+  )
+
+  return ordered.map(([id, meta]) => ({
+    id: id as `day-${string}`,
+    label: meta.label,
+    matches: sortByKickoffAsc(meta.matches, options.getKickoffAt),
+    showLiveDot: false,
+  }))
+}
+
 
 /**
  * Desktop Matches tab — Live, calendar buckets, then month groups, then Completed.

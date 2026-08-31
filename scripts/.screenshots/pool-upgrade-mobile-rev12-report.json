@@ -1,0 +1,105 @@
+{
+  "at844": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "close": {
+      "size": 32,
+      "iconSize": 16,
+      "bg": "rgb(42, 42, 42)"
+    },
+    "titleText": "Get Unlimited Access toPremium Features",
+    "titleToFeaturesGap": 12,
+    "featuresToCardGap": 76,
+    "cardWidth": 304,
+    "cardHeight": 228,
+    "ctaWidth": 304,
+    "ctaHeight": 40,
+    "widthsMatch": true,
+    "overflowY": "hidden",
+    "scrollable": false,
+    "sheetScrollHeight": 844,
+    "sheetClientHeight": 844,
+    "contentBottom": 832,
+    "clippedBelowFold": false,
+    "visible": {
+      "crown": true,
+      "title": true,
+      "features": true,
+      "card": true,
+      "cta": true,
+      "trust": true
+    },
+    "allVisible": true,
+    "gaps": {
+      "featuresToCard": 76,
+      "cardToCta": 101
+    }
+  },
+  "at700": {
+    "viewport": {
+      "width": 390,
+      "height": 700
+    },
+    "close": {
+      "size": 32,
+      "iconSize": 16,
+      "bg": "rgb(42, 42, 42)"
+    },
+    "titleText": "Get Unlimited Access toPremium Features",
+    "titleToFeaturesGap": 12,
+    "featuresToCardGap": 6,
+    "cardWidth": 304,
+    "cardHeight": 228,
+    "ctaWidth": 304,
+    "ctaHeight": 40,
+    "widthsMatch": true,
+    "overflowY": "hidden",
+    "scrollable": false,
+    "sheetScrollHeight": 700,
+    "sheetClientHeight": 700,
+    "contentBottom": 688,
+    "clippedBelowFold": false,
+    "visible": {
+      "crown": true,
+      "title": true,
+      "features": true,
+      "card": true,
+      "cta": true,
+      "trust": true
+    },
+    "allVisible": true,
+    "gaps": {
+      "featuresToCard": 6,
+      "cardToCta": 28
+    }
+  },
+  "floorHeightPx": 690,
+  "shots": {
+    "shot844": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev12-390x844.png",
+    "shot700": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev12-390x700.png"
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "cardHasBenefitsRow": true
+  },
+  "expected": {
+    "closeWas": {
+      "size": 44,
+      "icon": 24,
+      "bg": "#4a4a4a"
+    },
+    "closeNow": {
+      "size": 32,
+      "icon": 16,
+      "bg": "#2a2a2a"
+    },
+    "titleToFeaturesWas": "flex-1 (variable)",
+    "titleToFeaturesNow": 12,
+    "cardWidthWas": 280,
+    "cardWidthNow": 304,
+    "ctaHeightWas": 48,
+    "ctaHeightNow": 40
+  }
+}

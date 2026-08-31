@@ -1,0 +1,113 @@
+{
+  "at844": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "crown": {
+      "top": 20,
+      "width": 224,
+      "height": 149
+    },
+    "crownToTitleGap": 20,
+    "featureItems": [
+      "Pool Branding",
+      "Member Management",
+      "Custom Scoring",
+      "Prediction Tracking",
+      "Export Results + much more!"
+    ],
+    "featureCount": 5,
+    "titleToFeaturesGap": 12,
+    "featuresToCardGap": 43,
+    "bottomGaps": {
+      "reassuranceToCta": 16,
+      "ctaToTrust": 16
+    },
+    "cardWidth": 304,
+    "ctaWidth": 304,
+    "overflowY": "hidden",
+    "scrollable": false,
+    "contentBottom": 832,
+    "clippedBelowFold": false,
+    "visible": {
+      "crown": true,
+      "title": true,
+      "features": true,
+      "card": true,
+      "cta": true,
+      "trust": true
+    },
+    "allVisible": true
+  },
+  "at700": {
+    "viewport": {
+      "width": 390,
+      "height": 700
+    },
+    "crown": {
+      "top": 12,
+      "width": 224,
+      "height": 112
+    },
+    "crownToTitleGap": 12,
+    "featureItems": [
+      "Pool Branding",
+      "Member Management",
+      "Custom Scoring",
+      "Prediction Tracking",
+      "Export Results + much more!"
+    ],
+    "featureCount": 5,
+    "titleToFeaturesGap": 12,
+    "featuresToCardGap": 7,
+    "bottomGaps": {
+      "reassuranceToCta": 10,
+      "ctaToTrust": 10
+    },
+    "cardWidth": 304,
+    "ctaWidth": 304,
+    "overflowY": "hidden",
+    "scrollable": false,
+    "contentBottom": 688,
+    "clippedBelowFold": false,
+    "visible": {
+      "crown": true,
+      "title": true,
+      "features": true,
+      "card": true,
+      "cta": true,
+      "trust": true
+    },
+    "allVisible": true
+  },
+  "shots": {
+    "shot844": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev13-390x844.png",
+    "shot700": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev13-390x700.png"
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "cardHasBenefitsRow": true
+  },
+  "expected": {
+    "crownWas": {
+      "width": 200,
+      "height": 133,
+      "top": 12
+    },
+    "crownNow": {
+      "width": 224,
+      "heightApprox": 149,
+      "top": 20
+    },
+    "crownToTitleWas": 12,
+    "crownToTitleNow": 20,
+    "bottomGapWas": 8,
+    "bottomGapNow": 16,
+    "fifthFeature": {
+      "id": "missing_predictions",
+      "title": "Prediction Tracking",
+      "icon": "UserX"
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "views": {
+    "home": {
+      "path": "/pool/617c79ba/home",
+      "probe": {
+        "reportCount": 1,
+        "inviteCount": 1,
+        "hasPoolDesktopTopBar": true,
+        "fixedFallbackVisible": false,
+        "reportRects": [
+          {
+            "top": 24,
+            "left": 1233.078125,
+            "width": 91.671875,
+            "height": 32
+          }
+        ]
+      }
+    },
+    "predictions": {
+      "path": "/pool/617c79ba?tab=predictions",
+      "probe": {
+        "reportCount": 1,
+        "inviteCount": 1,
+        "hasPoolDesktopTopBar": true,
+        "fixedFallbackVisible": false,
+        "reportRects": [
+          {
+            "top": 24,
+            "left": 1233.078125,
+            "width": 91.671875,
+            "height": 32
+          }
+        ]
+      }
+    },
+    "leaderboard": {
+      "path": "/pool/617c79ba?tab=leaderboard",
+      "probe": {
+        "reportCount": 1,
+        "inviteCount": 1,
+        "hasPoolDesktopTopBar": true,
+        "fixedFallbackVisible": false,
+        "reportRects": [
+          {
+            "top": 24,
+            "left": 1233.078125,
+            "width": 91.671875,
+            "height": 32
+          }
+        ]
+      }
+    },
+    "settings": {
+      "path": "/pool/617c79ba/settings/details",
+      "probe": {
+        "reportCount": 1,
+        "inviteCount": 1,
+        "hasPoolDesktopTopBar": true,
+        "fixedFallbackVisible": false,
+        "reportRects": [
+          {
+            "top": 24,
+            "left": 1233.078125,
+            "width": 91.671875,
+            "height": 32
+          }
+        ]
+      }
+    },
+    "upgrade": {
+      "path": "/pool/617c79ba/upgrade",
+      "probe": {
+        "reportCount": 1,
+        "inviteCount": 0,
+        "hasPoolDesktopTopBar": false,
+        "fixedFallbackVisible": true,
+        "reportRects": [
+          {
+            "top": 14,
+            "left": 1332.328125,
+            "width": 91.671875,
+            "height": 32
+          }
+        ]
+      }
+    }
+  },
+  "screenshots": {
+    "home": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-actions-home-1440.png",
+    "predictions": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-actions-predictions-1440.png",
+    "leaderboard": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-actions-leaderboard-1440.png",
+    "settings": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-actions-settings-1440.png",
+    "upgrade": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-actions-upgrade-1440.png"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "probe": {
+    "titleLines": [
+      {
+        "text": "Get Unlimited Access of",
+        "display": "block",
+        "whiteSpace": "nowrap",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "text": "Premium Features",
+        "display": "block",
+        "whiteSpace": "nowrap",
+        "color": "rgb(0, 230, 118)"
+      }
+    ],
+    "reassurance": "You'll keep all your current members and pool data.",
+    "trust": "One-time payment | No subscription | Secure payment, no hidden fees",
+    "trustHasShield": false,
+    "cardBg": "rgb(20, 20, 20)",
+    "cardHasGreenEra": false,
+    "muchMore": {
+      "text": "+ much more!",
+      "fontFamily": "Teko, \"Teko Fallback\", \"Arial Narrow\", \"Helvetica Neue Condensed Bold\", ui-sans-serif, system-ui, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "600",
+      "fontStyle": "normal"
+    },
+    "featureFace": {
+      "fontFamily": "Teko, \"Teko Fallback\", \"Arial Narrow\", \"Helvetica Neue Condensed Bold\", ui-sans-serif, system-ui, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "600"
+    },
+    "order": {
+      "card": 417,
+      "reassurance": 737,
+      "cta": 767,
+      "trust": 825
+    }
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool",
+    "cardBg": "rgb(20, 20, 20)",
+    "cardText": "Custom Pool$9.99one-timePay once. Keep all Custom Pool features for this pool.One-time payment | No subscription | Keep "
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev10-390.png"
+}

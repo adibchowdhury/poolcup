@@ -87,6 +87,7 @@ export async function POST(_request: Request, context: Ctx) {
   }
 
   const settingsUrl = `${siteUrl}/pool/${encodeURIComponent(inviteCode)}/settings`
+  const upgradeUrl = `${siteUrl}/pool/${encodeURIComponent(inviteCode)}/upgrade`
 
   try {
     const customerId = await getOrCreateStripeCustomer(user)
@@ -103,7 +104,7 @@ export async function POST(_request: Request, context: Ctx) {
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${settingsUrl}?upgraded=1`,
-      cancel_url: settingsUrl,
+      cancel_url: upgradeUrl,
       metadata,
     })
 

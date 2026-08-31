@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import {
   ClassicRoundTabs,
   type ClassicRoundTabId,
@@ -48,7 +48,15 @@ import { cn } from '@/lib/utils'
 import { ClassicR32PreviewTab } from '@/components/predict/classic-r32-preview-tab'
 import { MatchLifecycleSections } from '@/components/predict/match-lifecycle-sections'
 import { MatchesTabGroupHeader } from '@/components/dashboard/matches-tab-grouped-sections'
-import { buildDateHorizonGroups } from '@/src/lib/matches-tab-date-groups'
+import {
+  buildDateHorizonGroups,
+  buildKickoffDayGroups,
+} from '@/src/lib/matches-tab-date-groups'
+import {
+  buildEndedTournamentStageGroups,
+  formatEndedStageMeta,
+  isEndedTournamentPredictions,
+} from '@/src/lib/ended-tournament-stage-groups'
 import {
   Select,
   SelectContent,
@@ -121,6 +129,82 @@ function matchesStatusFilter(
   if (filter === 'completed') return completed
   if (filter === 'unpicked') return !completed && !hasPick
   return !completed && hasPick
+}
+
+function toggleExpandedId(prev: Set<string>, id: string): Set<string> {
+  const next = new Set(prev)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  return next
+}
+
+/** Group Stage only: date-horizon sub-collapse inside an expanded stage. */
+function GroupStageDateNestedList({
+  matches,
+  renderPredictionCard,
+  gridClassName,
+}: {
+  matches: UserPoolPrediction[]
+  renderPredictionCard: (prediction: UserPoolPrediction) => ReactNode
+  gridClassName: string
+}) {
+  const dateHorizonGroups = useMemo(
+    () =>
+      buildKickoffDayGroups(matches, {
+        getKickoffAt: (prediction) => prediction.kickoffAt,
+        newestFirst: true,
+      }),
+    [matches],
+  )
+
+  const dateGroupIdsKey = useMemo(
+    () => dateHorizonGroups.map((group) => group.id).join('\0'),
+    [dateHorizonGroups],
+  )
+
+  const [expandedDateGroupIds, setExpandedDateGroupIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+
+  useEffect(() => {
+    const firstId = dateGroupIdsKey ? dateGroupIdsKey.split('\0')[0] : null
+    setExpandedDateGroupIds(firstId ? new Set([firstId]) : new Set())
+  }, [dateGroupIdsKey])
+
+  if (dateHorizonGroups.length === 0) return null
+
+  return (
+    <div className="space-y-5">
+      {dateHorizonGroups.map((group) => {
+        const isExpanded = expandedDateGroupIds.has(group.id)
+        return (
+          <section key={group.id} aria-label={group.label} className="min-w-0">
+            <MatchesTabGroupHeader
+              label={group.label}
+              count={group.matches.length}
+              showLiveDot={group.showLiveDot}
+              showCount={false}
+              expanded={isExpanded}
+              onToggle={() => {
+                setExpandedDateGroupIds((prev) =>
+                  toggleExpandedId(prev, group.id),
+                )
+              }}
+            />
+            {isExpanded ? (
+              <div className={gridClassName}>
+                {group.matches.map((prediction) => (
+                  <div key={prediction.matchId} className="min-w-0">
+                    {renderPredictionCard(prediction)}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        )
+      })}
+    </div>
+  )
 }
 
 function ClassicStageSaveBar({
@@ -234,6 +318,11 @@ export function YourPredictionsSection({
       isTournamentStyleMatches(classicPredictions),
     [classicPredictions],
   )
+  /** Branch: ended-event stage recap vs live date-first / lifecycle grouping. */
+  const endedTournamentRecap = useMemo(
+    () => isEndedTournamentPredictions(classicPredictions),
+    [classicPredictions],
+  )
   const mixedPlayoffMode = useMemo(
     () =>
       classicPredictions.length > 0 &&
@@ -313,12 +402,15 @@ export function YourPredictionsSection({
             isSeasonFlatRound(prediction.round),
           )
     }
+    // Ended recap: all stages at once (stage headers replace ClassicRoundTabs).
+    if (endedTournamentRecap) return classicPredictions
     return classicPredictions.filter((prediction) =>
       matchInClassicRoundTab(prediction.round, activeRoundTab),
     )
   }, [
     activeRoundTab,
     classicPredictions,
+    endedTournamentRecap,
     mixedPlayoffMode,
     seasonMode,
     seasonPlayoffPhase,
@@ -413,13 +505,32 @@ export function YourPredictionsSection({
     [statusFilteredPredictions],
   )
 
+  const endedStageGroups = useMemo(() => {
+    if (!endedTournamentRecap) return []
+    const groups = buildEndedTournamentStageGroups(statusFilteredPredictions, {
+      hasPick: predictionHasPick,
+    })
+    return groups.map((group) => ({
+      ...group,
+      matches: sortClassicPredictions(group.matches, classicSortMode),
+    }))
+  }, [classicSortMode, endedTournamentRecap, statusFilteredPredictions])
+
   const dateGroupIdsKey = useMemo(
     () => dateHorizonGroups.map((group) => group.id).join('\0'),
     [dateHorizonGroups],
   )
 
+  const endedStageIdsKey = useMemo(
+    () => endedStageGroups.map((group) => group.id).join('\0'),
+    [endedStageGroups],
+  )
+
   /** Per-visit defaults: first group expanded, rest collapsed. No persistence. */
   const [expandedDateGroupIds, setExpandedDateGroupIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [expandedStageIds, setExpandedStageIds] = useState<Set<string>>(
     () => new Set(),
   )
 
@@ -427,6 +538,11 @@ export function YourPredictionsSection({
     const firstId = dateGroupIdsKey ? dateGroupIdsKey.split('\0')[0] : null
     setExpandedDateGroupIds(firstId ? new Set([firstId]) : new Set())
   }, [dateGroupIdsKey])
+
+  useEffect(() => {
+    const firstId = endedStageIdsKey ? endedStageIdsKey.split('\0')[0] : null
+    setExpandedStageIds(firstId ? new Set([firstId]) : new Set())
+  }, [endedStageIdsKey])
 
   const [saveBarVisible, setSaveBarVisible] = useState(false)
 
@@ -475,12 +591,9 @@ export function YourPredictionsSection({
                 showCount={false}
                 expanded={isExpanded}
                 onToggle={() => {
-                  setExpandedDateGroupIds((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(group.id)) next.delete(group.id)
-                    else next.add(group.id)
-                    return next
-                  })
+                  setExpandedDateGroupIds((prev) =>
+                    toggleExpandedId(prev, group.id),
+                  )
                 }}
               />
               {isExpanded ? (
@@ -491,6 +604,56 @@ export function YourPredictionsSection({
                     </div>
                   ))}
                 </div>
+              ) : null}
+            </section>
+          )
+        })}
+      </div>
+    ) : null
+
+  const predictionsCardGridClassName = isLgUp
+    ? 'pool-predictions-desktop-grid grid min-w-0 items-start'
+    : matchListClassName
+
+  /** Shared ended-event list (mobile + desktop) — stage-first, not viewport-forked. */
+  const endedStageGroupedList =
+    endedStageGroups.length > 0 ? (
+      <div className="space-y-6 lg:space-y-8">
+        {endedStageGroups.map((group) => {
+          const isExpanded = expandedStageIds.has(group.id)
+          return (
+            <section key={group.id} aria-label={group.label} className="min-w-0">
+              <MatchesTabGroupHeader
+                label={group.label}
+                count={group.matches.length}
+                showCount={false}
+                meta={formatEndedStageMeta(
+                  group.matches.length,
+                  group.userPoints,
+                )}
+                expanded={isExpanded}
+                onToggle={() => {
+                  setExpandedStageIds((prev) =>
+                    toggleExpandedId(prev, group.id),
+                  )
+                }}
+              />
+              {isExpanded ? (
+                group.nestDateGroups ? (
+                  <GroupStageDateNestedList
+                    matches={group.matches}
+                    renderPredictionCard={renderPredictionCard}
+                    gridClassName={predictionsCardGridClassName}
+                  />
+                ) : (
+                  <div className={predictionsCardGridClassName}>
+                    {group.matches.map((prediction) => (
+                      <div key={prediction.matchId} className="min-w-0">
+                        {renderPredictionCard(prediction)}
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : null}
             </section>
           )
@@ -576,7 +739,7 @@ export function YourPredictionsSection({
         </div>
       ) : null}
 
-      {hasClassicContent && !seasonMode && !mixedPlayoffMode ? (
+      {hasClassicContent && !seasonMode && !mixedPlayoffMode && !endedTournamentRecap ? (
         <div className="mb-4 min-w-0">
           <ClassicRoundTabs
             activeId={activeRoundTab}
@@ -615,6 +778,12 @@ export function YourPredictionsSection({
               ? 'No playoff matches scheduled yet.'
               : 'No matches in this filter.'}
           </p>
+        ) : endedTournamentRecap ? (
+          <p className="rounded-2xl border border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
+            {statusFilter === 'all'
+              ? 'No matches scheduled yet.'
+              : 'No matches in this filter.'}
+          </p>
         ) : activeRoundTab === 'r32' && statusFilter === 'all' ? (
           <ClassicR32PreviewTab />
         ) : (
@@ -624,6 +793,8 @@ export function YourPredictionsSection({
               : 'No matches in this filter.'}
           </p>
         )
+      ) : endedTournamentRecap ? (
+        endedStageGroupedList
       ) : mixedPlayoffMode && seasonPlayoffPhase === 'playoffs' ? (
         isLgUp ? (
           desktopDateGroupedList

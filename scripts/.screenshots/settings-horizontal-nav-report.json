@@ -1,0 +1,75 @@
+[
+  {
+    "invite": "617c79ba",
+    "sectionSlug": "details",
+    "label": "workspace",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-horizontal-workspace-details-1440.png",
+    "dialogPresent": false,
+    "legacySidebarPresent": false,
+    "hasPrimaryNav": true,
+    "hasPillRow": true,
+    "headingText": "Pool Settings",
+    "settingsNavActive": "Settings",
+    "workspaceBg": "rgb(23, 23, 23)",
+    "lockedCount": 1,
+    "locked": [
+      "Pool branding — Custom Pool feature, locked"
+    ]
+  },
+  {
+    "invite": "617c79ba",
+    "sectionSlug": "danger",
+    "label": "danger-basic",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-horizontal-danger-basic-danger-1440.png",
+    "dialogPresent": false,
+    "legacySidebarPresent": false,
+    "hasPrimaryNav": true,
+    "hasPillRow": true,
+    "headingText": "Pool Settings",
+    "settingsNavActive": "Settings",
+    "workspaceBg": "rgb(23, 23, 23)",
+    "lockedCount": 0,
+    "locked": []
+  },
+  {
+    "invite": "617c79ba",
+    "sectionSlug": "commissioner",
+    "label": "locked-basic",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-horizontal-locked-basic-commissioner-1440.png",
+    "dialogPresent": false,
+    "legacySidebarPresent": false,
+    "hasPrimaryNav": true,
+    "hasPillRow": true,
+    "headingText": "Pool Settings",
+    "settingsNavActive": "Settings",
+    "workspaceBg": "rgb(23, 23, 23)",
+    "lockedCount": 4,
+    "locked": [
+      "Exports — Custom Pool feature, locked",
+      "Co-commissioners — Custom Pool feature, locked",
+      "Members missing predictions — Custom Pool feature, locked",
+      "Moderation log — Custom Pool feature, locked"
+    ]
+  },
+  {
+    "invite": "617c79ba",
+    "sectionSlug": "details",
+    "label": "workspace",
+    "width": 1920,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-horizontal-workspace-details-1920.png",
+    "dialogPresent": false,
+    "legacySidebarPresent": false,
+    "hasPrimaryNav": true,
+    "hasPillRow": true,
+    "headingText": "Pool Settings",
+    "settingsNavActive": "Settings",
+    "workspaceBg": "rgb(23, 23, 23)",
+    "lockedCount": 1,
+    "locked": [
+      "Pool branding — Custom Pool feature, locked"
+    ]
+  }
+]

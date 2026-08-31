@@ -10,6 +10,8 @@ import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 export type PoolSettingsPageData = {
   inviteCode: string
   poolId: string
+  /** pools.created_at — sidebar Kickoff row on desktop shell. */
+  createdAt: string | null
   poolName: string
   poolDescription: string | null
   poolThemeColor: string | null
@@ -53,6 +55,7 @@ type PoolRow = {
   description: string | null
   invite_code: string
   creator_id: string
+  created_at: string | null
   scoring_style: string
   accepting_members: boolean | null
   is_public: boolean | null
@@ -114,7 +117,7 @@ export async function assertPoolSettingsAccess(
   const { data: poolData } = await admin
     .from('pools')
     .select(
-      'id, name, description, invite_code, creator_id, scoring_style, accepting_members, is_public, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
+      'id, name, description, invite_code, creator_id, created_at, scoring_style, accepting_members, is_public, avatar, emblem_url, theme_color, event_id, score_exact_points, score_winner_points, score_draw_points, scoring_locked_at',
     )
     .eq('invite_code', inviteCode)
     .maybeSingle()
@@ -245,6 +248,7 @@ export async function loadPoolSettingsPageData(
     data: {
       inviteCode: pool.invite_code,
       poolId: pool.id,
+      createdAt: pool.created_at ?? null,
       poolName: pool.name,
       poolDescription:
         typeof pool.description === 'string' ? pool.description : null,

@@ -18,6 +18,7 @@ import { UserProfileLink } from '@/components/user-profile-link'
 import { LoginPanelConfetti, LEADERBOARD_PODIUM_CONFETTI_X_RANGE } from '@/components/auth/login-panel-confetti'
 import { TeamFlagImage } from '@/components/predict/team-flag-image'
 import { POOL_LEADERBOARD_DESKTOP_CONTENT_RAIL_CLASS } from '@/components/pool/pool-desktop-top-bar'
+import { POOL_DESKTOP_CANVAS_CLASS } from '@/src/lib/dashboard-surfaces'
 
 const CLIMB_STREAK_FIRE_MIN = 3
 
@@ -818,7 +819,7 @@ export function PoolLeaderboardStandings({
     <div
       className={cn(
         'flex min-h-0 flex-1 flex-col',
-        compact ? 'bg-transparent' : 'bg-app-background',
+        compact ? 'bg-transparent' : POOL_DESKTOP_CANVAS_CLASS,
         className,
       )}
     >
@@ -873,7 +874,8 @@ export function PoolLeaderboardStandings({
             compact
               ? 'mt-2 overflow-hidden rounded-lg bg-black/25'
               : cn(
-                  'mt-5 rounded-t-[2rem] bg-app-background sm:rounded-t-[2.5rem]',
+                  'mt-5 rounded-t-[2rem] sm:rounded-t-[2.5rem]',
+                  POOL_DESKTOP_CANVAS_CLASS,
                   // Desktop: shared rail so card edges match top bar + podium
                   'lg:mt-5 lg:rounded-none lg:bg-transparent',
                   POOL_LEADERBOARD_DESKTOP_CONTENT_RAIL_CLASS,
@@ -930,7 +932,7 @@ export function PoolLeaderboardStandings({
           </ul>
           {!compact ? (
             <div
-              className="min-h-0 flex-1 bg-app-background lg:hidden"
+              className={cn('min-h-0 flex-1 lg:hidden', POOL_DESKTOP_CANVAS_CLASS)}
               aria-hidden
             />
           ) : null}

@@ -63,10 +63,13 @@ export function PoolSettingsSectionPane({
   sectionId,
   tabProps,
   onBackToHub,
+  hideSectionHeading = false,
 }: {
   sectionId: PoolSettingsSectionId
   tabProps: PoolSettingsTabProps
   onBackToHub?: () => void
+  /** Desktop horizontal nav shows category title — omit duplicate heading. */
+  hideSectionHeading?: boolean
 }) {
   const section = POOL_SETTINGS_SECTIONS.find((row) => row.id === sectionId)
   if (!section) return null
@@ -77,17 +80,19 @@ export function PoolSettingsSectionPane({
       {onBackToHub ? (
         <SettingsBackControl onClick={onBackToHub} label="Settings menu" />
       ) : null}
-      <div>
-        <h2
-          className={cn(
-            'font-display text-2xl tracking-wide',
-            section.destructive ? 'text-destructive' : 'text-foreground',
-          )}
-        >
-          {section.title}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{section.subtitle}</p>
-      </div>
+      {!hideSectionHeading ? (
+        <div>
+          <h2
+            className={cn(
+              'font-display text-2xl tracking-wide',
+              section.destructive ? 'text-destructive' : 'text-foreground',
+            )}
+          >
+            {section.title}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{section.subtitle}</p>
+        </div>
+      ) : null}
       <SectionScreen {...tabProps} />
     </div>
   )
@@ -95,7 +100,7 @@ export function PoolSettingsSectionPane({
 
 /**
  * Mobile settings hub + per-section screens. Desktop uses
- * PoolSettingsDesktopLayout inside the modal instead.
+ * PoolSettingsDesktopLayout on `/pool/{invite}/settings/{section}`.
  */
 export function PoolSettingsHub({
   section = null,

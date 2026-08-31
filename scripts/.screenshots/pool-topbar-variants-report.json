@@ -1,0 +1,55 @@
+[
+  {
+    "label": "predictions",
+    "width": 1440,
+    "tabName": "Predictions",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-predictions-1440.png",
+    "barPresent": true,
+    "h1Text": "Test Pool Bundesliga 2026",
+    "h1Font": "Teko, \"Teko Fallback\", \"Arial Narrow\", \"Helvetica Neue Condensed Bold\", ui-sans-serif, system-ui, sans-serif",
+    "hasGearIcon": false,
+    "hasAvatar": false,
+    "metaText": "Score Predictor·1 member·Private pool",
+    "duplicateWorkspaceHeader": false,
+    "reportPresent": true,
+    "invitePresent": true
+  },
+  {
+    "label": "leaderboard",
+    "width": 1440,
+    "tabName": "Leaderboard",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-leaderboard-1440.png",
+    "barPresent": true,
+    "h1Text": "Test Pool Bundesliga 2026",
+    "h1Font": "Teko, \"Teko Fallback\", \"Arial Narrow\", \"Helvetica Neue Condensed Bold\", ui-sans-serif, system-ui, sans-serif",
+    "hasGearIcon": false,
+    "hasAvatar": false,
+    "metaText": "Score Predictor·1 member·Private pool",
+    "duplicateWorkspaceHeader": false,
+    "reportPresent": true,
+    "invitePresent": true
+  },
+  {
+    "label": "settings",
+    "width": 1440,
+    "tabName": "Settings",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-settings-1440.png",
+    "barPresent": true,
+    "h1Text": "Pool Settings",
+    "h1Font": "Teko, \"Teko Fallback\", \"Arial Narrow\", \"Helvetica Neue Condensed Bold\", ui-sans-serif, system-ui, sans-serif",
+    "hasGearIcon": true,
+    "hasAvatar": false,
+    "metaText": "Score Predictor·1 member·Private pool",
+    "duplicateWorkspaceHeader": false,
+    "reportPresent": true,
+    "invitePresent": true
+  },
+  {
+    "label": "mobile-settings",
+    "width": 390,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-topbar-mobile-settings-390.png",
+    "desktopBarVisible": false,
+    "desktopBarDisplay": "none",
+    "mobileTabBar": true
+  }
+]

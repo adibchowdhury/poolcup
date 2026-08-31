@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "tall": {
+    "label": "390x844",
+    "width": 390,
+    "height": 844,
+    "metrics": {
+      "sheetH": 844,
+      "scrollHeight": 844,
+      "clientHeight": 844,
+      "scrollable": false,
+      "stackMinH100dvh": true,
+      "flexSpacerCount": 4,
+      "sparklesInTitleZone": true,
+      "sparklesOverlapCrown": false,
+      "sparkleCount": 6
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-390x844.png"
+  },
+  "short": {
+    "label": "390x700",
+    "width": 390,
+    "height": 700,
+    "metrics": {
+      "sheetH": 700,
+      "scrollHeight": 776,
+      "clientHeight": 700,
+      "scrollable": true,
+      "stackMinH100dvh": true,
+      "flexSpacerCount": 4,
+      "sparklesInTitleZone": true,
+      "sparklesOverlapCrown": false,
+      "sparkleCount": 6
+    },
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-390x700.png"
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool"
+  }
+}

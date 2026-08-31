@@ -1,0 +1,72 @@
+{
+  "desktop": {
+    "dashboard": {
+      "path": "/dashboard",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-dashboard-1440.png",
+      "probes": {
+        "canvas": "#0d0d0d",
+        "main": "#000000",
+        "hubSidebar": "#171717",
+        "poolSidebar": null
+      }
+    },
+    "pool-home": {
+      "path": "/pool/617c79ba/home",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-home-1440.png",
+      "probes": {
+        "canvas": "#131313",
+        "main": "#0d0d0d",
+        "hubSidebar": null,
+        "poolSidebar": "#171717"
+      }
+    },
+    "pool-predictions": {
+      "path": "/pool/617c79ba?tab=predictions",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-predictions-1440.png",
+      "probes": {
+        "canvas": "#131313",
+        "main": "#0d0d0d",
+        "hubSidebar": null,
+        "poolSidebar": "#171717"
+      }
+    },
+    "pool-leaderboard": {
+      "path": "/pool/617c79ba?tab=leaderboard",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-leaderboard-1440.png",
+      "probes": {
+        "canvas": "#131313",
+        "main": "#0d0d0d",
+        "hubSidebar": null,
+        "poolSidebar": "#171717"
+      }
+    },
+    "pool-settings": {
+      "path": "/pool/617c79ba/settings/details",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-settings-1440.png",
+      "probes": {
+        "canvas": "#131313",
+        "main": "#0d0d0d",
+        "hubSidebar": null,
+        "poolSidebar": "#171717"
+      }
+    },
+    "pool-upgrade": {
+      "path": "/pool/617c79ba/upgrade",
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-upgrade-1440.png",
+      "probes": {
+        "canvas": "#131313",
+        "main": "#0d0d0d",
+        "hubSidebar": null,
+        "poolSidebar": "#171717"
+      }
+    }
+  },
+  "mobile": {
+    "pool-home-mobile": {
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-home-mobile.png"
+    },
+    "pool-predictions-mobile": {
+      "screenshot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\canvas-unify-pool-predictions-mobile.png"
+    }
+  }
+}

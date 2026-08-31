@@ -1,0 +1,30 @@
+{
+  "probe": {
+    "crownTop": 16,
+    "cardWidth": 280,
+    "cardHeight": 236,
+    "ctaWidth": 358,
+    "featuresToCardGap": 24,
+    "cardHasInternalBenefits": false,
+    "cardHasPayOnce": true,
+    "trust": "One-time payment | No subscription | No hidden fees",
+    "order": {
+      "card": 452,
+      "cta": 752,
+      "trust": 810
+    }
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "cardHasBenefitsRow": true,
+    "benefitsSnippet": "One-time payment | No subscription | Keep forever",
+    "cardWidth": 576
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev11-390.png",
+  "expected": {
+    "oldCardWidthApprox": 358,
+    "newCardWidth": 280,
+    "stackTopShiftPx": 16,
+    "featuresToCardGapPx": 24
+  }
+}

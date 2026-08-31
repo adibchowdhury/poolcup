@@ -50,8 +50,9 @@ function pathnameHasInlineDesktopReportIssue(pathname: string): boolean {
   ) {
     return true
   }
-  // Pool home + settings + predict headers (not print / other orphans).
+  // Pool shell pages — PoolDesktopTopBar owns Report issue on desktop.
   if (/^\/pool\/[^/]+$/.test(pathname)) return true
+  if (/^\/pool\/[^/]+\/home\/?$/.test(pathname)) return true
   if (/^\/pool\/[^/]+\/settings(\/|$)/.test(pathname)) return true
   if (/^\/pool\/[^/]+\/predict\/?$/.test(pathname)) return true
   if (pathname.startsWith('/match/')) return true
@@ -106,6 +107,8 @@ function LoggedInDesktopReportIssueFixed() {
   if (!user) return null
   if (isSkippedPublicPath(pathname)) return null
   if (pathnameHasInlineDesktopReportIssue(pathname)) return null
+  // Upgrade uses minimal chrome — no Report issue control.
+  if (/^\/pool\/[^/]+\/upgrade\/?$/.test(pathname)) return null
 
   return (
     <div className="pointer-events-none fixed right-4 top-3.5 z-[200] hidden lg:block">

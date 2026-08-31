@@ -1,0 +1,63 @@
+{
+  "ok": true,
+  "desktop": {
+    "entry": "locked-link",
+    "sidebarEntry": "locked-link",
+    "fromSettings": {
+      "pathname": "/pool/617c79ba/settings/commissioner",
+      "search": "?sub=commissioner-exports",
+      "sheetOpen": false,
+      "crownMobile": false,
+      "desktopCrown": false,
+      "heading": "Pool Settings",
+      "faqPill": false
+    },
+    "fromSidebar": {
+      "pathname": "/pool/617c79ba/upgrade",
+      "search": "",
+      "sheetOpen": false,
+      "crownMobile": false,
+      "desktopCrown": true,
+      "heading": "Upgrade Your Pool",
+      "faqPill": true
+    },
+    "direct": {
+      "pathname": "/pool/617c79ba/upgrade",
+      "search": "",
+      "sheetOpen": false,
+      "crownMobile": false,
+      "desktopCrown": true,
+      "heading": "Upgrade Your Pool",
+      "faqPill": true
+    },
+    "shots": {
+      "shotSettings": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-branch-desktop-1440-from-settings.png",
+      "shotDirect": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-branch-desktop-1440-direct.png"
+    }
+  },
+  "mobile": {
+    "entry": "locked-link",
+    "fromLocked": {
+      "pathname": "/pool/617c79ba",
+      "search": "?tab=settings&upgrade=1",
+      "sheetOpen": true,
+      "crownMobile": true,
+      "desktopCrown": true,
+      "heading": "Test Pool Bundesliga 2026",
+      "faqPill": true
+    },
+    "direct": {
+      "pathname": "/pool/617c79ba",
+      "search": "?tab=settings&upgrade=1",
+      "sheetOpen": true,
+      "crownMobile": true,
+      "desktopCrown": true,
+      "heading": "Test Pool Bundesliga 2026",
+      "faqPill": true
+    },
+    "shots": {
+      "shotLocked": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-branch-mobile-390-from-locked.png",
+      "shotDirect": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-branch-mobile-390-direct.png"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+[
+  {
+    "view": "default",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-default-1440.png",
+    "pathname": "/pool/617c79ba",
+    "search": "",
+    "activeSidebarText": "Predictions",
+    "contentHeading": "Next Week",
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "default"
+  },
+  {
+    "view": "home",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-home-1440.png",
+    "pathname": "/pool/617c79ba/home",
+    "search": "",
+    "activeSidebarText": "Home",
+    "contentHeading": "Pool Home",
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "home"
+  },
+  {
+    "view": "predictions",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-predictions-1440.png",
+    "pathname": "/pool/617c79ba",
+    "search": "?tab=predictions",
+    "activeSidebarText": "Predictions",
+    "contentHeading": "Next Week",
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "predictions"
+  },
+  {
+    "view": "leaderboard",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-leaderboard-1440.png",
+    "pathname": "/pool/617c79ba",
+    "search": "?tab=leaderboard",
+    "activeSidebarText": "Leaderboard",
+    "contentHeading": null,
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "leaderboard"
+  },
+  {
+    "view": "settings",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-settings-1440.png",
+    "pathname": "/pool/617c79ba/settings/details",
+    "search": "?sub=details-pool-type",
+    "activeSidebarText": "Settings",
+    "contentHeading": null,
+    "barTitle": "Pool Settings",
+    "viewName": "settings"
+  },
+  {
+    "view": "home-refresh",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-home-refresh-1440.png",
+    "pathname": "/pool/617c79ba/home",
+    "search": "",
+    "activeSidebarText": "Home",
+    "contentHeading": "Pool Home",
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "home-refresh"
+  },
+  {
+    "view": "home",
+    "width": 390,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-home-shell-home-390.png",
+    "pathname": "/pool/617c79ba",
+    "search": "?tab=predictions",
+    "activeSidebarText": "Home",
+    "contentHeading": "Pool Home",
+    "barTitle": "Test Pool Bundesliga 2026",
+    "viewName": "home"
+  }
+]

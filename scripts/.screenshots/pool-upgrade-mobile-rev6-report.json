@@ -1,0 +1,22 @@
+{
+  "probe": {
+    "closeW": 44,
+    "closeH": 44,
+    "closeBg": "rgb(74, 74, 74)",
+    "closeIconSize": 24,
+    "featuresDisplay": "flex",
+    "featuresWidth": 127,
+    "featureColor": "rgb(150, 162, 157)",
+    "trustColor": "rgb(150, 162, 157)",
+    "reassuranceColor": "rgb(150, 162, 157)",
+    "benefitsColor": "rgb(150, 162, 157)",
+    "cardBorder": "3px rgb(0, 0, 0)",
+    "cardOutline": "2px rgb(0, 230, 118) solid",
+    "ctaRadius": "3.35544e+07px"
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool"
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev6-390.png"
+}

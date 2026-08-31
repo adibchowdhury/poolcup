@@ -1,0 +1,21 @@
+{
+  "probe": {
+    "titleFontSize": "34px",
+    "featureFontSize": "16px",
+    "featureColor": "rgb(207, 212, 209)",
+    "featureIconSize": 24,
+    "cardPadding": "16px",
+    "order": {
+      "card": 466,
+      "reassurance": 687,
+      "cta": 738,
+      "trust": 804
+    },
+    "reassuranceAboveCta": true
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool"
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev9-390.png"
+}

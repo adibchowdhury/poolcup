@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { poolSettingsTabPath } from '@/src/lib/pool-settings-nav'
+import { poolSettingsPath } from '@/src/lib/pool-settings-nav'
 
 export const runtime = 'nodejs'
 
@@ -8,12 +8,12 @@ type PageProps = {
   searchParams: Promise<{ section?: string | string[] }>
 }
 
-export default async function PoolSettingsHubRedirect({
+export default async function PoolSettingsHubPage({
   params,
   searchParams,
 }: PageProps) {
   const { invite_code: inviteCode } = await params
   const query = await searchParams
   const section = Array.isArray(query.section) ? query.section[0] : query.section
-  redirect(poolSettingsTabPath(inviteCode, section))
+  redirect(poolSettingsPath(inviteCode, section ?? 'details'))
 }

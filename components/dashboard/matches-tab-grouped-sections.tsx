@@ -28,6 +28,8 @@ export function MatchesTabGroupHeader({
   trailing,
   className,
   showCount = true,
+  /** Mono recap line (e.g. “72 matches · You scored 61 pts”); replaces default count. */
+  meta,
   expanded,
   onToggle,
 }: {
@@ -38,6 +40,7 @@ export function MatchesTabGroupHeader({
   className?: string
   /** When false, hides the “N matches” count (e.g. predictions desktop). Default true. */
   showCount?: boolean
+  meta?: string
   /** Controlled expand state when `onToggle` is provided. */
   expanded?: boolean
   /** Makes the header a toggle control with chevron (app convention). */
@@ -46,6 +49,7 @@ export function MatchesTabGroupHeader({
   const countLabel = count === 1 ? '1 match' : `${count} matches`
   const collapsible = typeof onToggle === 'function'
   const isExpanded = expanded ?? true
+  const metaText = meta ?? (showCount ? countLabel : null)
 
   const inner = (
     <>
@@ -62,9 +66,16 @@ export function MatchesTabGroupHeader({
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-2 pb-0.5">
-          {showCount ? (
-            <span className="text-xs font-medium tabular-nums text-muted-foreground">
-              {countLabel}
+          {metaText ? (
+            <span
+              className={cn(
+                'tabular-nums text-muted-foreground',
+                meta
+                  ? 'font-mono text-[11px] font-medium tracking-tight sm:text-xs'
+                  : 'text-xs font-medium',
+              )}
+            >
+              {metaText}
             </span>
           ) : null}
           {collapsible ? (

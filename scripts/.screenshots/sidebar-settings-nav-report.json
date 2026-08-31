@@ -1,0 +1,31 @@
+[
+  {
+    "path": "/pool/617c79ba?tab=predictions",
+    "label": "predictions",
+    "file": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\sidebar-settings-nav-predictions-1440.png",
+    "poolNavItems": [
+      "Predictions",
+      "Leaderboard",
+      "Settings"
+    ],
+    "activeNav": null,
+    "topBarSettingsPresent": true,
+    "topBarActions": [
+      "Report issue",
+      "Invite"
+    ]
+  },
+  {
+    "path": "/pool/617c79ba/settings/details",
+    "label": "settings-active",
+    "file": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\sidebar-settings-nav-settings-active-1440.png",
+    "poolNavItems": [
+      "Predictions",
+      "Leaderboard",
+      "Settings"
+    ],
+    "activeNav": "Settings",
+    "topBarSettingsPresent": false,
+    "topBarActions": []
+  }
+]

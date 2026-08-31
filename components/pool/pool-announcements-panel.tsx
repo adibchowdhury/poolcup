@@ -40,6 +40,8 @@ type Props = {
   className?: string
   /** Compact member-facing list without composer. */
   showComposer?: boolean
+  /** Skip fetch; show empty default UI (locked Basic preview). */
+  previewOnly?: boolean
 }
 
 function formatWhen(iso: string) {
@@ -55,10 +57,11 @@ export function PoolAnnouncementsPanel({
   onBannerChange,
   className,
   showComposer = isAdmin,
+  previewOnly = false,
 }: Props) {
   const formId = useId()
   const [rows, setRows] = useState<PoolAnnouncement[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!previewOnly)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [posting, setPosting] = useState(false)
@@ -98,8 +101,14 @@ export function PoolAnnouncementsPanel({
   }, [poolId])
 
   useEffect(() => {
+    if (previewOnly) {
+      setRows([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     void load()
-  }, [load])
+  }, [load, previewOnly])
 
   async function handlePost() {
     if (!isAdmin || posting) return

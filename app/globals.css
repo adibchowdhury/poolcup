@@ -2531,8 +2531,7 @@ html.create-mode-dashboard-restore [data-hub-shell] {
 
 /*
  * Pucky login composition: TOP-OF-FORM-PANEL OVERLAY.
- * Desktop: eyeless frame + tracked eyes (lg+).
- * Mobile: public/login_assets/pucky-login-frame.png (baked-in eyes, static).
+ * Both breakpoints: public/login_assets/pucky-login-frame.png (full baked art).
  *
  * --pucky-hand-y: fraction from asset top to hand contact line (measured).
  * --pucky-hand-overlap: how far hands sit onto the panel top (px).
@@ -2811,6 +2810,54 @@ html.create-mode-dashboard-restore [data-hub-shell] {
     opacity: 1;
     filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.55))
       drop-shadow(0 0 4px rgba(242, 201, 76, 0.35));
+  }
+}
+
+/* ===== Pool upgrade hero crown — glowless float (non-harmonic dual timers) ===== */
+.pool-upgrade-crown-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.pool-upgrade-crown-float {
+  width: 100%;
+  height: 100%;
+  animation: pool-upgrade-crown-float 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.pool-upgrade-crown-tilt {
+  width: 100%;
+  height: 100%;
+  animation: pool-upgrade-crown-tilt 4.9s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pool-upgrade-crown-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0);
+  }
+}
+
+@keyframes pool-upgrade-crown-tilt {
+  0%,
+  100% {
+    transform: rotate(-1.25deg);
+  }
+  50% {
+    transform: rotate(1.25deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-upgrade-crown-float,
+  .pool-upgrade-crown-tilt {
+    animation: none !important;
   }
 }
 

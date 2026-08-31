@@ -13,7 +13,8 @@ export const HUB_DESKTOP_CONTENT_GUTTER_CLASS = 'px-4 lg:px-6 xl:px-8'
 /** Fixed left sidebar width (~240–260px). */
 export const HUB_DESKTOP_SIDEBAR_WIDTH_CLASS = 'w-[250px]'
 
-/** Fixed sidebar surface — lg+ only; pairs with a matching width spacer. */
+/** Fixed sidebar surface — lg+ only; pairs with a matching width spacer.
+ *  Background/border hex values match `DESKTOP_SIDEBAR_BG` / `DESKTOP_SIDEBAR_BORDER`. */
 export const HUB_DESKTOP_SIDEBAR_CLASS =
   'fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#292929] bg-[#171717] lg:flex'
 

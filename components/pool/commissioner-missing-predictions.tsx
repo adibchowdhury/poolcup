@@ -16,6 +16,10 @@ type Props = {
   poolId: string
   inviteCode?: string
   poolName: string
+  /** Skip fetch; show empty default UI (locked Basic preview). */
+  previewOnly?: boolean
+  /** Omit the section heading (parent LockedFeatureSection owns it). */
+  hideHeading?: boolean
 }
 
 function pickString(row: MissingRow, ...keys: string[]) {
@@ -41,10 +45,12 @@ export function CommissionerMissingPredictions({
   poolId,
   inviteCode,
   poolName,
+  previewOnly = false,
+  hideHeading = false,
 }: Props) {
   const { user } = useAuth()
   const [rows, setRows] = useState<MissingRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!previewOnly)
   const [error, setError] = useState<string | null>(null)
   const viewedRef = useRef(false)
 
@@ -70,8 +76,14 @@ export function CommissionerMissingPredictions({
   }, [poolId])
 
   useEffect(() => {
+    if (previewOnly) {
+      setRows([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     void load()
-  }, [load])
+  }, [load, previewOnly])
 
   async function nudge() {
     if (!inviteCode) return
@@ -106,9 +118,13 @@ export function CommissionerMissingPredictions({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-display text-lg tracking-wide">
-          Missing predictions
-        </h3>
+        {hideHeading ? (
+          <span className="sr-only">Missing predictions</span>
+        ) : (
+          <h3 className="font-display text-lg tracking-wide">
+            Missing predictions
+          </h3>
+        )}
         {inviteCode ? (
           <Button
             type="button"

@@ -11,6 +11,10 @@ type LogRow = Record<string, unknown>
 
 type Props = {
   poolId: string
+  /** Skip fetch; show empty default UI (locked Basic preview). */
+  previewOnly?: boolean
+  /** Omit the section heading (parent LockedFeatureSection owns it). */
+  hideHeading?: boolean
 }
 
 function pickString(row: LogRow, ...keys: string[]) {
@@ -58,9 +62,13 @@ function formatTarget(row: LogRow) {
   )
 }
 
-export function CommissionerModerationLog({ poolId }: Props) {
+export function CommissionerModerationLog({
+  poolId,
+  previewOnly = false,
+  hideHeading = false,
+}: Props) {
   const [rows, setRows] = useState<LogRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!previewOnly)
   const [error, setError] = useState<string | null>(null)
   const viewedRef = useRef(false)
 
@@ -86,12 +94,20 @@ export function CommissionerModerationLog({ poolId }: Props) {
   }, [poolId])
 
   useEffect(() => {
+    if (previewOnly) {
+      setRows([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     void load()
-  }, [load])
+  }, [load, previewOnly])
 
   return (
     <section className="space-y-3">
-      <h3 className="font-display text-lg tracking-wide">Moderation history</h3>
+      {hideHeading ? null : (
+        <h3 className="font-display text-lg tracking-wide">Moderation history</h3>
+      )}
       <p className="text-xs text-muted-foreground">
         Removals, transfers, co-commissioner changes, edits, and open/close.
       </p>

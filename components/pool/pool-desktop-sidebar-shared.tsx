@@ -1,9 +1,9 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Loader2, Target, Trophy } from 'lucide-react'
-import { toast } from 'sonner'
+import { Home, Settings, Target, Trophy } from 'lucide-react'
 import { TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { PoolCupLogo } from '@/components/poolcup-logo'
@@ -14,8 +14,19 @@ import {
 } from '@/components/dashboard/hub-desktop-nav-frame'
 import { cn } from '@/lib/utils'
 import { FOCUS_VISIBLE_RING } from '@/src/lib/focus-visible'
-import { startCustomPoolCheckout } from '@/src/lib/custom-pool-checkout-client'
 import { DASHBOARD_TAB_HREFS } from '@/src/lib/mobile-bottom-nav-routes'
+import {
+  poolHomePath,
+  poolPagePath,
+  poolSettingsPath,
+} from '@/src/lib/pool-settings-nav'
+
+/** Active pool section for link-based sidebar nav (settings route). */
+export type PoolDesktopSidebarNavSection =
+  | 'home'
+  | 'predictions'
+  | 'leaderboard'
+  | 'settings'
 
 /** Shared section content inset — labels + body share this left edge (12px). */
 export const POOL_DESKTOP_SIDEBAR_SECTION_INSET_CLASS = 'px-3'
@@ -56,8 +67,105 @@ export function PoolDesktopSidebarLogo() {
   )
 }
 
-/** POOL nav — Predictions / Leaderboard TabsTriggers (parent Tabs required). */
-export function PoolDesktopSidebarPoolNav() {
+/** POOL nav — Predictions / Leaderboard / Settings TabsTriggers (parent Tabs on pool pages). */
+export function PoolDesktopSidebarPoolNav({
+  mode = 'tabs',
+  inviteCode,
+  activeNav,
+  onNavigate,
+  showSettings = true,
+}: {
+  mode?: 'tabs' | 'links'
+  inviteCode?: string
+  activeNav?: PoolDesktopSidebarNavSection
+  onNavigate?: (href: string) => void
+  /** When false, hide Settings (mirrors prior top-bar visibility). All members: true. */
+  showSettings?: boolean
+}) {
+  if (mode === 'links' && inviteCode) {
+    const allItems: {
+      key: PoolDesktopSidebarNavSection
+      href: string
+      label: string
+      icon: typeof Target
+    }[] = [
+      {
+        key: 'home',
+        href: poolHomePath(inviteCode),
+        label: 'Home',
+        icon: Home,
+      },
+      {
+        key: 'predictions',
+        href: `${poolPagePath(inviteCode)}?tab=predictions`,
+        label: 'Predictions',
+        icon: Target,
+      },
+      {
+        key: 'leaderboard',
+        href: `${poolPagePath(inviteCode)}?tab=leaderboard`,
+        label: 'Leaderboard',
+        icon: Trophy,
+      },
+      {
+        key: 'settings',
+        href: poolSettingsPath(inviteCode, 'details'),
+        label: 'Settings',
+        icon: Settings,
+      },
+    ]
+    const items = showSettings
+      ? allItems
+      : allItems.filter((item) => item.key !== 'settings')
+
+    return (
+      <div
+        className={cn(
+          'flex shrink-0 flex-col gap-0.5 pb-2 pt-2',
+          POOL_DESKTOP_SIDEBAR_SECTION_INSET_CLASS,
+        )}
+      >
+        <p className={poolDesktopSidebarSectionLabelClassName}>Pool</p>
+        <nav className="flex flex-col gap-0.5" aria-label="Pool sections">
+          {items.map((item) => {
+            const Icon = item.icon
+            const isActive = activeNav === item.key
+            const className = cn(
+              poolDesktopSidebarNavTriggerClassName,
+              isActive && 'desktop-sidebar-nav-active',
+            )
+            if (onNavigate) {
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onNavigate(item.href)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={className}
+                >
+                  <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                  <span className="min-w-0 truncate">{item.label}</span>
+                </button>
+              )
+            }
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                prefetch
+                aria-current={isActive ? 'page' : undefined}
+                className={className}
+              >
+                <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <span className="min-w-0 truncate">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -66,22 +174,40 @@ export function PoolDesktopSidebarPoolNav() {
       )}
     >
       <p className={poolDesktopSidebarSectionLabelClassName}>Pool</p>
-      <TabsList className="flex h-auto w-full flex-col gap-0.5 bg-transparent p-0">
-        <TabsTrigger
-          value="predictions"
-          className={poolDesktopSidebarNavTriggerClassName}
-        >
-          <Target className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-          <span className="min-w-0 truncate">Predictions</span>
-        </TabsTrigger>
-        <TabsTrigger
-          value="leaderboard"
-          className={poolDesktopSidebarNavTriggerClassName}
-        >
-          <Trophy className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-          <span className="min-w-0 truncate">Leaderboard</span>
-        </TabsTrigger>
-      </TabsList>
+      <nav className="flex flex-col gap-0.5" aria-label="Pool sections">
+        <TabsList className="flex h-auto w-full flex-col gap-0.5 bg-transparent p-0">
+          <TabsTrigger
+            value="home"
+            className={poolDesktopSidebarNavTriggerClassName}
+          >
+            <Home className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="min-w-0 truncate">Home</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="predictions"
+            className={poolDesktopSidebarNavTriggerClassName}
+          >
+            <Target className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="min-w-0 truncate">Predictions</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="leaderboard"
+            className={poolDesktopSidebarNavTriggerClassName}
+          >
+            <Trophy className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="min-w-0 truncate">Leaderboard</span>
+          </TabsTrigger>
+          {showSettings ? (
+            <TabsTrigger
+              value="settings"
+              className={poolDesktopSidebarNavTriggerClassName}
+            >
+              <Settings className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <span className="min-w-0 truncate">Settings</span>
+            </TabsTrigger>
+          ) : null}
+        </TabsList>
+      </nav>
     </div>
   )
 }
@@ -92,23 +218,20 @@ export function PoolDesktopSidebarPoolNav() {
  */
 export function PoolDesktopCommissionerCta({
   poolId,
+  poolHasCommissionerTools = false,
+  onNavigateUpgrade,
   compact = false,
 }: {
   poolId?: string
+  poolHasCommissionerTools?: boolean
+  onNavigateUpgrade?: () => void
   compact?: boolean
 }) {
-  const [upgradeBusy, setUpgradeBusy] = useState(false)
+  if (poolHasCommissionerTools) return null
 
-  async function handleUpgrade() {
-    if (!poolId || upgradeBusy) return
-    setUpgradeBusy(true)
-    const result = await startCustomPoolCheckout(poolId)
-    if (!result.ok) {
-      toast.error(result.error)
-      setUpgradeBusy(false)
-      return
-    }
-    window.location.href = result.url
+  function handleUpgrade() {
+    if (!poolId || !onNavigateUpgrade) return
+    onNavigateUpgrade()
   }
 
   const pucky = compact ? 64 : 96
@@ -160,25 +283,15 @@ export function PoolDesktopCommissionerCta({
           type="button"
           size="sm"
           variant="default"
-          disabled={!poolId || upgradeBusy}
-          onClick={() => void handleUpgrade()}
+          disabled={!poolId || !onNavigateUpgrade}
+          onClick={handleUpgrade}
           className={cn(
             'w-full px-2 text-[12px] font-semibold leading-none',
             compact ? 'mt-2 h-8' : 'mt-3.5 h-9',
             FOCUS_VISIBLE_RING,
           )}
         >
-          {upgradeBusy ? (
-            <>
-              <Loader2
-                className="mr-1.5 h-3.5 w-3.5 animate-spin"
-                aria-hidden
-              />
-              Starting…
-            </>
-          ) : (
-            'Upgrade to Commissioner'
-          )}
+          Upgrade to Custom Pool
         </Button>
       </div>
     </div>

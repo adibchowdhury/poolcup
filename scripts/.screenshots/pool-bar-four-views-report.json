@@ -1,0 +1,58 @@
+[
+  {
+    "view": "predictions",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-bar-predictions-1440.png",
+    "barCount": 1,
+    "visibleBarCount": 1,
+    "ariaLabel": "Pool page header",
+    "h1": "Test Pool Bundesliga 2026",
+    "hasGear": false,
+    "hasAvatar": false,
+    "reportPresent": true,
+    "invitePresent": true,
+    "upgradeBackLink": false
+  },
+  {
+    "view": "leaderboard",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-bar-leaderboard-1440.png",
+    "barCount": 1,
+    "visibleBarCount": 1,
+    "ariaLabel": "Pool page header",
+    "h1": "Test Pool Bundesliga 2026",
+    "hasGear": false,
+    "hasAvatar": false,
+    "reportPresent": true,
+    "invitePresent": true,
+    "upgradeBackLink": false
+  },
+  {
+    "view": "settings",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-bar-settings-1440.png",
+    "barCount": 1,
+    "visibleBarCount": 1,
+    "ariaLabel": "Pool settings header",
+    "h1": "Pool Settings",
+    "hasGear": true,
+    "hasAvatar": false,
+    "reportPresent": true,
+    "invitePresent": true,
+    "upgradeBackLink": false
+  },
+  {
+    "view": "upgrade",
+    "width": 1440,
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-bar-upgrade-1440.png",
+    "barCount": 0,
+    "visibleBarCount": 0,
+    "ariaLabel": null,
+    "h1": null,
+    "hasGear": false,
+    "hasAvatar": false,
+    "reportPresent": false,
+    "invitePresent": false,
+    "upgradeBackLink": true
+  }
+]

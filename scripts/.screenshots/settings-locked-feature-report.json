@@ -1,0 +1,61 @@
+[
+  {
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-workspace-1440.png"
+  },
+  {
+    "invite": "617c79ba",
+    "navTitle": "Commissioner Controls",
+    "label": "basic",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-locked-basic-commissioner-1440.png",
+    "dialogPresent": false,
+    "settingsNavActive": "Settings",
+    "locked": [
+      "Exports — Custom Pool feature, locked",
+      "Co-commissioners — Custom Pool feature, locked",
+      "Members missing predictions — Custom Pool feature, locked",
+      "Moderation log — Custom Pool feature, locked"
+    ],
+    "oldUpgradeCards": 0,
+    "quietUpgrades": 4,
+    "badges": [
+      "Custom Pool",
+      "Custom Pool",
+      "Custom Pool",
+      "Custom Pool"
+    ],
+    "leftBg": "rgb(32, 34, 31)",
+    "rightBg": "rgb(23, 23, 23)"
+  },
+  {
+    "invite": "afcaad5c",
+    "navTitle": "Commissioner Controls",
+    "label": "custom",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-locked-custom-commissioner-1440.png",
+    "dialogPresent": false,
+    "settingsNavActive": "Settings",
+    "locked": [],
+    "oldUpgradeCards": 0,
+    "quietUpgrades": 0,
+    "badges": [],
+    "leftBg": "rgb(32, 34, 31)",
+    "rightBg": "rgb(23, 23, 23)"
+  },
+  {
+    "invite": "617c79ba",
+    "navTitle": "Pool Details",
+    "label": "basic",
+    "path": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\settings-locked-basic-details-1440.png",
+    "dialogPresent": false,
+    "settingsNavActive": "Settings",
+    "locked": [
+      "Pool branding — Custom Pool feature, locked"
+    ],
+    "oldUpgradeCards": 0,
+    "quietUpgrades": 1,
+    "badges": [
+      "Custom Pool"
+    ],
+    "leftBg": "rgb(32, 34, 31)",
+    "rightBg": "rgb(23, 23, 23)"
+  }
+]

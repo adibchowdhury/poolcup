@@ -1,14 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, Suspense, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { FormEvent, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Mail } from 'lucide-react'
 import { AuthFormDivider } from '@/components/auth/auth-form-divider'
 import { LoginPanelConfetti, LOGIN_CONFETTI_BLEED_LEFT_PX } from '@/components/auth/login-panel-confetti'
 import { LoginPanelLeaderboard } from '@/components/auth/login-panel-leaderboard'
 import { LoginPanelTestimonial } from '@/components/auth/login-panel-testimonial'
-import { PuckyLoginEyes } from '@/components/auth/pucky-login-eyes'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { PasswordInput, authInputClassName } from '@/components/auth/password-input'
 import { PoolCupLogo } from '@/components/poolcup-logo'
@@ -20,10 +19,16 @@ import {
   isValidEmailFormat,
 } from '@/src/lib/auth-form'
 import { capturePostHog } from '@/src/lib/posthog-client'
-import { PUCKY_EYE_ASSET } from '@/src/lib/pucky-eye-calibration'
 import { getSafeNext } from '@/src/lib/safe-redirect'
 import { bindTactilePress } from '@/src/lib/tactile-press'
 import { cn } from '@/lib/utils'
+
+/** Full baked Pucky (eyes in art) — same seat for mobile + desktop. */
+const PUCKY_LOGIN_FRAME = {
+  src: '/login_assets/pucky-login-frame.png',
+  width: 1536,
+  height: 1024,
+} as const
 
 /**
  * Login page background experiment switch.
@@ -74,7 +79,6 @@ function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = getSafeNext(searchParams)
-  const puckyFrameRef = useRef<HTMLImageElement>(null)
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -178,28 +182,25 @@ function LoginPageContent() {
         */}
         <div className="login-pucky-overhang" aria-hidden="true" />
         <div className="login-pucky-body relative">
-        {/* Mobile: original frame with eyes baked in — no tracking. */}
+        {/* Mobile + desktop: full baked Pucky in the existing seat (scale/position via CSS vars). */}
         <img
           className="login-pucky-frame login-pucky-frame--mobile"
-          src={PUCKY_EYE_ASSET.referenceSrc}
+          src={PUCKY_LOGIN_FRAME.src}
           alt=""
-          width={PUCKY_EYE_ASSET.width}
-          height={PUCKY_EYE_ASSET.height}
+          width={PUCKY_LOGIN_FRAME.width}
+          height={PUCKY_LOGIN_FRAME.height}
           decoding="async"
           aria-hidden="true"
         />
-        {/* Desktop: eyeless frame + tracked eyes over LEFT panel top. */}
         <img
-          ref={puckyFrameRef}
           className="login-pucky-frame login-pucky-frame--desktop"
-          src={PUCKY_EYE_ASSET.eyelessSrc}
+          src={PUCKY_LOGIN_FRAME.src}
           alt=""
-          width={PUCKY_EYE_ASSET.width}
-          height={PUCKY_EYE_ASSET.height}
+          width={PUCKY_LOGIN_FRAME.width}
+          height={PUCKY_LOGIN_FRAME.height}
           decoding="async"
           aria-hidden="true"
         />
-        <PuckyLoginEyes frameRef={puckyFrameRef} />
         <div
           className={cn(
             'login-pucky-card relative z-10 grid w-full grid-cols-1 overflow-hidden rounded-2xl border border-[#1e2d3d] bg-[#171717] lg:grid-cols-2',

@@ -1,0 +1,33 @@
+{
+  "probe": {
+    "crownW": 240,
+    "crownToTitleGap": 28,
+    "featureNames": [
+      "Pool Branding",
+      "Member Management",
+      "Custom Scoring",
+      "Export Results+ much more!"
+    ],
+    "featureIconColor": "rgb(150, 162, 157)",
+    "cardBorder": "3px rgb(0, 0, 0)",
+    "cardBoxShadow": "rgb(0, 0, 0) 0px 0px 0px 2px, rgb(0, 230, 118) 0px 0px 0px 4px, rgba(0, 168, 93, 0.28) 0px 12px 40px 0px",
+    "benefitsGone": true,
+    "stackOrderTops": {
+      "crown": 40,
+      "title": 228,
+      "features": 301,
+      "card": 443,
+      "cta": 691,
+      "reassurance": 751,
+      "trust": 804
+    },
+    "trustIsLast": true,
+    "scrollHeight": 844,
+    "clientHeight": 844
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool"
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev7-390.png"
+}

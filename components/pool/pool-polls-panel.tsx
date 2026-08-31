@@ -48,6 +48,8 @@ type Props = {
   /** Show create button / composer (admin only). */
   showComposer?: boolean
   className?: string
+  /** Skip fetch; show empty default UI (locked Basic preview). */
+  previewOnly?: boolean
 }
 
 function toDatetimeLocalValue(d: Date): string {
@@ -60,10 +62,11 @@ export function PoolPollsPanel({
   isAdmin,
   showComposer = isAdmin,
   className,
+  previewOnly = false,
 }: Props) {
   const baseId = useId()
   const [polls, setPolls] = useState<PoolPoll[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!previewOnly)
   const [error, setError] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [question, setQuestion] = useState('')
@@ -98,8 +101,14 @@ export function PoolPollsPanel({
   }, [poolId])
 
   useEffect(() => {
+    if (previewOnly) {
+      setPolls([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     void load()
-  }, [load])
+  }, [load, previewOnly])
 
   function resetComposer() {
     setQuestion('')

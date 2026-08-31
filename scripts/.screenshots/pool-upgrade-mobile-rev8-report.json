@@ -1,0 +1,17 @@
+{
+  "probe": {
+    "lastFeatureInline": "Export Results + much more!",
+    "oneTimeGone": true,
+    "pricePresent": true,
+    "priceToSentenceGap": 8,
+    "cardShadow": "rgb(0, 0, 0) 0px 0px 0px 2px, rgba(0, 230, 118, 0.35) 0px 0px 0px 3px, rgba(0, 168, 93, 0.28) 0px 12px 40px 0px",
+    "cardToCtaGap": 40,
+    "ctaText": "Upgrade My Pool Experience",
+    "glowClass": true
+  },
+  "desktop": {
+    "sheetOpen": false,
+    "heading": "Upgrade Your Pool"
+  },
+  "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\pool-upgrade-mobile-rev8-390.png"
+}
