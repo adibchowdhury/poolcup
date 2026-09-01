@@ -1,0 +1,59 @@
+{
+  "comingSoonMode": "off",
+  "curl": {
+    "nfl": {
+      "status": 200,
+      "title": "NFL Pick&#x27;em 2026 – Free NFL Pick&#x27;em Pool | PoolCup",
+      "description": "Create a free NFL Pick&#x27;em pool for the 2026 season. Invite friends, pick every game, and climb a live leaderboard — PoolCup keeps score automatically.",
+      "canonical": "http://localhost:3000/nfl-pick-em",
+      "ogTitle": "NFL Pick&#x27;em 2026 – Free NFL Pick&#x27;em Pool | PoolCup",
+      "ogDescription": "Create a free NFL Pick&#x27;em pool for the 2026 season. Invite friends, pick every game, and climb a live leaderboard — PoolCup keeps score automatically.",
+      "ogType": "website",
+      "robots": "index, follow",
+      "hasH1": true,
+      "primaryHref": "/_next/static/chunks/1787ak~s.~.hw.css",
+      "secondaryHref": "/login",
+      "path": "/nfl-pick-em"
+    },
+    "home": {
+      "status": 200,
+      "title": "PoolCup - World Cup 2026 Prediction Pool",
+      "description": "Create a private prediction pool for your office, group chat, or Discord. Everyone predicts, the app keeps score.",
+      "canonical": "http://localhost:3000",
+      "ogTitle": null,
+      "ogDescription": null,
+      "ogType": null,
+      "robots": null,
+      "hasH1": false,
+      "primaryHref": "/login?next=/create",
+      "secondaryHref": "/login",
+      "path": "/"
+    },
+    "pricing": {
+      "status": 200,
+      "title": "Pricing — PoolCup",
+      "description": "Free for players. Upgrade any pool to Custom Pool for $9.99 one-time — logo, colors, custom scoring, announcements, and commissioner tools. No subscription.",
+      "canonical": "http://localhost:3000/pricing",
+      "ogTitle": "Pricing — PoolCup",
+      "ogDescription": "Play free. Custom Pool is $9.99 one-time per pool. No subscription. Members always play free.",
+      "ogType": null,
+      "robots": null,
+      "hasH1": false,
+      "primaryHref": "/login?next=/create",
+      "secondaryHref": "/login",
+      "path": "/pricing"
+    }
+  },
+  "cta": {
+    "primaryHref": "/login?next=/create",
+    "secondaryHref": "/login",
+    "loggedOutPrimaryUrl": "http://localhost:3000/login?next=/create",
+    "loggedInPrimaryHref": "/login?next=/create",
+    "loggedInAfterPrimary": "http://localhost:3000/login?next=/create",
+    "loggedInCreateUrl": "http://localhost:3000/create"
+  },
+  "shots": {
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-logged-out-390.png",
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-logged-out-1440.png"
+  }
+}

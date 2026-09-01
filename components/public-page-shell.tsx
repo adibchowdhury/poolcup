@@ -25,7 +25,9 @@ export function PublicPageShell({
       <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[#0a0e12]/95 backdrop-blur-md">
         <LandingNavbar />
       </header>
-      <main className={cn(mainClassName)}>{children}</main>
+      <main id="main-content" className={cn(mainClassName)}>
+        {children}
+      </main>
       <SiteFooter backgroundClass={footerBackgroundClass} />
     </div>
   )

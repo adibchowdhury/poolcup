@@ -1,0 +1,202 @@
+{
+  "status": 200,
+  "meta": {
+    "titleMatch": "NFL Pick&#x27;em 2026 – Free NFL Pick&#x27;em Pool | PoolCup",
+    "canonical": "http://localhost:3000/nfl-pick-em",
+    "ogTitle": "NFL Pick&#x27;em 2026 – Free NFL Pick&#x27;em Pool | PoolCup",
+    "ogDesc": "Create a free NFL Pick&#x27;em pool for the 2026 season. Invite friends, pick every game, and climb a live leaderboard — PoolCup keeps score automatically."
+  },
+  "contentChecks": {
+    "heroH1": true,
+    "whatIs": true,
+    "slateHeading": true,
+    "seahawks": true,
+    "howItWorks": true,
+    "whyPoolcup": true,
+    "faqHeading": true,
+    "quietCta": true,
+    "bottomCta": true,
+    "lockAnswer": true,
+    "midSeasonAnswer": true
+  },
+  "faq": {
+    "entityCount": 6,
+    "expectedCount": 6,
+    "allShapeOk": true,
+    "allTextInHtml": true,
+    "checks": [
+      {
+        "question": "Is NFL Pick'em free on PoolCup?",
+        "answerPreview": "Yes. You can create a free Basic pool for the NFL season and invite friends at n",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "How does scoring work?",
+        "answerPreview": "Each week you pick the winner of every NFL game on the slate — no spreads or poi",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "How many people can join my pool?",
+        "answerPreview": "Any group size works. PoolCup fits a small office chat or a full league of rival",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "Can I run a pick'em pool for my office or league?",
+        "answerPreview": "Yes. Create a pool, share one invite link, and everyone joins in the browser. Po",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "When do picks lock?",
+        "answerPreview": "Picks lock at each game's kickoff. Once that match's kickoff time is reached, it",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "Can I join mid-season?",
+        "answerPreview": "Yes, as long as the pool is still accepting members. You can make picks on remai",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      }
+    ]
+  },
+  "jsonLdWellFormed": true,
+  "headingTree": [
+    {
+      "tag": "h1",
+      "text": "NFL Pick'em"
+    },
+    {
+      "tag": "h2",
+      "text": "What is NFL Pick'em?"
+    },
+    {
+      "tag": "h2",
+      "text": "This Week's NFL Games"
+    },
+    {
+      "tag": "h2",
+      "text": "How NFL Pick'em Works on PoolCup"
+    },
+    {
+      "tag": "h3",
+      "text": "Create your pool"
+    },
+    {
+      "tag": "h3",
+      "text": "Invite your crew"
+    },
+    {
+      "tag": "h3",
+      "text": "Make weekly picks"
+    },
+    {
+      "tag": "h3",
+      "text": "Climb the leaderboard"
+    },
+    {
+      "tag": "h2",
+      "text": "Why Run Your Pick'em Pool on PoolCup"
+    },
+    {
+      "tag": "h3",
+      "text": "Automatic scoring"
+    },
+    {
+      "tag": "h3",
+      "text": "Live leaderboards"
+    },
+    {
+      "tag": "h3",
+      "text": "Free to play"
+    },
+    {
+      "tag": "h3",
+      "text": "Invite-link simple"
+    },
+    {
+      "tag": "h3",
+      "text": "Any group size"
+    },
+    {
+      "tag": "h2",
+      "text": "NFL Pick'em FAQ"
+    },
+    {
+      "tag": "h3",
+      "text": "Is NFL Pick'em free on PoolCup?"
+    },
+    {
+      "tag": "h3",
+      "text": "How does scoring work?"
+    },
+    {
+      "tag": "h3",
+      "text": "How many people can join my pool?"
+    },
+    {
+      "tag": "h3",
+      "text": "Can I run a pick'em pool for my office or league?"
+    },
+    {
+      "tag": "h3",
+      "text": "When do picks lock?"
+    },
+    {
+      "tag": "h3",
+      "text": "Can I join mid-season?"
+    },
+    {
+      "tag": "h2",
+      "text": "Ready to start your NFL pick'em pool?"
+    },
+    {
+      "tag": "h3",
+      "text": "Join the PoolCup Community"
+    },
+    {
+      "tag": "h3",
+      "text": "Site Map"
+    },
+    {
+      "tag": "h3",
+      "text": "Legal & Privacy"
+    },
+    {
+      "tag": "h3",
+      "text": "Site Map"
+    },
+    {
+      "tag": "h3",
+      "text": "Legal & Privacy"
+    }
+  ],
+  "shots": {
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase4-390.png",
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase4-1440.png"
+  },
+  "lighthouseMobile": {
+    "performance": 61,
+    "accessibility": 93,
+    "bestPractices": 96,
+    "seo": 100,
+    "cheapWins": [
+      "vs text #728d9c",
+      "PublicPageShell main#main-content for skip link"
+    ],
+    "flaggedLater": [
+      "footer #5a7080 contrast",
+      "mobile nav aria-hidden-focus",
+      "localhost /_vercel/insights/script.js 404"
+    ]
+  }
+}

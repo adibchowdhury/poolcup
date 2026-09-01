@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "status": 200,
+    "hasH1": true,
+    "hasWhatIsH2": true,
+    "hasHowH2": true,
+    "hasWhyH2": true,
+    "hasCreateStep": true,
+    "hasInviteStep": true,
+    "hasWeeklyPicks": true,
+    "hasClimb": true,
+    "hasNoSpreadsheets": true,
+    "hasHomepageLink": true,
+    "hasPricingLink": true,
+    "hasLoginCreate": true,
+    "hasMatchupsStub": true,
+    "hasFaqStub": false
+  },
+  "shots": {
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2-390.png",
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2-1440.png"
+  }
+}

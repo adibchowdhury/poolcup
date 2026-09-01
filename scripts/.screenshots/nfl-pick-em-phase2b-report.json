@@ -1,0 +1,116 @@
+{
+  "expectedLoginHref": "/login?next=%2Fcreate%3Fevent%3Dnfl-2026",
+  "expectedCreateHref": "/create?event=nfl-2026",
+  "loginNextDecode": {
+    "rawNextParam": "/create?event=nfl-2026",
+    "decoded": "/create?event=nfl-2026",
+    "matchesCreate": true
+  },
+  "loggedOut": {
+    "primaryHref": "/login?next=%2Fcreate%3Fevent%3Dnfl-2026",
+    "hrefMatches": true,
+    "loginUrl": "http://localhost:3000/login?next=%2Fcreate%3Fevent%3Dnfl-2026",
+    "nextOnLogin": "/create?event=nfl-2026",
+    "nextPreserved": true,
+    "testAccountEmail": "adibchowdhury32@gmail.com",
+    "afterAuthUrl": "http://localhost:3000/create?event=nfl-2026",
+    "wizard": {
+      "selectedSport": "Football",
+      "panelLabel": "Competitions · Football",
+      "competitionHeading": "Competitions · Football01 availableIn seasonNFL 2026",
+      "pressedRows": [
+        "In seasonNFL 2026"
+      ],
+      "nflPressed": true,
+      "nflRows": [
+        {
+          "pressed": true,
+          "text": "In seasonNFL 2026"
+        }
+      ],
+      "stillOnStep1": true,
+      "loading": false
+    },
+    "preselectedOk": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2b-logged-out-funnel-390.png"
+  },
+  "loggedIn": {
+    "primaryHref": "/create?event=nfl-2026",
+    "hrefMatchesCreate": true,
+    "afterClickUrl": "http://localhost:3000/create?event=nfl-2026",
+    "wizard": {
+      "selectedSport": "Football",
+      "panelLabel": "Competitions · Football",
+      "competitionHeading": "Competitions · Football01 availableIn seasonNFL 2026",
+      "pressedRows": [
+        "In seasonNFL 2026"
+      ],
+      "nflPressed": true,
+      "nflRows": [
+        {
+          "pressed": true,
+          "text": "In seasonNFL 2026"
+        }
+      ],
+      "stillOnStep1": true,
+      "loading": false
+    },
+    "preselectedOk": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2b-logged-in-funnel-390.png"
+  },
+  "desktop": {
+    "afterClickUrl": "http://localhost:3000/dashboard",
+    "modalVisible": true,
+    "wizard": {
+      "selectedSport": "Football",
+      "panelLabel": null,
+      "competitionHeading": "In seasonNFL 2026",
+      "pressedRows": [
+        "In seasonNFL 2026"
+      ],
+      "nflPressed": true,
+      "nflRows": [
+        {
+          "pressed": true,
+          "text": "In seasonNFL 2026"
+        }
+      ],
+      "stillOnStep1": false,
+      "loading": false
+    },
+    "preselectedOk": true,
+    "shot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2b-desktop-1440.png"
+  },
+  "plainCreate": {
+    "plain": {
+      "selectedSport": "Soccer",
+      "panelLabel": "Competitions · Soccer",
+      "competitionHeading": "Competitions · Soccer06 availableIn seasonBundesliga 2026/27In seasonLa Liga 2026/27In seasonLigue 1 2026/27In seasonMLS 2026In seasonPremier League 2026/27In seasonSerie A 2026/27",
+      "pressedRows": [],
+      "nflPressed": false,
+      "nflRows": [],
+      "stillOnStep1": true,
+      "loading": false
+    },
+    "withEvent": {
+      "selectedSport": "Football",
+      "panelLabel": "Competitions · Football",
+      "competitionHeading": "Competitions · Football01 availableIn seasonNFL 2026",
+      "pressedRows": [
+        "In seasonNFL 2026"
+      ],
+      "nflPressed": true,
+      "nflRows": [
+        {
+          "pressed": true,
+          "text": "In seasonNFL 2026"
+        }
+      ],
+      "stillOnStep1": true,
+      "loading": false
+    },
+    "plainShot": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase2b-plain-create-390.png",
+    "plainHasNoForcedNflEvent": true,
+    "eventForcesFootballAndNfl": true
+  }
+}

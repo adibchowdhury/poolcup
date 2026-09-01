@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /pricing
+Allow: /nfl-pick-em
 Allow: /privacy
 Allow: /terms
 Allow: /cookies

@@ -53,7 +53,13 @@ export async function updateSessionAndGateAuth(
   request: NextRequest,
 ): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({
-    request,
+    request: {
+      headers: (() => {
+        const headers = new Headers(request.headers)
+        headers.set('x-pathname', request.nextUrl.pathname)
+        return headers
+      })(),
+    },
   })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -72,8 +78,10 @@ export async function updateSessionAndGateAuth(
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value)
         })
+        const headers = new Headers(request.headers)
+        headers.set('x-pathname', request.nextUrl.pathname)
         supabaseResponse = NextResponse.next({
-          request,
+          request: { headers },
         })
         cookiesToSet.forEach(({ name, value, options }) => {
           supabaseResponse.cookies.set(name, value, options)

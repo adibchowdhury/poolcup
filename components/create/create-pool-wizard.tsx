@@ -336,6 +336,14 @@ const CREATE_SPORT_KEY: Record<SportId, string> = {
   hockey: 'hockey',
 }
 
+function sportIdFromEventSport(sport: string): SportId | null {
+  const key = normalizeSportKey(sport)
+  for (const row of SPORTS) {
+    if (CREATE_SPORT_KEY[row.id] === key) return row.id
+  }
+  return null
+}
+
 const SPORTS: {
   id: SportId
   label: string
@@ -804,7 +812,8 @@ export function CreatePoolWizard({
   const [selectedSport, setSelectedSport] = useState<SportId | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [creatableEvents, setCreatableEvents] = useState<SportingEvent[]>([])
-  const [eventsLoading, setEventsLoading] = useState(false)
+  /** Start true so the default/preselect effect waits for the first fetch (avoids locking soccer on []). */
+  const [eventsLoading, setEventsLoading] = useState(true)
   const [eventsError, setEventsError] = useState<string | null>(null)
   const defaultSportAppliedRef = useRef(false)
   const [poolName, setPoolName] = useState('')
@@ -871,16 +880,43 @@ export function CreatePoolWizard({
     )
   }, [creatableEvents, selectedSport])
 
-  /** Prefer sport with the most live events so the right column is populated. */
+  /**
+   * Initial sport/event selection after creatable events load.
+   * Wiring: selectedSport/selectedEventId start null; this effect is the sole
+   * URL-driven preselect (not useState init — events aren't available yet).
+   * Optional ?event=<slug> (or checkoutHandoff.eventSlug on desktop modal):
+   * match against listCreatableSportingEvents rows (already live/upcoming only);
+   * on hit, set sport tile + event id and stay on step 1. Invalid/unknown slug
+   * is ignored silently. checkout / draft_id handled separately above — untouched.
+   */
   useEffect(() => {
     if (defaultSportAppliedRef.current) return
     if (selectedSport != null) {
       defaultSportAppliedRef.current = true
       return
     }
+    // Gate on first load: initial eventsLoading=true; empty [] before fetch must not apply.
     if (eventsLoading) return
 
     defaultSportAppliedRef.current = true
+
+    const eventSlug =
+      checkoutHandoff?.eventSlug?.trim() ||
+      searchParams.get('event')?.trim() ||
+      null
+
+    if (eventSlug) {
+      const matched = creatableEvents.find((event) => event.slug === eventSlug)
+      if (matched) {
+        const sportId = sportIdFromEventSport(matched.sport)
+        if (sportId) {
+          setSelectedSport(sportId)
+          setSelectedEventId(matched.id)
+          return
+        }
+      }
+      // Invalid/unknown slug → fall through to default sport pick.
+    }
 
     let bestSport: SportId = SPORTS[0]!.id
     let bestLive = -1
@@ -901,7 +937,13 @@ export function CreatePoolWizard({
       }
     }
     setSelectedSport(bestSport)
-  }, [creatableEvents, eventsLoading, selectedSport])
+  }, [
+    checkoutHandoff,
+    creatableEvents,
+    eventsLoading,
+    searchParams,
+    selectedSport,
+  ])
 
 
   const selectedScoring = useMemo(

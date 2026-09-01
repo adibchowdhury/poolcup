@@ -49,6 +49,7 @@ function isMarketingPath(pathname: string): boolean {
   if (pathname === '/') return true
   const marketing = new Set([
     '/pricing',
+    '/nfl-pick-em',
     '/terms',
     '/privacy',
     '/security',
@@ -56,6 +57,19 @@ function isMarketingPath(pathname: string): boolean {
     '/contact',
   ])
   return marketing.has(pathname)
+}
+
+/** Forward the request path so root generateMetadata can set a correct canonical. */
+function withPathnameHeader(request: NextRequest): Headers {
+  const headers = new Headers(request.headers)
+  headers.set('x-pathname', request.nextUrl.pathname)
+  return headers
+}
+
+function nextWithPathname(request: NextRequest): NextResponse {
+  return NextResponse.next({
+    request: { headers: withPathnameHeader(request) },
+  })
 }
 
 /**
@@ -108,7 +122,7 @@ export async function proxy(request: NextRequest) {
 
   // Always allow Next internals, APIs, static assets, and the holding page.
   if (isPassthroughPath(pathname)) {
-    return applyRefCookie(NextResponse.next(), refToSet)
+    return applyRefCookie(nextWithPathname(request), refToSet)
   }
 
   // —— Coming-soon gate (product closed) ——
@@ -139,7 +153,7 @@ export async function proxy(request: NextRequest) {
 
     // Soft launch: landing + legal/marketing pages stay public (no auth gate).
     if (!hasBypass && isMarketingPath(pathname)) {
-      return applyRefCookie(NextResponse.next(), refToSet)
+      return applyRefCookie(nextWithPathname(request), refToSet)
     }
 
     // No bypass → holding page for everything else (including /login, /dashboard).

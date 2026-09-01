@@ -25,10 +25,12 @@ function CreatePoolDesktopBounce() {
         ? checkoutRaw
         : null
     const draftId = searchParams.get('draft_id')
+    const eventSlug = searchParams.get('event')
 
     setCreatePoolModalHandoff({
       checkout,
       draftId,
+      eventSlug,
     })
     router.replace('/dashboard')
   }, [router, searchParams])

@@ -1,0 +1,23 @@
+{
+  "status": 200,
+  "curl": {
+    "teamsInHtml": {
+      "Seattle Seahawks": true,
+      "New England Patriots": true,
+      "Kansas City Chiefs": true,
+      "Denver Broncos": true
+    },
+    "allTeamsPresent": true,
+    "hasHeading": true,
+    "hasQuietCta": true,
+    "hasDegradeEmpty": false,
+    "etInHtml": true,
+    "kickoffSampleFormatted": "Wed, Sep 9 · 8:20 PM ET",
+    "timeSampleInHtml": true
+  },
+  "rowCount": 16,
+  "shots": {
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase3-390.png",
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\nfl-pick-em-phase3-1440.png"
+  }
+}

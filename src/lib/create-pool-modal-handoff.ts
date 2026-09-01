@@ -6,6 +6,8 @@ export type CreatePoolModalHandoff = {
   /** Stripe return flags from /create?checkout=… */
   checkout?: 'success' | 'cancel' | null
   draftId?: string | null
+  /** Optional ?event=<slug> deep-link (e.g. nfl-2026) for sport/competition preselect. */
+  eventSlug?: string | null
 }
 
 export function setCreatePoolModalHandoff(

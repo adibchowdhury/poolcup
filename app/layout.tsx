@@ -59,15 +59,22 @@ const defaultDescription =
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers()
-  const pathname = headersList.get('x-pathname') ?? '/'
+  // Prefer the path set by proxy / session gate. Do not invent '/' when missing —
+  // that previously collapsed every page without its own alternates to a wrong
+  // sitewide canonical.
+  const pathname = headersList.get('x-pathname')
 
   return {
     metadataBase: new URL(siteUrl),
     title: defaultTitle,
     description: defaultDescription,
-    alternates: {
-      canonical: pathname,
-    },
+    ...(pathname
+      ? {
+          alternates: {
+            canonical: pathname,
+          },
+        }
+      : {}),
     verification: {
       google: 'wUcYdWnVflR1_Y88THjoEWcCYgtCrRWr-BwkzGmoBzs',
     },
