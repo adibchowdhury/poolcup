@@ -45,7 +45,7 @@ export default async function NflPickEmPage() {
             Pick the winners. Compete with friends. See who knows football best.
           </p>
           <p className="mt-3 text-sm font-medium text-[#00e676] md:text-base">
-            The 2026 NFL season kicks off September 10 — get your pool ready.
+            The 2026 NFL season kicks off September 9 — get your pool ready.
           </p>
 
           <NflPickEmHeroCtas />

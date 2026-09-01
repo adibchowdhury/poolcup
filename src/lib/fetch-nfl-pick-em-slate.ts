@@ -57,7 +57,7 @@ export async function fetchNflPickEmSlate(): Promise<NflPickEmSlateMatch[]> {
 /**
  * Static NFL kickoff label for anonymous marketing visitors.
  * Always America/New_York (ET), zone labeled — never visitor-local TZ.
- * Example: "Thu, Sep 10 · 8:20 PM ET"
+ * Example: "Wed, Sep 9 · 8:20 PM ET"
  */
 export function formatNflKickoffEt(iso: string): string {
   const date = new Date(iso)
