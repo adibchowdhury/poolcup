@@ -1,0 +1,10 @@
+{
+  "href": "/nfl-pick-em",
+  "mHref": "/nfl-pick-em",
+  "afterDesktopNav": "http://localhost:3000/nfl-pick-em",
+  "afterMobileNav": "http://localhost:3000/nfl-pick-em",
+  "shots": {
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\footer-nfl-pick-em-1440.png",
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\footer-nfl-pick-em-390.png"
+  }
+}

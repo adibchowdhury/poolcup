@@ -50,6 +50,7 @@ function isMarketingPath(pathname: string): boolean {
   const marketing = new Set([
     '/pricing',
     '/nfl-pick-em',
+    '/college-football-pick-em',
     '/terms',
     '/privacy',
     '/security',

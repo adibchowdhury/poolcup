@@ -1,5 +1,10 @@
 import { createServerSupabaseClient } from '@/src/lib/supabase/server'
 import { normalizeTeamLogoUrl } from '@/src/lib/team-logos'
+import {
+  formatPickEmKickoffEt,
+  pickEmTeamInitials,
+  type PickEmSlateMatch,
+} from '@/src/lib/pick-em-marketing-slate'
 
 /** NFL 2026 sporting_events.id — same event as create-wizard `?event=nfl-2026`. */
 export const NFL_2026_EVENT_ID = 'eea86f2b-a0e2-46df-8f3a-688dfbd7ff10'
@@ -10,14 +15,7 @@ export const NFL_2026_EVENT_ID = 'eea86f2b-a0e2-46df-8f3a-688dfbd7ff10'
  */
 export const NFL_PICK_EM_SLATE_LIMIT = 16
 
-export type NflPickEmSlateMatch = {
-  id: string
-  kickoff_at: string
-  team1_name: string
-  team2_name: string
-  team1_logo: string | null
-  team2_logo: string | null
-}
+export type NflPickEmSlateMatch = PickEmSlateMatch
 
 /**
  * Upcoming NFL slate for the marketing page.
@@ -54,41 +52,8 @@ export async function fetchNflPickEmSlate(): Promise<NflPickEmSlateMatch[]> {
   }))
 }
 
-/**
- * Static NFL kickoff label for anonymous marketing visitors.
- * Always America/New_York (ET), zone labeled — never visitor-local TZ.
- * Example: "Wed, Sep 9 · 8:20 PM ET"
- */
-export function formatNflKickoffEt(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
+/** @deprecated Use formatPickEmKickoffEt — kept for NFL imports. */
+export const formatNflKickoffEt = formatPickEmKickoffEt
 
-  const datePart = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
-
-  const timePart = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date)
-
-  return `${datePart} · ${timePart} ET`
-}
-
-/** Compact monogram when crest URL is missing (server-safe; no onError). */
-export function nflTeamInitials(teamName: string): string {
-  const parts = teamName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
-  const first = parts[0]![0] ?? ''
-  const last = parts[parts.length - 1]![0] ?? ''
-  return `${first}${last}`.toUpperCase()
-}
+/** @deprecated Use pickEmTeamInitials — kept for NFL imports. */
+export const nflTeamInitials = pickEmTeamInitials

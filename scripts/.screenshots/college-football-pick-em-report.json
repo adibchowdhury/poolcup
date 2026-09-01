@@ -1,0 +1,196 @@
+{
+  "status": 200,
+  "meta": {
+    "titleMatch": "College Football Pick&#x27;em 2026 – Free CFB Pick&#x27;em Pool | PoolCup",
+    "canonical": "http://localhost:3000/college-football-pick-em",
+    "ogTitle": "College Football Pick&#x27;em 2026 – Free CFB Pick&#x27;em Pool | PoolCup",
+    "ogDesc": "Run a free college football pick&#x27;em pool for 2026. Pick Saturday winners, invite friends, and climb a live leaderboard — PoolCup scores it automatically.",
+    "robotsMeta": "index, follow"
+  },
+  "contentChecks": {
+    "heroH1": true,
+    "whatIs": true,
+    "slateHeading": true,
+    "howItWorks": true,
+    "whyPoolcup": true,
+    "faqHeading": true,
+    "launchingCta": true,
+    "nflSecondaryCta": true,
+    "morePickEm": true,
+    "launchingSection": true,
+    "createPoolFaq": true,
+    "noindex": false
+  },
+  "faq": {
+    "entityCount": 6,
+    "expectedCount": 6,
+    "allShapeOk": true,
+    "allTextInHtml": true,
+    "checks": [
+      {
+        "question": "Is college football pick'em free on PoolCup?",
+        "answerPreview": "Yes. You will be able to create a free Basic college football pick'em pool for t",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "When can I create a college football pool?",
+        "answerPreview": "College football pick'em pools on PoolCup are launching in the next few days ahe",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "How does scoring work?",
+        "answerPreview": "Each week you make weekly picks on the winner of every game on the Saturday slat",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "When do picks lock?",
+        "answerPreview": "Picks lock at each game's kickoff. Once that matchup's kickoff time is reached, ",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "Can I join a pick'em pool mid-season?",
+        "answerPreview": "Yes, as long as the pool is still accepting members. You can make picks on remai",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      },
+      {
+        "question": "Can I run a college football pick em league for my office?",
+        "answerPreview": "Yes. Create a pick'em pool, share one invite link, and everyone joins in the bro",
+        "questionInHtml": true,
+        "answerInHtml": true,
+        "shapeOk": true
+      }
+    ]
+  },
+  "jsonLdWellFormed": true,
+  "headingTree": [
+    {
+      "tag": "h1",
+      "text": "College Football Pick'em"
+    },
+    {
+      "tag": "h2",
+      "text": "What is College Football Pick'em?"
+    },
+    {
+      "tag": "h2",
+      "text": "This Week's College Football Games"
+    },
+    {
+      "tag": "h2",
+      "text": "How College Football Pick'em Works on PoolCup"
+    },
+    {
+      "tag": "h3",
+      "text": "Create your pool"
+    },
+    {
+      "tag": "h3",
+      "text": "Invite your crew"
+    },
+    {
+      "tag": "h3",
+      "text": "Make weekly picks"
+    },
+    {
+      "tag": "h3",
+      "text": "Climb the leaderboard"
+    },
+    {
+      "tag": "h2",
+      "text": "Why Run Your College Football Pick'em Pool on PoolCup"
+    },
+    {
+      "tag": "h3",
+      "text": "Curated Saturday slates"
+    },
+    {
+      "tag": "h3",
+      "text": "Live leaderboards"
+    },
+    {
+      "tag": "h3",
+      "text": "Free to play"
+    },
+    {
+      "tag": "h3",
+      "text": "Invite-link simple"
+    },
+    {
+      "tag": "h3",
+      "text": "Any group size"
+    },
+    {
+      "tag": "h2",
+      "text": "More pick'em"
+    },
+    {
+      "tag": "h2",
+      "text": "College Football Pick'em FAQ"
+    },
+    {
+      "tag": "h3",
+      "text": "Is college football pick'em free on PoolCup?"
+    },
+    {
+      "tag": "h3",
+      "text": "When can I create a college football pool?"
+    },
+    {
+      "tag": "h3",
+      "text": "How does scoring work?"
+    },
+    {
+      "tag": "h3",
+      "text": "When do picks lock?"
+    },
+    {
+      "tag": "h3",
+      "text": "Can I join a pick'em pool mid-season?"
+    },
+    {
+      "tag": "h3",
+      "text": "Can I run a college football pick em league for my office?"
+    },
+    {
+      "tag": "h2",
+      "text": "College football pick'em pools — launching this week"
+    },
+    {
+      "tag": "h3",
+      "text": "Join the PoolCup Community"
+    },
+    {
+      "tag": "h3",
+      "text": "Site Map"
+    },
+    {
+      "tag": "h3",
+      "text": "Legal & Privacy"
+    },
+    {
+      "tag": "h3",
+      "text": "Site Map"
+    },
+    {
+      "tag": "h3",
+      "text": "Legal & Privacy"
+    }
+  ],
+  "lighthouse": {
+    "error": "Command failed: npx lighthouse http://localhost:3000/college-football-pick-em --only-categories=performance,accessibility,best-practices,seo --form-factor=mobile --chrome-flags=\"--headless\" --output=json --quiet\nRuntime error encountered: EPERM, Permission denied: \\\\?\\C:\\Users\\tenni\\AppData\\Local\\Temp\\lighthouse.40690346 '\\\\?\\C:\\Users\\tenni\\AppData\\Local\\Temp\\lighthouse.40690346'\nError: EPERM, Permission denied: \\\\?\\C:\\Users\\tenni\\AppData\\Local\\Temp\\lighthouse.40690346 '\\\\?\\C:\\Users\\tenni\\AppData\\Local\\Temp\\lighthouse.40690346'\n    at rmSync (node:fs:1221:18)\n    at Launcher.destroyTmp (file:///C:/Users/tenni/AppData/Local/npm-cache/_npx/0f94ee7615faf582/node_modules/chrome-launcher/dist/chrome-launcher.js:367:9)\n    at Launcher.kill (file:///C:/Users/tenni/AppData/Local/npm-cache/_npx/0f94ee7615faf582/node_modules/chrome-launcher/dist/chrome-launcher.js:349:14)\n    at Object.kill (file:///C:/Users/tenni/AppData/Local/npm-cache/_npx/0f94ee7615faf582/node_modules/chrome-launcher/dist/chrome-launcher.js:39:18)\n    at runLighthouse (file:///C:/Users/tenni/AppData/Local/npm-cache/_npx/0f94ee7615faf582/node_modules/lighthouse/cli/run.js:217:21)\n    at async file:///C:/Users/tenni/AppData/Local/npm-cache/_npx/0f94ee7615faf582/node_modules/lighthouse/cli/index.js:10:1\n"
+  },
+  "shots": {
+    "shot390": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\college-football-pick-em-390.png",
+    "shot1440": "C:\\dev\\pool-cup-prediction-app\\scripts\\.screenshots\\college-football-pick-em-1440.png"
+  }
+}

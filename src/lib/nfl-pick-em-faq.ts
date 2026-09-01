@@ -1,11 +1,13 @@
+import {
+  buildPickEmFaqJsonLd,
+  type PickEmFaqItem,
+} from '@/src/lib/pick-em-marketing-faq'
+
 /**
  * Single source for /nfl-pick-em FAQ — visible Accordion + FAQPage JSON-LD.
  * Plain strings only so schema text matches the UI verbatim.
  */
-export type NflPickEmFaqItem = {
-  question: string
-  answer: string
-}
+export type NflPickEmFaqItem = PickEmFaqItem
 
 /**
  * Locking (verified): matches.locked_at is set to kickoff_at at sync
@@ -53,16 +55,5 @@ export const NFL_PICK_EM_FAQ_ITEMS: readonly NflPickEmFaqItem[] = [
 export function buildNflPickEmFaqJsonLd(
   items: readonly NflPickEmFaqItem[] = NFL_PICK_EM_FAQ_ITEMS,
 ) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
-    })),
-  }
+  return buildPickEmFaqJsonLd(items)
 }

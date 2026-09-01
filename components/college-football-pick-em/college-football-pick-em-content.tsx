@@ -1,27 +1,29 @@
 import Link from 'next/link'
 import { Check, Link2, Trophy, Users, Zap } from 'lucide-react'
-import { NflPickEmHeroCtas } from '@/components/nfl-pick-em/nfl-pick-em-hero-ctas'
-import { NflPickEmMatchups } from '@/components/nfl-pick-em/nfl-pick-em-matchups'
-import { NflPickEmFaqAccordion } from '@/components/nfl-pick-em/nfl-pick-em-faq-accordion'
-import type { NflPickEmSlateMatch } from '@/src/lib/fetch-nfl-pick-em-slate'
-import { NFL_PICK_EM_FAQ_ITEMS } from '@/src/lib/nfl-pick-em-faq'
+import { CollegeFootballPickEmHeroCtas } from '@/components/college-football-pick-em/college-football-pick-em-hero-ctas'
+import { PickEmFaqAccordion } from '@/components/pick-em-marketing/pick-em-faq-accordion'
+import { PickEmMatchupsSection } from '@/components/pick-em-marketing/pick-em-matchups-section'
+import { CFB_PICK_EM_FAQ_ITEMS } from '@/src/lib/college-football-pick-em-faq'
+import { CFB_PICK_EM_SEASON_YEAR } from '@/src/lib/college-football-pick-em-season'
+import { NFL_PICK_EM_PAGE_HREF } from '@/src/lib/college-football-pick-em-links'
+import type { PickEmSlateMatch } from '@/src/lib/pick-em-marketing-slate'
 import { cn } from '@/lib/utils'
 
 const HOW_IT_WORKS_STEPS = [
   {
     number: '01',
     title: 'Create your pool',
-    body: 'Spin up a free NFL pick\'em pool in minutes and lock it to the season.',
+    body: 'Spin up a free college football pick\'em pool and lock it to the season.',
   },
   {
     number: '02',
     title: 'Invite your crew',
-    body: 'Share one invite link — friends join your league without an app-store detour.',
+    body: 'Share one invite link — friends join your pick em league without an app-store detour.',
   },
   {
     number: '03',
     title: 'Make weekly picks',
-    body: 'Before kickoff each week, choose the winner of every game on the slate.',
+    body: 'Before kickoff each Saturday, choose the winner of every game on the slate.',
   },
   {
     number: '04',
@@ -33,8 +35,8 @@ const HOW_IT_WORKS_STEPS = [
 const WHY_ITEMS = [
   {
     icon: Zap,
-    title: 'Automatic scoring',
-    body: 'No spreadsheets, no arguments — results post and the board updates itself.',
+    title: 'Curated Saturday slates',
+    body: 'Roughly 15–25 games that matter each week — not every FBS kickoff, just the matchups your group cares about.',
   },
   {
     icon: Trophy,
@@ -54,7 +56,7 @@ const WHY_ITEMS = [
   {
     icon: Users,
     title: 'Any group size',
-    body: 'Works for a three-person office chat or a full league of rivals.',
+    body: 'Works for a dorm-floor rivalry or a full office pick em pool.',
   },
 ] as const
 
@@ -62,58 +64,85 @@ const sectionPad = 'px-6 py-14 md:py-20'
 const proseWidth = 'mx-auto max-w-3xl'
 const contentWidth = 'mx-auto max-w-6xl'
 
-type NflPickEmContentProps = {
-  upcomingMatches: NflPickEmSlateMatch[]
+type SlateEmptyState = 'prelaunch' | 'offseason' | 'loading'
+
+function resolveSlateEmptyMessage(state: SlateEmptyState): string {
+  if (state === 'prelaunch') {
+    return `College football pick'em pools are launching this week — the ${CFB_PICK_EM_SEASON_YEAR} schedule will appear here as soon as we go live.`
+  }
+  if (state === 'offseason') {
+    return 'College football season returns in August — check back when Saturdays matter again.'
+  }
+  return 'This week\'s slate is loading — check back soon.'
+}
+
+type CollegeFootballPickEmContentProps = {
+  upcomingMatches: PickEmSlateMatch[]
+  slateEmptyState: SlateEmptyState
 }
 
 /**
- * Body sections for /nfl-pick-em (server-rendered HTML).
- * How-it-works / why use H3s under their H2s. FAQ uses Accordion triggers (not H3).
+ * Body sections for /college-football-pick-em (server-rendered HTML).
  */
-export function NflPickEmContent({ upcomingMatches }: NflPickEmContentProps) {
+export function CollegeFootballPickEmContent({
+  upcomingMatches,
+  slateEmptyState,
+}: CollegeFootballPickEmContentProps) {
   return (
     <>
       <section
         className={cn(sectionPad, 'border-t border-[rgba(255,255,255,0.06)]')}
-        aria-labelledby="what-is-nfl-pick-em-heading"
+        aria-labelledby="what-is-cfb-pick-em-heading"
       >
         <div className={proseWidth}>
           <h2
-            id="what-is-nfl-pick-em-heading"
+            id="what-is-cfb-pick-em-heading"
             className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl"
           >
-            What is NFL Pick&apos;em?
+            What is College Football Pick&apos;em?
           </h2>
           <div className="mt-6 space-y-4 text-base leading-relaxed text-[#728d9c] md:text-lg md:leading-relaxed">
             <p>
-              NFL Pick&apos;em is simple: every week you pick the winner of every
-              NFL game. No spreads, no point totals — just who wins. Most correct
-              weekly picks takes the top spot on the leaderboard.
+              College football pick&apos;em is simple: every week you pick the
+              winner of the games on the Saturday slate. No spreads, no point
+              totals — just who wins. Most correct weekly picks takes the top
+              spot on the leaderboard.
             </p>
             <p>
-              PoolCup is where you run that pick&apos;em pool with your friends,
-              office, or league. Create a free pool, share an invite link, and
-              scoring happens automatically when the games end.
+              PoolCup is where you will run that pick&apos;em pool with your
+              friends, office, or campus crew. You will create a free pool,
+              share an invite link, and scoring will happen automatically when
+              games end — with a curated slate of roughly 15–25 games that
+              matter each week.
             </p>
           </div>
         </div>
       </section>
 
-      <NflPickEmMatchups matches={upcomingMatches} />
+      {/*
+        Week-hub seam: future /college-football-pick-em/week-N children link here.
+        Stable anchor: #cfb-pick-em-matchups-heading
+      */}
+      <PickEmMatchupsSection
+        headingId="cfb-pick-em-matchups-heading"
+        heading="This Week's College Football Games"
+        matches={upcomingMatches}
+        emptyMessage={resolveSlateEmptyMessage(slateEmptyState)}
+      />
 
       <section
         className={cn(
           sectionPad,
           'border-t border-[rgba(255,255,255,0.06)] bg-[#090f18]',
         )}
-        aria-labelledby="how-nfl-pick-em-works-heading"
+        aria-labelledby="how-cfb-pick-em-works-heading"
       >
         <div className={contentWidth}>
           <h2
-            id="how-nfl-pick-em-works-heading"
+            id="how-cfb-pick-em-works-heading"
             className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl"
           >
-            How NFL Pick&apos;em Works on PoolCup
+            How College Football Pick&apos;em Works on PoolCup
           </h2>
           <ol className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
             {HOW_IT_WORKS_STEPS.map((step) => (
@@ -142,14 +171,14 @@ export function NflPickEmContent({ upcomingMatches }: NflPickEmContentProps) {
 
       <section
         className={cn(sectionPad, 'border-t border-[rgba(255,255,255,0.06)]')}
-        aria-labelledby="why-poolcup-heading"
+        aria-labelledby="why-poolcup-cfb-heading"
       >
         <div className="mx-auto max-w-4xl">
           <h2
-            id="why-poolcup-heading"
+            id="why-poolcup-cfb-heading"
             className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl"
           >
-            Why Run Your Pick&apos;em Pool on PoolCup
+            Why Run Your College Football Pick&apos;em Pool on PoolCup
           </h2>
           <ul className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {WHY_ITEMS.map((item) => {
@@ -196,49 +225,48 @@ export function NflPickEmContent({ upcomingMatches }: NflPickEmContentProps) {
           </h2>
           <p className="mt-3 text-base text-[#728d9c]">
             <Link
-              href="/college-football-pick-em"
+              href={NFL_PICK_EM_PAGE_HREF}
               className="font-medium text-[#00e676] underline-offset-4 hover:underline"
             >
-              College Football Pick&apos;em
+              NFL Pick&apos;em
             </Link>
           </p>
         </div>
       </section>
 
-      {/* Phase 4: FAQ */}
       <section
-        className={cn(
-          sectionPad,
-          'border-t border-[rgba(255,255,255,0.06)]',
-        )}
-        aria-labelledby="nfl-pick-em-faq-heading"
+        className={cn(sectionPad, 'border-t border-[rgba(255,255,255,0.06)]')}
+        aria-labelledby="cfb-pick-em-faq-heading"
       >
         <div className="mx-auto max-w-2xl">
           <h2
-            id="nfl-pick-em-faq-heading"
+            id="cfb-pick-em-faq-heading"
             className="text-center font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl"
           >
-            NFL Pick&apos;em FAQ
+            College Football Pick&apos;em FAQ
           </h2>
-          <NflPickEmFaqAccordion items={NFL_PICK_EM_FAQ_ITEMS} />
+          <PickEmFaqAccordion items={CFB_PICK_EM_FAQ_ITEMS} valuePrefix="cfb-faq" />
         </div>
       </section>
 
       <section
+        id="launching"
         className={cn(
           sectionPad,
-          'border-t border-[rgba(255,255,255,0.06)] bg-[#090f18]',
+          'border-t border-[rgba(255,255,255,0.06)] bg-[#090f18] scroll-mt-20',
         )}
-        aria-labelledby="nfl-pick-em-bottom-cta-heading"
+        aria-labelledby="cfb-pick-em-bottom-cta-heading"
       >
         <div className={cn(proseWidth, 'text-center')}>
           <h2
-            id="nfl-pick-em-bottom-cta-heading"
+            id="cfb-pick-em-bottom-cta-heading"
             className="font-display text-3xl tracking-wide text-[#f0f4f8] md:text-4xl"
           >
-            Ready to start your NFL pick&apos;em pool?
+            College football pick&apos;em pools — launching this week
           </h2>
           <p className="mt-4 text-base leading-relaxed text-[#728d9c] md:text-lg">
+            We are putting the finishing touches on CFB pools ahead of the{' '}
+            {CFB_PICK_EM_SEASON_YEAR} season. NFL Pick&apos;em is live today if you want to compete now.
             Explore more on the{' '}
             <Link
               href="/"
@@ -246,16 +274,16 @@ export function NflPickEmContent({ upcomingMatches }: NflPickEmContentProps) {
             >
               PoolCup homepage
             </Link>
-            , compare plans on{' '}
+            {' '}or compare plans on{' '}
             <Link
               href="/pricing"
               className="font-medium text-[#00e676] underline-offset-4 hover:underline"
             >
               PoolCup pricing
             </Link>
-            , or create your pool now.
+            .
           </p>
-          <NflPickEmHeroCtas />
+          <CollegeFootballPickEmHeroCtas />
         </div>
       </section>
     </>
